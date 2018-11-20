@@ -61,7 +61,7 @@ void GL::reset() {
 	d_projectionMatrixStack.reset();
 	d_textureMatrixStack.reset();
 	d_activeMatrixStack = &d_modelViewMatrixStack;
-	d_si = 0;
+	d_states.clear();
 	d_cs.reset();
 	d_commands.reset(); }
 
@@ -71,11 +71,10 @@ void GL::maybeUpdateState() {
 	d_cs.modelViewMatrix = d_modelViewMatrixStack.top();
 	d_cs.projectionMatrix = d_projectionMatrixStack.top();
 	d_cs.textureMatrix = d_textureMatrixStack.top();
-	d_states[d_si] = d_cs;
+	d_states.push_back(d_cs);
 	d_commands.appendByte(CMD_STATE);
-	d_commands.appendPtr(&d_states[d_si]);
-	d_dirty = false;
-	d_si++; }
+	d_commands.appendPtr(&d_states.back());
+	d_dirty = false; }
 
 }  // close package namespace
 }  // close enterprise namespace

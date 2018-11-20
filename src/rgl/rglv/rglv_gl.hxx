@@ -7,6 +7,7 @@
 #include <rmlv_vec.hxx>
 
 #include <array>
+#include <deque>
 #include <mutex>
 #include <stdexcept>
 #include <PixelToaster.h>
@@ -224,8 +225,7 @@ private:
 
 	GLState d_cs;
 	bool d_dirty;
-	std::array<GLState, 1000> d_states;
-	int d_si; };
+	std::deque<GLState> d_states; };
 
 }  // close package namespace
 }  // close enterprise namespace
