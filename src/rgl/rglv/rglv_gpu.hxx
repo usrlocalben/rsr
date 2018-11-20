@@ -322,7 +322,7 @@ struct SubStack {
 	void clear() { sp = 0; } };
 
 
-template<typename ...PGMs>
+template<typename ...SHADERS>
 class GPU {
 public:
 	void reset(const rmlv::ivec2& newBufferDimensionsInPixels, const rmlv::ivec2& newTileDimensionsInBlocks) {
@@ -478,9 +478,9 @@ private:
 				auto count = cs.consumeInt();
 				// printf(" drawElements %02x %d %p", flags, count, indices);
 				if (enableClipping) {
-					bin_drawArray<true, PGMs...>(*stateptr, count); }
+					bin_drawArray<true, SHADERS...>(*stateptr, count); }
 				else {
-					bin_drawArray<false, PGMs...>(*stateptr, count); }}
+					bin_drawArray<false, SHADERS...>(*stateptr, count); }}
 			else if (cmd == CMD_DRAW_ELEMENTS) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -489,9 +489,9 @@ private:
 				auto indices = static_cast<uint16_t*>(cs.consumePtr());
 				// printf(" drawElements %02x %d %p", flags, count, indices);
 				if (enableClipping) {
-					bin_drawElements<true, PGMs...>(*stateptr, count, indices); }
+					bin_drawElements<true, SHADERS...>(*stateptr, count, indices); }
 				else {
-					bin_drawElements<false, PGMs...>(*stateptr, count, indices); }}}
+					bin_drawElements<false, SHADERS...>(*stateptr, count, indices); }}}
 
 		// stats...
 		int total_ = 0;
@@ -541,21 +541,21 @@ private:
 			else if (cmd == CMD_STORE_TRUECOLOR) {
 				auto enableGamma = cs.consumeByte();
 				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
-				tile_storeTrueColor<PGMs...>(*stateptr, rect, enableGamma, outcanvas);
+				tile_storeTrueColor<SHADERS...>(*stateptr, rect, enableGamma, outcanvas);
 				// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
 				}
 			else if (cmd == CMD_CLIPPED_TRI) {
 				tile_drawClipped(*stateptr, rect, cs); }
 			else if (cmd == CMD_DRAW_INLINE) {
-				tile_drawElements<PGMs...>(*stateptr, rect, cs); }}}
+				tile_drawElements<SHADERS...>(*stateptr, rect, cs); }}}
 
-	template <typename... XPGMs>
-	typename std::enable_if<sizeof...(XPGMs) == 0>::type tile_storeTrueColor(const GLState& state, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
+	template <typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_storeTrueColor(const GLState& state, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
 
-	template <typename PGM, typename ...XPGMs>
+	template <typename PGM, typename ...PGMs>
 	void tile_storeTrueColor(const GLState& state, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
 		if (state.programId != PGM::id) {
-			tile_storeTrueColor<XPGMs...>(state, rect, enableGamma, outcanvas);
+			tile_storeTrueColor<PGMs...>(state, rect, enableGamma, outcanvas);
 			return; }
 
 		auto& cc = *d_cc;
@@ -564,13 +564,13 @@ private:
 		else {
 			rglr::copyRect<PGM, rglr::LinearColor>(rect, cc, outcanvas); }}
 
-	template <bool ENABLE_CLIPPING, typename... XPGMs>
-	typename std::enable_if<sizeof...(XPGMs) == 0>::type bin_drawArray(const GLState& state, const int count) {}
+	template <bool ENABLE_CLIPPING, typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_drawArray(const GLState& state, const int count) {}
 
-	template <bool ENABLE_CLIPPING, typename PGM, typename ...XPGMs>
+	template <bool ENABLE_CLIPPING, typename PGM, typename ...PGMs>
 	void bin_drawArray(const GLState& state, const int count) {
 		if (state.programId != PGM::id) {
-			bin_drawArray<ENABLE_CLIPPING, XPGMs...>(state, count);
+			bin_drawArray<ENABLE_CLIPPING, PGMs...>(state, count);
 			return; }
 		using std::min, std::max;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
@@ -682,13 +682,13 @@ private:
 		if (ENABLE_CLIPPING && d_clipQueue.size()) {
 			bin_drawElementsClipped<PGM>(state); }}
 
-	template <bool ENABLE_CLIPPING, typename... XPGMs>
-	typename std::enable_if<sizeof...(XPGMs) == 0>::type bin_drawElements(const GLState& state, const int count, const uint16_t * const indices) {}
+	template <bool ENABLE_CLIPPING, typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_drawElements(const GLState& state, const int count, const uint16_t * const indices) {}
 
-	template <bool ENABLE_CLIPPING, typename PGM, typename ...XPGMs>
+	template <bool ENABLE_CLIPPING, typename PGM, typename ...PGMs>
 	void bin_drawElements(const GLState& state, const int count, const uint16_t * const indices) {
 		if (PGM::id != state.programId) {
-			bin_drawElements<ENABLE_CLIPPING, XPGMs...>(state, count, indices);
+			bin_drawElements<ENABLE_CLIPPING, PGMs...>(state, count, indices);
 			return; }
 		using std::min, std::max;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
@@ -800,13 +800,13 @@ private:
 		if (ENABLE_CLIPPING && d_clipQueue.size()) {
 			bin_drawElementsClipped<PGM>(state); }}
 
-	template <typename... XPGMs>
-	typename std::enable_if<sizeof...(XPGMs) == 0>::type tile_drawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
+	template <typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_drawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
 
-	template<typename PGM, typename ...XPGMs>
+	template<typename PGM, typename ...PGMs>
 	void tile_drawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {
 		if (state.programId != PGM::id) {
-			tile_drawElements<XPGMs...>(state, rect, cs);
+			tile_drawElements<PGMs...>(state, rect, cs);
 			return; }
 
 		using rmlm::mat4;
@@ -1008,13 +1008,13 @@ private:
 				func(bin); }
 			ofs += d_bufferDimensionsInTiles.x; }};
 
-	template <typename... XPGMs>
-	typename std::enable_if<sizeof...(XPGMs) == 0>::type tile_drawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
+	template <typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_drawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
 
-	template <typename PGM, typename ...XPGMs>
+	template <typename PGM, typename ...PGMs>
 	void tile_drawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {
 		if (state.programId != PGM::id) {
-			tile_drawClipped<XPGMs...>(state, rect, cs);
+			tile_drawClipped<PGMs...>(state, rect, cs);
 			return; }
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
