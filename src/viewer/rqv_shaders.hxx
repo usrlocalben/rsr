@@ -27,6 +27,8 @@ ShaderProgramId deserialize_program_name(const std::string&);
  * http://codeflow.org/entries/2012/aug/02/easy-wireframe-display-with-barycentric-coordinates/
  */
 struct WireframeProgram final : public rglv::BaseProgram {
+	static int id;
+
 	template <typename TU1>
 	inline static void shadeFragment(
 		// built-in
@@ -62,6 +64,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 
 
 struct IQPostProgram final : public rglv::BaseProgram {
+	static int id;
 	inline static rmlv::qfloat3 shadeCanvas(const rmlv::qfloat2 q, const rmlv::qfloat3 source) {
 		//const auto q = gl_FragCoord / targetSize;
 		auto col = source;
@@ -72,6 +75,7 @@ struct IQPostProgram final : public rglv::BaseProgram {
 
 
 struct EnvmapProgram final : public rglv::BaseProgram {
+	static int id;
 #define IN_POSITION v.a0
 #define IN_SMOOTH_NORMAL v.a1
 #define IN_FACE_NORMAL v.a2
@@ -125,6 +129,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 
 
 struct AmyProgram final : public rglv::BaseProgram {
+	static int id;
 #define IN_POSITION v.a0
 #define IN_TEXCOORD v.a2
 #define OUT_TEXCOORD outs.r0
@@ -162,6 +167,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 
 
 struct EnvmapXProgram final : public rglv::BaseProgram {
+	static int id;
 #define IN_POSITION v.a0
 #define IN_SMOOTH_NORMAL v.a1
 #define IN_FACE_NORMAL v.a2

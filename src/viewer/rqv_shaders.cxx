@@ -5,6 +5,13 @@ namespace rqv {
 
 using namespace std;
 
+int WireframeProgram::id = int(ShaderProgramId::Wireframe);
+int IQPostProgram::id = int(ShaderProgramId::IQ);
+int EnvmapProgram::id = int(ShaderProgramId::Envmap);
+int AmyProgram::id = int(ShaderProgramId::Amy);
+int EnvmapXProgram::id = int(ShaderProgramId::EnvmapX);
+
+
 ShaderProgramId deserialize_program_name(const string& text) {
 	if (text == "Default") {
 		return ShaderProgramId::Default; }

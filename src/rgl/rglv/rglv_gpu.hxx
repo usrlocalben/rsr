@@ -87,6 +87,8 @@ struct ClippedVertex {
 
 
 struct BaseProgram {
+	static int id;
+
 	inline static void shadeVertex(
 		const VertexInput& v,
 		const ShaderUniforms& u,
@@ -320,7 +322,7 @@ struct SubStack {
 	void clear() { sp = 0; } };
 
 
-template<class PGM1, class PGM2, class PGM3, class PGM4, class PGM5>
+template<typename ...PGMs>
 class GPU {
 public:
 	void reset(const rmlv::ivec2& newBufferDimensionsInPixels, const rmlv::ivec2& newTileDimensionsInBlocks) {
@@ -476,21 +478,9 @@ private:
 				auto count = cs.consumeInt();
 				// printf(" drawElements %02x %d %p", flags, count, indices);
 				if (enableClipping) {
-					switch (stateptr->programId) {
-					case 1: bin_drawArray<PGM1, true>(*stateptr, count); break;
-					case 2: bin_drawArray<PGM2, true>(*stateptr, count); break;
-					case 3: bin_drawArray<PGM3, true>(*stateptr, count); break;
-					case 4: bin_drawArray<PGM4, true>(*stateptr, count); break;
-					case 5: bin_drawArray<PGM5, true>(*stateptr, count); break;
-					default: break; }}
+					bin_drawArray<true, PGMs...>(*stateptr, count); }
 				else {
-					switch (stateptr->programId) {
-					case 1: bin_drawArray<PGM1, false>(*stateptr, count); break;
-					case 2: bin_drawArray<PGM2, false>(*stateptr, count); break;
-					case 3: bin_drawArray<PGM3, false>(*stateptr, count); break;
-					case 4: bin_drawArray<PGM4, false>(*stateptr, count); break;
-					case 5: bin_drawArray<PGM5, false>(*stateptr, count); break;
-					default: break; }}}
+					bin_drawArray<false, PGMs...>(*stateptr, count); }}
 			else if (cmd == CMD_DRAW_ELEMENTS) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -499,21 +489,9 @@ private:
 				auto indices = static_cast<uint16_t*>(cs.consumePtr());
 				// printf(" drawElements %02x %d %p", flags, count, indices);
 				if (enableClipping) {
-					switch (stateptr->programId) {
-					case 1: bin_drawElements<PGM1, true>(*stateptr, count, indices); break;
-					case 2: bin_drawElements<PGM2, true>(*stateptr, count, indices); break;
-					case 3: bin_drawElements<PGM3, true>(*stateptr, count, indices); break;
-					case 4: bin_drawElements<PGM4, true>(*stateptr, count, indices); break;
-					case 5: bin_drawElements<PGM5, true>(*stateptr, count, indices); break;
-					default: break; }}
+					bin_drawElements<true, PGMs...>(*stateptr, count, indices); }
 				else {
-					switch (stateptr->programId) {
-					case 1: bin_drawElements<PGM1, false>(*stateptr, count, indices); break;
-					case 2: bin_drawElements<PGM2, false>(*stateptr, count, indices); break;
-					case 3: bin_drawElements<PGM3, false>(*stateptr, count, indices); break;
-					case 4: bin_drawElements<PGM4, false>(*stateptr, count, indices); break;
-					case 5: bin_drawElements<PGM5, false>(*stateptr, count, indices); break;
-					default: break; }}}}
+					bin_drawElements<false, PGMs...>(*stateptr, count, indices); }}}
 
 		// stats...
 		int total_ = 0;
@@ -563,37 +541,37 @@ private:
 			else if (cmd == CMD_STORE_TRUECOLOR) {
 				auto enableGamma = cs.consumeByte();
 				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
-				switch (stateptr->programId) {
-				case 0: tile_storeTrueColor<BaseProgram>(*stateptr, rect, enableGamma, outcanvas); break;
-				case 1: tile_storeTrueColor<PGM1>(*stateptr, rect, enableGamma, outcanvas); break;
-				case 2: tile_storeTrueColor<PGM2>(*stateptr, rect, enableGamma, outcanvas); break;
-				case 3: tile_storeTrueColor<PGM3>(*stateptr, rect, enableGamma, outcanvas); break;
-				case 4: tile_storeTrueColor<PGM4>(*stateptr, rect, enableGamma, outcanvas); break;
-				case 5: tile_storeTrueColor<PGM5>(*stateptr, rect, enableGamma, outcanvas); break;
-				default: break; }
+				tile_storeTrueColor<PGMs...>(*stateptr, rect, enableGamma, outcanvas);
 				// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
 				}
 			else if (cmd == CMD_CLIPPED_TRI) {
 				tile_drawClipped(*stateptr, rect, cs); }
 			else if (cmd == CMD_DRAW_INLINE) {
-				switch (stateptr->programId) {
-				case 1: tile_drawElements<PGM1>(*stateptr, rect, cs); break;
-				case 2: tile_drawElements<PGM2>(*stateptr, rect, cs); break;
-				case 3: tile_drawElements<PGM3>(*stateptr, rect, cs); break;
-				case 4: tile_drawElements<PGM4>(*stateptr, rect, cs); break;
-				case 5: tile_drawElements<PGM5>(*stateptr, rect, cs); break;
-				default: break; }}}}
+				tile_drawElements<PGMs...>(*stateptr, rect, cs); }}}
 
-	template <typename PGM>
+	template <typename... XPGMs>
+	typename std::enable_if<sizeof...(XPGMs) == 0>::type tile_storeTrueColor(const GLState& state, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
+
+	template <typename PGM, typename ...XPGMs>
 	void tile_storeTrueColor(const GLState& state, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
+		if (state.programId != PGM::id) {
+			tile_storeTrueColor<XPGMs...>(state, rect, enableGamma, outcanvas);
+			return; }
+
 		auto& cc = *d_cc;
 		if (enableGamma) {
 			rglr::copyRect<PGM, rglr::sRGB>(rect, cc, outcanvas); }
 		else {
 			rglr::copyRect<PGM, rglr::LinearColor>(rect, cc, outcanvas); }}
 
-	template <typename PGM, bool ENABLE_CLIPPING>
+	template <bool ENABLE_CLIPPING, typename... XPGMs>
+	typename std::enable_if<sizeof...(XPGMs) == 0>::type bin_drawArray(const GLState& state, const int count) {}
+
+	template <bool ENABLE_CLIPPING, typename PGM, typename ...XPGMs>
 	void bin_drawArray(const GLState& state, const int count) {
+		if (state.programId != PGM::id) {
+			bin_drawArray<ENABLE_CLIPPING, XPGMs...>(state, count);
+			return; }
 		using std::min, std::max;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		assert(state.arrayFormat == AF_VAO_PNM);
@@ -702,10 +680,16 @@ private:
 
 		d_stats0.totalTrianglesClipped = d_clipQueue.size();
 		if (ENABLE_CLIPPING && d_clipQueue.size()) {
-			bin_drawElementsClipped(state); }}
+			bin_drawElementsClipped<PGM>(state); }}
 
-	template <typename PGM, bool ENABLE_CLIPPING>
+	template <bool ENABLE_CLIPPING, typename... XPGMs>
+	typename std::enable_if<sizeof...(XPGMs) == 0>::type bin_drawElements(const GLState& state, const int count, const uint16_t * const indices) {}
+
+	template <bool ENABLE_CLIPPING, typename PGM, typename ...XPGMs>
 	void bin_drawElements(const GLState& state, const int count, const uint16_t * const indices) {
+		if (PGM::id != state.programId) {
+			bin_drawElements<ENABLE_CLIPPING, XPGMs...>(state, count, indices);
+			return; }
 		using std::min, std::max;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		assert(state.arrayFormat == AF_VAO_PNM);
@@ -814,10 +798,17 @@ private:
 
 		d_stats0.totalTrianglesClipped = d_clipQueue.size();
 		if (ENABLE_CLIPPING && d_clipQueue.size()) {
-			bin_drawElementsClipped(state); }}
+			bin_drawElementsClipped<PGM>(state); }}
 
-	template<class PGM>
+	template <typename... XPGMs>
+	typename std::enable_if<sizeof...(XPGMs) == 0>::type tile_drawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
+
+	template<typename PGM, typename ...XPGMs>
 	void tile_drawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {
+		if (state.programId != PGM::id) {
+			tile_drawElements<XPGMs...>(state, rect, cs);
+			return; }
+
 		using rmlm::mat4;
 		using rmlv::vec2;
 		using rmlv::vec3;
@@ -895,6 +886,7 @@ private:
 			// reset the SIMD lane counter
 			li = 0; }}
 
+	template <typename PGM>
 	void bin_drawElementsClipped(const GLState& state) {
 		using rmlm::mat4;
 		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
@@ -925,14 +917,7 @@ private:
 
 				qfloat4 coord;
 				VertexOutput computed;
-
-				switch (state.programId) {
-				case 1: PGM1::shadeVertex(vi_, ui, coord, computed); break;
-				case 2: PGM2::shadeVertex(vi_, ui, coord, computed); break;
-				case 3: PGM3::shadeVertex(vi_, ui, coord, computed); break;
-				case 4: PGM4::shadeVertex(vi_, ui, coord, computed); break;
-				case 5: PGM5::shadeVertex(vi_, ui, coord, computed); break; }
-
+				PGM::shadeVertex(vi_, ui, coord, computed);
 				poly.push_back(ClippedVertex{ coord.lane(0), computed.lane(0) }); }
 
 			// phase 2: sutherland-hodgman clipping
@@ -1023,7 +1008,14 @@ private:
 				func(bin); }
 			ofs += d_bufferDimensionsInTiles.x; }};
 
+	template <typename... XPGMs>
+	typename std::enable_if<sizeof...(XPGMs) == 0>::type tile_drawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
+
+	template <typename PGM, typename ...XPGMs>
 	void tile_drawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {
+		if (state.programId != PGM::id) {
+			tile_drawClipped<XPGMs...>(state, rect, cs);
+			return; }
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 
@@ -1055,28 +1047,8 @@ private:
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu1(state.texture0Ptr, state.texture0Dim, state.texture0MinFilter);
 
-		switch (state.programId) {
-		case 1: {
-			DefaultTargetProgram<sampler, PGM1, rglr::BlendProgram::Set> target_program(tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
-			draw_triangle(target_height, rect, dev[0], dev[1], dev[2], !backfacing, target_program); }
-			break;
-		case 2: {
-			DefaultTargetProgram<sampler, PGM2, rglr::BlendProgram::Set> target_program(tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
-			draw_triangle(target_height, rect, dev[0], dev[1], dev[2], !backfacing, target_program); }
-			break;
-		case 3: {
-			DefaultTargetProgram<sampler, PGM3, rglr::BlendProgram::Set> target_program(tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
-			draw_triangle(target_height, rect, dev[0], dev[1], dev[2], !backfacing, target_program); }
-			break;
-		case 4: {
-			DefaultTargetProgram<sampler, PGM4, rglr::BlendProgram::Set> target_program(tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
-			draw_triangle(target_height, rect, dev[0], dev[1], dev[2], !backfacing, target_program); }
-			break;
-		case 5: {
-			DefaultTargetProgram<sampler, PGM5, rglr::BlendProgram::Set> target_program(tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
-			draw_triangle(target_height, rect, dev[0], dev[1], dev[2], !backfacing, target_program); }
-			break;
-		default: break; }}
+		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
+		draw_triangle(target_height, rect, dev[0], dev[1], dev[2], !backfacing, target_program); }
 
 	auto generateUniforms(const GLState& state) {
 		ShaderUniforms ui;

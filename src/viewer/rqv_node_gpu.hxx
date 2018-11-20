@@ -18,7 +18,7 @@
 namespace rqdq {
 namespace rqv {
 
-using GPU = rglv::GPU<WireframeProgram, IQPostProgram, EnvmapProgram, AmyProgram, EnvmapXProgram>;
+using GPU = rglv::GPU<rglv::BaseProgram, WireframeProgram, IQPostProgram, EnvmapProgram, AmyProgram, EnvmapXProgram>;
 
 struct GPUNode : public NodeBase {
 	// internal
