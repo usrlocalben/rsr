@@ -1,0 +1,19 @@
+cxx_library(
+    name='gason_util',
+    srcs=['rclx_gason_util.cxx'],
+    hdrs=['rclx_gason_util.hxx'],
+    deps=[
+        '3rdparty/gason',
+        'src/rml/rmlv:vec',
+        ],
+    )
+
+cxx_library(
+    name='jsonfile',
+    srcs=['rclx_jsonfile.cxx'],
+    hdrs=['rclx_jsonfile.hxx'],
+    deps=[
+        '3rdparty/gason',
+        'src/rcl/rcls:file',
+        ],
+    )

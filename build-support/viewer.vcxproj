@@ -1,0 +1,245 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{259CD5BA-0871-4008-843E-ED7359A8495A}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>viewer</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\build-support\3rdparty.props" />
+    <Import Project="$(SolutionDir)\build-support\src.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\build-support\3rdparty.props" />
+    <Import Project="$(SolutionDir)\build-support\src.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\build-support\3rdparty.props" />
+    <Import Project="$(SolutionDir)\build-support\src.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\build-support\3rdparty.props" />
+    <Import Project="$(SolutionDir)\build-support\src.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <IntDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>$(SolutionDir)\dist\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3dx9.lib;$(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_ENABLE_EXTENDED_ALIGNED_STORAGE</PreprocessorDefinitions>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3dx9.lib;$(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <OmitFramePointers>true</OmitFramePointers>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3dx9.lib;$(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <OmitFramePointers>true</OmitFramePointers>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3dx9.lib;$(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="$(SolutionDir)\src\ral\ralio\ralio_audio_controller.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\ral\rals\rals_sync_controller.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclma\rclma_framepool.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclmt\rclmt_barrier.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclmt\rclmt_jobsys.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclr\rclr_algorithm.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclt\rclt_util.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclx\rclx_gason_util.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclx\rclx_jsonfile.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_blend.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_canvas.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_canvas_util.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_display_mode.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_kawase.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_pixeltoaster_util.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_profont.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_texture.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_camera.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_clipper.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_fragment.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gl.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gpu.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gpu_protocol.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_marching_cubes.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_material.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_math.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_math.t.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_mesh.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_mesh_store.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_obj.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_packed_stream.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_packed_stream.t.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_triangle.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_triangle.t.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_vao.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlm\rmlm_mat4.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_mmutil.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_mvec4.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_soa.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_vec.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv.m.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_app.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_compile.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_cpu_colors.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_jobsys_vis.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_base.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_camera.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_computed.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_auraforlaura.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_carpet.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_foo.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_mc.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_xyquad.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_gl.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_gpu.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_material.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_output.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_render.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_translate.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_value.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_resource.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_shaders.cxx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="rqv_resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="viewer.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

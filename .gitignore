@@ -1,0 +1,15 @@
+#build
+.ox
+dist
+wvenv
+venv
+
+#editor
+.idea
+*.swp
+.vs
+
+#python
+*.pyc
+
+

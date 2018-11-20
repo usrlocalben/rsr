@@ -1,0 +1,19 @@
+cxx_library(
+    name='mat4',
+    srcs=['rmlm_mat4.cxx'],
+    hdrs=['rmlm_mat4.hxx'],
+    deps=[
+        '3rdparty/fmt',
+        'src/rml/rmlv:vec',
+        'src/rml/rmlv:soa',
+        ],
+    )
+
+cxx_exe(
+    name='mat4_test',
+    srcs=['rmlm_mat4.t.cxx'],
+    deps=[
+        'src/rml/rmlv:vec',
+        ':mat4',
+        ],
+    )

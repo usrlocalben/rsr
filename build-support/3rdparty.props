@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <_PropertySheetDisplayName>3rdparty</_PropertySheetDisplayName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>
+        $(SolutionDir)\3rdparty\aligned_allocator;
+        $(SolutionDir)\3rdparty\bass;
+        $(SolutionDir)\3rdparty\directx\Include;
+        $(SolutionDir)\3rdparty\exprtk;
+        $(SolutionDir)\3rdparty\fmt\include;
+        $(SolutionDir)\3rdparty\gason;
+        $(SolutionDir)\3rdparty\picopng;
+        $(SolutionDir)\3rdparty\pixeltoaster;
+        $(SolutionDir)\3rdparty\rocket;
+        $(SolutionDir)\3rdparty\ryg-srgb;
+        $(SolutionDir)\3rdparty\sse-pow;
+	%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>
+        $(SolutionDir)\3rdparty\directx\Lib\$(PlatformTarget);
+	$(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
+      <AdditionalDependencies>
+	$(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>
