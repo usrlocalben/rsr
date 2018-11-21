@@ -7,11 +7,12 @@ cxx_library(
         ],
     )
 
-cxx_exe(
-    name='packed_stream_test',
+cxx_test(
+    name='packed_stream_unittest',
     srcs=['rglv_packed_stream.t.cxx'],
     deps=[
         '3rdparty/fmt',
+        '3rdparty/googletest:gtest_main',
         'src/rml/rmlv:vec',
         ':packed_stream',
         ],
@@ -204,7 +205,7 @@ cxx_library(
         ],
     )
 
-cxx_exe(
+cxx_test(
     name='triangle_test',
     srcs=['rglv_triangle.t.cxx'],
     deps=[

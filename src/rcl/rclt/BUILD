@@ -4,10 +4,11 @@ cxx_library(
     hdrs=['rclt_util.hxx'],
     )
 
-cxx_exe(
-    name='util_test',
+cxx_test(
+    name='util_unittest',
     srcs=['rclt_util.t.cxx'],
     deps=[
+        '3rdparty/googletest:gtest_main',
         ':util',
         ],
     )

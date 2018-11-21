@@ -328,8 +328,10 @@ class CxxExeTarget(Target):
 
             all_config = my_config + sub_config
 
-            my_exe = os.path.join(work_dir, 'abcd_' + src + '.exe')
-            logger.info('exe %s', src)
+            my_exe_name = self.selector.replace('/', '__').replace(':', '__')
+
+            my_exe = os.path.join(work_dir, 'abcd_' + my_exe_name + '.exe')
+            logger.info('exe %s', my_exe_name)
             exe_result = yield link_exe(
                 lib_dirs=all_config.lib_dirs,
                 inputs=all_config.lib_inputs | all_config.obj_inputs,
@@ -344,9 +346,15 @@ class CxxExeTarget(Target):
         returnValue(result)
 
 
-register_target_type(CxxExeTarget)
+class CxxTestTarget(CxxExeTarget):
+    goals = ('compile', 'test')
+    token = 'cxx_test'
+
+
 register_target_type(CxxBinaryLibraryTarget)
+register_target_type(CxxExeTarget)
 register_target_type(CxxLibraryTarget)
+register_target_type(CxxTestTarget)
 register_target_type(WinResourceTarget)
 
 
@@ -373,7 +381,8 @@ def cl_obj(src, include_dirs, output_path, flags=CXX_FLAGS, defs=CXX_DEFS):
     # print 'EXEC', cmd
 
     exit_code, stdout, stderr = yield async_check_output(cmd)
-    stdout = stdout.decode()
+    stdout = stdout.decode('cp437').replace('\r\n', '\n')
+    stderr = stderr.decode('cp437').replace('\r\n', '\n')
     if exit_code == 0:
         if 'warning' in stdout:
             msgs = clean_cl_messages(stdout)
@@ -411,7 +420,8 @@ def rc_res(src, include_dirs, output_path):
     cmd.append(src)  # MUST be last
 
     exit_code, stdout, stderr = yield async_check_output(cmd)
-    stdout = stdout.decode()
+    stdout = stdout.decode('cp437').replace('\r\n', '\n')
+    stderr = stderr.decode('cp437').replace('\r\n', '\n')
     if exit_code == 0:
         returnValue((True, output_path + '.res'))
     else:
@@ -439,7 +449,8 @@ def link_exe(inputs, lib_dirs, output_path):
     # print 'EXEC', ' '.join(cmd)
 
     exit_code, stdout, stderr = yield async_check_output(cmd)
-    stdout = stdout.decode()
+    stdout = stdout.decode('cp437').replace('\r\n', '\n')
+    stderr = stderr.decode('cp437').replace('\r\n', '\n')
     if exit_code == 0:
         return
     else:

@@ -2,31 +2,22 @@
 
 #include <iostream>
 #include <string>
+#include <gtest/gtest.h>
 
 using namespace rqdq;
 
+namespace {
 
-void ok() {
-	std::cout << "."; }
+TEST(Trim, TrimsWhitespacePrefix) {
+	EXPECT_EQ(rclt::trim("   hey"), "hey"); }
 
-void fail() {
-	std::cout << "F"; }
+TEST(Trim, TrimsWhitespaceSuffix) {
+	EXPECT_EQ(rclt::trim("hey   "), "hey"); }
 
+TEST(Trim, TrimsWhitespaceBoth) {
+	EXPECT_EQ(rclt::trim("   hey   "), "hey"); }
 
-void assertEqual(const std::string& a, const std::string& b) {
-	if (a == b) {
-		ok();
-		return; }
-	std::cout << "error, strings not equal " << a << " != " << b << std::endl; }
+TEST(Trim, NoWhitespaceIsIdentity) {
+	EXPECT_EQ(rclt::trim("hey"), "hey"); }
 
-
-void test_trim() {
-	assertEqual(rclt::trim("   hey   "), "hey");
-	assertEqual(rclt::trim("   hey"), "hey");
-	assertEqual(rclt::trim("hey   "), "hey");
-	assertEqual(rclt::trim("hey"), "hey"); }
-
-
-int main(int argc, char **argv) {
-	test_trim();
-	return 0; }
+}  // close unnamed namespace

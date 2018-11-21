@@ -100,4 +100,7 @@ int main(int argc, char **argv) {
 
 	cout << endl;
 	return total_errors ? 1 : 0;
+TEST(PerspectiveDivide, 
+	vec4 pa{ 10,20,30,10 };
+	assertAlmostEqual(perspective_divide(pa), vec4{ 1,2,3,1.0f / 10.0f });
 }

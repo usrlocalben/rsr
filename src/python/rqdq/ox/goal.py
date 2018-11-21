@@ -29,18 +29,34 @@ class Goal(object):
         pass
 
 
+class ResolveGoal(Goal):
+    def __init__(self, work_dir, bg):
+        super(ResolveGoal, self).__init__(work_dir)
+        self._work_dir = work_dir
+        self._bg = bg
+
+    @defer.inlineCallbacks
+    def run(self, target):
+        check_it_yo(self._bg, target)
+        if False:
+            yield None
+        defer.returnValue(True)
+
+
 class CompileGoal(Goal):
     def __init__(self, work_dir, bg):
         super(CompileGoal, self).__init__(work_dir)
-        self.target_count = 0
         self._work_dir = work_dir
         self._bg = bg
+        self.resolve = ResolveGoal(work_dir, bg)
+        self.target_count = 0
 
     @defer.inlineCallbacks
     def run(self, target):
         if 'compile' not in target.goals:
             return
 
+        result = yield self.resolve.run(target)
         try:
             logger.debug('will compile %s in %s', target.selector, self._work_dir)
             built = yield target.compile(self._work_dir)
@@ -73,15 +89,43 @@ class RunGoal(Goal):
         if 'run' not in target.goals:
             return
 
-        check_it_yo(self._bg, target)
         maybe_exe_path = yield self._compile.run(target)
         if maybe_exe_path:
             cmd = [maybe_exe_path,]
             print('>>> executing "%s"' % (maybe_exe_path,))
             exit_code, stdout, stderr = yield async_check_output(cmd)
+            stdout = stdout.decode('cp437').replace('\r\n', '\n')
             print(stdout)
             print('<<< terminated with code %d' % (exit_code,))
         defer.returnValue(True)
+
+    def finalize(self):
+        self._compile.finalize()
+
+
+class TestGoal(Goal):
+    def __init__(self, work_dir, bg):
+        super(TestGoal, self).__init__(work_dir)
+        self._compile = CompileGoal(work_dir, bg)
+        self._work_dir = work_dir
+        self._bg = bg
+
+    @defer.inlineCallbacks
+    def run(self, target):
+        if 'test' not in target.goals:
+            defer.returnValue(True)
+
+        maybe_exe_path = yield self._compile.run(target)
+        if maybe_exe_path:
+            cmd = [maybe_exe_path,]
+            print('>>> executing "%s"' % (maybe_exe_path,))
+            exit_code, stdout, stderr = yield async_check_output(cmd)
+            stdout = stdout.decode('cp437').replace('\r\n', '\n')
+            print(stdout)
+            print('<<< terminated with code %d' % (exit_code,))
+            if exit_code == 0:
+                defer.returnValue(True)
+        defer.returnValue(False)
 
     def finalize(self):
         self._compile.finalize()

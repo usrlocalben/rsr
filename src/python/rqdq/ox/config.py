@@ -1,4 +1,4 @@
-CONFIG_FLAGS = "clang release console"
+CONFIG_FLAGS = "msvc release console"
 #CONFIG_FLAGS = "msvc release gui sync"
 #CONFIG_FLAGS = "msvc release gui sync player"
 #CONFIG_FLAGS = "msvc debug console"

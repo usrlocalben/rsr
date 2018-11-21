@@ -147,7 +147,7 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 	rglr::QFloat4Canvas cbc(8, 8);
 	rglr::QFloatCanvas dbc(8, 8);
 
-	rglr::fillRect(cbc.rect(), vec4{ 0.0f,0,0,1.0 }, cbc);
+	rglr::fillRect(cbc.rect(), vec4{ 0,0,0,1.0 }, cbc);
 
 	bool frontfacing = true;
 
@@ -168,12 +168,14 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 
 	// compare
 	for (int yy = 0; yy < 8; yy++) {
+		//std::cout << "\n";
 		auto cmprow = expected[yy];
 		for (int xx = 0; xx < 8; xx++) {
 			auto px = cbc.get_pixel(xx, yy);
 			auto cmpch = px.x > 0 ? 'X' : '.';
+			//std::cout <<cmpch;
 			if (cmpch != cmprow[xx]) {
-				return false; }}}
+				return false; } }}
 	return true; }
 
 
@@ -182,35 +184,33 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
  * verify that the target is filled with the correct u,v values within 0.01f
  */
 bool check_triangle_uv() {
-	const int width = 2560;
+	/*const int width = 2560;
 	const int height = 2560;
 	const float fwidth = 2560.0f;
 	const float fheight = 2560.0f;
 	const float right = 2560.5f;
-	const float bottom = 2560.5f;
+	const float bottom = 2560.5f;*/
+	const int width = 16;
+	const int height = 16;
+	const float fwidth = 16.0f;
+	const float fheight = 16.0f;
+	const float right = 16.5f;
+	const float bottom = 16.5f;
 
 	rglr::QFloat4Canvas cbc(width, height);
 	rglr::QFloatCanvas dbc(width, height);
 
-	rglr::fillRect(cbc.rect(), vec4{ 0.0f,0,0,1.0 }, cbc);
+	rglr::fillRect(cbc.rect(), vec4{ 0,0,0,1.0 }, cbc);
 
 	bool frontfacing = true;
 
 	vec4 ulp{ 0.5, 0.5, 0, 1 };     vec2 uluv{ 0.0, fheight };  vec4 urp{ right,    0.5, 0, 1 };  vec2 uruv{ fwidth, fheight };
 	vec4 llp{ 0.5, bottom, 0, 1 };  vec2 lluv{ 0.0,    0.0 };  vec4 lrp{ right, bottom, 0, 1 };  vec2 lruv{ fwidth,   0.0 };
 
-	array<vec4, 3> points_upper_left = {
-		ulp, llp, urp,
-		};
-	array<vec2, 3> uv_upper_left = {
-		uluv, lluv, uruv,
-		};
-	array<vec4, 3> points_lower_right = {
-		urp, llp, lrp
-		};
-	array<vec2, 3> uv_lower_right = {
-		uruv, lluv, lruv
-		};
+	array<vec4, 3> points_upper_left = { ulp, llp, urp, };
+	array<vec2, 3> uv_upper_left = { uluv, lluv, uruv, };
+	array<vec4, 3> points_lower_right = { urp, llp, lrp };
+	array<vec2, 3> uv_lower_right = { uruv, lluv, lruv };
 
 	using sampler = rglr::ts_pow2_mipmap;
 	const sampler nullTexture(nullptr, 256, 0);
@@ -257,17 +257,22 @@ bool check_triangle_uv() {
 	for (int yy = 0; yy < height; yy++) {
 		for (int xx = 0; xx < width; xx++) {
 			auto px = cbc.get_pixel(xx, yy);
+
 			int iu = int(px.x + expected_accuracy);
 			int iv = int(px.y + expected_accuracy);
+
+			//float dx = float(xx) - px.x;
+			//float dy = float(height - yy) - px.y;
+			//cout << "(" << dx << "," << dy << ") ";
+			// cout << "(" << int(px.x+0.01f) << "," << int(px.y+0.01f) << ") ";
 			if (iu != xx) {
 				// verify U is 0,1,2,3,4,5,6,7 from lef to right
 				return false; }
 			if (iv != (height - yy)) {
 				// verify V is 8,7,6,5,4,3,2,1 from top to bottom
 				return false; }
-			// cout << "(" << int(px.x+0.5) << "," << int(px.y+0.5) << ") ";
 		}
-		// cout << "\n";
+		//cout << "\n";
 	}
 	return true; }
 

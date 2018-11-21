@@ -32,3 +32,12 @@ cxx_library(
         'src/rml/rmlv:mvec4',
         ],
     )
+
+cxx_test(
+    name='vec_test',
+    srcs=['rmlv_vec.t.cxx'],
+    deps=[
+        '3rdparty/googletest:gtest_main',
+        ':vec',
+        ],
+    )

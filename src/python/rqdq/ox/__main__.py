@@ -2,8 +2,10 @@
 ox
 
 usage:
+    ox resolve <selector> [--log-level=<level>]
     ox compile <selector> [--log-level=<level>]
     ox run <selector> [--log-level=<level>]
+    ox test <selector> [--log-level=<level>]
     ox (-h | --help)
 
 options:
@@ -19,7 +21,9 @@ from rqdq.os import ancestor_dirs
 from rqdq.os import maybe_mkdir
 from rqdq.ox.config import *
 from rqdq.ox.goal import CompileGoal
+from rqdq.ox.goal import ResolveGoal
 from rqdq.ox.goal import RunGoal
+from rqdq.ox.goal import TestGoal
 from rqdq.ox.graph import BuildGraph
 from rqdq.ox.graph import target_type_registry
 from rqdq.ox.os import o2i
@@ -67,6 +71,16 @@ def main(arguments):
         work_dir = os.path.join(root_path, '.ox')
         maybe_mkdir(work_dir)
         goal = RunGoal(work_dir=work_dir, bg=bg)
+    elif arguments.get('test'):
+        # XXX rnd = str(uuid.uuid4())[0:5]
+        work_dir = os.path.join(root_path, '.ox')
+        maybe_mkdir(work_dir)
+        goal = TestGoal(work_dir=work_dir, bg=bg)
+    elif arguments.get('resolve'):
+        # XXX rnd = str(uuid.uuid4())[0:5]
+        work_dir = os.path.join(root_path, '.ox')
+        maybe_mkdir(work_dir)
+        goal = ResolveGoal(work_dir=work_dir, bg=bg)
     else:
         raise NotImplementedError()
 

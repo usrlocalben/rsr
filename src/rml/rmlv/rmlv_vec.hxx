@@ -255,6 +255,16 @@ inline vec4 normalize(const vec4 &a) {
 	/*normalize a to length 1.0*/
 	return a / sqrt(dot(a, a)); }
 
+inline float length(const vec4& a) {
+	return sqrt(dot(a, a)); }
+
+inline vec4 sqrt(const vec4& a) {
+	auto sx = sqrtf(a.x);
+	auto sy = sqrtf(a.y);
+	auto sz = sqrtf(a.z);
+	auto sw = sqrtf(a.w);
+	return{sx, sy, sz, sw}; }
+
 inline float hadd(const vec4& a) {
 	return a.x + a.y + a.z + a.w; }
 

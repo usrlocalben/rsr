@@ -86,14 +86,24 @@ struct QFloat4Canvas {
 
 	rmlv::vec4 get_pixel(int x, int y) {
 		const float* data = reinterpret_cast<const float*>(_ptr);
+		const int channels = 4;
+		const int pixelsPerQuad = 4;
+		const int elemsPerQuad = channels * pixelsPerQuad;
+		const int widthInQuads = _width / 2;
+		const int heightInQuads = _height / 2;
 
-		int cellidx = y / 2 * _stride2 + x / 2;
+		const int Yquad = y / 2;
+		const int Xquad = x / 2;
+
+		const int quadAddr = (Yquad * widthInQuads + Xquad) * elemsPerQuad;
+
+		//int cellidx = y / 2 * _stride2 + x / 2;
 		int sy = y % 2;
 		int sx = x % 2;
-		float r = data[ cellidx +  0 + sy*2 + sx ];
-		float g = data[ cellidx +  4 + sy*2 + sx ];
-		float b = data[ cellidx +  8 + sy*2 + sx ];
-		float a = data[ cellidx + 12 + sy*2 + sx ];
+		float r = data[ quadAddr +  0 + sy*2 + sx ];
+		float g = data[ quadAddr +  4 + sy*2 + sx ];
+		float b = data[ quadAddr +  8 + sy*2 + sx ];
+		float a = data[ quadAddr + 12 + sy*2 + sx ];
 		return rmlv::vec4{ r, g, b, a }; }
 
 private:

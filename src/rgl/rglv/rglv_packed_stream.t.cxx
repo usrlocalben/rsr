@@ -2,12 +2,14 @@
 #include <rmlv_vec.hxx>
 
 #include <iostream>
-#include <fmt/printf.h>
+#include <gtest/gtest.h>
 
 using namespace rqdq;
 using namespace std;
 
-int main() {
+namespace {
+
+TEST(PackedStream, BasicOperation) {
 	rglv::FastPackedStream ps;
 	ps.appendByte(11);
 	ps.appendInt(0x7f7f7f7f);
@@ -16,16 +18,17 @@ int main() {
 	ps.appendByte(8);
 	ps.appendByte(38);
 
-	auto xa = ps.consumeByte();
-	auto xb = ps.consumeInt();
-	auto xc = ps.consumeVec4();
-	auto xd = ps.consumeByte();
-	auto xe = ps.consumeByte();
-	auto xf = ps.consumeByte();
-	fmt::printf("%d,", xa);
-	fmt::printf("%08x,", xb);
-	cout << xc;
-	fmt::printf("%d,", xd);
-	fmt::printf("%d,", xe);
-	fmt::printf("%d,", xf);
-}
+	EXPECT_EQ(ps.consumeByte(), 11);
+	EXPECT_EQ(ps.consumeInt(), 0x7f7f7f7f);
+
+	auto v = ps.consumeVec4();
+	EXPECT_FLOAT_EQ(v.x, 1.1);
+	EXPECT_FLOAT_EQ(v.y, 2.2);
+	EXPECT_FLOAT_EQ(v.z, 3.3);
+	EXPECT_FLOAT_EQ(v.w, 4.4);
+
+	EXPECT_EQ(ps.consumeByte(), 44);
+	EXPECT_EQ(ps.consumeByte(), 8);
+	EXPECT_EQ(ps.consumeByte(), 38); }
+
+}  // close unnamed namespace

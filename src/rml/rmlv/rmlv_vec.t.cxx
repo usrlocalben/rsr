@@ -2,301 +2,252 @@
 
 #include <iostream>
 #include <string>
+#include <gtest/gtest.h>
+namespace {
+using namespace rqdq::rmlv;
 
+#define EXPECT_VEC4_EQ(val1, val2) \
+	EXPECT_FLOAT_EQ(val1.x, val2.x); \
+	EXPECT_FLOAT_EQ(val1.y, val2.y); \
+	EXPECT_FLOAT_EQ(val1.z, val2.z); \
+	EXPECT_FLOAT_EQ(val1.w, val2.w)
 
-void ok() {
-	std::cout << "."; }
+#define EXPECT_VEC3_EQ(val1, val2) \
+	EXPECT_FLOAT_EQ(val1.x, val2.x); \
+	EXPECT_FLOAT_EQ(val1.y, val2.y); \
+	EXPECT_FLOAT_EQ(val1.z, val2.z)
 
-void fail() {
-	std::cout << "F"; }
+TEST(Vec4, Add) {
+	vec4 a{ 1, 2, 3, 4 };
+	vec4 b{ 12, 13, 14, 15 };
+	vec4 res = a + b;
+	EXPECT_FLOAT_EQ(res.x, 13);
+	EXPECT_FLOAT_EQ(res.y, 15);
+	EXPECT_FLOAT_EQ(res.z, 17);
+	EXPECT_FLOAT_EQ(res.w, 19); }
 
+TEST(Vec4, Subtract) {
+	vec4 a{ 1, 2, 3, 4 };
+	vec4 b{ 12, 13, 14, 15 };
+	vec4 res = b - a;
+	EXPECT_FLOAT_EQ(res.x, 11);
+	EXPECT_FLOAT_EQ(res.y, 11);
+	EXPECT_FLOAT_EQ(res.z, 11);
+	EXPECT_FLOAT_EQ(res.w, 11); }
 
-void assertEqual(const std::string& a, const std::string& b) {
-	if (a == b) {
-		ok();
-		return; }
-	std::cout << "error, strings not equal " << a << " != " << b << std::endl; }
+TEST(Vec4, Multiply) {
+	vec4 a{ 1, 2, 3, 4 };
+	vec4 b{ 12, 13, 14, 15 };
+	vec4 res = b * a;
+	EXPECT_FLOAT_EQ(res.x, 12);
+	EXPECT_FLOAT_EQ(res.y, 26);
+	EXPECT_FLOAT_EQ(res.z, 42);
+	EXPECT_FLOAT_EQ(res.w, 60); }
 
+TEST(Vec4, Divide) {
+	vec4 a{ 1, 2, 3, 4 };
+	vec4 b{ 12, 13, 14, 15 };
+	vec4 res = b / a;
+	EXPECT_FLOAT_EQ(res.x, 12);
+	EXPECT_FLOAT_EQ(res.y, 6.5);
+	EXPECT_FLOAT_EQ(res.z, 4.6666665);
+	EXPECT_FLOAT_EQ(res.w, 3.75); }
 
-void assertAlmostEqual(float a, float b) {
-	static const auto ep = 0.001f;
-	if (abs(a - b) < ep) {
-		ok();
-		return; }
-	std::cout << "error, not almost equal " << a << ", !~= " << b << std::endl; }
+TEST(Vec4, BroadcastInitializer) {
+	vec4 one{ 1 };
+	vec4 two{ 2 };
+	vec4 res = one + two;
+	EXPECT_FLOAT_EQ(res.x, 3);
+	EXPECT_FLOAT_EQ(res.y, 3);
+	EXPECT_FLOAT_EQ(res.z, 3);
+	EXPECT_FLOAT_EQ(res.w, 3); }
 
-
-void assertAlmostEqual(const rmlv::vec4& a, const rmlv::vec4& b) {
-	static const auto ep = 0.001f;
-	float dx = abs(a.x - b.x);
-	float dy = abs(a.y - b.y);
-	float dz = abs(a.z - b.z);
-	float dw = abs(a.w - b.w);
-	if (dx < ep && dy < ep && dz < ep && dw < ep) {
-		ok();
-		return; }
-	std::cout << "error, not almost equal " << a << ", !~= " << b << std::endl; }
-
-
-void test_vec4_basic_math() {
-	rmlv::vec4 a{ 1, 2, 3, 4 };
-	rmlv::vec4 b{ 12, 13, 14, 15 };
-	rmlv::vec4 res = a + b;
-
-//	std::cout << "test basic math 1" << std::endl;
-	assertAlmostEqual(res.x, 13);
-	assertAlmostEqual(res.y, 15);
-	assertAlmostEqual(res.z, 17);
-	assertAlmostEqual(res.w, 19);
-
-	res = b - a;
-//	std::cout << "test basic math 2" << std::endl;
-	assertAlmostEqual(res.x, 11);
-	assertAlmostEqual(res.y, 11);
-	assertAlmostEqual(res.z, 11);
-	assertAlmostEqual(res.w, 11);
-
-	res = b * a;
-//	std::cout << "test basic math 3" << std::endl;
-	assertAlmostEqual(res.x, 12);
-	assertAlmostEqual(res.y, 26);
-	assertAlmostEqual(res.z, 42);
-	assertAlmostEqual(res.w, 60);
-
-	res = b / a;
-//	std::cout << "test basic math 4" << std::endl;
-	assertAlmostEqual(res.x, 12);
-	assertAlmostEqual(res.y, 6.5);
-	assertAlmostEqual(res.z, 4.666);
-	assertAlmostEqual(res.w, 3.75);
-
-	rmlv::vec4 one{ 1 };
-	rmlv::vec4 two{ 2 };
-	res = one + two;
-//	std::cout << "test basic math 5" << std::endl;
-	assertAlmostEqual(res.x, 3);
-	assertAlmostEqual(res.y, 3);
-	assertAlmostEqual(res.z, 3);
-	assertAlmostEqual(res.w, 3);
-
-	rmlv::vec4 three{ 3 };
-	rmlv::vec4 started_default;
-
+TEST(Vec4, MutatedDefaultInit) {
+	vec4 three{ 3 };
+	vec4 started_default;
 	started_default.x = -2;
 	started_default.y = -3;
 	started_default.z = -4;
 	started_default.w = 10;
-	res = three + started_default;
-//	std::cout << "test basic math 6" << std::endl;
-	assertAlmostEqual(res.x, 1);
-	assertAlmostEqual(res.y, 0);
-	assertAlmostEqual(res.z, -1);
-	assertAlmostEqual(res.w, 13);
-	
-	std::cout << std::endl;
-}
+	vec4 res = three + started_default;
+	EXPECT_FLOAT_EQ(res.x, 1);
+	EXPECT_FLOAT_EQ(res.y, 0);
+	EXPECT_FLOAT_EQ(res.z, -1);
+	EXPECT_FLOAT_EQ(res.w, 13); }
+
+/*TEST(Vec4, xyz0) {
+	vec4 za{ 1, 2, 3, 4 };
+	auto expected = vec4{1,2,3,0};
+	EXPECT_VEC4_EQ(za.xyz0(), expected); }*/
+
+TEST(Vec4, Negate) {
+	vec4 d{ 2, 3, 4, 5};
+	auto expected = vec4{-2,-3,-4,-5};
+	EXPECT_VEC4_EQ(-d, expected); }
 
 
-void test_vec3_basic_math() {
-	rmlv::vec3 a{ 1, 2, 3 };
-	rmlv::vec3 b{ 12, 13, 14 };
-	rmlv::vec3 res = a + b;
 
-//	std::cout << "test basic math 1" << std::endl;
-	assertAlmostEqual(res.x, 13);
-	assertAlmostEqual(res.y, 15);
-	assertAlmostEqual(res.z, 17);
+// vec3
+TEST(Vec3, Add) {
+	vec3 a{ 1, 2, 3 };
+	vec3 b{ 12, 13, 14 };
+	vec3 res = a + b;
+	EXPECT_FLOAT_EQ(res.x, 13);
+	EXPECT_FLOAT_EQ(res.y, 15);
+	EXPECT_FLOAT_EQ(res.z, 17); }
 
-	res = b - a;
-//	std::cout << "test basic math 2" << std::endl;
-	assertAlmostEqual(res.x, 11);
-	assertAlmostEqual(res.y, 11);
-	assertAlmostEqual(res.z, 11);
+TEST(Vec3, Subtract) {
+	vec3 a{ 1, 2, 3 };
+	vec3 b{ 12, 13, 14 };
+	vec3 res = b - a;
+	EXPECT_FLOAT_EQ(res.x, 11);
+	EXPECT_FLOAT_EQ(res.y, 11);
+	EXPECT_FLOAT_EQ(res.z, 11); }
 
-	res = b * a;
-//	std::cout << "test basic math 3" << std::endl;
-	assertAlmostEqual(res.x, 12);
-	assertAlmostEqual(res.y, 26);
-	assertAlmostEqual(res.z, 42);
+TEST(Vec3, Multiply) {
+	vec3 a{ 1, 2, 3 };
+	vec3 b{ 12, 13, 14 };
+	vec3 res = b * a;
+	EXPECT_FLOAT_EQ(res.x, 12);
+	EXPECT_FLOAT_EQ(res.y, 26);
+	EXPECT_FLOAT_EQ(res.z, 42); }
 
-	res = b / a;
-//	std::cout << "test basic math 4" << std::endl;
-	assertAlmostEqual(res.x, 12);
-	assertAlmostEqual(res.y, 6.5);
-	assertAlmostEqual(res.z, 4.666);
+TEST(Vec3, Divide) {
+	vec3 a{ 1, 2, 3 };
+	vec3 b{ 12, 13, 14 };
+	vec3 res = b / a;
+	EXPECT_FLOAT_EQ(res.x, 12);
+	EXPECT_FLOAT_EQ(res.y, 6.5);
+	EXPECT_FLOAT_EQ(res.z, 4.6666665); }
 
-	rmlv::vec3 one{ 1 };
-	rmlv::vec3 two{ 2 };
-	res = one + two;
-//	std::cout << "test basic math 5" << std::endl;
-	assertAlmostEqual(res.x, 3);
-	assertAlmostEqual(res.y, 3);
-	assertAlmostEqual(res.z, 3);
+TEST(Vec3, BroadcastInitializer) {
+	vec3 one{ 1 };
+	vec3 two{ 2 };
+	vec3 res = one + two;
+	EXPECT_FLOAT_EQ(res.x, 3);
+	EXPECT_FLOAT_EQ(res.y, 3);
+	EXPECT_FLOAT_EQ(res.z, 3); }
 
-	rmlv::vec3 three{ 3 };
-	rmlv::vec3 started_default;
-
+TEST(Vec3, MutatedDefaultInit) {
+	vec3 three{ 3 };
+	vec3 started_default;
 	started_default.x = -2;
 	started_default.y = -3;
 	started_default.z = -4;
-	res = three + started_default;
-//	std::cout << "test basic math 6" << std::endl;
-	assertAlmostEqual(res.x, 1);
-	assertAlmostEqual(res.y, 0);
-	assertAlmostEqual(res.z, -1);
-	
-	std::cout << std::endl;
-}
+	vec3 res = three + started_default;
+	EXPECT_FLOAT_EQ(res.x, 1);
+	EXPECT_FLOAT_EQ(res.y, 0);
+	EXPECT_FLOAT_EQ(res.z, -1); }
 
+// vec3
+TEST(Vec2, Add) {
+	vec2 a{ 1, 2 };
+	vec2 b{ 12, 13 };
+	vec2 res = a + b;
+	EXPECT_FLOAT_EQ(res.x, 13);
+	EXPECT_FLOAT_EQ(res.y, 15); }
 
-void test_vec2_basic_math() {
-	rmlv::vec2 a{ 1, 2 };
-	rmlv::vec2 b{ 12, 13 };
-	rmlv::vec2 res = a + b;
+TEST(Vec2, Subtract) {
+	vec2 a{ 1, 2 };
+	vec2 b{ 12, 13 };
+	vec2 res = b - a;
+	EXPECT_FLOAT_EQ(res.x, 11);
+	EXPECT_FLOAT_EQ(res.y, 11); }
 
-//	std::cout << "test basic math 1" << std::endl;
-	assertAlmostEqual(res.x, 13);
-	assertAlmostEqual(res.y, 15);
+TEST(Vec2, Multiply) {
+	vec2 a{ 1, 2 };
+	vec2 b{ 12, 13 };
+	vec2 res = b * a;
+	EXPECT_FLOAT_EQ(res.x, 12);
+	EXPECT_FLOAT_EQ(res.y, 26); }
 
-	res = b - a;
-//	std::cout << "test basic math 2" << std::endl;
-	assertAlmostEqual(res.x, 11);
-	assertAlmostEqual(res.y, 11);
+TEST(Vec2, Divide) {
+	vec2 a{ 1, 2 };
+	vec2 b{ 12, 13 };
+	vec2 res = b / a;
+	EXPECT_FLOAT_EQ(res.x, 12);
+	EXPECT_FLOAT_EQ(res.y, 6.5); }
 
-	res = b * a;
-//	std::cout << "test basic math 3" << std::endl;
-	assertAlmostEqual(res.x, 12);
-	assertAlmostEqual(res.y, 26);
+TEST(Vec2, BroadcastInitializer) {
+	vec2 one{ 1 };
+	vec2 two{ 2 };
+	vec2 res = one + two;
+	EXPECT_FLOAT_EQ(res.x, 3);
+	EXPECT_FLOAT_EQ(res.y, 3); }
 
-	res = b / a;
-//	std::cout << "test basic math 4" << std::endl;
-	assertAlmostEqual(res.x, 12);
-	assertAlmostEqual(res.y, 6.5);
-
-	rmlv::vec2 one{ 1 };
-	rmlv::vec2 two{ 2 };
-	res = one + two;
-//	std::cout << "test basic math 5" << std::endl;
-	assertAlmostEqual(res.x, 3);
-	assertAlmostEqual(res.y, 3);
-
-	rmlv::vec2 three{ 3 };
-	rmlv::vec2 started_default;
-
+TEST(Vec2, MutatedDefaultInit) {
+	vec2 three{ 3 };
+	vec2 started_default;
 	started_default.x = -2;
 	started_default.y = -3;
-	res = three + started_default;
-//	std::cout << "test basic math 6" << std::endl;
-	assertAlmostEqual(res.x, 1);
-	assertAlmostEqual(res.y, 0);
-	
-	std::cout << std::endl;
-}
+	vec2 res = three + started_default;
+	EXPECT_FLOAT_EQ(res.x, 1);
+	EXPECT_FLOAT_EQ(res.y, 0); }
 
 
-/*void test_vec4_shuffles() {
-	mvec4f a{ 2, 3, 4, 5 };
-	mvec4f res;
+TEST(Hmax, Vec3) {
+	EXPECT_FLOAT_EQ(hmax(vec3{10,20,30}), 30);
+	EXPECT_FLOAT_EQ(hmax(vec3{30,20,10}), 30);
+	EXPECT_FLOAT_EQ(hmax(vec3{10,30,20}), 30); }
 
-	res = a.xxxx();
-	assertAlmostEqual(res, vec4{ 2,2,2,2 });
-	res = a.yyyy();
-	assertAlmostEqual(res, vec4{ 3,3,3,3 });
-	res = a.zzzz();
-	assertAlmostEqual(res, vec4{ 4,4,4,4 });
-	res = a.wwww();
-	assertAlmostEqual(res, vec4{ 5,5,5,5 });
+TEST(Hmax, Vec4) {
+	EXPECT_FLOAT_EQ(hmax(vec4{10,20,30,40}), 40);
+	EXPECT_FLOAT_EQ(hmax(vec4{40,30,20,10}), 40);
+	EXPECT_FLOAT_EQ(hmax(vec4{10,40,30,20}), 40);
+	EXPECT_FLOAT_EQ(hmax(vec4{10,30,40,20}), 40); }
 
-	res = a.yzxw();
-	assertAlmostEqual(res, vec4{ 3, 4, 2, 5 });
-	res = a.zxyw();
-	assertAlmostEqual(res, vec4{ 4, 2, 3, 5 });
+TEST(Hmin, Vec3) {
+	EXPECT_FLOAT_EQ(hmin(vec3{10,20,30}), 10);
+	EXPECT_FLOAT_EQ(hmin(vec3{30,20,10}), 10);
+	EXPECT_FLOAT_EQ(hmin(vec3{20,10,30}), 10); }
 
-	res = a.xyxy();
-	assertAlmostEqual(res, vec4{ 2, 3, 2, 3 });
-	res = a.zwzw();
-	assertAlmostEqual(res, vec4{ 4, 5, 4, 5 });
-	std::cout << std::endl;
-}*/
+TEST(Hmin, Vec4) {
+	EXPECT_FLOAT_EQ(hmin(vec4{10,20,30,40}), 10);
+	EXPECT_FLOAT_EQ(hmin(vec4{30,20,10,40}), 10);
+	EXPECT_FLOAT_EQ(hmin(vec4{20,10,30,40}), 10);
+	EXPECT_FLOAT_EQ(hmin(vec4{20,40,30,10}), 10); }
 
+TEST(Length, Vec4) {
+	EXPECT_FLOAT_EQ(length(vec4{4,4,0,0}), 5.6568542);
+	EXPECT_FLOAT_EQ(length(vec4{1,1,1,0}), 1.7320508);
+	EXPECT_FLOAT_EQ(length(vec4{1,1,1,1}), 2); }
 
-void test_vec3_more() {
-	assertAlmostEqual(hmax(rmlv::vec3{ 10,20,30 }), 30);
-	assertAlmostEqual(hmax(rmlv::vec3{ 30,20,10 }), 30);
-	assertAlmostEqual(hmax(rmlv::vec3{ 10,30,20 }), 30);
-	assertAlmostEqual(hmin(rmlv::vec3{ 10,20,30 }), 10);
-	assertAlmostEqual(hmin(rmlv::vec3{ 30,20,10 }), 10);
-	assertAlmostEqual(hmin(rmlv::vec3{ 10,30,20 }), 10);
-}
+TEST(Abs, Vec4) {
+	auto foo = vec4{-10,-20,30,-40};
+	auto expected = vec4{10,20,30,40};
+	EXPECT_VEC4_EQ(abs(foo), expected);
 
-/*void test_vec4_more() {
-	vec4 a{ 4, 4, 0, 0 };
-	auto len = length(a);
+	foo = vec4{100,-234,0,3.14};
+	expected = vec4{100,234,0,3.14};
+	EXPECT_VEC4_EQ(abs(foo), expected); }
 
-	assertAlmostEqual(len, 5.656);
-
-	vec4 b{ 1, 1, 1, 0 };
-	len = length(b);
-	assertAlmostEqual(len, 1.732);
-
-	vec4 c{ 1, 1, 1, 1 };
-	len = length(c);
-	assertAlmostEqual(len, 2);
-
-	vec4 d{ 2, 3, 4, 5 };
-	vec4 neg = -d;
-	assertAlmostEqual(neg, vec4{ -2, -3, -4, -5 });
-
-	vec4 e{ -10, -20, 30, -40 };
-	vec4 f{ 100, -234, 0, 3.14f };
-	assertAlmostEqual(abs(e), vec4{ 10, 20, 30, 40 });
-	assertAlmostEqual(abs(f), vec4{ 100, 234, 0, 3.14f });
-
+TEST(Dot, Vec4) {
 	vec4 da{ 2, 3, 4, 0 };
 	vec4 db{ 3, 4, 5, 0 };
-	assertAlmostEqual(dot(da, db), 3 * 2 + 4 * 3 + 5 * 4);
+	EXPECT_FLOAT_EQ(dot(da, db), 3*2+4*3+5*4+0*0); }
 
-	vec4 g{ 16 };
-	assertAlmostEqual(sqrt(g), vec4{ 4,4,4,4 });
+TEST(Sqrt, Vec4) {
+	vec4 foo{ 16 };
+	auto expected = vec4{4,4,4,4};
+	EXPECT_VEC4_EQ(sqrt(foo), expected); }
 
+TEST(Normalize, Vec4) {
 	vec4 h{ 10,10,10,0 };
-	assertAlmostEqual(normalize(h), vec4{ 0.5772f, 0.5772f, 0.5772f, 0 });
-	assertAlmostEqual(length(normalize(h)), 1.0);
+	auto expected_normal = vec4{ 0.57735026, 0.57735026, 0.57735026, 0 };
+	EXPECT_VEC4_EQ(normalize(h), expected_normal);
+	EXPECT_FLOAT_EQ(length(normalize(h)), 1.0); }
 
+TEST(Hadd, Vec4) {
 	vec4 i{ 4, 13, 8, -10 };
-	assertAlmostEqual(hadd(i), 4 + 13 + 8 + (-10));
-	assertAlmostEqual(hmin(i), -10);
-	assertAlmostEqual(hmax(i), 13);
+	EXPECT_FLOAT_EQ(hadd(i), 4 + 13 + 8 + (-10)); }
 
-	assertAlmostEqual(hmax(vec4{ 10,20,30,40 }), 40);
-	assertAlmostEqual(hmax(vec4{ 30,20,40,10 }), 40);
-	assertAlmostEqual(hmax(vec4{ 40,30,20,10 }), 40);
-	assertAlmostEqual(hmax(vec4{ 30,40,20,10 }), 40);
-	assertAlmostEqual(hmin(vec4{ 10,20,30,40 }), 10);
-	assertAlmostEqual(hmin(vec4{ 30,20,40,10 }), 10);
-	assertAlmostEqual(hmin(vec4{ 10,40,20,30 }), 10);
-	assertAlmostEqual(hmin(vec4{ 40,10,20,30 }), 10);
-
+TEST(Cross, Vec4) {
 	vec4 ca{ 3, 4, 5, 0 };
 	vec4 cb{ 4, 5, 6, 0 };
-	assertAlmostEqual(cross(ca,cb), vec4{ -1, 2, -1,0 });
+	auto expected = vec4{ -1, 2, -1,0 };
+	EXPECT_VEC4_EQ(cross(ca,cb), expected);
 	cb = vec4{ 4, 5, -6, 0 };
-	assertAlmostEqual(cross(ca, cb), vec4{ -49, 38, -1, 0 });
-	std::cout << std::endl;
+	expected = vec4{ -49, 38, -1, 0 };
+	EXPECT_VEC4_EQ(cross(ca, cb), expected); }
 
-
-	vec4 pa{ 10,20,30,10 };
-	assertAlmostEqual(perspective_divide(pa), vec4{ 1,2,3,1.0f / 10.0f });
-
-	vec4 za{ 1, 2, 3, 4 };
-	assertAlmostEqual(za.xyz0(), vec4{ 1,2,3,0 });
-}*/
-
-
-int main() {
-	test_vec4_basic_math();
-	test_vec3_basic_math();
-	test_vec2_basic_math();
-//	test_vec4_shuffles();
-//	test_vec4_more();
-	return 0; }
+} // close unnamed namespace
