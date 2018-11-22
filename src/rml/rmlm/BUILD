@@ -9,10 +9,11 @@ cxx_library(
         ],
     )
 
-cxx_exe(
+cxx_test(
     name='mat4_test',
     srcs=['rmlm_mat4.t.cxx'],
     deps=[
+        '3rdparty/googletest:gtest_main',
         'src/rml/rmlv:vec',
         ':mat4',
         ],

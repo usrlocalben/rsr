@@ -3,69 +3,73 @@
 
 #include <string>
 #include <iostream>
+#include <gtest/gtest.h>
 
 using namespace rqdq;
 using namespace std;
 
+namespace {
 
-void ok() {
-	cout << "."; }
+#define EXPECT_VEC4_EQ(val1, val2) \
+	EXPECT_FLOAT_EQ(val1.x, val2.x); \
+	EXPECT_FLOAT_EQ(val1.y, val2.y); \
+	EXPECT_FLOAT_EQ(val1.z, val2.z); \
+	EXPECT_FLOAT_EQ(val1.w, val2.w)
 
+using namespace rmlm;
+using namespace rmlv;
 
-void fail() {
-	cout << "F"; }
-
-
-void assertAlmostEqual(const rmlv::vec4& a, const rmlv::vec4& b) {
-	static const auto ep = 0.001f;
-	float dx = abs(a.x - b.x);
-	float dy = abs(a.y - b.y);
-	float dz = abs(a.z - b.z);
-	float dw = abs(a.w - b.w);
-	if (dx < ep && dy < ep && dz < ep && dw < ep) {
-		ok();
-		return; }
-	cout << "error, not almost equal " << a << ", !~= " << b << endl; }
+TEST(Mat4, IdentityMultiplyGivesIdentity) {
+	mat4 m = mat4::ident();
+	vec4 a{ 3, 4, 5, 6 };
+	auto result = m * a;
+	auto expected = vec4{3,4,5,6};
+	EXPECT_VEC4_EQ(result, expected); }
 
 
-void test_mat4_basic() {
-	rmlm::mat4 m = rmlm::mat4::ident();
+TEST(Mat43dScale, ScalesXYZNotW) {
+	vec4 b{ 10, 10, 10, 1 };
+	auto m = mat4::scale(vec4{ 1, 2, 3, 4 });  // w component should be dropped
+	auto result = m * b;
+	auto expected = vec4{ 10, 20, 30, 1};
+	EXPECT_VEC4_EQ(result, expected); }
 
-	rmlv::vec4 a{ 3, 4, 5, 6 };
-	assertAlmostEqual(m*a, rmlv::vec4{ 3,4,5,6 });
+TEST(Mat43dTranslate, ChangeInZ) {
+	auto a = vec4{ 3, 4, 5, 1 };
+	auto m = mat4::translate(0, 0, -10);
+	auto result = m * a;
+	auto expected = vec4{ 3, 4, -5, 1 };
+	EXPECT_VEC4_EQ(result, expected); }
 
-	rmlv::vec4 b{ 10, 10, 10, 1 };
-	m = rmlm::mat4::scale(rmlv::vec4{ 1, 2, 3, 4 });  // w component should be dropped
-	assertAlmostEqual(m*b, rmlv::vec4{ 10, 20, 30, 1 });
-
-	a = rmlv::vec4{ 3, 4, 5, 1 };
-	m = rmlm::mat4::translate(0, 0, -10);
-	assertAlmostEqual(m*a, rmlv::vec4{ 3, 4, -5, 1 });
-
-	m = rmlm::mat4{
+TEST(Mat4, InitializeWithFloatsHasExpectedInternalStorage) {
+	auto m = mat4{
 		0,1,2,3,
 		4,5,6,7,
 		8,9,10,11,
 		12,13,14,15 };
-	assertAlmostEqual(m.ff[0], 0);
-	assertAlmostEqual(m.ff[1], 4);
-	assertAlmostEqual(m.ff[2], 8);
-	assertAlmostEqual(m.ff[3], 12);
 
-	assertAlmostEqual(m.ff[4], 1);
-	assertAlmostEqual(m.ff[5], 5);
-	assertAlmostEqual(m.ff[6], 9);
-	assertAlmostEqual(m.ff[7], 13);
+	// col 0
+	EXPECT_FLOAT_EQ(m.ff[0], 0);
+	EXPECT_FLOAT_EQ(m.ff[1], 4);
+	EXPECT_FLOAT_EQ(m.ff[2], 8);
+	EXPECT_FLOAT_EQ(m.ff[3], 12);
 
-	// skip the third col...
+	// col 1
+	EXPECT_FLOAT_EQ(m.ff[4], 1);
+	EXPECT_FLOAT_EQ(m.ff[5], 5);
+	EXPECT_FLOAT_EQ(m.ff[6], 9);
+	EXPECT_FLOAT_EQ(m.ff[7], 13);
 
-	assertAlmostEqual(m.ff[12], 3);
-	assertAlmostEqual(m.ff[13], 7);
-	assertAlmostEqual(m.ff[14], 11);
-	assertAlmostEqual(m.ff[15], 15);
-}
+	// col 2
+	EXPECT_FLOAT_EQ(m.ff[8], 2);
+	EXPECT_FLOAT_EQ(m.ff[9], 6);
+	EXPECT_FLOAT_EQ(m.ff[10], 10);
+	EXPECT_FLOAT_EQ(m.ff[11], 14);
 
+	// col 3
+	EXPECT_FLOAT_EQ(m.ff[12], 3);
+	EXPECT_FLOAT_EQ(m.ff[13], 7);
+	EXPECT_FLOAT_EQ(m.ff[14], 11);
+	EXPECT_FLOAT_EQ(m.ff[15], 15); }
 
-int main(int argc, char **argv) {
-	test_mat4_basic();
-}
+}  // close unnamed namespace

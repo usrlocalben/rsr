@@ -41,3 +41,13 @@ cxx_test(
         ':vec',
         ],
     )
+
+cxx_test(
+    name='soa_unittest',
+    srcs=['rmlv_soa.t.cxx'],
+    deps=[
+        '3rdparty/googletest:gtest_main',
+        ':soa',
+        ':vec',
+        ],
+    )
