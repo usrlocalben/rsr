@@ -21,7 +21,7 @@ namespace rqv {
 
 struct FxXYQuad : GlNode {
 	int d_activeBuffer = 0;
-	std::array<rglv::VertexArray_PNM, 3> d_buffers;
+	std::array<rglv::VertexArray_F3F3F3, 3> d_buffers;
 	rcls::vector<uint16_t> mesh_idx;
 
 	// connections

@@ -190,17 +190,17 @@ public:
 		case 4096: d_cs.texture0Dim = 12; break;
 		default: std::cout << "invalid texture size " << dim << std::endl; } }
 
-	void glUseArray(const VertexArray_PNM& vao) {
+	void glUseArray(const VertexArray_F3F3F3& vao) {
 		d_dirty = true;
 		d_cs.array = static_cast<const void*>(&vao);
-		d_cs.arrayFormat = AF_VAO_PNM; }
+		d_cs.arrayFormat = AF_VAO_F3F3F3; }
 
 	//inline void glUniform(const VertexInputUniform& viu) {
 	//	state.vertex_input_uniform = viu; }
 
-	//void drawElements(const VertexArray_PN&, const rcls::vector<int>&);
-	//void drawElements(const VertexArray_PNM&, const rcls::vector<int>&);
-	//void drawElements(const VertexArray_PN&);
+	//void drawElements(const VertexArray_F3F3&, const rcls::vector<int>&);
+	//void drawElements(const VertexArray_F3F3F3&, const rcls::vector<int>&);
+	//void drawElements(const VertexArray_F3F3&);
 	void glDrawElements(const int mode, const int count, const int type, const uint16_t * indices, const bool enableClipping=true);
 	void glDrawArrays(const int mode, const int start, const int count, const bool enableClipping=true);
 	void glClear(const rmlv::vec4 color);

@@ -22,14 +22,14 @@ namespace rqv {
 
 struct FxFoo : GlNode {
 	// config
-	rglv::VertexArray_PNM meshVAO;
+	rglv::VertexArray_F3F3F3 meshVAO;
 	rcls::vector<uint16_t> meshIndices;
 
 	// inputs
 	MaterialNode* material_node = nullptr;
 
 	FxFoo(const std::string& name, const InputList& inputs, const rglv::Mesh& mesh) :GlNode(name, inputs) {
-		std::tie(meshVAO, meshIndices) = rglv::make_indexed_vao_PNM(mesh); }
+		std::tie(meshVAO, meshIndices) = rglv::make_indexed_vao_F3F3F3(mesh); }
 
 	void connect(const std::string&, NodeBase*, const std::string&) override;
 	std::vector<NodeBase*> deps() override;

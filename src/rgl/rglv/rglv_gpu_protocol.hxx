@@ -37,7 +37,7 @@ constexpr uint8_t CMD_STORE_TRUECOLOR = 22;
 // internal use below this point
 constexpr uint8_t CMD_CLIPPED_TRI = 100;
 
-constexpr int AF_VAO_PNM = 1;  // VertexArray_PNM
+constexpr int AF_VAO_F3F3F3 = 1;  // VertexArray_F3F3F3
 
 }  // close package namespace
 }  // close enterprise namespace

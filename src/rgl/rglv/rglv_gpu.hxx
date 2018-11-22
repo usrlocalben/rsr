@@ -574,10 +574,10 @@ private:
 			return; }
 		using std::min, std::max;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
-		assert(state.arrayFormat == AF_VAO_PNM);
+		assert(state.arrayFormat == AF_VAO_F3F3F3);
 		assert(state.array != nullptr);
 
-		const auto& vao = *static_cast<const VertexArray_PNM*>(state.array);
+		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 
 		const auto clipper = Clipper{};
 
@@ -652,9 +652,9 @@ private:
 				processAsManyFacesAsPossible(); }
 
 			//----- begin vao specialization -----
-			vi_.a0 = vao.position.loadxyz1(vi);
-			vi_.a1 = vao.normal.loadxyz0(vi);
-			vi_.a2 = vao.float3_1.loadxyz0(vi);
+			vi_.a0 = vao.a0.loadxyz1(vi);
+			vi_.a1 = vao.a1.loadxyz0(vi);
+			vi_.a2 = vao.a2.loadxyz0(vi);
 			//------ end vao specialization ------
 
 			qfloat4 coord;
@@ -692,10 +692,10 @@ private:
 			return; }
 		using std::min, std::max;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
-		assert(state.arrayFormat == AF_VAO_PNM);
+		assert(state.arrayFormat == AF_VAO_F3F3F3);
 		assert(state.array != nullptr);
 
-		const auto& vao = *static_cast<const VertexArray_PNM*>(state.array);
+		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 
 		const auto clipper = Clipper{};
 
@@ -770,9 +770,9 @@ private:
 				processAsManyFacesAsPossible(); }
 
 			//----- begin vao specialization -----
-			vi_.a0 = vao.position.loadxyz1(vi);
-			vi_.a1 = vao.normal.loadxyz0(vi);
-			vi_.a2 = vao.float3_1.loadxyz0(vi);
+			vi_.a0 = vao.a0.loadxyz1(vi);
+			vi_.a1 = vao.a1.loadxyz0(vi);
+			vi_.a2 = vao.a2.loadxyz0(vi);
 			//------ end vao specialization ------
 
 			qfloat4 coord;
@@ -821,8 +821,8 @@ private:
 
 		//---- begin vao specialization ----
 		assert(state.array != nullptr);
-		assert(state.arrayFormat == AF_VAO_PNM);
-		auto& vao = *static_cast<const VertexArray_PNM*>(state.array);
+		assert(state.arrayFormat == AF_VAO_F3F3F3);
+		auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 		//----- end vao specialization -----
 
 		auto& cbc = *d_cc;
@@ -861,9 +861,9 @@ private:
 				for (int i=0; i<3; ++i) {
 					const auto idx = faceIndices[i];
 					//---- vao specialization ----
-					vi_[i].a0.setLane(li, vec4{ vao.position.at(idx), 1 });
-					vi_[i].a1.setLane(li, vec4{ vao.normal.at(idx), 0 });
-					vi_[i].a2.setLane(li, vec4{ vao.float3_1.at(idx), 0 }); }
+					vi_[i].a0.setLane(li, vec4{ vao.a0.at(idx), 1 });
+					vi_[i].a1.setLane(li, vec4{ vao.a1.at(idx), 0 });
+					vi_[i].a2.setLane(li, vec4{ vao.a2.at(idx), 0 }); }
 				li += 1; }
 
 			if (!eof && (li < 4)) {
@@ -895,7 +895,7 @@ private:
 		static rcls::vector<ClippedVertex> poly;
 		static rcls::vector<ClippedVertex> tmp;
 
-		const auto& vao = *static_cast<const VertexArray_PNM*>(state.array);
+		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 		const auto clipper = Clipper{};
 
 		const rmlm::qmat4 qm_dm{ d_deviceMatrix };
@@ -910,9 +910,9 @@ private:
 
 				//---- begin vao specialization ----
 				VertexInput vi_;
-				vi_.a0 = vec4{ vao.position.at(idx), 1 };
-				vi_.a1 = vec4{ vao.normal.at(idx), 0 };
-				vi_.a2 = vec4{ vao.float3_1.at(idx), 0 };
+				vi_.a0 = vec4{ vao.a0.at(idx), 1 };
+				vi_.a1 = vec4{ vao.a1.at(idx), 0 };
+				vi_.a2 = vec4{ vao.a2.at(idx), 0 };
 				//----- end vao specialization -----
 
 				qfloat4 coord;

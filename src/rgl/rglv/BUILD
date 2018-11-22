@@ -93,6 +93,7 @@ cxx_library(
     srcs=['rglv_mesh.cxx'],
     hdrs=['rglv_mesh.hxx'],
     deps=[
+        '3rdparty/tuple_hash',
         'src/rcl/rclr:algorithm',
         'src/rcl/rcls:aligned_containers',
         'src/rml/rmlv:vec',

@@ -9,6 +9,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <tuple_hash.hxx>
 
 namespace rqdq {
 namespace rglv {
@@ -168,57 +169,67 @@ void Mesh::compute_edges() {
 }
 
 
-std::tuple<VertexArray_PN, rcls::vector<uint16_t>> make_indexed_vao_PN(const Mesh& m) {
-	VertexArray_PN d;
+std::tuple<VertexArray_F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3(const Mesh& m) {
+	VertexArray_F3F3 vao;
+	using vertexdata = std::tuple<vec3, vec3>;
+	std::unordered_map<vertexdata, int> vertexMap;
 	rcls::vector<uint16_t> idx;
 
 	for (const auto& face : m.faces) {
 		for (int i = 0; i < 3; i++) {
-			auto point = m.points[face.point_idx[i]];
+			auto d0 = m.points[face.point_idx[i]];
 			// auto normal = m.normals[face.normal_idx[i]];
 			auto smooth = m.vertex_normals[face.point_idx[i]];
 			auto faceted = face.normal;
-			auto normal = normalize(lerp(smooth, faceted, 0.666));
+			auto d1 = normalize(lerp(smooth, faceted, 0.666));
 			// auto texcoord = m.texcoords[face.texcoord_idx[i]];
-			int vao_idx = d.upsert(point, normal); // , texcoord);
-			idx.push_back(vao_idx); }}
 
-	d.pad();
-	return std::tuple{d, idx}; }
+			auto key = vertexdata{d0, d1};
+			int vertexIdx;
+			if (auto found = vertexMap.find(key); found != vertexMap.end()) {
+				vertexIdx = found->second; }
+			else {
+				vertexIdx = vertexMap[key] = vao.append(d0, d1); }
+			idx.push_back(vertexIdx); }}
+
+	vao.pad();
+	return std::tuple{vao, idx}; }
 
 
-std::tuple<VertexArray_PNM, rcls::vector<uint16_t>> make_indexed_vao_PNM(const Mesh& m) {
-	VertexArray_PNM d;
+std::tuple<VertexArray_F3F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3F3(const Mesh& m) {
+	VertexArray_F3F3F3 vao;
+	using vertexdata = std::tuple<vec3, vec3, vec3>;
+	std::unordered_map<vertexdata, int> vertexMap;
 	rcls::vector<uint16_t> idx;
 
 	for (const auto& face : m.faces) {
 		for (int i = 0; i < 3; i++) {
-			int vao_idx = d.upsert(
+			// position
+			auto d0 = m.points[face.point_idx[i]];
+			// computed smooth normals
+			auto d1 = m.vertex_normals[face.point_idx[i]];
+			// computed face normals
+			auto d2 = face.normal;
 
-				// position
-				m.points[face.point_idx[i]],
+			// blended normals
+			// normalize(lerp(smooth, faceted, 0.666)),
 
-				// computed smooth normals
-				m.vertex_normals[face.point_idx[i]],
+			// obj normals
+			// m.normals[face.normal_idx[i]],
 
-				// computed face normals
-				face.normal
+			// obj texture coords
+			// vec3{ m.texcoords[face.texcoord_idx[i]], 0 },
 
-				// blended normals
-				// normalize(lerp(smooth, faceted, 0.666)),
+			vertexdata key{ d0, d1, d2 };
+			int vertexIdx;
+			if (auto found = vertexMap.find(key); found != vertexMap.end()) {
+				vertexIdx = found->second; }
+			else {
+				vertexIdx = vertexMap[key] = vao.append(d0, d1, d2); }
+			idx.push_back(vertexIdx); }}
 
-				// obj normals
-				// m.normals[face.normal_idx[i]],
-
-
-				// obj texture coords
-				// vec3{ m.texcoords[face.texcoord_idx[i]], 0 },
-				);
-
-			idx.push_back(vao_idx); }}
-
-	d.pad();
-	return std::tuple{d, idx}; }
+	vao.pad();
+	return std::tuple{vao, idx}; }
 
 
 }  // close package namespace

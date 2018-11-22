@@ -25,7 +25,7 @@ namespace rqv {
 
 struct FxAuraForLaura final : GlNode {
 	// state
-	std::array<rglv::VertexArray_PNM, 3> d_buffers;
+	std::array<rglv::VertexArray_F3F3F3, 3> d_buffers;
 	int d_activeBuffer = 0;
 	rcls::vector<uint16_t> d_meshIndices;
 	rglv::Mesh d_src;

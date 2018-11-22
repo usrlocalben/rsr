@@ -10,7 +10,7 @@ namespace rqdq {
 namespace rglv {
 
 
-struct SoArray_Float2 {
+struct Float2Array {
 	rmlv::vec2 at(int idx) const {
 		return rmlv::vec2{x[idx], y[idx]};}
 
@@ -20,7 +20,7 @@ struct SoArray_Float2 {
 	int size() const {
 		return int(x.size()); }
 
-	void push_back(rmlv::vec2 a) {
+	inline void push_back(rmlv::vec2 a) {
 		x.push_back(a.x); y.push_back(a.y);}
 
 	void clear() {
@@ -30,7 +30,7 @@ struct SoArray_Float2 {
 	};
 
 
-struct SoArray_Float3 {
+struct Float3Array {
 	rmlv::vec3 at(int idx) const {
 		return rmlv::vec3{x[idx], y[idx], z[idx]}; }
 
@@ -47,7 +47,7 @@ struct SoArray_Float3 {
 		assert(x.size() == y.size() && y.size() == z.size());
 		return int(x.size()); }
 
-	void push_back(rmlv::vec3 a) {
+	inline void push_back(rmlv::vec3 a) {
 		assert(x.size() == y.size() && y.size() == z.size());
 		x.push_back(a.x); y.push_back(a.y); z.push_back(a.z); }
 
@@ -60,123 +60,87 @@ struct SoArray_Float3 {
 	rcls::vector<float> x, y, z; };
 
 
-struct VertexArray_PN {
-	std::optional<int> find(const rmlv::vec3& p, const rmlv::vec3& n) const {
-		for (int i = 0; i < size(); i++) {
-			if (almost_equal(position.at(i), p) &&
-				almost_equal(normal.at(i), n))
-				return i; }
-		return {}; }
-
-	int append(const rmlv::vec3& p, const rmlv::vec3& n) {
-		position.push_back(p);
-		normal.push_back(n);
-		return size() - 1; }
-
+struct VertexArray_F3F3 {
 	void clear() {
-		position.clear();
-		normal.clear(); }
+		a0.clear();
+		a1.clear(); }
+
+	int size() const {
+		return int(a0.size());}
+
+	int append(const rmlv::vec3& v0, const rmlv::vec3& v1) {
+		int idx = size();
+		a0.push_back(v0);
+		a1.push_back(v1);
+		return idx; }
 
 	void pad() {
 		const int rag = size() % 4;
 		const int needed = 4 - rag;
 		for (int i = 0; i < needed; i++) {
-			position.push_back({0.0f});
-			normal.push_back({0.0f});}}
+			a0.push_back({0.0f});
+			a1.push_back({0.0f});}}
 
-	int upsert(const rmlv::vec3& p, const rmlv::vec3& n) {
-		if (auto existing_idx = find(p, n)) {
-			return existing_idx.value(); }
-		return append(p, n); }
+	Float3Array a0;
+	Float3Array a1; };
+
+
+struct VertexArray_F3F3F2 {
+	void clear() {
+		a0.clear();
+		a1.clear();
+		a2.clear();}
 
 	int size() const {
-		return int(position.size());}
+		return int(a0.size());}
 
-	SoArray_Float3 position;
-	SoArray_Float3 normal; };
-
-
-struct VertexArray_PNT {
-	std::optional<int> find(const rmlv::vec3& p, const rmlv::vec3& n, const rmlv::vec2& t) const {
-		for (int i = 0; i < size(); i++) {
-			if (almost_equal(position.at(i), p) &&
-				almost_equal(normal.at(i), n) &&
-				almost_equal(texcoord.at(i), t))
-				return i; }
-		return {}; }
-
-	int append(const rmlv::vec3& p, const rmlv::vec3& n, const rmlv::vec2& t) {
-		position.push_back(p);
-		normal.push_back(n);
-		texcoord.push_back(t);
-		return size() - 1; }
-
-	void clear() {
-		position.clear();
-		normal.clear();
-		texcoord.clear();}
+	int append(rmlv::vec3 v0, rmlv::vec3 v1, rmlv::vec2 v2) {
+		int idx = size();
+		a0.push_back(v0);
+		a1.push_back(v1);
+		a2.push_back(v2);
+		return idx; }
 
 	void pad() {
 		const int rag = size() % 4;
 		const int needed = 4 - rag;
 		for (int i = 0; i < needed; i++) {
-			position.push_back({0.0f});
-			texcoord.push_back({0.0f});
-			normal.push_back({0.0f});}}
+			a0.push_back({0.0f});
+			a2.push_back({0.0f});
+			a1.push_back({0.0f});}}
 
-	int upsert(const rmlv::vec3& p, const rmlv::vec3& n, const rmlv::vec2& t) {
-		if (auto existing_idx = find(p, n, t)) {
-			return existing_idx.value(); }
-		return append(p, n, t); }
+	Float3Array a0;
+	Float3Array a1;
+	Float2Array a2; };
+
+
+struct VertexArray_F3F3F3 {
+	void clear() {
+		a0.clear();
+		a1.clear();
+		a2.clear();}
 
 	int size() const {
-		return int(position.size());}
+		return int(a0.size());}
 
-	SoArray_Float3 position;
-	SoArray_Float3 normal;
-	SoArray_Float2 texcoord;
-	};
-
-
-struct VertexArray_PNM {
-	std::optional<int> find(const rmlv::vec3 p, const rmlv::vec3 n, const rmlv::vec3 a) const {
-		for (int i = 0; i < size(); i++) {
-			if (almost_equal(position.at(i), p) &&
-				almost_equal(normal.at(i), n) &&
-				almost_equal(float3_1.at(i), a))
-				return i; }
-		return {}; }
-
-	int append(const rmlv::vec3 p, const rmlv::vec3 n, const rmlv::vec3 a) {
-		position.push_back(p);
-		normal.push_back(n);
-		float3_1.push_back(a);
-		return size() - 1; }
-
-	void clear() {
-		position.clear();
-		normal.clear();
-		float3_1.clear();}
+	int append(const rmlv::vec3 v0, const rmlv::vec3 v1, const rmlv::vec3 v2) {
+		int idx = size();
+		a0.push_back(v0);
+		a1.push_back(v1);
+		a2.push_back(v2);
+		return idx; }
 
 	void pad() {
 		const int rag = size() % 4;
 		const int needed = 4 - rag;
 		for (int i = 0; i < needed; i++) {
-			position.push_back({0.0f});
-			float3_1.push_back({0.0f});
-			normal.push_back({0.0f});}}
+			a0.push_back({0.0f});
+			a1.push_back({0.0f});
+			a2.push_back({0.0f});}}
 
-	int upsert(const rmlv::vec3 p, const rmlv::vec3 n, const rmlv::vec3 a) {
-		if (auto existing_idx = find(p, n, a)) {
-			return existing_idx.value(); }
-		return append(p, n, a); }
-
-	int size() const {
-		return int(position.size());}
-
-	SoArray_Float3 position;
-	SoArray_Float3 normal;
-	SoArray_Float3 float3_1; };
+	Float3Array a0;
+	Float3Array a1;
+	Float3Array a2; };
 
 
 }  // close package namespace

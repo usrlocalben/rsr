@@ -17,6 +17,7 @@
         $(SolutionDir)\3rdparty\rocket;
         $(SolutionDir)\3rdparty\ryg-srgb;
         $(SolutionDir)\3rdparty\sse-pow;
+        $(SolutionDir)\3rdparty\tuple_hash;
 	%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>

@@ -123,7 +123,7 @@ struct Surface {
 struct FxMC : GlNode {
 	Surface d_field;
 
-	std::array<std::vector<rglv::VertexArray_PNM>, 3> d_buffers;
+	std::array<std::vector<rglv::VertexArray_F3F3F3>, 3> d_buffers;
 	std::array<std::atomic<int>, 3> d_bufferEnd = { 0,0,0 };
 	std::atomic<int> d_activeBuffer = 0;
 	std::mutex d_bufferMutex;
@@ -159,7 +159,7 @@ struct FxMC : GlNode {
 	void draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) override;
 
 	void swapBuffers();
-	rglv::VertexArray_PNM& allocVAO();
+	rglv::VertexArray_F3F3F3& allocVAO();
 
 	rclmt::jobsys::Job* finalize() {
 		return rclmt::jobsys::make_job(FxMC::finalizeJmp, std::tuple{this}); }

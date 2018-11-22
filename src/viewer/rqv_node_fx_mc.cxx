@@ -168,7 +168,7 @@ void FxMC::swapBuffers() {
 	d_bufferEnd[d_activeBuffer] = 0; }
 
 
-rglv::VertexArray_PNM& FxMC::allocVAO() {
+rglv::VertexArray_F3F3F3& FxMC::allocVAO() {
 	std::scoped_lock lock(d_bufferMutex);
 	auto& buffer = d_buffers[d_activeBuffer];
 	auto& end = d_bufferEnd[d_activeBuffer];

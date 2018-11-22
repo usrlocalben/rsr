@@ -90,6 +90,9 @@ struct alignas(8) vec2 {
 	vec2& operator*=(const float b) { x *= b; y *= b; return *this; }
 	vec2& operator/=(const float b) { x /= b; y /= b; return *this; }
 
+	bool operator==(const vec2& other) const {
+		return x==other.x && y==other.y; }
+
 	float x, y; };
 
 
@@ -135,6 +138,9 @@ struct alignas(4) vec3 {
 	vec3& operator-=(const float b) { x -= b; y -= b; z -= b; return *this; }
 	vec3& operator*=(const float b) { x *= b; y *= b; z *= b; return *this; }
 	vec3& operator/=(const float b) { x /= b; y /= b; z /= b; return *this; }
+
+	bool operator==(const vec3& other) const {
+		return x==other.x && y==other.y && z==other.z; }
 
 	static inline vec3 from_rgb(const int rgb) {
 		return vec3{
@@ -403,6 +409,30 @@ inline auto unpack_udec3(uint32_t N) {
 }  // close package namespace
 }  // close enterprise namespace
 
+namespace std {
+
+template <>
+struct hash<rqdq::rmlv::vec2> {
+	std::size_t operator()(const rqdq::rmlv::vec2& k) const {
+		using std::size_t;
+		using std::hash;
+		return hash<float>()(k.x) ^ hash<float>()(k.y); }};
+
+template <>
+struct hash<rqdq::rmlv::vec3> {
+	std::size_t operator()(const rqdq::rmlv::vec3& k) const {
+		using std::size_t;
+		using std::hash;
+		return hash<float>()(k.x) ^ hash<float>()(k.y) ^ hash<float>()(k.z); }};
+
+template <>
+struct hash<rqdq::rmlv::vec4> {
+	std::size_t operator()(const rqdq::rmlv::vec4& k) const {
+		using std::size_t;
+		using std::hash;
+		return hash<float>()(k.x) ^ hash<float>()(k.y) ^ hash<float>()(k.z) ^ hash<float>()(k.w); }};
+
+}  // close std namespace
 
 std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec4& v);
 std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec3& v);

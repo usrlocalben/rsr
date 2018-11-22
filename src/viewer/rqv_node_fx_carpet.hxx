@@ -22,7 +22,7 @@ namespace rqv {
 
 struct FxCarpet final : GlNode {
 	// state
-	std::array<rglv::VertexArray_PNM, 3> d_buffers;
+	std::array<rglv::VertexArray_F3F3F3, 3> d_buffers;
 	int d_activeBuffer = 0;
 
 	// inputs
