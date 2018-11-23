@@ -181,7 +181,7 @@ std::tuple<VertexArray_F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3(const
 			// auto normal = m.normals[face.normal_idx[i]];
 			auto smooth = m.vertex_normals[face.point_idx[i]];
 			auto faceted = face.normal;
-			auto d1 = normalize(lerp(smooth, faceted, 0.666));
+			auto d1 = normalize(mix(smooth, faceted, 0.666));
 			// auto texcoord = m.texcoords[face.texcoord_idx[i]];
 
 			auto key = vertexdata{d0, d1};
@@ -212,7 +212,7 @@ std::tuple<VertexArray_F3F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3F3(c
 			auto d2 = face.normal;
 
 			// blended normals
-			// normalize(lerp(smooth, faceted, 0.666)),
+			// normalize(mix(smooth, faceted, 0.666)),
 
 			// obj normals
 			// m.normals[face.normal_idx[i]],

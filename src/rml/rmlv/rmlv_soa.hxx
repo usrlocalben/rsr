@@ -11,13 +11,9 @@
 namespace rqdq {
 namespace rmlv {
 
-
 typedef mvec4f qfloat;
 
-
 struct qfloat2 {
-	/*SoA float2*/
-
 	inline qfloat2() = default;
 	inline qfloat2(const vec2& a) noexcept :x(a.x), y(a.y) {}
 	inline qfloat2(const mvec4f& a) noexcept :x(a.xxxx()), y(a.yyyy()) {}
@@ -58,13 +54,7 @@ struct qfloat2 {
 	};
 
 
-inline qfloat length(const qfloat2 &a) {
-	return sqrt(a.x*a.x + a.y*a.y); }
-
-
 struct qfloat3 {
-	/*SoA float3*/
-
 	inline qfloat3() = default;
 	inline qfloat3(const vec3& a) noexcept : x(a.x), y(a.y), z(a.z) {}
 	inline qfloat3(const mvec4f& a) noexcept :x(a.xxxx()), y(a.yyyy()), z(a.zzzz()) {}
@@ -94,6 +84,8 @@ struct qfloat3 {
 	inline vec3 lane(const int li) {
 		return vec3{ x.lane[li], y.lane[li], z.lane[li] }; }
 
+	inline qfloat2 xy() const { return{ x, y }; }
+
 	union {
 		struct { mvec4f x, y, z; };
 		struct { mvec4f r, g, b; };
@@ -102,57 +94,7 @@ struct qfloat3 {
 	};
 
 
-inline qfloat3 sin(const qfloat3& a) {
-	return qfloat3{ sin(a.x), sin(a.y), sin(a.z) }; }
-
-
-inline qfloat3 fract(const qfloat3& a) {
-	return qfloat3{ fract(a.x), fract(a.y), fract(a.z) }; }
-
-
-inline qfloat3 pow(const qfloat3& a, const qfloat3& b) {
-	return qfloat3{ pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z) }; }
-
-
-inline qfloat3 operator*(const float& lhs, const qfloat3& rhs) {
-	return qfloat3{ lhs * rhs.x, lhs * rhs.y, lhs * rhs.z }; }
-
-
-inline qfloat3 operator*(const qfloat& lhs, const qfloat3& rhs) {
-	return qfloat3{ lhs * rhs.x, lhs * rhs.y, lhs * rhs.z }; }
-
-
-inline qfloat length(const qfloat3 &a) {
-	return sqrt(a.x*a.x + a.y*a.y + a.z*a.z); }
-
-
-inline qfloat3 sqrt(const qfloat3 &a) {
-	return qfloat3{ sqrt(a.x), sqrt(a.y), sqrt(a.z) }; }
-
-
-inline qfloat dot(const qfloat3& a, const qfloat3& b) {
-	return a.x*b.x + a.y*b.y + a.z*b.z; }
-
-
-inline qfloat3 normalize(const qfloat3& a) {
-	mvec4f scale = rsqrt(dot(a, a));
-	return qfloat3{
-		a.x * scale,
-		a.y * scale,
-		a.z * scale }; }
-
-
-inline qfloat3 lerp(const qfloat3& a, const qfloat3& b, const qfloat& t) {
-	return qfloat3{ lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t) }; }
-
-inline qfloat3 reflect(const qfloat3& i, const qfloat3& n) {
-	return i - qfloat{2.0f} * dot(n, i) * n; }
-
-
-
-
 struct qfloat4 {
-
 	inline qfloat4() = default;
 	inline qfloat4(const vec3& a, const float w) noexcept :x(a.x), y(a.y), z(a.z), w(w) {}
 	inline qfloat4(const vec4& a) noexcept :x(a.x), y(a.y), z(a.z), w(a.w) {}
@@ -163,8 +105,8 @@ struct qfloat4 {
 
 	inline qfloat4& operator+=(const qfloat4& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; w += rhs.w; return *this; }
 
-	inline qfloat3 xyz() const {
-		return qfloat3{ x, y, z }; }
+	inline qfloat2 xy() const { return{ x, y }; }
+	inline qfloat3 xyz() const { return{ x, y, z }; }
 
 	inline vec4 lane(const int li) {
 		return vec4{ x.lane[li], y.lane[li], z.lane[li], w.lane[li] }; }
@@ -193,28 +135,71 @@ struct qfloat4 {
 	};
 
 
+inline qfloat3 operator*(const float& lhs, const qfloat3& rhs) { return qfloat3{ lhs * rhs.x, lhs * rhs.y, lhs * rhs.z }; }
+inline qfloat3 operator*(const qfloat& lhs, const qfloat3& rhs) { return qfloat3{ lhs * rhs.x, lhs * rhs.y, lhs * rhs.z }; }
+inline qfloat4 operator*(const qfloat4& lhs, const mvec4f& rhs) { return qfloat4{ lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs }; }
+
+
+// sqrt
+inline qfloat2 sqrt(qfloat2 a) { return{ sqrt(a.x), sqrt(a.y) }; }
+inline qfloat3 sqrt(qfloat3 a) { return{ sqrt(a.x), sqrt(a.y), sqrt(a.z) }; }
+inline qfloat4 sqrt(qfloat4 a) { return{ sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w) }; }
+
+
+// dot
+inline qfloat dot(const qfloat2& a, const qfloat2& b) { return a.x*b.x + a.y*b.y; }
+inline qfloat dot(const qfloat3& a, const qfloat3& b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
+inline qfloat dot(const qfloat4& a, const qfloat4& b) { return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w; }
+
+
+// length (_not_ using rsqrt!)
+inline qfloat length(qfloat2 a) { return sqrt(dot(a,a)); }
+inline qfloat length(qfloat3 a) { return sqrt(dot(a,a)); }
+inline qfloat length(qfloat4 a) { return sqrt(dot(a,a)); }
+
+
+// fract
+inline qfloat2 fract(qfloat2 a) { return{ fract(a.x), fract(a.y) }; }
+inline qfloat3 fract(qfloat3 a) { return{ fract(a.x), fract(a.y), fract(a.z) }; }
+inline qfloat4 fract(qfloat4 a) { return{ fract(a.x), fract(a.y), fract(a.z), fract(a.w) }; }
+
+
+// pow
+inline qfloat2 pow(qfloat2 a, qfloat2 b) { return{ pow(a.x, b.x), pow(a.y, b.y) }; }
+inline qfloat3 pow(qfloat3 a, qfloat3 b) { return{ pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z) }; }
+inline qfloat4 pow(qfloat4 a, qfloat4 b) { return{ pow(a.x, b.x), pow(a.y, b.y), pow(a.z, b.z), pow(a.w, b.w) }; }
+
+
+// sin
+inline qfloat3 sin(const qfloat3& a) { return qfloat3{ sin(a.x), sin(a.y), sin(a.z) }; }
+
+
+// normalize, but using rsqrt!
+inline qfloat3 normalize(qfloat3 a) {
+	mvec4f scale = rsqrt(dot(a, a));
+	return{ a.x * scale, a.y * scale, a.z * scale }; }
+inline qfloat4 normalize(qfloat4 a) {
+	mvec4f scale = rsqrt(dot(a, a));
+	return{ a.x * scale, a.y * scale, a.z * scale, a.w * scale }; }
+
+
+// mix
+//inline qfloat mix(qfloat a, qfloat b, qfloat t) {
+//	return a*(mvec4f(1.0f) - t) + b*t; }
+inline qfloat3 mix(qfloat3 a, qfloat3 b, qfloat t) {
+	return{ mix(a.x, b.x, t),
+	        mix(a.y, b.y, t),
+	        mix(a.z, b.z, t) }; }
+inline qfloat4 mix(qfloat4 a, qfloat4 b, qfloat t) {
+	return{ mix(a.x, b.x, t),
+	        mix(a.y, b.y, t),
+	        mix(a.z, b.z, t),
+	        mix(a.w, b.w, t) }; }
+
+
 inline void load_interleaved_lut(const float *bp, mvec4i ofs, qfloat4& out) {
 	load_interleaved_lut(bp, ofs, out.x, out.y, out.z, out.w); }
 
-inline mvec4f mix(const mvec4f& a, const mvec4f& b, const mvec4f& t) {
-	return a*(mvec4f(1.0f) - t) + b*t; }
-
-inline qfloat dot(const qfloat4& a, const qfloat4& b) {
-	return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w; }
-
-inline qfloat4 operator*(const qfloat4& lhs, const mvec4f& rhs) {
-	return qfloat4{ lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs }; }
-
-inline qfloat4 normalize(const qfloat4& a) {
-	mvec4f scale = rsqrt(dot(a, a));
-	return qfloat4{
-		a.x * scale,
-		a.y * scale,
-		a.z * scale,
-		a.w * scale}; }
-
-inline qfloat4 lerp(const qfloat4& a, const qfloat4& b, const qfloat& t) {
-	return qfloat4{ lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t), lerp(a.w, b.w, t) }; }
 
 
 }  // close package namespace

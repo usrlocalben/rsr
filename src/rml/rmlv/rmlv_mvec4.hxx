@@ -191,11 +191,11 @@ inline float hmin(const mvec4f& a) {
 	r1 = _mm_min_ss(r0, r1);
 	return _mm_cvtss_f32(r1); }
 
-inline mvec4f lerp(const mvec4f &a, const mvec4f &b, const float t) {
+inline mvec4f mix(const mvec4f &a, const mvec4f &b, const float t) {
 	//return (1.0f - t)*a + t*b; }
 	return a + mvec4f{t} * (b - a); }  // xxx faster, but incorrect?
 
-inline mvec4f lerp(const mvec4f &a, const mvec4f &b, const mvec4f& t) {
+inline mvec4f mix(const mvec4f &a, const mvec4f &b, const mvec4f& t) {
 	//return (mvec4f{ 1.0f }-t)*a + t*b; }
 	return a + t * (b - a); }   // xxx faster, but incorrect?
 

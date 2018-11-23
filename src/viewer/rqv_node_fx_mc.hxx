@@ -38,7 +38,7 @@ struct AABB {
 
 
 inline rmlv::vec3 midpoint(AABB block) {
-	return lerp(block.left_top_back, block.right_bottom_front, 0.5f);}
+	return mix(block.left_top_back, block.right_bottom_front, 0.5f);}
 
 
 struct BlockDivider {

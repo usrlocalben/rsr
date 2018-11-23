@@ -46,6 +46,7 @@ struct VertexInput {
 	rmlv::qfloat4 a2;
 	rmlv::qfloat4 a3; };
 
+
 struct ShaderUniforms {
 	rmlv::qfloat4 u0;
 	rmlv::qfloat4 u1;
@@ -54,18 +55,19 @@ struct ShaderUniforms {
 	rmlm::qmat4 nm;
 	rmlm::qmat4 mvpm; };
 
+
 struct VertexOutputx1 {
 	rmlv::vec3 r0;
 	rmlv::vec3 r1;
 	rmlv::vec3 r2;
-	rmlv::vec3 r3;
+	rmlv::vec3 r3; };
 
-	static VertexOutputx1 clip(const VertexOutputx1& a, const VertexOutputx1& b, const float t) {
-		return {
-			lerp(a.r0, b.r0, t),
-			lerp(a.r1, b.r1, t),
-			lerp(a.r2, b.r2, t),
-			lerp(a.r3, b.r3, t) }; } };
+inline VertexOutputx1 mix(VertexOutputx1 a, VertexOutputx1 b, float t) {
+	return { mix(a.r0, b.r0, t),
+	         mix(a.r1, b.r1, t),
+	         mix(a.r2, b.r2, t),
+	         mix(a.r3, b.r3, t) }; }
+
 
 struct VertexOutput {
 	rmlv::qfloat3 r0;
@@ -665,7 +667,7 @@ private:
 				auto flags = clipper.clip_point(coord);
 				store_bytes(d_clipFlagBuffer.alloc<4>(), flags); }
 
-			auto devCoord = pdiv2d(devmatmul(qm_dm, coord));
+			auto devCoord = pdiv(devmatmul(qm_dm, coord)).xy();
 			devCoord.copyTo(d_devCoordBuffer.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -783,7 +785,7 @@ private:
 				auto flags = clipper.clip_point(coord);
 				store_bytes(d_clipFlagBuffer.alloc<4>(), flags); }
 
-			auto devCoord = pdiv2d(devmatmul(qm_dm, coord));
+			auto devCoord = pdiv(devmatmul(qm_dm, coord)).xy();
 			devCoord.copyTo(d_devCoordBuffer.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -941,8 +943,8 @@ private:
 						weAreInside = !weAreInside;
 
 						const float t = clipper.clip_line(plane, here.coord, next.coord);
-						auto newCoord = lerp(here.coord, next.coord, t);
-						auto newData = VertexOutputx1::clip(here.data, next.data, t);
+						auto newCoord = mix(here.coord, next.coord, t);
+						auto newData = mix(here.data, next.data, t);
 						tmp.push_back({ newCoord, newData }); }}
 
 				std::swap(poly, tmp);
@@ -998,7 +1000,7 @@ private:
 		auto top_left = ivec2{ vminx, vminy } / d_tileDimensionsInPixels;
 		auto bottom_right = ivec2{ vmaxx, vmaxy } / d_tileDimensionsInPixels;
 
-		bottom_right = ivec2::min(bottom_right, d_bufferDimensionsInTiles - ivec2{ 1, 1 });
+		bottom_right = vmin(bottom_right, d_bufferDimensionsInTiles - ivec2{ 1, 1 });
 
 		int ofs = top_left.y * d_bufferDimensionsInTiles.x + top_left.x;
 		for (int ty = top_left.y; ty <= bottom_right.y; ++ty) {

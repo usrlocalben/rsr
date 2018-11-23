@@ -20,16 +20,29 @@ namespace rglv {
  * Returns:
  *   x/w, y/w, z/w, 1/w
  */
-inline auto pdiv(const rmlv::qfloat4& p) {
-	__m128 r1 = _mm_rcp_ps(p.w.v);
+inline rmlv::qfloat4 pdiv(rmlv::qfloat4 p) {
+	__m128 invw = _mm_rcp_ps(p.w.v);
 	//__m128 r1 = _mm_div_ps(_mm_set1_ps(1.0f), p.w.v);
-	return rmlv::qfloat4{ p.x * r1, p.y * r1, p.z * r1, r1 }; }
+	return{ p.x * invw, p.y * invw, p.z * invw, invw }; }
 
-inline auto pdiv2d(const rmlv::qfloat4& p) {
-	__m128 r1 = _mm_rcp_ps(p.w.v);
-	//__m128 r1 = _mm_div_ps(_mm_set1_ps(1.0f), p.w.v);
-	return rmlv::qfloat2{ p.x * r1, p.y * r1 }; }
 
+/*
+ * perspective divide, scalar version
+ *
+ * float operations _must_ match SoA version !
+ */
+inline rmlv::vec4 pdiv(rmlv::vec4 p) {
+	float invw;
+	_mm_store_ss(&invw, _mm_rcp_ss(_mm_set_ss(p.w)));
+	auto bias_z = 0.5f * (p.z * invw) + 0.5f;
+	return rmlv::vec4{ p.x*invw, p.y*invw, bias_z, invw }; }
+
+
+inline rmlv::vec3 reflect(rmlv::vec3 i, rmlv::vec3 n) {
+	return i - 2.0f * dot(n, i) * n; }
+
+inline rmlv::qfloat3 reflect(const rmlv::qfloat3& i, const rmlv::qfloat3& n) {
+	return i - rmlv::qfloat{2.0f} * dot(n, i) * n; }
 
 /**
  * matrix/vector multiply, specialized for the device-matrix

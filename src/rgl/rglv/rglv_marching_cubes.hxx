@@ -93,7 +93,7 @@ void march_sdf_vao(
 			auto offset = calc_offset(cd.value[edge_connection[edge][0]],
 			                          cd.value[edge_connection[edge][1]],
 			                          0);
-			auto position = lerp(cd.pos[edge_connection[edge][0]], cd.pos[edge_connection[edge][1]], offset);
+			auto position = mix(cd.pos[edge_connection[edge][0]], cd.pos[edge_connection[edge][1]], offset);
 			//auto position = pos + ((vertex_offset[edge_connection[edge][0]] + rmlv::vec3{ offset } * edge_direction[edge]) * vdelta);
 			edge_vertex[edge] = position;
 			float dx = field.sample(position - vec3{ ep,0,0 }) - field.sample(position + vec3{ ep,0,0 });

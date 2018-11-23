@@ -294,6 +294,7 @@ cxx_library(
     deps=[
         'src/rgl/rglv:fragment',
         'src/rgl/rglv:gpu',
+        'src/rgl/rglv:math',
         'src/rgl/rglv:triangle',
         'src/rml/rmlm:mat4',
         'src/rml/rmlv:soa',

@@ -12,18 +12,6 @@ namespace rmlv {
 constexpr auto M_PI = 3.14159265358979323846;
 
 
-template<typename T>
-T lerp_fast(const T& a, const T& b, const T& f) {
-	return a + (f*(b - a)); }
-
-
-/*template<typename T>
-T lerp(const T& a, const T& b, const T& f) {
-	return (1 - f)*a + f*b; }*/
-
-
-inline float lerp(const float& a, const float& b, const float& t) {
-	return (1 - t)*a + t*b; }
 
 
 inline float clamp(const float& x, const float &a, const float &b) {
@@ -31,10 +19,6 @@ inline float clamp(const float& x, const float &a, const float &b) {
 	if (x > b) return b;
 	return x; }
 
-
-template<typename T>
-T lerp_premul(const T& a, const T& b, const T& f) {
-	return (T(1) - f)*a + b; }
 
 
 inline double fract(const double x) {
@@ -93,31 +77,16 @@ struct alignas(8) vec2 {
 	bool operator==(const vec2& other) const {
 		return x==other.x && y==other.y; }
 
-	float x, y; };
-
-
-inline vec2 operator-(const vec2& a) { return vec2(-a.x, -a.y); }
-
-inline vec2 operator*(const float b, const vec2& a) { return vec2(a.x*b, a.y*b); }
-
-inline float dot(const vec2& a, const vec2& b) {
-	return a.x*b.x + a.y*b.y; }
-
-inline vec2 normalize(const vec2& a) {
-	return (1.0f / sqrt(dot(a, a)))*a; }
-
-inline vec2 lerp(const vec2& a, const vec2& b, const float t) {
-	return vec2( lerp(a.x,b.x,t), lerp(a.y,b.y,t) ); }
-
-inline vec2 abs(const vec2& a) {
-	return vec2(fabs(a.x), fabs(a.y)); }
+	union {
+		struct { float x, y; };
+		std::array<float, 2> arr; }; };
 
 
 struct alignas(4) vec3 {
 	vec3() = default;
-	constexpr vec3(const vec2 a, const float z) noexcept : x(a.x), y(a.y), z(z) {}
-	constexpr vec3(const float a, const float b, const float c) noexcept : x(a), y(b), z(c) {}
 	constexpr vec3(const float a) noexcept : x(a), y(a), z(a) {}
+	constexpr vec3(const float a, const float b, const float c) noexcept : x(a), y(b), z(c) {}
+	constexpr vec3(const vec2 a, const float z) noexcept : x(a.x), y(a.y), z(z) {}
 
 	vec3 operator+(const vec3& b) const { return { x + b.x, y + b.y, z + b.z }; }
 	vec3 operator-(const vec3& b) const { return { x - b.x, y - b.y, z - b.z }; }
@@ -142,12 +111,6 @@ struct alignas(4) vec3 {
 	bool operator==(const vec3& other) const {
 		return x==other.x && y==other.y && z==other.z; }
 
-	static inline vec3 from_rgb(const int rgb) {
-		return vec3{
-			(float)((rgb >> 16) & 0xff) / 256.0f,
-			(float)((rgb >> 8) & 0xff) / 256.0f,
-			(float)((rgb >> 0) & 0xff) / 256.0f }; }
-
 	vec2 xy() const { return vec2{x, y}; }
 
 	union {
@@ -155,65 +118,11 @@ struct alignas(4) vec3 {
 		std::array<float, 3> arr; }; };
 
 
-/*	vec3 operator+(float a, const vec3& b) { return b + a; }
-	vec3 operator-(float a, const vec3& b) { return vec3(_mm_set1_ps(a)) - b; }*/
-inline vec3 operator*(float a, const vec3& b) { return{ a*b.x, a*b.y, a*b.z }; }
-/*	inline vec3 operator/(float a, const vec3& b) { return vec3(_mm_set1_ps(a)) / b; }*/
-
-inline vec3 operator-(const vec3& a) {
-	return{ -a.x, -a.y, -a.z }; }
-
-inline vec3 abs(const vec3& a) {
-	return{ fabs(a.x), fabs(a.y), fabs(a.z) }; }
-
-inline float dot(const vec3& a, const vec3& b) {
-	return a.x*b.x + a.y*b.y + a.z*b.z; }
-
-inline vec3 normalize(const vec3& a) {
-	/*normalize a to length 1.0*/
-	return a / sqrt(dot(a, a)); }
-//return a * (1.0f / sqrt(dot(a, a))); }
-
-inline float length(const vec3& a) {
-	return sqrt(dot(a, a)); }
-
-inline float hadd(const vec3& a) {
-	return a.x + a.y + a.z; }
-
-inline float hmax(const vec3& a) {
-	using std::max;
-	return max(max(a.x, a.y), a.z); }
-
-inline float hmin(const vec3& a) {
-	using std::min;
-	return min(min(a.x, a.y), a.z); }
-
-inline vec3 vmin(const vec3& a, const vec3& b) {
-	using std::min;
-	return{ min(a.x, b.x), min(a.y, b.y), min(a.z, b.z) }; }
-
-inline vec3 vmax(const vec3& a, const vec3& b) {
-	using std::max;
-	return{ max(a.x, b.x), max(a.y, b.y), max(a.z, b.z) }; }
-
-inline vec3 cross(const vec3& a, const vec3& b) {
-	return{
-		a.y*b.z - a.z*b.y,
-		a.z*b.x - a.x*b.z,
-		a.x*b.y - a.y*b.x }; }
-
-inline vec3 reflect(const vec3& i, const vec3& n) {
-	return i - vec3{ 2.0f } *dot(n, i) * n; }
-
-inline vec3 lerp(const vec3 &a, const vec3 &b, const float t) {
-	return (1.0f - t)*a + t*b; }
-
-
 struct alignas(16) vec4 {
 	vec4() = default;
 	constexpr vec4(float a, float b, float c, float d) :x(a), y(b), z(c), w(d) {}
 	constexpr vec4(float a) : x(a), y(a), z(a), w(a) {}
-	constexpr vec4(const vec3 a, float b) : x(a.x), y(a.y), z(a.z), w(b) {}  // XXX shuffle/set1
+	constexpr vec4(const vec3 a, float b) : x(a.x), y(a.y), z(a.z), w(b) {}
 
 	vec4 operator+(const vec4& b) const { return { x + b.x, y + b.y, z + b.z, w + b.w }; }
 	vec4 operator-(const vec4& b) const { return { x - b.x, y - b.y, z - b.z, w - b.w }; }
@@ -238,67 +147,10 @@ struct alignas(16) vec4 {
 	vec2 xy() { return vec2{ x, y }; }
 	vec3 xyz() { return vec3{ x, y, z }; }
 
-/*	inline vec4 from_rgb(const int rgb) {
-		return vec4{
-			(float)((rgb >> 16) & 0xff) / 256.0f,
-			(float)((rgb >> 8) & 0xff) / 256.0f,
-			(float)((rgb >> 0) & 0xff) / 256.0f}; }*/
+	union {
+		struct { float x, y, z, w; };
+		std::array<float, 3> arr; }; };
 
-	float x, y, z, w; };
-
-inline vec4 operator*(float a, const vec4& b) { return{ a*b.x, a*b.y, a*b.z, a*b.w }; }
-
-inline vec4 operator-(const vec4& a) {
-	return{ -a.x, -a.y, -a.z, -a.w }; }
-
-inline vec4 abs(const vec4& a) {
-	return{ fabs(a.x), fabs(a.y), fabs(a.z), fabs(a.w) }; }
-
-inline float dot(const vec4& a, const vec4& b) {
-	return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w; }
-
-inline vec4 normalize(const vec4 &a) {
-	/*normalize a to length 1.0*/
-	return a / sqrt(dot(a, a)); }
-
-inline float length(const vec4& a) {
-	return sqrt(dot(a, a)); }
-
-inline vec4 sqrt(const vec4& a) {
-	auto sx = sqrtf(a.x);
-	auto sy = sqrtf(a.y);
-	auto sz = sqrtf(a.z);
-	auto sw = sqrtf(a.w);
-	return{sx, sy, sz, sw}; }
-
-inline float hadd(const vec4& a) {
-	return a.x + a.y + a.z + a.w; }
-
-inline float hmax(const vec4& a) {
-	using std::max;
-	return max(max(max(a.x, a.y), a.z), a.w); }
-
-inline float hmin(const vec4& a) {
-	using std::min;
-	return min(min(min(a.x, a.y), a.z), a.w); }
-
-inline vec4 vmin(const vec4& a, const vec4& b) {
-	using std::min;
-	return{ min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w) }; }
-
-inline vec4 vmax(const vec4& a, const vec4& b) {
-	using std::max;
-	return{ max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w) }; }
-
-inline vec4 cross(const vec4& a, const vec4& b) {
-	return{
-		a.y*b.z - a.z*b.y,
-		a.z*b.x - a.x*b.z,
-		a.x*b.y - a.y*b.x,
-		a.w*b.w - a.w*b.w }; }
-
-inline vec4 lerp(const vec4 &a, const vec4 &b, const float t) {
-	return (1.0f - t)*a + t*b; }
 
 struct alignas(8) ivec2 {
 	ivec2() = default;
@@ -316,14 +168,6 @@ struct alignas(8) ivec2 {
 
 	ivec2 operator+(int b) const { return ivec2(x + b, y + b); }
 	ivec2 operator-(int b) const { return ivec2(x - b, y - b); }
-
-	static ivec2 min(const ivec2& a, const ivec2& b) {
-		return {std::min(a.x, b.x),
-		        std::min(a.y, b.y)}; }
-
-	static ivec2 max(const ivec2& a, const ivec2& b) {
-		return {std::max(a.x, b.x),
-		        std::max(a.y, b.y)}; }
 
 	int x, y; };
 
@@ -349,27 +193,101 @@ struct ivec4 {
 		int32_t si[4]; }; };
 
 
+// float * vec
+inline vec2 operator*(float a, vec2 b) { return{ a*b.x, a*b.y }; }
+inline vec3 operator*(float a, vec3 b) { return{ a*b.x, a*b.y, a*b.z }; }
+inline vec4 operator*(float a, vec4 b) { return{ a*b.x, a*b.y, a*b.z, a*b.w }; } 
+
+
+// unary minus
+inline vec2 operator-(vec2 a) { return{ -a.x, -a.y }; }
+inline vec3 operator-(vec3 a) { return{ -a.x, -a.y, -a.z }; }
+inline vec4 operator-(vec4 a) { return{ -a.x, -a.y, -a.z, -a.w }; }
+
+
+// mix
 /*
- * perspective divide, scalar version
- *
- * float operations _must_ match SoA version !
- *
- * Args:
- * p: point in homogeneous clip-space
- * 
- * Returns:
- * x/w, y/w, z/w, 1/w
- */
-inline vec4 pdiv(vec4 p) {
-	float one_over_w;
-	_mm_store_ss(&one_over_w, _mm_rcp_ss(_mm_set_ss(p.w)));
-	auto bias_z = 0.5f * (p.z * one_over_w) + 0.5f;
-	//return vec4{ p.x*one_over_w, p.y*one_over_w, p.z*one_over_w, one_over_w }; }
-	return vec4{ p.x*one_over_w, p.y*one_over_w, bias_z, one_over_w }; }
-	//float a = 1.0f / p.w;
-	//return p * a; }
+template<typename T>
+T lerp_fast(const T& a, const T& b, const T& f) {
+	return a + (f*(b - a)); }
+template<typename T>
+T lerp_premul(const T& a, const T& b, const T& f) {
+	return (T(1) - f)*a + b; }
+*/
+
+/*template<typename T>
+T lerp(const T& a, const T& b, const T& f) {
+	return (1 - f)*a + f*b; }*/
+
+inline float mix(float a, float b, float t) { return (1.0f - t)*a + t*b; }
+inline vec2 mix(vec2 a, vec2 b, float t) { return (1.0f - t)*a + t*b; }
+inline vec3 mix(vec3 a, vec3 b, float t) { return (1.0f - t)*a + t*b; }
+inline vec4 mix(vec4 a, vec4 b, float t) { return (1.0f - t)*a + t*b; }
 
 
+// dot
+inline float dot(vec2 a, vec2 b) { return a.x*b.x + a.y*b.y; }
+inline float dot(vec3 a, vec3 b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
+inline float dot(vec4 a, vec4 b) { return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w; }
+
+// length
+inline float length(vec2 a) { return sqrtf(dot(a, a)); }
+inline float length(vec3 a) { return sqrtf(dot(a, a)); }
+inline float length(vec4 a) { return sqrtf(dot(a, a)); }
+
+// normalize
+inline vec2 normalize(vec2 a) { return a / length(a); }
+inline vec3 normalize(vec3 a) { return a / length(a); }
+inline vec4 normalize(vec4 a) { return a / length(a); }
+
+// sqrt
+inline vec2 sqrt(vec2 a) { return{ sqrtf(a.x), sqrtf(a.y) }; }
+inline vec3 sqrt(vec3 a) { return{ sqrtf(a.x), sqrtf(a.y), sqrtf(a.z) }; }
+inline vec4 sqrt(vec4 a) { return{ sqrtf(a.x), sqrtf(a.y), sqrtf(a.z), sqrtf(a.w) }; }
+
+// abs
+inline vec2 abs(vec2 a) { return{ fabs(a.x), fabs(a.y) }; }
+inline vec3 abs(vec3 a) { return{ fabs(a.x), fabs(a.y), fabs(a.z) }; }
+inline vec4 abs(vec4 a) { return{ fabs(a.x), fabs(a.y), fabs(a.z), fabs(a.w) }; }
+
+// h*
+inline float hadd(vec2 a) { return a.x + a.y; }
+inline float hadd(vec3 a) { return a.x + a.y + a.z; }
+inline float hadd(vec4 a) { return a.x + a.y + a.z + a.w; }
+
+inline float hmax(vec2 a) { return std::max(a.x, a.y); }
+inline float hmax(vec3 a) { return std::max(std::max(a.x, a.y), a.z); }
+inline float hmax(vec4 a) { return std::max(std::max(std::max(a.x, a.y), a.z), a.w); }
+
+inline float hmin(vec2 a) { return std::min(a.x, a.y); }
+inline float hmin(vec3 a) { return std::min(std::min(a.x, a.y), a.z); }
+inline float hmin(vec4 a) { return std::min(std::min(std::min(a.x, a.y), a.z), a.w); }
+
+// vmin/vmax
+inline ivec2 vmin(ivec2 a, ivec2 b) { return { std::min(a.x, b.x), std::min(a.y, b.y) }; }
+inline vec2 vmin(vec2 a, vec2 b) { return{ std::min(a.x, b.x), std::min(a.y, b.y) }; }
+inline vec3 vmin(vec3 a, vec3 b) { return{ std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z) }; }
+inline vec4 vmin(vec4 a, vec4 b) { return{ std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z), std::min(a.w, b.w) }; }
+
+inline ivec2 vmax(ivec2 a, ivec2 b) { return { std::max(a.x, b.x), std::max(a.y, b.y) }; }
+inline vec2 vmax(vec2 a, vec2 b) { return{ std::max(a.x, b.x), std::max(a.y, b.y) }; }
+inline vec3 vmax(vec3 a, vec3 b) { return{ std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z) }; }
+inline vec4 vmax(vec4 a, vec4 b) { return{ std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z), std::max(a.w, b.w) }; }
+
+
+// cross product
+inline vec3 cross(vec3 a, vec3 b) {
+	return { a.y*b.z - a.z*b.y,
+	         a.z*b.x - a.x*b.z,
+	         a.x*b.y - a.y*b.x }; }
+inline vec4 cross(vec4 a, vec4 b) {
+	return{ a.y*b.z - a.z*b.y,
+	        a.z*b.x - a.x*b.z,
+	        a.x*b.y - a.y*b.x,
+	        a.w*b.w - a.w*b.w }; }
+
+
+// almost_equal
 inline bool almost_equal(const float a, const float b) {
 	return fabs(a - b) < 0.0001; }
 
@@ -377,20 +295,16 @@ inline bool almost_equal(const vec2& a, const vec2& b) {
 	return (almost_equal(a.x, b.x) &&
 	        almost_equal(a.y, b.y)); }
 
-inline bool almost_equal(const vec4& a, const vec4& b) {
-	return (
-		almost_equal(a.x, b.x) &&
-		almost_equal(a.y, b.y) &&
-		almost_equal(a.z, b.z) &&
-		almost_equal(a.w, b.w)
-	); }
-
 inline bool almost_equal(const vec3& a, const vec3& b) {
-	return (
-		almost_equal(a.x, b.x) &&
-		almost_equal(a.y, b.y) &&
-		almost_equal(a.z, b.z)
-	); }
+	return (almost_equal(a.x, b.x) &&
+	        almost_equal(a.y, b.y) &&
+	        almost_equal(a.z, b.z)); }
+
+inline bool almost_equal(const vec4& a, const vec4& b) {
+	return (almost_equal(a.x, b.x) &&
+	        almost_equal(a.y, b.y) &&
+	        almost_equal(a.z, b.z) &&
+	        almost_equal(a.w, b.w)); }
 
 
 inline uint32_t pack_udec3(float x, float y, float z) {
@@ -398,7 +312,6 @@ inline uint32_t pack_udec3(float x, float y, float z) {
 	auto iy = uint32_t( (y + 1.0f) * 511.5f );
 	auto iz = uint32_t( (z + 1.0f) * 511.5f );
 	return (ix & 0x3FF) | ((iy & 0x3FF) << 10) | ((iz & 0x3FF) << 20); }
-
 
 inline auto unpack_udec3(uint32_t N) {
 	auto x = float( (N >> 22) / ((1 << 10) - 1) );
@@ -434,6 +347,7 @@ struct hash<rqdq::rmlv::vec4> {
 
 }  // close std namespace
 
+std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec2& v);
 std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec4& v);
 std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec3& v);
 std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::ivec2& v);

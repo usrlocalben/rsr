@@ -1,6 +1,7 @@
 #pragma once
 #include <rglv_fragment.hxx>
 #include <rglv_gpu.hxx>
+#include <rglv_math.hxx>
 #include <rglv_triangle.hxx>
 #include <rmlm_mat4.hxx>
 #include <rmlv_soa.hxx>
@@ -92,9 +93,9 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 
 		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, IN_POSITION);
 		rmlv::qfloat3 e = normalize(position.xyz());
-		rmlv::qfloat4 vn = lerp(IN_SMOOTH_NORMAL, IN_FACE_NORMAL, 0.0f); // in_uniform.roughness);
+		rmlv::qfloat4 vn = mix(IN_SMOOTH_NORMAL, IN_FACE_NORMAL, 0.0f); // in_uniform.roughness);
 		rmlv::qfloat3 n = normalize(mul(gl_NormalMatrix, vn).xyz());
-		rmlv::qfloat3 r = reflect(e, n);
+		rmlv::qfloat3 r = rglv::reflect(e, n);
 
 		rmlv::qfloat m = rmlv::qfloat{2.0f} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0f)*(r.z + 1.0f)));
 		rmlv::qfloat uu = r.x / m + 0.5f;
@@ -186,9 +187,9 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 
 		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, IN_POSITION);
 		rmlv::qfloat3 e = normalize(position.xyz());
-		rmlv::qfloat4 vn = lerp(IN_SMOOTH_NORMAL, IN_FACE_NORMAL, 0.0f); // in_uniform.roughness);
+		rmlv::qfloat4 vn = mix(IN_SMOOTH_NORMAL, IN_FACE_NORMAL, 0.0f); // in_uniform.roughness);
 		rmlv::qfloat3 n = normalize(mul(gl_NormalMatrix, vn).xyz());
-		rmlv::qfloat3 r = reflect(e, n);
+		rmlv::qfloat3 r = rglv::reflect(e, n);
 
 		rmlv::qfloat m = rmlv::qfloat{2.0f} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0f)*(r.z + 1.0f)));
 		rmlv::qfloat uu = r.x / m + 0.5f;
@@ -212,7 +213,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4& gl_FragColor
 		) {
 		gl_FragColor = tu1.sample({ OUT_ENVMAP_UV.x, OUT_ENVMAP_UV.y });
-		gl_FragColor = lerp(gl_FragColor, UNIFORM_BACKCOLOR, UNIFORM_OPACITY.x); }
+		gl_FragColor = mix(gl_FragColor, UNIFORM_BACKCOLOR, UNIFORM_OPACITY.x); }
 #undef gl_ModelViewMatrix
 #undef gl_ModelViewProjectionMatrix
 #undef gl_NormalMatrix
