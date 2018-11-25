@@ -1,6 +1,7 @@
 #include <rqv_cpu_colors.hxx>
 
 #include <array>
+
 #include <PixelToaster.h>
 
 namespace rqdq {

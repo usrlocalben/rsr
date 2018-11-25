@@ -1,5 +1,4 @@
 #include <rglr_texture.hxx>
-
 #include <rcls_aligned_containers.hxx>
 #include <rmlv_mvec4.hxx>
 #include <rmlv_vec.hxx>

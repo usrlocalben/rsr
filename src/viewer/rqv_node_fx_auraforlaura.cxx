@@ -1,5 +1,4 @@
 #include <rqv_node_fx_auraforlaura.hxx>
-
 #include <rqv_node_base.hxx>
 #include <rqv_node_material.hxx>
 #include <rqv_node_value.hxx>

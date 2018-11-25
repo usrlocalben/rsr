@@ -1,5 +1,4 @@
 #include <rglv_mesh.hxx>
-
 #include <rclr_algorithm.hxx>
 #include <rglv_vao.hxx>
 #include <rmlv_vec.hxx>
@@ -9,6 +8,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+
 #include <tuple_hash.hxx>
 
 namespace rqdq {

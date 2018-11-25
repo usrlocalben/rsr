@@ -6,6 +6,7 @@
 #include <rqv_resource.h>
 
 #include <thread>
+
 #include <fmt/format.h>
 #include <fmt/printf.h>
 #include <gason.h>

@@ -1,5 +1,4 @@
 #include <rqv_node_gl.hxx>
-
 #include <rclma_framepool.hxx>
 #include <rclmt_jobsys.hxx>
 #include <rglv_math.hxx>

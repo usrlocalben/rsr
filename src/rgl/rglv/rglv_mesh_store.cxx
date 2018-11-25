@@ -1,5 +1,4 @@
 #include <rglv_mesh_store.hxx>
-
 #include <rcls_file.hxx>
 #include <rglr_texture.hxx>
 #include <rglv_material.hxx>

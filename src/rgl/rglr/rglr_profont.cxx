@@ -1,5 +1,4 @@
 #include <rglr_profont.hxx>
-
 #include <rclr_algorithm.hxx>
 #include <rglr_canvas.hxx>
 

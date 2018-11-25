@@ -1,5 +1,4 @@
 #include <rqv_node_fx_mc.hxx>
-
 #include <rclmt_jobsys.hxx>
 #include <rglv_gl.hxx>
 #include <rglv_mesh.hxx>

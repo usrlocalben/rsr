@@ -3,15 +3,12 @@
  * http://paulbourke.net/geometry/polygonise
  */
 #include <rglv_marching_cubes.hxx>
-
 #include <rmlv_vec.hxx>
 
 #include <array>
 
 namespace rqdq {
 namespace rglv {
-
-std::mutex strangeMutex;
 
 const std::array<rmlv::vec3, 8> vertex_offset = { {
 	{ 0,0,0 }, { 1,0,0 }, { 1,1,0 }, { 0,1,0 },

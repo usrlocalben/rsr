@@ -1,5 +1,4 @@
 #include <rqv_jobsys_vis.hxx>
-
 #include <rclmt_jobsys.hxx>
 #include <rglr_canvas.hxx>
 

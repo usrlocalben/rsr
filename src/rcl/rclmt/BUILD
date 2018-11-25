@@ -15,7 +15,7 @@ cxx_library(
     )
 
 cxx_test(
-    name='jobsys_test',
+    name='jobsys_unittest',
     srcs=['rclmt_jobsys.t.cxx'],
     deps=[
         'src/rcl/rclmt:jobsys',

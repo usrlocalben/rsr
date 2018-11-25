@@ -1,5 +1,4 @@
 #include <rqv_node_fx_foo.hxx>
-
 #include <rglv_mesh.hxx>
 #include <rqv_node_base.hxx>
 #include <rqv_node_material.hxx>

@@ -10,7 +10,7 @@ cxx_library(
     )
 
 cxx_test(
-    name='mat4_test',
+    name='mat4_unittest',
     srcs=['rmlm_mat4.t.cxx'],
     deps=[
         '3rdparty/googletest:gtest_main',

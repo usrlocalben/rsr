@@ -1,5 +1,4 @@
 #include <rglv_obj.hxx>
-
 #include <rcls_file.hxx>
 #include <rclt_util.hxx>
 #include <rglv_material.hxx>

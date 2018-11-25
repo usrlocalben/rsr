@@ -1,5 +1,4 @@
 #include <rqv_compile.hxx>
-
 #include <rclx_gason_util.hxx>
 #include <rglv_mesh_store.hxx>
 #include <rclt_util.hxx>
@@ -24,6 +23,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+
 #include <gason.h>
 
 namespace rqdq {

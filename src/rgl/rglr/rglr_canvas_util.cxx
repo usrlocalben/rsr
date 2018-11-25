@@ -3,6 +3,8 @@
 #include <rmlg_irect.hxx>
 #include <rmlv_vec.hxx>
 
+#include <algorithm>
+
 #include <PixelToaster.h>
 
 namespace rqdq {

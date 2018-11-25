@@ -1,5 +1,4 @@
 #include <rglv_gl.hxx>
-
 #include <rglv_gpu_protocol.hxx>
 #include <rglv_packed_stream.hxx>
 #include <rmlv_vec.hxx>

@@ -1,5 +1,4 @@
 #include <rclma_framepool.hxx>
-
 #include <rclmt_jobsys.hxx>
 
 #include <vector>

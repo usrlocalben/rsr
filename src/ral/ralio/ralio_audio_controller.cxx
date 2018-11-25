@@ -1,10 +1,10 @@
 #include <ralio_audio_controller.hxx>
 
-#include <bass.h>
-
 #include <cassert>
 #include <optional>
 #include <string>
+
+#include <bass.h>
 
 
 namespace rqdq {

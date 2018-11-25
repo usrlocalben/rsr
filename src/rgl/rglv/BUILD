@@ -124,7 +124,7 @@ cxx_library(
     )
 
 cxx_exe(
-    name='math_test',
+    name='math_unittest',
     srcs=['rglv_math.t.cxx'],
     deps=[
         'src/rml/rmlm:mat4',
@@ -207,7 +207,7 @@ cxx_library(
     )
 
 cxx_test(
-    name='triangle_test',
+    name='triangle_unittest',
     srcs=['rglv_triangle.t.cxx'],
     deps=[
         'src/rcl/rcls:aligned_containers',

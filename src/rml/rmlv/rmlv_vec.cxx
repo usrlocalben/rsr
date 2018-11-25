@@ -1,6 +1,7 @@
 #include <rmlv_vec.hxx>
 
 #include <ostream>
+
 #include <fmt/format.h>
 
 std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec2& v) {

@@ -2,6 +2,7 @@
 #include <rmlv_vec.hxx>
 
 #include <iostream>
+
 #include <gtest/gtest.h>
 
 using namespace rqdq;

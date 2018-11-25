@@ -34,7 +34,7 @@ cxx_library(
     )
 
 cxx_test(
-    name='vec_test',
+    name='vec_unittest',
     srcs=['rmlv_vec.t.cxx'],
     deps=[
         '3rdparty/googletest:gtest_main',

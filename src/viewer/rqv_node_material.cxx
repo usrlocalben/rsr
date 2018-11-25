@@ -1,5 +1,4 @@
 #include <rqv_node_material.hxx>
-
 #include <rclmt_jobsys.hxx>
 #include <rglr_texture.hxx>
 #include <rglv_gl.hxx>
@@ -8,6 +7,7 @@
 
 #include <memory>
 #include <string>
+
 #include <PixelToaster.h>
 
 namespace rqdq {

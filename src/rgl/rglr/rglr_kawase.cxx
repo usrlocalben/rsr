@@ -1,8 +1,8 @@
 #include <rglr_kawase.hxx>
-
 #include <rglr_canvas.hxx>
 #include <rmlv_mvec4.hxx>
 
+#include <algorithm>
 #include <array>
 
 using std::array;

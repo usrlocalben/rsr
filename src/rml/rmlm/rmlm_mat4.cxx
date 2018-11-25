@@ -1,10 +1,10 @@
 #include <rmlm_mat4.hxx>
 #include <rmlv_vec.hxx>
 
-#include <fmt/printf.h>
-
 #include <cassert>
 #include <iostream>
+
+#include <fmt/printf.h>
 
 
 namespace rqdq {

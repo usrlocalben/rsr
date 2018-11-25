@@ -1,5 +1,4 @@
 #include <rqv_app.hxx>
-
 #include <ralio_audio_controller.hxx>
 #include <rals_sync_controller.hxx>
 #include <rclma_framepool.hxx>
@@ -30,12 +29,16 @@
 #include <sstream>
 #include <thread>
 #include <vector>
+
 #include <fmt/format.h>
 #include <fmt/printf.h>
 #include <gason.h>
 #include <PixelToaster.h>
 #include <rocket/sync.h>
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#undef min
+#undef max
 
 namespace rqdq {
 namespace rqv {

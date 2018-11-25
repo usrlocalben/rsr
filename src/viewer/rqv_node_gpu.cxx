@@ -1,5 +1,4 @@
 #include <rqv_node_gpu.hxx>
-
 #include <rclmt_jobsys.hxx>
 #include <rglv_math.hxx>
 #include <rmlv_vec.hxx>
@@ -8,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <tuple>
+
 #include <ryg-srgb.h>
 
 namespace rqdq {
