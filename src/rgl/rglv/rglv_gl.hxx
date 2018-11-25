@@ -43,6 +43,22 @@ constexpr int GL_NEAREST_MIPMAP_NEAREST = 0;
 constexpr int GL_LINEAR_MIPMAP_NEAREST = 1;
 
 
+struct TextureState {
+	const PixelToaster::FloatingPointPixel *ptr;
+	int width;
+	int height;
+	int stride;
+	int filter;
+
+	void reset() {
+		ptr = nullptr;
+		width = 8;
+		height = 8;
+		stride = 8;
+		filter = GL_NEAREST_MIPMAP_NEAREST;  // standard default is NEAREST_MIPMAP_LINEAR
+		} };
+
+
 struct GLState {
 	rmlm::mat4 modelViewMatrix;	// defaults to identity
 	rmlm::mat4 projectionMatrix;
@@ -55,11 +71,13 @@ struct GLState {
 	const void *array;		// default is nullptr
 	int arrayFormat;		// unused... 0
 
-	const PixelToaster::FloatingPointPixel *texture0Ptr;
-	int texture0Width;
-	int texture0Height;
-	int texture0Stride;
-	int texture0MinFilter;
+	std::array<TextureState, 2> tus;
+
+	const PixelToaster::FloatingPointPixel *texture1Ptr;
+	int texture1Width;
+	int texture1Height;
+	int texture1Stride;
+	int texture1MinFilter;
 
 	void reset() {
 		cullingEnabled = false;
@@ -67,13 +85,8 @@ struct GLState {
 		color = rmlv::vec4{1.0f,1.0f,1.0f,1.0f};
 		normal = rmlv::vec3{ 0.0f, 1.0f, 0.0f };
 		programId = 0;
-
-		texture0Ptr = nullptr;
-		texture0Width = 8;
-		texture0Height = 8;
-		texture0Stride = 8;
-		texture0MinFilter = GL_NEAREST_MIPMAP_NEAREST;  // standard default is NEAREST_MIPMAP_LINEAR
-
+		for (auto& tu : tus) {
+			tu.reset(); }
 		array = nullptr;
 		arrayFormat = 0; } };
 
@@ -174,14 +187,15 @@ public:
 		d_dirty = true;
 		d_cs.programId = v; }
 
-	void glBindTexture(const PixelToaster::FloatingPointPixel *ptr, int width, int height, int stride, const int mode) {
+	void glBindTexture(int unit, const PixelToaster::FloatingPointPixel *ptr, int width, int height, int stride, const int mode) {
 		d_dirty = true;
-		d_cs.texture0Ptr = ptr;
 		assert(mode == GL_LINEAR_MIPMAP_NEAREST || mode == GL_NEAREST_MIPMAP_NEAREST);
-		d_cs.texture0MinFilter = mode;
-		d_cs.texture0Width = width;
-		d_cs.texture0Height = height;
-		d_cs.texture0Stride = stride; }
+		auto& tu = d_cs.tus[unit];
+		tu.ptr = ptr;
+		tu.filter = mode;
+		tu.width = width;
+		tu.height = height;
+		tu.stride = stride; }
 
 	void glUseArray(const VertexArray_F3F3F3& vao) {
 		d_dirty = true;

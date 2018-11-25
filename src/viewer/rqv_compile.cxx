@@ -247,7 +247,8 @@ CompileResult compileFxXYQuad(const string& id, const JsonValue& data, const rgl
 CompileResult compileMaterial(const string& id, const JsonValue& data, const rglv::MeshStore& meshStore) {
 	InputList inputs;
 	NodeList deps;
-	Optional(TextureNode, texture)
+	Optional(TextureNode, texture0)
+	Optional(TextureNode, texture1)
 	Optional(ValuesBase, u0)
 	Optional(ValuesBase, u1)
 

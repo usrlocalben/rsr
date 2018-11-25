@@ -99,7 +99,7 @@ struct BaseProgram {
 		) {
 		gl_Position = rmlm::mul(u.mvpm, v.a0); }
 
-	template <typename TU1>
+	template <typename TEXTURE_UNIT>
 	inline static void shadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
@@ -110,7 +110,8 @@ struct BaseProgram {
 		// special
 		const rglv::tri_qfloat& BS, const rglv::tri_qfloat& BP,
 		// texture units
-		const TU1& tu1,
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
@@ -137,7 +138,7 @@ struct GPUStats {
 	int totalTrianglesDrawn; };
 
 
-template <typename TU1, typename FRAGMENT_PROGRAM, typename BLEND_PROGRAM>
+template <typename TEXTURE_UNIT, typename FRAGMENT_PROGRAM, typename BLEND_PROGRAM>
 struct DefaultTargetProgram {
 
 	// const FRAGMENT_PROGRAM& fp;
@@ -148,7 +149,7 @@ struct DefaultTargetProgram {
 	rmlv::qfloat* db;
 	rmlv::qfloat* dbx;
 
-	const TU1& tu1;
+	const TEXTURE_UNIT& tu0, tu1;
 
 	const int width;
 	const int height;
@@ -166,7 +167,8 @@ struct DefaultTargetProgram {
 	const ShaderUniforms uniforms;
 
 	DefaultTargetProgram(
-		const TU1& tu1,
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
 		rglr::QFloat4Canvas& cc,
 		rglr::QFloatCanvas& dc,
 		const ShaderUniforms uniforms,
@@ -180,6 +182,7 @@ struct DefaultTargetProgram {
 		:width(cc.width()),
 		height(cc.height()),
 		target_dimensions(rmlv::qfloat2{float(cc.width()), float(cc.height())}),
+		tu0(tu0),
 		tu1(tu1),
 		cb(cc.data()),
 		db(dc.data()),
@@ -262,7 +265,7 @@ struct DefaultTargetProgram {
 		                                fragDepth,
 										uniforms,
 		                                interpolatedVertexData,
-		                                BS, BP, tu1, fragColor);
+		                                BS, BP, tu0, tu1, fragColor);
 
 		qfloat4 destColor;
 		loadColor(destColor);
@@ -836,7 +839,8 @@ private:
 		const rmlm::qmat4 qm_dm{ d_deviceMatrix };
 
 		using sampler = rglr::ts_pow2_mipmap;
-		const sampler tu1(state.texture0Ptr, state.texture0Width, state.texture0Height, state.texture0Stride, state.texture0MinFilter);
+		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
+		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
 		array<VertexInput, 3> vi_;
 		array<VertexOutput, 3> computed;
@@ -882,7 +886,7 @@ private:
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu1, cbc, dbc, ui, devCoord[0].lane(ti), devCoord[1].lane(ti), devCoord[2].lane(ti), computed[0].lane(ti), computed[1].lane(ti), computed[2].lane(ti));
+				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu0, tu1, cbc, dbc, ui, devCoord[0].lane(ti), devCoord[1].lane(ti), devCoord[2].lane(ti), computed[0].lane(ti), computed[1].lane(ti), computed[2].lane(ti));
 				draw_triangle(target_height, rect, fx[0].si[ti], fx[1].si[ti], fx[2].si[ti], fy[0].si[ti], fy[1].si[ti], fy[2].si[ti], !backfacing, target_program); }
 
 			// reset the SIMD lane counter
@@ -1047,9 +1051,10 @@ private:
 			std::swap(dev[0], dev[2]); }
 
 		using sampler = rglr::ts_pow2_mipmap;
-		const sampler tu1(state.texture0Ptr, state.texture0Width, state.texture0Height, state.texture0Stride, state.texture0MinFilter);
+		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
+		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
+		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu0, tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
 		draw_triangle(target_height, rect, dev[0], dev[1], dev[2], !backfacing, target_program); }
 
 	auto generateUniforms(const GLState& state) {

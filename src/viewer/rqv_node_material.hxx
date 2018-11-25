@@ -24,7 +24,8 @@ struct MaterialNode : NodeBase {
 	const bool d_filter;
 
 	// inputs
-	TextureNode* texture_node = nullptr;
+	TextureNode* texture0_node = nullptr;
+	TextureNode* texture1_node = nullptr;
 	ValuesBase* u0_node = nullptr;  std::string u0_slot;
 	ValuesBase* u1_node = nullptr;  std::string u1_slot;
 
@@ -43,11 +44,17 @@ struct MaterialNode : NodeBase {
 
 		jobsys::Job *postSetup = jobsys::make_job(jobsys::noop);
 		add_links_to(postSetup);
-		if (texture_node) {
-			texture_node->add_link(postSetup);
-			texture_node->run(); }
+		if (texture0_node == nullptr && texture1_node == nullptr) {
+			jobsys::run(postSetup); }
 		else {
-			jobsys::run(postSetup); }}
+			if (texture0_node) {
+				texture0_node->add_link(after_all(postSetup));}
+			if (texture1_node) {
+				texture1_node->add_link(after_all(postSetup));}
+			if (texture0_node) {
+				texture0_node->run(); }
+			if (texture1_node) {
+				texture1_node->run(); }}}
 
 	virtual void apply(rglv::GL*);};
 

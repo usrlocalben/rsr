@@ -43,8 +43,8 @@
 		"h": 3.14, "v": 0,
 		"fov": 55.0}},
 
-	{"$renderToTexture": {"id": "texRTT", "gpu": "nGPU2", "dim": 128, "aa": true, "aspect": 1.777}},
-	{"$material": {"id": "mTest", "program": "Amy", "filter": false, "texture": "texRTT"}},
+	{"$renderToTexture": {"id": "texRTT", "gpu": "nGPU2", "width": 256, "height": 256, "aa": true, "aspect": 1.666}},
+	{"$material": {"id": "mTest", "program": "Amy", "filter": false, "texture0": "texRTT"}},
 
 	{"$layer": { "id": "nPIPLayer",
 		"camera": {"$orthographic": {}},
@@ -107,14 +107,14 @@
 	{"$material": { "id": "mBlack",
 		"program": "Envmap",
 		"filter": false,
-		"texture": {"$image": {"file": "data/textures/env-black.png"}}}},
+		"texture0": {"$image": {"file": "data/textures/env-black.png"}}}},
 
 	{"$material": { "id": "mPurpleFade",
 		"program": "EnvmapX",
 		"filter": false,
 		"u0": "amyBackgroundColor",
 		"u1": "sync:foo",
-		"texture": {"$image": {"file": "data/textures/env-purple.png"}}}},
+		"texture0": {"$image": {"file": "data/textures/env-purple.png"}}}},
 
 	{"$computedVec3": {
 		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
@@ -123,7 +123,7 @@
 	{"$material": { "id": "mAmy",
 		"program": "Amy",
 		"filter": true,
-		"texture": {"$image": {"file": "data/textures/amy1024.png"}}}},
+		"texture0": {"$image": {"file": "data/textures/amy1024.png"}}}},
 
 	{"$translate": { "id":"nAuraForLaura",
 		"gl": {"$fxAuraForLaura": {

@@ -30,7 +30,7 @@ ShaderProgramId deserialize_program_name(const std::string&);
 struct WireframeProgram final : public rglv::BaseProgram {
 	static int id;
 
-	template <typename TU1>
+	template <typename TEXTURE_UNIT>
 	inline static void shadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
@@ -41,7 +41,8 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		// special
 		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
 		// texture units
-		const TU1& tu1,
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
@@ -103,7 +104,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		OUT_ENVMAP_UV = { uu, vv, 0 };
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
-	template <typename TU1>
+	template <typename TEXTURE_UNIT>
 	inline static void shadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
@@ -114,11 +115,12 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		// special
 		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
 		// texture units
-		const TU1& tu1,
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
-		gl_FragColor = tu1.sample({ OUT_ENVMAP_UV.x, OUT_ENVMAP_UV.y }); }
+		gl_FragColor = tu0.sample({ OUT_ENVMAP_UV.x, OUT_ENVMAP_UV.y }); }
 #undef gl_ModelViewMatrix
 #undef gl_ModelViewProjectionMatrix
 #undef gl_NormalMatrix
@@ -144,7 +146,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		OUT_TEXCOORD = IN_TEXCOORD.xyz();
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
-	template <typename TU1>
+	template <typename TEXTURE_UNIT>
 	inline static void shadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
@@ -155,11 +157,12 @@ struct AmyProgram final : public rglv::BaseProgram {
 		// special
 		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
 		// texture units
-		const TU1& tu1,
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
-		gl_FragColor = tu1.sample({ OUT_TEXCOORD.x, OUT_TEXCOORD.y }); }
+		gl_FragColor = tu0.sample({ OUT_TEXCOORD.x, OUT_TEXCOORD.y }); }
 #undef gl_ModelViewProjectionMatrix
 #undef OUT_TEXCOORD
 #undef IN_TEXCOORD
@@ -197,7 +200,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		OUT_ENVMAP_UV = { uu, vv, 0 };
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
-	template <typename TU1>
+	template <typename TEXTURE_UNIT>
 	inline static void shadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
@@ -208,11 +211,12 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		// special
 		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
 		// texture units
-		const TU1& tu1,
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
-		gl_FragColor = tu1.sample({ OUT_ENVMAP_UV.x, OUT_ENVMAP_UV.y });
+		gl_FragColor = tu0.sample({ OUT_ENVMAP_UV.x, OUT_ENVMAP_UV.y });
 		gl_FragColor = mix(gl_FragColor, UNIFORM_BACKCOLOR, UNIFORM_OPACITY.x); }
 #undef gl_ModelViewMatrix
 #undef gl_ModelViewProjectionMatrix

@@ -16,8 +16,10 @@ namespace rqv {
 using namespace std;
 
 void MaterialNode::connect(const string& attr, NodeBase* other, const string& slot) {
-	if (attr == "texture") {
-		texture_node = dynamic_cast<TextureNode*>(other); }
+	if (attr == "texture0") {
+		texture0_node = dynamic_cast<TextureNode*>(other); }
+	else if (attr == "texture1") {
+		texture1_node = dynamic_cast<TextureNode*>(other); }
 	else if (attr == "u0") {
 		u0_node = dynamic_cast<ValuesBase*>(other);
 		u0_slot = slot; }
@@ -30,8 +32,10 @@ void MaterialNode::connect(const string& attr, NodeBase* other, const string& sl
 
 vector<NodeBase*> MaterialNode::deps() {
 	vector<NodeBase*> out;
-	if (texture_node != nullptr) {
-		out.push_back(texture_node); }
+	if (texture0_node != nullptr) {
+		out.push_back(texture0_node); }
+	if (texture1_node != nullptr) {
+		out.push_back(texture1_node); }
 	if (u0_node != nullptr) {
 		out.push_back(u0_node); }
 	if (u1_node != nullptr) {
@@ -42,9 +46,12 @@ vector<NodeBase*> MaterialNode::deps() {
 void MaterialNode::apply(rglv::GL* _dc) {
 	auto& dc = *_dc;
 	dc.glUseProgram(int(d_program));
-	if (texture_node != nullptr) {
-		auto& texture = texture_node->getTexture();
-		dc.glBindTexture(texture.buf.data(), texture.width, texture.height, texture.stride, d_filter ? 1 : 0); }
+	if (texture0_node != nullptr) {
+		auto& texture = texture0_node->getTexture();
+		dc.glBindTexture(0, texture.buf.data(), texture.width, texture.height, texture.stride, d_filter ? 1 : 0); }
+	if (texture1_node != nullptr) {
+		auto& texture = texture1_node->getTexture();
+		dc.glBindTexture(1, texture.buf.data(), texture.width, texture.height, texture.stride, d_filter ? 1 : 0); }
 	dc.glEnable(rglv::GL_CULL_FACE);
 	if (u0_node) {
 		dc.glColor(u0_node->get(u0_slot).as_vec3()); }
