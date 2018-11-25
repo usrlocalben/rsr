@@ -5,7 +5,7 @@
 #include <rglr_blend.hxx>
 #include <rglr_canvas.hxx>
 #include <rglr_canvas_util.hxx>
-#include <rglr_texture.hxx>
+#include <rglr_texture_sampler.hxx>
 #include <rglv_clipper.hxx>
 #include <rglv_fragment.hxx>
 #include <rglv_gl.hxx>

@@ -10,7 +10,7 @@
 #include <rglr_display_mode.hxx>
 #include <rglr_pixeltoaster_util.hxx>
 #include <rglr_profont.hxx>
-#include <rglr_texture.hxx>
+#include <rglr_texture_store.hxx>
 #include <rglv_camera.hxx>
 #include <rglv_material.hxx>
 #include <rglv_mesh_store.hxx>

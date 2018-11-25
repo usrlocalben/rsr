@@ -1,80 +1,23 @@
 #include <rglr_texture.hxx>
+
+#include <rmlg_pow2.hxx>
 #include <rcls_aligned_containers.hxx>
 #include <rmlv_mvec4.hxx>
 #include <rmlv_vec.hxx>
-#include <rcls_file.hxx>
 
-#include <fstream>
-#include <string>
-#include <vector>
-
-#include <fmt/format.h>
-#include <fmt/printf.h>
 #include <PixelToaster.h>
-#include <picopng.h>
-#include <ryg-srgb.h>
 
 
 namespace rqdq {
 namespace rglr {
 
-std::vector<uint8_t> load_file(const std::string& filename);
-
-
-Texture load_png(const std::string filename, const std::string name, const bool premultiply) {
-	using ryg::srgb8_to_float;
-
-	std::vector<unsigned char> image;
-
-	auto data = load_file(filename);
-
-	unsigned long w, h;
-	int error = decodePNG(image, w, h, data.empty() ? 0 : data.data(), (unsigned long)data.size());
-	if (error != 0) {
-		std::cout << "error(" << error << ") decoding png from [" << filename << "]" << std::endl;
-		while (1); }
-
-	rcls::vector<PixelToaster::FloatingPointPixel> pc;
-
-	pc.resize(w * h);
-
-	auto* ic = image.data();
-	for (unsigned i = 0; i < w*h; i++) {
-		auto& dst = pc[i];
-		dst.r = srgb8_to_float(*(ic++));
-		dst.g = srgb8_to_float(*(ic++));
-		dst.b = srgb8_to_float(*(ic++));
-		dst.a = *(ic++) / 255.0f; // XXX is alpha srgb?
-		if (premultiply) {
-			dst.r *= dst.a;
-			dst.g *= dst.a;
-			dst.b *= dst.a; }}
-
-	return{ pc, int(w), int(h), int(w), name }; }
-
-
-Texture load_any(const std::string& prefix, const std::string& fn, const std::string& name, const bool premultiply) {
-	//	string tmp = fn;
-	//	transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
-	// std::cout << "texturestore: loading " << prefix << fn << std::endl;
-	std::string ext = fn.substr(fn.length() - 4, 4);
-	if (ext == ".png") {
-		return load_png(prefix + fn, name, premultiply); }
-//	else if (ext == ".jpg") {
-//		return loadJpg(prefix + fn, name);
-//	}
-	else {
-		std::cout << "unsupported texture extension \"" << ext << "\"" << std::endl;
-		while (1); }}
-
-
 Texture ensurePowerOf2(Texture& src) {
-	if (src.height == src.width && is_pow2(src.width)) {
+	if (src.height == src.width && rmlg::is_pow2(src.width)) {
 		return src; }
 
 	int longEdge = std::max(src.width, src.height);
 
-	const int dim = pow2ceil(longEdge);
+	const int dim = rmlg::pow2ceil(longEdge);
 
 	rcls::vector<PixelToaster::FloatingPointPixel> img;
 	img.resize(dim*dim);
@@ -95,12 +38,12 @@ void Texture::maybe_make_mipmap() {
 		mipmap = false;
 		return; }
 
-	if (!is_pow2(width)) {
+	if (!rmlg::is_pow2(width)) {
 		pow = -1;
 		mipmap = false;
 		return; }
 
-	pow = ilog2(width);
+	pow = rmlg::ilog2(width);
 	if (pow > 12) {
 		pow = -1;
 		mipmap = false;
@@ -138,73 +81,6 @@ void Texture::maybe_make_mipmap() {
 	//	this->height *= 2;  // this is probably only useful for viewing the mipmap itself
 }
 
-
-Texture checkerboard2x2() {
-	rcls::vector<PixelToaster::FloatingPointPixel> db;
-	db.push_back(PixelToaster::FloatingPointPixel(0, 0, 0, 0));
-	db.push_back(PixelToaster::FloatingPointPixel(1, 0, 1, 0));
-	db.push_back(PixelToaster::FloatingPointPixel(1, 0, 1, 0));
-	db.push_back(PixelToaster::FloatingPointPixel(0, 0, 0, 0));
-	return{ db, 2, 2, 2, "checkerboard" }; }
-
-
-TextureStore::TextureStore() {
-	this->append(checkerboard2x2()); }
-
-
-void TextureStore::append(Texture t) {
-	store.push_back(t); }
-
-
-const Texture * const TextureStore::find_by_name(const std::string& name) const {
-	for (auto& item : store) {
-		if (item.name == name) return &item; }
-	return nullptr; }
-
-
-void TextureStore::load_any(const std::string& prepend, const std::string& fname) {
-	auto existing = this->find_by_name(fname);
-	if (existing != nullptr) {
-		return; }
-
-	Texture newtex = rglr::load_any(prepend, fname, fname, true);
-	newtex.maybe_make_mipmap();
-	this->append(newtex); }
-
-
-void TextureStore::load_dir(const std::string& prepend) {
-	static const std::vector<std::string> extensions{ "*.png" }; // , "*.jpg" };
-
-	for (auto& ext : extensions) {
-		for (auto& fn : rcls::fileglob(prepend + ext)) {
-			//std::cout << "scanning [" << prepend << "][" << fn << "]" << std::endl;
-			this->load_any(prepend, fn); }}}
-
-
-void TextureStore::print() {
-	int i = 0;
-	for (const auto& item : store) {
-		const void * const ptr = item.buf.data();
-		fmt::printf("#% 3d \"%-20s\" % 4d x% 4d", i, item.name, item.width, item.height);
-		fmt::printf("  data@ 0x%p\n", ptr);
-		i++; }}
-
-
-std::vector<uint8_t> load_file(const std::string& filename) {
-	std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
-
-	// get filesize
-	std::streamsize size = 0;
-	if (file.seekg(0, std::ios::end).good()) {
-		size = file.tellg(); }
-	if (file.seekg(0, std::ios::beg).good()) {
-		size -= file.tellg(); }
-
-	std::vector<uint8_t> buffer;
-	if (size > 0) {
-		buffer.resize(size);
-		file.read(reinterpret_cast<char*>(buffer.data()), size); }
-	return buffer; }
 
 }  // close package namespace
 }  // close enterprise namespace

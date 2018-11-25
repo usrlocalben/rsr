@@ -1,6 +1,6 @@
 #pragma once
 #include <rcls_aligned_containers.hxx>
-#include <rglr_texture.hxx>
+#include <rglr_texture_store.hxx>
 #include <rglv_material.hxx>
 #include <rglv_mesh.hxx>
 

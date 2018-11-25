@@ -3,6 +3,7 @@
 #include <rglv_mesh_store.hxx>
 #include <rclt_util.hxx>
 #include <rglr_texture.hxx>
+#include <rglr_texture_load.hxx>
 #include <rqv_node_camera.hxx>
 #include <rqv_node_computed.hxx>
 #include <rqv_node_fx_auraforlaura.hxx>

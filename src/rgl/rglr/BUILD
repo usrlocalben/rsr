@@ -78,14 +78,52 @@ cxx_library(
     srcs=['rglr_texture.cxx'],
     hdrs=['rglr_texture.hxx'],
     deps=[
+        '3rdparty/pixeltoaster',
+        'src/rcl/rcls:aligned_containers',
+        'src/rml/rmlg:pow2',
+        'src/rml/rmlv:mvec4',
+        'src/rml/rmlv:vec',
+        ],
+    )
+
+cxx_library(
+    name='texture_store',
+    srcs=['rglr_texture_store.cxx'],
+    hdrs=['rglr_texture_store.hxx'],
+    deps=[
+        '3rdparty/fmt',
+        'src/rcl/rcls:file',
+        ':texture',
+        ':texture_load',
+        ],
+    )
+
+cxx_library(
+    name='texture_sampler',
+    srcs=['rglr_texture_sampler.cxx'],
+    hdrs=['rglr_texture_sampler.hxx'],
+    deps=[
+        '3rdparty/pixeltoaster',
+        'src/rml/rmlg:pow2',
+        'src/rml/rmlv:mvec4',
+        'src/rml/rmlv:soa',
+        'src/rml/rmlv:vec',
+        ],
+    )
+
+cxx_library(
+    name='texture_load',
+    srcs=['rglr_texture_load.cxx'],
+    hdrs=['rglr_texture_load.hxx'],
+    deps=[
         '3rdparty/fmt',
         '3rdparty/picopng',
         '3rdparty/pixeltoaster',
         '3rdparty/ryg-srgb',
         'src/rcl/rcls:aligned_containers',
         'src/rcl/rcls:file',
+        'src/rml/rmlg:pow2',
         'src/rml/rmlv:mvec4',
-        'src/rml/rmlv:soa',
         'src/rml/rmlv:vec',
         ],
     )

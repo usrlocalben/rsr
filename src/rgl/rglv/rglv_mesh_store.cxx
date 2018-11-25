@@ -1,6 +1,6 @@
 #include <rglv_mesh_store.hxx>
 #include <rcls_file.hxx>
-#include <rglr_texture.hxx>
+#include <rglr_texture_store.hxx>
 #include <rglv_material.hxx>
 #include <rglv_obj.hxx>
 #include <rglv_mesh.hxx>

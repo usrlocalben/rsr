@@ -29,7 +29,7 @@ cxx_library(
         'src/rcl/rcls:aligned_containers',
         'src/rgl/rglr:canvas',
         'src/rgl/rglr:canvas_util',
-        'src/rgl/rglr:texture',
+        'src/rgl/rglr:texture_sampler',
         'src/rml/rmlg:irect',
         'src/rml/rmlg:triangle',
         'src/rml/rmlm:mat4',
@@ -165,7 +165,7 @@ cxx_library(
     deps=[
         'src/rcl/rcls:aligned_containers',
         'src/rcl/rcls:file',
-        'src/rgl/rglr:texture',
+        'src/rgl/rglr:texture_store',
         ':material',
         ':mesh',
         ':obj',

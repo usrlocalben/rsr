@@ -15,3 +15,9 @@ cxx_library(
         'src/rml/rmlv:vec',
         ],
     )
+
+cxx_library(
+    name='pow2',
+    srcs=['rmlg_pow2.cxx'],
+    hdrs=['rmlg_pow2.hxx'],
+    )

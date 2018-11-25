@@ -187,6 +187,9 @@
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_pixeltoaster_util.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_profont.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_texture.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_texture_load.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_texture_sampler.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_texture_store.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_camera.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_clipper.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_fragment.cxx" />
@@ -205,6 +208,7 @@
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_triangle.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_triangle.t.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_vao.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlg\rmlg_pow2.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlm\rmlm_mat4.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_mmutil.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_mvec4.cxx" />
