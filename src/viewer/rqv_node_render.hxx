@@ -96,14 +96,15 @@ struct RenderToTexture : TextureNode {
 	rglr::FloatingPointCanvas d_outCanvas;
 
 	// config
-	const int d_dim;
+	const int d_width;
+	const int d_height;
 	const float d_aspect;
 	const bool d_aa;
 
 	// inputs
 	GPUNode* gpu_node = nullptr;
 
-	RenderToTexture(const std::string& name, const InputList& inputs, const int dim, const float pa, bool aa);
+	RenderToTexture(const std::string& name, const InputList& inputs, int width, int height, float pa, bool aa);
 
 	void connect(const std::string& attr, NodeBase* other, const std::string& slot) override;
 	std::vector<NodeBase*> deps() override;
@@ -125,13 +126,15 @@ struct RenderToTexture : TextureNode {
 	void postProcessImpl();
 
 	rglr::QFloatCanvas& get_depthcanvas() {
-		const int renderDim = d_aa ? d_dim * 2 : d_dim;
-		internal_depth_canvas.resize(renderDim, renderDim);
+		const int renderWidth = d_aa ? d_width * 2 : d_width;
+		const int renderHeight = d_aa ? d_height * 2 : d_height;
+		internal_depth_canvas.resize(renderWidth, renderHeight);
 		return internal_depth_canvas; }
 
 	rglr::QFloat4Canvas& get_colorcanvas() {
-		const int renderDim = d_aa ? d_dim * 2 : d_dim;
-		internal_color_canvas.resize(renderDim, renderDim);
+		const int renderWidth = d_aa ? d_width * 2 : d_width;
+		const int renderHeight = d_aa ? d_height * 2 : d_height;
+		internal_color_canvas.resize(renderWidth, renderHeight);
 		return internal_color_canvas; }
 
 	const rglr::Texture& getTexture() override {

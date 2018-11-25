@@ -44,7 +44,7 @@ void MaterialNode::apply(rglv::GL* _dc) {
 	dc.glUseProgram(int(d_program));
 	if (texture_node != nullptr) {
 		auto& texture = texture_node->getTexture();
-		dc.glBindTexture(texture.buf.data(), texture.width, d_filter ? 1 : 0); }
+		dc.glBindTexture(texture.buf.data(), texture.width, texture.height, texture.stride, d_filter ? 1 : 0); }
 	dc.glEnable(rglv::GL_CULL_FACE);
 	if (u0_node) {
 		dc.glColor(u0_node->get(u0_slot).as_vec3()); }

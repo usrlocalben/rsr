@@ -340,9 +340,13 @@ CompileResult compileRenderToTexture(const string& id, const JsonValue& data, co
 
 	Required(GPUNode, gpu)
 
-	int dim = 512;
-	if (auto jv = jv_find(data, "dim", JSON_NUMBER)) {
-		dim = int(jv->toNumber()); }
+	int width = 256;
+	if (auto jv = jv_find(data, "width", JSON_NUMBER)) {
+		width = int(jv->toNumber()); }
+
+	int height = 256;
+	if (auto jv = jv_find(data, "height", JSON_NUMBER)) {
+		height = int(jv->toNumber()); }
 
 	bool aa = false;
 	if (auto jv = jv_find(data, "aa", JSON_TRUE)) {
@@ -352,7 +356,7 @@ CompileResult compileRenderToTexture(const string& id, const JsonValue& data, co
 	if (auto jv = jv_find(data, "aspect", JSON_NUMBER)) {
 		pa = float(jv->toNumber()); }
 
-	return tuple{make_shared<RenderToTexture>(id, inputs, dim, pa, aa), deps}; }
+	return tuple{make_shared<RenderToTexture>(id, inputs, width, height, pa, aa), deps}; }
 
 
 CompileResult compileTranslate(const string& id, const JsonValue& data, const rglv::MeshStore& meshStore) {

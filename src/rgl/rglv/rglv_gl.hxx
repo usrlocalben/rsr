@@ -56,7 +56,9 @@ struct GLState {
 	int arrayFormat;		// unused... 0
 
 	const PixelToaster::FloatingPointPixel *texture0Ptr;
-	int texture0Dim;
+	int texture0Width;
+	int texture0Height;
+	int texture0Stride;
 	int texture0MinFilter;
 
 	void reset() {
@@ -67,7 +69,9 @@ struct GLState {
 		programId = 0;
 
 		texture0Ptr = nullptr;
-		texture0Dim = 8;
+		texture0Width = 8;
+		texture0Height = 8;
+		texture0Stride = 8;
 		texture0MinFilter = GL_NEAREST_MIPMAP_NEAREST;  // standard default is NEAREST_MIPMAP_LINEAR
 
 		array = nullptr;
@@ -170,25 +174,14 @@ public:
 		d_dirty = true;
 		d_cs.programId = v; }
 
-	void glBindTexture(const PixelToaster::FloatingPointPixel *ptr, const int dim, const int mode) {
+	void glBindTexture(const PixelToaster::FloatingPointPixel *ptr, int width, int height, int stride, const int mode) {
 		d_dirty = true;
 		d_cs.texture0Ptr = ptr;
 		assert(mode == GL_LINEAR_MIPMAP_NEAREST || mode == GL_NEAREST_MIPMAP_NEAREST);
 		d_cs.texture0MinFilter = mode;
-		switch (dim) {
-		case 2: d_cs.texture0Dim = 1; break;
-		case 4: d_cs.texture0Dim = 2; break;
-		case 8: d_cs.texture0Dim = 3; break;
-		case 16: d_cs.texture0Dim = 4; break;
-		case 32: d_cs.texture0Dim = 5; break;
-		case 64: d_cs.texture0Dim = 6; break;
-		case 128: d_cs.texture0Dim = 7; break;
-		case 256: d_cs.texture0Dim = 8; break;
-		case 512: d_cs.texture0Dim = 9; break;
-		case 1024: d_cs.texture0Dim = 10; break;
-		case 2048: d_cs.texture0Dim = 11; break;
-		case 4096: d_cs.texture0Dim = 12; break;
-		default: std::cout << "invalid texture size " << dim << std::endl; } }
+		d_cs.texture0Width = width;
+		d_cs.texture0Height = height;
+		d_cs.texture0Stride = stride; }
 
 	void glUseArray(const VertexArray_F3F3F3& vao) {
 		d_dirty = true;

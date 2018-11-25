@@ -34,6 +34,27 @@ struct Texture {
 	};
 
 
+inline bool is_pow2(unsigned x) {
+	while (((x & 1) == 0) && x > 1) {
+		x >>= 1; }
+	return x == 1; }
+
+
+inline int ilog2(unsigned x) {
+	int pow = 0;
+	while (x) {
+		x >>= 1;
+		pow++; }
+	return pow - 1; }
+
+
+inline int pow2ceil(int a) {
+	int c = 1;
+	while (c < a) {
+		c <<= 1; }
+	return c; }
+
+
 class TextureStore {
 public:
 	TextureStore();
@@ -89,60 +110,78 @@ inline int levelOfDetail(const rmlv::qfloat uCoord, const rmlv::qfloat vCoord) {
 
 
 struct ts_pow2_mipmap {
-
 	const PixelToaster::FloatingPointPixel* const d_bitmap;
-	const rmlv::qfloat d_baseDimf;
-	const rmlv::mvec4i d_stride;
-	const int d_power;
-	int rowlut[16];
+
+	rmlv::mvec4i d_stride;
+	rmlv::mvec4f d_height;
+	rmlv::mvec4f d_width;
+	rmlv::mvec4i d_uLastRow;
+
 	rqdq::rmlv::qfloat4(rqdq::rglr::ts_pow2_mipmap::*d_func)(const rqdq::rmlv::qfloat2& texcoord) const;
+
+	// only for mipmaps
+	rmlv::qfloat d_baseDimf;
+	int rowlut[16];
+	int d_power;
 
 	ts_pow2_mipmap(
 		const PixelToaster::FloatingPointPixel* ptr,
-		int power,
-		int mode
-	) :d_bitmap(ptr), d_baseDimf(float(1L << power)), d_stride(1 << power), d_power(power) {
-		assert(power >= 2 && power <= 12);
-		int x = 0;
-		for (int p = power; p >= 0; p--) {
-			int siz = 1 << p;
-			rowlut[power - p] = x + siz - 1;
-			x += siz; }
+		int width, int height, int row_stride, int mode
+	) :d_bitmap(ptr) {
+		d_stride = row_stride;
+		if (is_pow2(width) && width == height && row_stride == width) {
+			// power-of-2 texture
+			d_power = ilog2(width);
+			d_baseDimf = float(width);
+			assert(d_power >= 2 && d_power <= 12);
 
-		if (mode == 0) {
-			switch (power) {
-			case 12: d_func = &ts_pow2_mipmap::sample_nearest<12>; break;
-			case 11: d_func = &ts_pow2_mipmap::sample_nearest<11>; break;
-			case 10: d_func = &ts_pow2_mipmap::sample_nearest<10>; break;
-			case 9: d_func = &ts_pow2_mipmap::sample_nearest<9>; break;
-			case 8: d_func = &ts_pow2_mipmap::sample_nearest<8>; break;
-			case 7: d_func = &ts_pow2_mipmap::sample_nearest<7>; break;
-			case 6: d_func = &ts_pow2_mipmap::sample_nearest<6>; break;
-			case 5: d_func = &ts_pow2_mipmap::sample_nearest<5>; break;
-			case 4: d_func = &ts_pow2_mipmap::sample_nearest<4>; break;
-			case 3: d_func = &ts_pow2_mipmap::sample_nearest<3>; break;
-			case 2: d_func = &ts_pow2_mipmap::sample_nearest<2>; break;
-			default: assert(false); }}
-		else if (mode == 1) {
-			switch (power) {
-			case 12: d_func = &ts_pow2_mipmap::sample_bilinear<12>; break;
-			case 11: d_func = &ts_pow2_mipmap::sample_bilinear<11>; break;
-			case 10: d_func = &ts_pow2_mipmap::sample_bilinear<10>; break;
-			case 9: d_func = &ts_pow2_mipmap::sample_bilinear<9>; break;
-			case 8: d_func = &ts_pow2_mipmap::sample_bilinear<8>; break;
-			case 7: d_func = &ts_pow2_mipmap::sample_bilinear<7>; break;
-			case 6: d_func = &ts_pow2_mipmap::sample_bilinear<6>; break;
-			case 5: d_func = &ts_pow2_mipmap::sample_bilinear<5>; break;
-			case 4: d_func = &ts_pow2_mipmap::sample_bilinear<4>; break;
-			case 3: d_func = &ts_pow2_mipmap::sample_bilinear<3>; break;
-			case 2: d_func = &ts_pow2_mipmap::sample_bilinear<2>; break;
-			default: assert(false); }}}
+			int x = 0;
+			for (int p = d_power; p >= 0; p--) {
+				int siz = 1 << p;
+			rowlut[d_power - p] = x + siz - 1;
+				x += siz; }
+
+			if (mode == 0) {
+				switch (d_power) {
+				case 12: d_func = &ts_pow2_mipmap::sample_nearest_nearest<12>; break;
+				case 11: d_func = &ts_pow2_mipmap::sample_nearest_nearest<11>; break;
+				case 10: d_func = &ts_pow2_mipmap::sample_nearest_nearest<10>; break;
+				case 9: d_func = &ts_pow2_mipmap::sample_nearest_nearest<9>; break;
+				case 8: d_func = &ts_pow2_mipmap::sample_nearest_nearest<8>; break;
+				case 7: d_func = &ts_pow2_mipmap::sample_nearest_nearest<7>; break;
+				case 6: d_func = &ts_pow2_mipmap::sample_nearest_nearest<6>; break;
+				case 5: d_func = &ts_pow2_mipmap::sample_nearest_nearest<5>; break;
+				case 4: d_func = &ts_pow2_mipmap::sample_nearest_nearest<4>; break;
+				case 3: d_func = &ts_pow2_mipmap::sample_nearest_nearest<3>; break;
+				case 2: d_func = &ts_pow2_mipmap::sample_nearest_nearest<2>; break;
+				default: assert(false); }}
+			else if (mode == 1) {
+				switch (d_power) {
+				case 12: d_func = &ts_pow2_mipmap::sample_nearest_linear<12>; break;
+				case 11: d_func = &ts_pow2_mipmap::sample_nearest_linear<11>; break;
+				case 10: d_func = &ts_pow2_mipmap::sample_nearest_linear<10>; break;
+				case 9: d_func = &ts_pow2_mipmap::sample_nearest_linear<9>; break;
+				case 8: d_func = &ts_pow2_mipmap::sample_nearest_linear<8>; break;
+				case 7: d_func = &ts_pow2_mipmap::sample_nearest_linear<7>; break;
+				case 6: d_func = &ts_pow2_mipmap::sample_nearest_linear<6>; break;
+				case 5: d_func = &ts_pow2_mipmap::sample_nearest_linear<5>; break;
+				case 4: d_func = &ts_pow2_mipmap::sample_nearest_linear<4>; break;
+				case 3: d_func = &ts_pow2_mipmap::sample_nearest_linear<3>; break;
+				case 2: d_func = &ts_pow2_mipmap::sample_nearest_linear<2>; break;
+				default: assert(false); }}}
+		else {
+			// non power-of-2 texture
+			d_height = height;
+			d_uLastRow = rmlv::mvec4i{height - 1};
+			d_width = width;
+			d_func = &ts_pow2_mipmap::sample_zero_nearest_nonpow2;
+			}}
 
 	inline rmlv::qfloat4 sample(const rmlv::qfloat2& texcoord) const {
 		return ((*this).*d_func)(texcoord); }
 
 	template <int POWER>
-	rmlv::qfloat4 sample_nearest(const rmlv::qfloat2& texcoord) const {
+	rmlv::qfloat4 sample_nearest_nearest(const rmlv::qfloat2& texcoord) const {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
 
 		const int level = std::min(levelOfDetail<1 << POWER>(texcoord.s, texcoord.t), POWER);
@@ -165,8 +204,21 @@ struct ts_pow2_mipmap {
 		load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, color);
 		return color; }
 
+	rmlv::qfloat4 sample_zero_nearest_nonpow2(const rmlv::qfloat2& texcoord) const {
+		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
+
+		auto pxU = ftoi(fract(texcoord.s) * d_width); // XXX floor?
+		auto pxV = ftoi(fract(texcoord.t) * d_height);
+
+		auto ofs = (d_uLastRow - pxV)*d_stride + pxU;
+		ofs = shl<2>(ofs);  // 4 channels
+
+		qfloat4 color;
+		load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, color);
+		return color; }
+
 	template <int POWER>
-	rmlv::qfloat4 sample_bilinear(const rmlv::qfloat2& texcoord) const {
+	rmlv::qfloat4 sample_nearest_linear(const rmlv::qfloat2& texcoord) const {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
 
 		const int level = std::min(levelOfDetail<1 << POWER>(texcoord.s, texcoord.t), POWER);

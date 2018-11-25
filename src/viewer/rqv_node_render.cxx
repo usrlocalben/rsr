@@ -44,8 +44,8 @@ void RenderNode::main() {
 	gpu_node->run(); }
 
 
-RenderToTexture::RenderToTexture(const std::string & name, const InputList & inputs, const int dim, const float pa, bool aa)
-	:TextureNode(name, inputs), d_dim(dim), d_aspect(pa), d_aa(aa) {}
+RenderToTexture::RenderToTexture(const std::string & name, const InputList & inputs, int width, int height, const float pa, bool aa)
+	:TextureNode(name, inputs), d_width(width), d_height(height), d_aspect(pa), d_aa(aa) {}
 
 
 void RenderToTexture::connect(const std::string & attr, NodeBase * other, const std::string & slot) {
@@ -74,12 +74,12 @@ void RenderToTexture::main() {
 	if (d_aa) {
 		// internal_depth_canvas.resize(d_dim*2, d_dim*2);
 		// internal_color_canvas.resize(d_dim*2, d_dim*2);
-		gpu_node->setDimensions(d_dim*2, d_dim*2); }
+		gpu_node->setDimensions(d_width*2, d_height*2); }
 	else {
 		// internal_depth_canvas.resize(d_dim, d_dim);
 		// internal_color_canvas.resize(d_dim, d_dim);
-		gpu_node->setDimensions(d_dim, d_dim); }
-	d_out.resize(d_dim, d_dim);
+		gpu_node->setDimensions(d_width, d_height); }
+	d_out.resize(d_width, d_height);
 	gpu_node->setTileDimensions(rmlv::ivec2{ 8, 8 });
 	gpu_node->setAspect(d_aspect);
 	gpu_node->add_link(after_all(renderJob));
@@ -92,7 +92,7 @@ void RenderToTexture::renderImpl() {
 	gpu.d_cc = &get_colorcanvas();
 	gpu.d_dc = &get_depthcanvas();
 	auto& ic = gpu.IC();
-	d_outCanvas = rglr::FloatingPointCanvas(d_out.buf.data(), d_dim, d_dim, d_dim);
+	d_outCanvas = rglr::FloatingPointCanvas(d_out.buf.data(), d_width, d_height, d_width);
 	if (d_aa) {
 		ic.storeHalfsize(&d_outCanvas); }
 	else {

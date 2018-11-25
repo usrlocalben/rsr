@@ -836,7 +836,7 @@ private:
 		const rmlm::qmat4 qm_dm{ d_deviceMatrix };
 
 		using sampler = rglr::ts_pow2_mipmap;
-		const sampler tu1(state.texture0Ptr, state.texture0Dim, state.texture0MinFilter);
+		const sampler tu1(state.texture0Ptr, state.texture0Width, state.texture0Height, state.texture0Stride, state.texture0MinFilter);
 
 		array<VertexInput, 3> vi_;
 		array<VertexOutput, 3> computed;
@@ -1047,7 +1047,7 @@ private:
 			std::swap(dev[0], dev[2]); }
 
 		using sampler = rglr::ts_pow2_mipmap;
-		const sampler tu1(state.texture0Ptr, state.texture0Dim, state.texture0MinFilter);
+		const sampler tu1(state.texture0Ptr, state.texture0Width, state.texture0Height, state.texture0Stride, state.texture0MinFilter);
 
 		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
 		draw_triangle(target_height, rect, dev[0], dev[1], dev[2], !backfacing, target_program); }

@@ -68,34 +68,13 @@ Texture load_any(const std::string& prefix, const std::string& fn, const std::st
 		while (1); }}
 
 
-bool is_power_of_two(unsigned x) {
-	while (((x & 1) == 0) && x > 1) {
-		x >>= 1; }
-	return x == 1; }
-
-
-int ilog2(unsigned x) {
-	int pow = 0;
-	while (x) {
-		x >>= 1;
-		pow++; }
-	return pow - 1; }
-
-
-inline int powerOf2Successor(int a) {
-	int dim = 1;
-	while (dim < a) {
-		dim <<= 1; }
-	return dim; }
-
-
 Texture ensurePowerOf2(Texture& src) {
-	if (src.height == src.width && is_power_of_two(src.width)) {
+	if (src.height == src.width && is_pow2(src.width)) {
 		return src; }
 
 	int longEdge = std::max(src.width, src.height);
 
-	const int dim = powerOf2Successor(longEdge);
+	const int dim = pow2ceil(longEdge);
 
 	rcls::vector<PixelToaster::FloatingPointPixel> img;
 	img.resize(dim*dim);
@@ -116,7 +95,7 @@ void Texture::maybe_make_mipmap() {
 		mipmap = false;
 		return; }
 
-	if (!is_power_of_two(width)) {
+	if (!is_pow2(width)) {
 		pow = -1;
 		mipmap = false;
 		return; }
