@@ -30,7 +30,7 @@ bool check_triangle_uv();
 bool check_triangle(array<vec4, 3>, array<string, 8>);
 
 struct DebugWithFragCoord final : public rglv::BaseProgram {
-	template <typename TU1>
+	template <typename TU>
 	static void shadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
@@ -41,7 +41,7 @@ struct DebugWithFragCoord final : public rglv::BaseProgram {
 		// special
 		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
 		// texture units
-		const TU1& tu1,
+		const TU& tu0, const TU& tu1,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
@@ -49,7 +49,7 @@ struct DebugWithFragCoord final : public rglv::BaseProgram {
 
 
 struct DebugWithBary final : public rglv::BaseProgram {
-	template <typename TU1>
+	template <typename TU>
 	static void shadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
@@ -60,7 +60,7 @@ struct DebugWithBary final : public rglv::BaseProgram {
 		// special
 		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
 		// texture units
-		const TU1& tu1,
+		const TU& tu0, const TU& tu1,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
@@ -68,7 +68,7 @@ struct DebugWithBary final : public rglv::BaseProgram {
 
 
 struct DebugWithUV : public rglv::BaseProgram {
-	template <typename TU1>
+	template <typename TU>
 	static void shadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
@@ -79,7 +79,8 @@ struct DebugWithUV : public rglv::BaseProgram {
 		// special
 		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
 		// texture units
-		const TU1& tu1,
+		const TU& tu0,
+		const TU& tu1,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
@@ -152,10 +153,11 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 	bool frontfacing = true;
 
 	using sampler = rglr::ts_pow2_mipmap;
-	const sampler nullTexture(nullptr, 256, 0);
+	const sampler nullTexture1(nullptr, 256, 256, 256, 0);
+	const sampler nullTexture2(nullptr, 256, 256, 256, 0);
 	rglv::ShaderUniforms nullUniforms;
 	rglv::DefaultTargetProgram<sampler, DebugWithBary, rglr::BlendProgram::Set> target_program(
-		nullTexture, cbc, dbc,
+		nullTexture1, nullTexture2, cbc, dbc,
 		nullUniforms,
 		points[0], points[1], points[2],
 		rglv::VertexOutputx1{}, rglv::VertexOutputx1{}, rglv::VertexOutputx1{});
@@ -213,7 +215,8 @@ bool check_triangle_uv() {
 	array<vec2, 3> uv_lower_right = { uruv, lluv, lruv };
 
 	using sampler = rglr::ts_pow2_mipmap;
-	const sampler nullTexture(nullptr, 256, 0);
+	const sampler nullTexture1(nullptr, 256, 256, 256, 0);
+	const sampler nullTexture2(nullptr, 256, 256, 256, 0);
 	rglv::ShaderUniforms nullUniforms;
 
 	{
@@ -223,7 +226,7 @@ bool check_triangle_uv() {
 		rglv::VertexOutputx1 computed2; computed2.r0 = vec3{ uvs[1], 0 };
 		rglv::VertexOutputx1 computed3; computed3.r0 = vec3{ uvs[2], 0 };
 		rglv::DefaultTargetProgram<sampler, DebugWithUV, rglr::BlendProgram::Set> target_program(
-			nullTexture, cbc, dbc,
+			nullTexture1, nullTexture2, cbc, dbc,
 			nullUniforms,
 			points[0], points[1], points[2],
 			computed1, computed2, computed3);
@@ -240,7 +243,7 @@ bool check_triangle_uv() {
 		rglv::VertexOutputx1 computed2; computed2.r0 = vec3{ uvs[1], 0 };
 		rglv::VertexOutputx1 computed3; computed3.r0 = vec3{ uvs[2], 0 };
 		rglv::DefaultTargetProgram<sampler, DebugWithUV, rglr::BlendProgram::Set> target_program(
-			nullTexture, cbc, dbc,
+			nullTexture1, nullTexture2, cbc, dbc,
 			nullUniforms,
 			points[0], points[1], points[2],
 			computed1, computed2, computed3);

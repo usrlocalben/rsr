@@ -127,6 +127,7 @@ cxx_exe(
     name='math_unittest',
     srcs=['rglv_math.t.cxx'],
     deps=[
+        '3rdparty/googletest:gtest_main',
         'src/rml/rmlm:mat4',
         'src/rml/rmlv:vec',
         ':math',
