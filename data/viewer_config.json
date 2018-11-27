@@ -1,4 +1,15 @@
 {
     "concurrency": 0,
-    "nice": true
+    "nice": true,
+	"soundtrack": {
+		"tempo": 85,
+		"duration": {"minutes": 2, "seconds": 51},
+		"path": "data/untitled.mp3"},
+	"sync": {
+		"precision": 4,
+		"tracks": ["foo", "bar"]}
+
+
+
+
 }

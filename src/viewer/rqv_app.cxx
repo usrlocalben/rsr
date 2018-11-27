@@ -26,6 +26,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <thread>
 #include <vector>
@@ -60,13 +61,7 @@ const ivec2 SCAN_SIZE_LIMIT_IN_TILES{ 16, 16 };
 const double MEASUREMENT_DISCARD = 0.05;  // discard worst 5% because of os noise
 
 
-static const float tempoInBeatsPerMinute = 85.0f;
-static const int precisionInRowsPerBeat = 4;
-static const double rowsPerSecond = (double(tempoInBeatsPerMinute) / 60) * precisionInRowsPerBeat;
 
-//static const int songDurationInRows = 0x320;
-static const double songDurationInSeconds = (60 * 2) + 51;
-static const int songDurationInRows = songDurationInSeconds * rowsPerSecond;
 
 
 struct SampleSmoother {
@@ -85,6 +80,66 @@ std::vector<DisplayMode> modelist = {
 	{1920, 1080},
 	{1920, 1200},
 	{320, 240}, };
+
+
+struct Soundtrack {
+	std::string path;
+	double tempoInBeatsPerMinute;
+	double durationInSeconds;};
+
+
+optional<Soundtrack> deserializeSoundtrack(const JsonValue& data) {
+	double tempo;
+	double duration = 0;
+	string path;
+
+	if (auto search = jv_find(data, "tempo", JSON_NUMBER)) {
+		tempo = search->toNumber(); }
+	else {
+		cout << "soundtrack: missing tempo\n";
+		return {}; }
+
+	if (auto search = jv_find(data, "path", JSON_STRING)) {
+		path = search->toString(); }
+	else {
+		cout << "soundtrack: missing path\n";
+		return {}; }
+
+	if (auto dnode = jv_find(data, "duration", JSON_OBJECT)) {
+		if (auto search = jv_find(*dnode, "minutes", JSON_NUMBER)) {
+			duration += search->toNumber() * 60.0; }
+		if (auto search = jv_find(*dnode, "seconds", JSON_NUMBER)) {
+			duration += search->toNumber(); }
+		if (duration == 0) {
+			cout << "soundtrack: duration node should indicate duration in minutes and/or seconds\n";
+			return {}; }}
+	else {
+		cout << "soundtrack: missing duration node\n";
+		return {}; }
+
+	return Soundtrack{ path, tempo, duration };}
+
+
+struct SyncConfig {
+	int precisionInRowsPerBeat;
+	vector<string> trackNames; };
+
+
+optional<SyncConfig> deserializeSyncConfig(const JsonValue& data) {
+	SyncConfig sc;
+
+	if (auto search = jv_find(data, "precision", JSON_NUMBER)) {
+		sc.precisionInRowsPerBeat = int(search->toNumber()); }
+	else {
+		cout << "syncConfig: missing precision\n";
+		return {}; }
+
+	if (auto search = jv_find(data, "tracks", JSON_ARRAY)) {
+		for (const auto item : *search) {
+			sc.trackNames.push_back(item->value.toString()); }}
+	if (sc.trackNames.empty()) {
+		cout << "syncConfig: warning: no track names configured\n"; }
+	return sc; }
 
 
 class Application::impl : public PixelToaster::Listener {
@@ -167,8 +222,8 @@ private:
 
 #ifdef ENABLE_MUSIC
 	// music/sync
-	const std::string d_trackPath = "data\\untitled.mp3";
-	std::vector<std::string> d_syncTrackNames = { "foo", "bar" };
+	Soundtrack d_soundtrack;
+	SyncConfig d_syncConfig;
 #endif
 	};
 
@@ -188,21 +243,44 @@ void Application::impl::run() {
 		cout << "compile failed, can't continue.\n";
 		return; }
 
+	JSONFile config_json("data/viewer_config.json");
+
 #ifdef ENABLE_MUSIC
+	if (auto jv = jv_find(config_json.docroot(), "soundtrack", JSON_OBJECT)) {
+		if (auto result = deserializeSoundtrack(*jv)) {
+			d_soundtrack = result.value(); }
+		else {
+			return; }}
+	else {
+		cout << "compiled with ENABLE_MUSIC but soundtrack config not found, can't continue\n";
+		return; }
+
+	if (auto jv = jv_find(config_json.docroot(), "sync", JSON_OBJECT)) {
+		if (auto result = deserializeSyncConfig(*jv)) {
+			d_syncConfig = result.value(); }
+		else {
+			return; }}
+	else {
+		cout << "compiled with ENABLE_MUSIC but sync config not found, can't continue\n";
+		return; }
+
 	AudioController audioController;
 
-	auto result = audioController.createStream(d_trackPath);
+	auto result = audioController.createStream(d_soundtrack.path);
 	if (!result.has_value()) {
-		cout << "failed to load " << d_trackPath << ", can't continue.\n";
+		cout << "failed to load " << d_soundtrack.path << ", can't continue.\n";
 		return; }
 
 	auto soundtrack = std::move(result.value());
+
+	const double rowsPerSecond = (double(d_soundtrack.tempoInBeatsPerMinute) / 60) * d_syncConfig.precisionInRowsPerBeat;
+	const int songDurationInRows = d_soundtrack.durationInSeconds * rowsPerSecond;
 
 	rals::SyncController syncController(std::string("data/sync"), soundtrack, rowsPerSecond);
 #ifndef SYNC_PLAYER
 	syncController.connect();
 #endif
-	for (const auto& name : d_syncTrackNames) {
+	for (const auto& name : d_syncConfig.trackNames) {
 		syncController.addTrack(name); }
 
 	audioController.start();
