@@ -1,5 +1,9 @@
-cxx_library(
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
     name='fmt',
-    srcs=['src/format.cc'],
-    include_dir='include',
-)
+    hdrs=glob(["include/fmt/*.h"]),
+    srcs=[
+        "src/format.cc",
+        "src/posix.cc",],
+    strip_include_prefix = "include",)

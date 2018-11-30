@@ -1,23 +1,20 @@
-cxx_library(
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
     name='irect',
-    srcs=['rmlg_irect.cxx'],
+    srcs=['rmlg_irect.cxx', 'rmlg_irect.hxx'],
     hdrs=['rmlg_irect.hxx'],
     deps=[
-        'src/rml/rmlv:vec',
-        ],
-    )
+        '//src/rml/rmlv:vec', ],)
 
-cxx_library(
+cc_library(
     name='triangle',
-    srcs=['rmlg_triangle.cxx'],
+    srcs=['rmlg_triangle.cxx', 'rmlg_triangle.hxx'],
     hdrs=['rmlg_triangle.hxx'],
     deps=[
-        'src/rml/rmlv:vec',
-        ],
-    )
+        '//src/rml/rmlv:vec', ],)
 
-cxx_library(
+cc_library(
     name='pow2',
-    srcs=['rmlg_pow2.cxx'],
-    hdrs=['rmlg_pow2.hxx'],
-    )
+    srcs=['rmlg_pow2.cxx', 'rmlg_pow2.hxx'],
+    hdrs=['rmlg_pow2.hxx'],)

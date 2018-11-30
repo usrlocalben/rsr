@@ -1,12 +1,15 @@
-cxx_library(
-    srcs=['rocket/device.c', 'rocket/track.c'],
-    include_dir='.',
-    deps=[':socketlib'],
-    )
+package(default_visibility = ["//visibility:public"])
 
-cxx_binary_library(
-    name='socketlib',
-    include_dir='include',
-    lib_dir='lib\\x64',
-    inputs=['ws2_32.lib'],
+cc_library(
+    name = "rocket",
+    srcs=[
+        "rocket/base.h",
+        "rocket/device.c",
+        "rocket/device.h",
+        "rocket/track.c",
+        "ws2_32.lib",
+        "rocket/track.h", ],
+    hdrs=["rocket/sync.h"],
+    strip_include_prefix = "rocket",
+    #deps=[':socketlib'],
     )

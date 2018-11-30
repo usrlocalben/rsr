@@ -1,6 +1,7 @@
-cxx_binary_library(
-    include_dir='.',
-    lib_dir='.',
-    inputs=['bass.lib'],
-)
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "bass",
+    hdrs = ["bass.h"],
+    srcs = ["bass.lib"],)
 

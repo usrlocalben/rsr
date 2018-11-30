@@ -1,6 +1,8 @@
-cxx_binary_library(
-    include_dir='include',
-    lib_dir='lib\\x64',
-    inputs=['d3dx9.lib'],
-)
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "sdk",
+    hdrs = glob(["include/*.h", "include/*.inl"]),
+    strip_include_prefix = "include",
+    )
 

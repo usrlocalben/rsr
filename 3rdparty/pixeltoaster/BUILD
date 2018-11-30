@@ -1,17 +1,17 @@
-cxx_library(
-    # name='pixeltoaster',
-    srcs=['PixelToaster.cpp'],
-    include_dir='',
-    # hdrs=['PixelToaster.h'],
-    # private_hdrs=[
-    #     'PixelToasterCommon.h',
-    #   'PixelToasterConversion.h',
-    #  'PixelToasterWindows.h'],
-    deps=['3rdparty/directx'],
-)
+package(default_visibility = ["//visibility:public"])
 
-cxx_exe(
+cc_library(
+    name = "pixeltoaster",
+    srcs = [
+        "PixelToaster.cpp",
+        "PixelToasterCommon.h",
+        "PixelToasterConversion.h",
+        "PixelToasterWindows.h", ],
+    hdrs = ["PixelToaster.h"],
+    deps=[
+        "//3rdparty/directx:sdk", ],)
+
+cc_binary(
     name='example_floating_point',
     srcs=['ExampleFloatingPoint.cpp'],
-    deps=[':pixeltoaster'],
-)
+    deps=[':pixeltoaster'],)

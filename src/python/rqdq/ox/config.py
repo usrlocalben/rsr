@@ -1,4 +1,4 @@
-CONFIG_FLAGS = "msvc release console"
+CONFIG_FLAGS = "msvc release sync"
 #CONFIG_FLAGS = "msvc release gui sync"
 #CONFIG_FLAGS = "msvc release gui sync player"
 #CONFIG_FLAGS = "msvc debug console"
