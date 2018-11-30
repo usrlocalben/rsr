@@ -1,8 +1,8 @@
 #pragma once
-#include <rcls_aligned_containers.hxx>
-#include <rglr_texture_store.hxx>
-#include <rglv_material.hxx>
-#include <rglv_mesh.hxx>
+#include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rgl/rglr/rglr_texture_store.hxx"
+#include "src/rgl/rglv/rglv_material.hxx"
+#include "src/rgl/rglv/rglv_mesh.hxx"
 
 #include <string>
 #include <tuple>

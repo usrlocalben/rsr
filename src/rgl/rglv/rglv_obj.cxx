@@ -1,9 +1,9 @@
-#include <rglv_obj.hxx>
-#include <rcls_file.hxx>
-#include <rclt_util.hxx>
-#include <rglv_material.hxx>
-#include <rglv_mesh.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rgl/rglv/rglv_obj.hxx"
+#include "src/rcl/rcls/rcls_file.hxx"
+#include "src/rcl/rclt/rclt_util.hxx"
+#include "src/rgl/rglv/rglv_material.hxx"
+#include "src/rgl/rglv/rglv_mesh.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <cmath>
 #include <fstream>

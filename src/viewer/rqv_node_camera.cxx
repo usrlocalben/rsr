@@ -1,4 +1,4 @@
-#include <rqv_node_camera.hxx>
+#include "src/viewer/rqv_node_camera.hxx"
 
 namespace rqdq {
 namespace rqv {

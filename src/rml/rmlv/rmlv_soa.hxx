@@ -2,8 +2,8 @@
  * SoA 2x2 vector oprations for shaders
  */
 #pragma once
-#include <rmlv_mvec4.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rml/rmlv/rmlv_mvec4.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <pmmintrin.h>
 

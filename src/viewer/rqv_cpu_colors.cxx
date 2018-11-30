@@ -1,4 +1,4 @@
-#include <rqv_cpu_colors.hxx>
+#include "src/viewer/rqv_cpu_colors.hxx"
 
 #include <array>
 

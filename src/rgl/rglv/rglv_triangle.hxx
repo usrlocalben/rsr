@@ -1,8 +1,8 @@
 #pragma once
-#include <rmlg_irect.hxx>
-#include <rmlv_mvec4.hxx>
-#include <rmlv_soa.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rml/rmlg/rmlg_irect.hxx"
+#include "src/rml/rmlv/rmlv_mvec4.hxx"
+#include "src/rml/rmlv/rmlv_soa.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <algorithm>
 #include <array>

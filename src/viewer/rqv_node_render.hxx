@@ -1,13 +1,13 @@
 #pragma once
-#include <rclmt_jobsys.hxx>
-#include <rglr_canvas.hxx>
-#include <rglv_mesh_store.hxx>
-#include <rmlv_vec.hxx>
-#include <rqv_node_base.hxx>
-#include <rqv_node_gpu.hxx>
-#include <rqv_node_material.hxx>
-#include <rqv_node_output.hxx>
-#include <rqv_shaders.hxx>
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rgl/rglr/rglr_canvas.hxx"
+#include "src/rgl/rglv/rglv_mesh_store.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/rqv_node_base.hxx"
+#include "src/viewer/rqv_node_gpu.hxx"
+#include "src/viewer/rqv_node_material.hxx"
+#include "src/viewer/rqv_node_output.hxx"
+#include "src/viewer/rqv_shaders.hxx"
 
 #include <memory>
 #include <string>

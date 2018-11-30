@@ -2,8 +2,8 @@
  * i believe everyone starts here:
  * http://paulbourke.net/geometry/polygonise
  */
-#include <rglv_marching_cubes.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rgl/rglv/rglv_marching_cubes.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <array>
 

@@ -1,10 +1,10 @@
 #pragma once
-#include <rglr_canvas.hxx>
-#include <rglv_gpu_protocol.hxx>
-#include <rglv_packed_stream.hxx>
-#include <rglv_vao.hxx>
-#include <rmlm_mat4.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rgl/rglr/rglr_canvas.hxx"
+#include "src/rgl/rglv/rglv_gpu_protocol.hxx"
+#include "src/rgl/rglv/rglv_packed_stream.hxx"
+#include "src/rgl/rglv/rglv_vao.hxx"
+#include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <array>
 #include <deque>

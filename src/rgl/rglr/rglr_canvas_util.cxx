@@ -1,7 +1,7 @@
-#include <rglr_canvas_util.hxx>
-#include <rglr_canvas.hxx>
-#include <rmlg_irect.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rgl/rglr/rglr_canvas_util.hxx"
+#include "src/rgl/rglr/rglr_canvas.hxx"
+#include "src/rml/rmlg/rmlg_irect.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <algorithm>
 

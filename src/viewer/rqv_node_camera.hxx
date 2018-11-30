@@ -1,10 +1,10 @@
 #pragma once
-#include <rglv_camera.hxx>
-#include <rglv_math.hxx>
-#include <rmlm_mat4.hxx>
-#include <rmlv_vec.hxx>
-#include <rqv_node_base.hxx>
-#include <rqv_node_value.hxx>
+#include "src/rgl/rglv/rglv_camera.hxx"
+#include "src/rgl/rglv/rglv_math.hxx"
+#include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/rqv_node_base.hxx"
+#include "src/viewer/rqv_node_value.hxx"
 
 #include <memory>
 #include <string>

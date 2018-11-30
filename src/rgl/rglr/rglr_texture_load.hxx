@@ -1,5 +1,5 @@
 #pragma once
-#include <rglr_texture.hxx>
+#include "src/rgl/rglr/rglr_texture.hxx"
 
 #include <string>
 

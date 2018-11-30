@@ -1,10 +1,10 @@
 #pragma once
-#include <rclmt_jobsys.hxx>
-#include <rglv_gl.hxx>
-#include <rmlm_mat4.hxx>
-#include <rqv_node_base.hxx>
-#include <rqv_node_camera.hxx>
-#include <rqv_node_value.hxx>
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rgl/rglv/rglv_gl.hxx"
+#include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/viewer/rqv_node_base.hxx"
+#include "src/viewer/rqv_node_camera.hxx"
+#include "src/viewer/rqv_node_value.hxx"
 
 #include <iostream>
 #include <string>

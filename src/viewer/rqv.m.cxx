@@ -1,9 +1,9 @@
-#include <rclma_framepool.hxx>
-#include <rclmt_jobsys.hxx>
-#include <rclx_gason_util.hxx>
-#include <rclx_jsonfile.hxx>
-#include <rqv_app.hxx>
-#include <rqv_resource.h>
+#include "src/rcl/rclma/rclma_framepool.hxx"
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rcl/rclx/rclx_gason_util.hxx"
+#include "src/rcl/rclx/rclx_jsonfile.hxx"
+#include "src/viewer/rqv_app.hxx"
+#include "src/viewer/rqv_resource.h"
 
 #include <thread>
 

@@ -1,8 +1,8 @@
 #pragma once
-#include <rclmt_jobsys.hxx>
-#include <rglr_canvas.hxx>
-#include <rmlv_vec.hxx>
-#include <rqv_node_base.hxx>
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rgl/rglr/rglr_canvas.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/rqv_node_base.hxx"
 
 #include <string>
 

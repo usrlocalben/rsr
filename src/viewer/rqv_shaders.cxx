@@ -1,4 +1,4 @@
-#include <rqv_shaders.hxx>
+#include "src/viewer/rqv_shaders.hxx"
 
 namespace rqdq {
 namespace rqv {

@@ -1,7 +1,7 @@
 #pragma once
-#include <rglv_gpu.hxx>
-#include <rglv_vao.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_vao.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <array>
 #include <mutex>

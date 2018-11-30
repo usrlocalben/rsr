@@ -1,6 +1,6 @@
-#include <rglr_kawase.hxx>
-#include <rglr_canvas.hxx>
-#include <rmlv_mvec4.hxx>
+#include "src/rgl/rglr/rglr_kawase.hxx"
+#include "src/rgl/rglr/rglr_canvas.hxx"
+#include "src/rml/rmlv/rmlv_mvec4.hxx"
 
 #include <algorithm>
 #include <array>

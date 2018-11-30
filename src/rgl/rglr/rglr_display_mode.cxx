@@ -1,1 +1,1 @@
-#include <rglr_display_mode.hxx>
+#include "src/rgl/rglr/rglr_display_mode.hxx"

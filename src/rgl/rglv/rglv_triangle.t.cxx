@@ -1,13 +1,13 @@
-#include <rcls_aligned_containers.hxx>
-#include <rglr_blend.hxx>
-#include <rglr_canvas.hxx>
-#include <rglr_canvas_util.hxx>
-#include <rglr_texture.hxx>
-#include <rglv_gpu.hxx>
-#include <rglv_triangle.hxx>
-#include <rmlm_mat4.hxx>
-#include <rmlv_soa.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rgl/rglr/rglr_blend.hxx"
+#include "src/rgl/rglr/rglr_canvas.hxx"
+#include "src/rgl/rglr/rglr_canvas_util.hxx"
+#include "src/rgl/rglr/rglr_texture.hxx"
+#include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_triangle.hxx"
+#include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/rml/rmlv/rmlv_soa.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <array>
 #include <cmath>

@@ -1,9 +1,9 @@
-#include <rqv_node_material.hxx>
-#include <rclmt_jobsys.hxx>
-#include <rglr_texture.hxx>
-#include <rglv_gl.hxx>
-#include <rqv_node_base.hxx>
-#include <rqv_shaders.hxx>
+#include "src/viewer/rqv_node_material.hxx"
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rgl/rglr/rglr_texture.hxx"
+#include "src/rgl/rglv/rglv_gl.hxx"
+#include "src/viewer/rqv_node_base.hxx"
+#include "src/viewer/rqv_shaders.hxx"
 
 #include <memory>
 #include <string>

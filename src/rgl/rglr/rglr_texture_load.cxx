@@ -1,10 +1,10 @@
-#include <rglr_texture_load.hxx>
-#include <rcls_aligned_containers.hxx>
-#include <rcls_file.hxx>
-#include <rglr_texture.hxx>
-#include <rmlg_pow2.hxx>
-#include <rmlv_mvec4.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rgl/rglr/rglr_texture_load.hxx"
+#include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rcl/rcls/rcls_file.hxx"
+#include "src/rgl/rglr/rglr_texture.hxx"
+#include "src/rml/rmlg/rmlg_pow2.hxx"
+#include "src/rml/rmlv/rmlv_mvec4.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <fstream>
 #include <string>

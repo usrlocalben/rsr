@@ -1,9 +1,9 @@
-#include <rqv_node_fx_carpet.hxx>
-#include <rqv_node_base.hxx>
-#include <rqv_node_material.hxx>
-#include <rqv_node_value.hxx>
-#include <rglv_mesh.hxx>
-#include <rqv_shaders.hxx>
+#include "src/viewer/rqv_node_fx_carpet.hxx"
+#include "src/viewer/rqv_node_base.hxx"
+#include "src/viewer/rqv_node_material.hxx"
+#include "src/viewer/rqv_node_value.hxx"
+#include "src/rgl/rglv/rglv_mesh.hxx"
+#include "src/viewer/rqv_shaders.hxx"
 
 #include <memory>
 #include <string>

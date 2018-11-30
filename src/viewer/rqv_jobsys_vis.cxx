@@ -1,6 +1,6 @@
-#include <rqv_jobsys_vis.hxx>
-#include <rclmt_jobsys.hxx>
-#include <rglr_canvas.hxx>
+#include "src/viewer/rqv_jobsys_vis.hxx"
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rgl/rglr/rglr_canvas.hxx"
 
 
 namespace rqdq {

@@ -1,5 +1,5 @@
 #pragma once
-#include <ralio_audio_controller.hxx>
+#include "src/ral/ralio/ralio_audio_controller.hxx"
 
 #include <functional>
 #include <memory>

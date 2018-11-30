@@ -1,7 +1,7 @@
 #pragma once
-#include <rglr_canvas.hxx>
-#include <rmlg_irect.hxx>
-#include <rmlv_soa.hxx>
+#include "src/rgl/rglr/rglr_canvas.hxx"
+#include "src/rml/rmlg/rmlg_irect.hxx"
+#include "src/rml/rmlv/rmlv_soa.hxx"
 
 #include <ryg-srgb.h>
 

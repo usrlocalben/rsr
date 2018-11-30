@@ -1,6 +1,6 @@
 #pragma once
-#include <rglv_mesh_store.hxx>
-#include <rqv_node_base.hxx>
+#include "src/rgl/rglv/rglv_mesh_store.hxx"
+#include "src/viewer/rqv_node_base.hxx"
 
 #include <memory>
 #include <vector>

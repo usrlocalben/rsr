@@ -1,8 +1,8 @@
-#include <rqv_node_gpu.hxx>
-#include <rclmt_jobsys.hxx>
-#include <rglv_math.hxx>
-#include <rmlv_vec.hxx>
-#include <rqv_node_base.hxx>
+#include "src/viewer/rqv_node_gpu.hxx"
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rgl/rglv/rglv_math.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/rqv_node_base.hxx"
 
 #include <string>
 #include <vector>

@@ -1,6 +1,6 @@
-#include <rglr_profont.hxx>
-#include <rclr_algorithm.hxx>
-#include <rglr_canvas.hxx>
+#include "src/rgl/rglr/rglr_profont.hxx"
+#include "src/rcl/rclr/rclr_algorithm.hxx"
+#include "src/rgl/rglr/rglr_canvas.hxx"
 
 #include <functional>
 #include <sstream>

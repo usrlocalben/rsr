@@ -1,7 +1,7 @@
 #pragma once
-#include <rglv_triangle.hxx>
-#include <rmlv_mvec4.hxx>
-#include <rmlv_soa.hxx>
+#include "src/rgl/rglv/rglv_triangle.hxx"
+#include "src/rml/rmlv/rmlv_mvec4.hxx"
+#include "src/rml/rmlv/rmlv_soa.hxx"
 
 #include <xmmintrin.h>
 

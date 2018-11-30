@@ -1,7 +1,7 @@
-#include <rglv_mesh.hxx>
-#include <rclr_algorithm.hxx>
-#include <rglv_vao.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rgl/rglv/rglv_mesh.hxx"
+#include "src/rcl/rclr/rclr_algorithm.hxx"
+#include "src/rgl/rglv/rglv_vao.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <iostream>
 #include <map>

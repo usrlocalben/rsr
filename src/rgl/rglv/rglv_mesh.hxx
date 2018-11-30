@@ -1,7 +1,7 @@
 #pragma once
-#include <rcls_aligned_containers.hxx>
-#include <rglv_vao.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rgl/rglv/rglv_vao.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <string>
 #include <tuple>

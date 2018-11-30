@@ -1,5 +1,5 @@
-#include <rals_sync_controller.hxx>
-#include <ralio_audio_controller.hxx>
+#include "src/ral/rals/rals_sync_controller.hxx"
+#include "src/ral/ralio/ralio_audio_controller.hxx"
 
 #include <memory>
 #include <stdexcept>

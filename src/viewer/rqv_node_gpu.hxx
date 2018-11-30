@@ -1,13 +1,13 @@
 #pragma once
-#include <rclma_framepool.hxx>
-#include <rclmt_jobsys.hxx>
-#include <rglv_gpu.hxx>
-#include <rmlv_vec.hxx>
-#include <rqv_node_base.hxx>
-#include <rqv_node_camera.hxx>
-#include <rqv_node_gl.hxx>
-#include <rqv_node_value.hxx>
-#include <rqv_shaders.hxx>
+#include "src/rcl/rclma/rclma_framepool.hxx"
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/rqv_node_base.hxx"
+#include "src/viewer/rqv_node_camera.hxx"
+#include "src/viewer/rqv_node_gl.hxx"
+#include "src/viewer/rqv_node_value.hxx"
+#include "src/viewer/rqv_shaders.hxx"
 
 #include <memory>
 #include <optional>

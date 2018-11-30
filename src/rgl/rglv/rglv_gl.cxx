@@ -1,7 +1,7 @@
-#include <rglv_gl.hxx>
-#include <rglv_gpu_protocol.hxx>
-#include <rglv_packed_stream.hxx>
-#include <rmlv_vec.hxx>
+#include "src/rgl/rglv/rglv_gl.hxx"
+#include "src/rgl/rglv/rglv_gpu_protocol.hxx"
+#include "src/rgl/rglv/rglv_packed_stream.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <cassert>
 

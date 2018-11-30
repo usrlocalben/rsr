@@ -1,6 +1,6 @@
-#include <rglr_texture_store.hxx>
-#include <rcls_file.hxx>
-#include <rglr_texture_load.hxx>
+#include "src/rgl/rglr/rglr_texture_store.hxx"
+#include "src/rcl/rcls/rcls_file.hxx"
+#include "src/rgl/rglr/rglr_texture_load.hxx"
 
 #include <string>
 #include <vector>

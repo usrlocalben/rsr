@@ -1,7 +1,7 @@
 #pragma once
-#include <rmlg_pow2.hxx>
-#include <rmlv_mvec4.hxx>
-#include <rmlv_soa.hxx>
+#include "src/rml/rmlg/rmlg_pow2.hxx"
+#include "src/rml/rmlv/rmlv_mvec4.hxx"
+#include "src/rml/rmlv/rmlv_soa.hxx"
 
 #include <cassert>
 

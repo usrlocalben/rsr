@@ -1,11 +1,11 @@
 #pragma once
-#include <rclma_framepool.hxx>
-#include <rclmt_jobsys.hxx>
-#include <rglv_gl.hxx>
-#include <rmlm_mat4.hxx>
-#include <rmlv_vec.hxx>
-#include <rqv_node_gl.hxx>
-#include <rqv_node_value.hxx>
+#include "src/rcl/rclma/rclma_framepool.hxx"
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rgl/rglv/rglv_gl.hxx"
+#include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/rqv_node_gl.hxx"
+#include "src/viewer/rqv_node_value.hxx"
 
 #include <memory>
 #include <string>

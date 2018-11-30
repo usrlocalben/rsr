@@ -1,7 +1,7 @@
-#include <rqv_node_fx_xyquad.hxx>
-#include <rglv_mesh.hxx>
-#include <rqv_node_base.hxx>
-#include <rqv_shaders.hxx>
+#include "src/viewer/rqv_node_fx_xyquad.hxx"
+#include "src/rgl/rglv/rglv_mesh.hxx"
+#include "src/viewer/rqv_node_base.hxx"
+#include "src/viewer/rqv_shaders.hxx"
 
 #include <memory>
 #include <string>
