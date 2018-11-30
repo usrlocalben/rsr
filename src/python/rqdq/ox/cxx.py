@@ -81,77 +81,72 @@ class WinResourceTarget(Target):
 
     @defer.inlineCallbacks
     def compile(self, work_dir):
-        if self._event:
-            result = yield self._event.deferred()
-            returnValue(result)
-
-        self._event = pe = PendingEvent()
-
-        @defer.inlineCallbacks
-        def work():
-
-            any_deps_modified = False
-            sub_tasks = [node.compile(work_dir) for node in self.rdeps]
-            sub_tasks = yield DeferredList(sub_tasks)
-            sub_config = CompileConfig()
-            for success, data_ in sub_tasks:
-                if not success:
-                    raise data_
-                this_modified, this_config = data_
-                sub_config += this_config
-                any_deps_modified = any_deps_modified or this_modified
-
-            my_objs = set()
-
-            src = self._src
-
-            bsrc = os.path.basename(src)
-            name, ext = split_extension(bsrc, raise_if_missing=True)
-
-            src_path = i2o(self._path + '/' + src)
-            dep_mtime = os.path.getmtime(src_path)
-
-            output_path = os.path.join(work_dir, 'abcd_' + name)
-            obj_path = output_path + '.res'
-
-            my_tasks = []
-
-            if not any_deps_modified and os.path.exists(obj_path) and os.path.getmtime(obj_path) > dep_mtime:
-                # print 'up-to-date', obj_path
-                any_rebuild = False
-                my_objs.add(obj_path)
-            else:
-                any_rebuild = True
-                logger.info('rc %s', src)
-                # print 'CL', self._path, src
-                my_tasks.append(rc_res(
-                    src=src_path,
-                    include_dirs=sub_config.include_dirs,
-                    output_path=output_path,
-                ))
-
-            my_tasks = yield DeferredList(my_tasks)
-
-            for success, data_ in my_tasks:
-                if not success:
-                    raise data_
-                ok, output = data_
-                if not ok:
-                    raise Exception('one resource src did not compile')
-                my_objs.add(output)
-
-            my_config = CompileConfig(
-                obj_inputs=my_objs,
-                include_dirs=set(),
-            )
-
-            all_config = my_config + sub_config
-            self._compile_config = all_config
-            returnValue((any_rebuild, all_config))
-
-        pe.run(work)
-        result = yield pe.deferred()
+        if self._event is None:
+            self._event = PendingEvent()
+            self._event.run(self.compile_impl, work_dir)
+        result = yield self._event.deferred()
         returnValue(result)
+
+    @defer.inlineCallbacks
+    def compile_impl(self, work_dir):
+        any_deps_modified = False
+        sub_tasks = [node.compile(work_dir) for node in self.rdeps]
+        sub_tasks = yield DeferredList(sub_tasks)
+        sub_config = CompileConfig()
+        for success, data_ in sub_tasks:
+            if not success:
+                raise data_
+            this_modified, this_config = data_
+            sub_config += this_config
+            any_deps_modified = any_deps_modified or this_modified
+
+        my_objs = set()
+
+        src = self._src
+
+        bsrc = os.path.basename(src)
+        name, ext = split_extension(bsrc, raise_if_missing=True)
+
+        src_path = i2o(self._path + '/' + src)
+        dep_mtime = os.path.getmtime(src_path)
+
+        output_path = os.path.join(work_dir, 'abcd_' + name)
+        obj_path = output_path + '.res'
+
+        my_tasks = []
+
+        if not any_deps_modified and os.path.exists(obj_path) and os.path.getmtime(obj_path) > dep_mtime:
+            # print 'up-to-date', obj_path
+            any_rebuild = False
+            my_objs.add(obj_path)
+        else:
+            any_rebuild = True
+            logger.info('rc %s', src)
+            # print 'CL', self._path, src
+            my_tasks.append(rc_res(
+                src=src_path,
+                include_dirs=sub_config.include_dirs,
+                output_path=output_path,
+            ))
+
+        my_tasks = yield DeferredList(my_tasks)
+
+        for success, data_ in my_tasks:
+            if not success:
+                raise data_
+            ok, output = data_
+            if not ok:
+                raise Exception('one resource src did not compile')
+            my_objs.add(output)
+
+        my_config = CompileConfig(
+            obj_inputs=my_objs,
+            include_dirs=set(),
+        )
+
+        all_config = my_config + sub_config
+        self._compile_config = all_config
+        returnValue((any_rebuild, all_config))
 
 
 class CxxLibraryTarget(Target):
@@ -177,83 +172,79 @@ class CxxLibraryTarget(Target):
 
     @defer.inlineCallbacks
     def compile(self, work_dir):
-        if self._event:
-            result = yield self._event.deferred()
-            returnValue(result)
-
-        self._event = pe = PendingEvent()
-
-        @defer.inlineCallbacks
-        def work():
-            any_deps_modified = False
-            sub_tasks = [node.compile(work_dir) for node in self.rdeps]
-            sub_tasks = yield DeferredList(sub_tasks)
-            sub_config = CompileConfig()
-            for success, data_ in sub_tasks:
-                if not success:
-                    raise data_
-                this_modified, this_config = data_
-                sub_config += this_config
-                any_deps_modified = any_deps_modified or this_modified
-
-            my_includes = {os.path.join(i2o(self._path), self._include_dir)}
-
-            my_tasks = []
-
-            hdr_mtime = 0
-            for hdr in self._hdrs:
-                hdr_path = i2o(self._path + '/' + hdr)
-                hdr_mtime = max(hdr_mtime, os.path.getmtime(hdr_path))
-
-            my_objs = set()
-
-            any_rebuild = False
-            for src in self._srcs:
-                bsrc = os.path.basename(src)
-                name, ext = split_extension(bsrc, raise_if_missing=True)
-
-                src_path = i2o(self._path + '/' + src)
-                dep_mtime = max(hdr_mtime, os.path.getmtime(src_path))
-
-                output_path = os.path.join(work_dir, 'abcd_' + name)
-                obj_path = output_path + '.obj'
-
-                if not any_deps_modified and os.path.exists(obj_path) and os.path.getmtime(obj_path) > dep_mtime:
-                    # print 'up-to-date', obj_path
-                    my_objs.add(obj_path)
-                    continue
-
-                logger.info('cxx %s', src)
-                any_rebuild = True
-                # print 'CL', self._path, src
-                my_tasks.append(cl_obj(
-                    src=src_path,
-                    include_dirs=sub_config.include_dirs | my_includes,
-                    output_path=output_path,
-                ))
-
-            my_tasks = yield DeferredList(my_tasks)
-
-            for success, data_ in my_tasks:
-                if not success:
-                    raise data_
-                ok, output = data_
-                if not ok:
-                    raise Exception('one lib src did not compile')
-                my_objs.add(output)
-
-            my_config = CompileConfig(
-                obj_inputs=my_objs,
-                include_dirs=my_includes,
-            )
-
-            all_config = my_config + sub_config
-            self._compile_config = all_config
-            returnValue((any_rebuild, all_config))
-
-        pe.run(work)
-        result = yield pe.deferred()
+        if self._event is None:
+            self._event = PendingEvent()
+            self._event.run(self.compile_impl, work_dir)
+        result = yield self._event.deferred()
         returnValue(result)
+
+    @defer.inlineCallbacks
+    def compile_impl(self, work_dir):
+        any_deps_modified = False
+        sub_tasks = [node.compile(work_dir) for node in self.rdeps]
+        sub_tasks = yield DeferredList(sub_tasks)
+        sub_config = CompileConfig()
+        for success, data_ in sub_tasks:
+            if not success:
+                raise data_
+            this_modified, this_config = data_
+            sub_config += this_config
+            any_deps_modified = any_deps_modified or this_modified
+
+        my_includes = {os.path.join(i2o(self._path), self._include_dir)}
+
+        my_tasks = []
+
+        hdr_mtime = 0
+        for hdr in self._hdrs:
+            hdr_path = i2o(self._path + '/' + hdr)
+            hdr_mtime = max(hdr_mtime, os.path.getmtime(hdr_path))
+
+        my_objs = set()
+
+        any_rebuild = False
+        for src in self._srcs:
+            bsrc = os.path.basename(src)
+            name, ext = split_extension(bsrc, raise_if_missing=True)
+
+            src_path = i2o(self._path + '/' + src)
+            dep_mtime = max(hdr_mtime, os.path.getmtime(src_path))
+
+            output_path = os.path.join(work_dir, 'abcd_' + name)
+            obj_path = output_path + '.obj'
+
+            if not any_deps_modified and os.path.exists(obj_path) and os.path.getmtime(obj_path) > dep_mtime:
+                # print 'up-to-date', obj_path
+                my_objs.add(obj_path)
+                continue
+
+            logger.info('cxx %s', src)
+            any_rebuild = True
+            # print 'CL', self._path, src
+            my_tasks.append(cl_obj(
+                src=src_path,
+                include_dirs=sub_config.include_dirs | my_includes,
+                output_path=output_path,
+            ))
+
+        my_tasks = yield DeferredList(my_tasks)
+
+        for success, data_ in my_tasks:
+            if not success:
+                raise data_
+            ok, output = data_
+            if not ok:
+                raise Exception('one lib src did not compile')
+            my_objs.add(output)
+
+        my_config = CompileConfig(
+            obj_inputs=my_objs,
+            include_dirs=my_includes,
+        )
+
+        all_config = my_config + sub_config
+        self._compile_config = all_config
+        returnValue((any_rebuild, all_config))
 
 
 class CxxExeTarget(Target):
@@ -276,74 +267,70 @@ class CxxExeTarget(Target):
 
     @defer.inlineCallbacks
     def compile(self, work_dir):
-        if self._event:
-            result = yield self._event.deferred()
-            returnValue(result)
-
-        self._event = pe = PendingEvent()
-
-        @defer.inlineCallbacks
-        def work():
-            sub_tasks = [node.compile(work_dir) for node in self.rdeps]
-            sub_tasks = yield DeferredList(sub_tasks)
-            sub_config = CompileConfig()
-            any_deps_modified = False
-            for success, data_ in sub_tasks:
-                if not success:
-                    raise data_
-                this_modified, this_config = data_
-                sub_config += this_config
-                any_deps_modified = any_deps_modified or this_modified
-
-            my_includes = set()  # XXX should exe's have include dirs?
-
-            my_tasks = []
-            for src in self._srcs:
-                bsrc = os.path.basename(src)
-                name, ext = split_extension(bsrc, raise_if_missing=True)
-
-                output_path = os.path.join(work_dir, 'abcd_' + name)
-                logger.info('cxx %s', src)
-                # print 'CL', self._path, src
-                my_tasks.append(cl_obj(
-                    src=i2o(self._path + '/' + src),
-                    include_dirs=sub_config.include_dirs | my_includes,
-                    output_path=output_path,
-                ))
-
-            my_tasks = yield DeferredList(my_tasks)
-            my_objs = set()
-            for success, data in my_tasks:
-                if not success:
-                    raise data
-                ok, output = data
-                if not ok:
-                    raise Exception('one exe src did not compile')
-                my_objs.add(output)
-
-            my_config = CompileConfig(
-                obj_inputs=my_objs,
-                include_dirs=my_includes,
-            )
-
-            all_config = my_config + sub_config
-
-            my_exe_name = self.selector.replace('/', '__').replace(':', '__')
-
-            my_exe = os.path.join(work_dir, 'abcd_' + my_exe_name + '.exe')
-            logger.info('exe %s', my_exe_name)
-            exe_result = yield link_exe(
-                lib_dirs=all_config.lib_dirs,
-                inputs=all_config.lib_inputs | all_config.obj_inputs,
-                output_path=my_exe,
-            )
-
-            self._output_exe = my_exe
-            returnValue(my_exe)
-
-        pe.run(work)
-        result = yield pe.deferred()
+        if self._event is None:
+            self._event = PendingEvent()
+            self._event.run(self.compile_impl, work_dir)
+        result = yield self._event.deferred()
         returnValue(result)
+
+    @defer.inlineCallbacks
+    def compile_impl(self, work_dir):
+        sub_tasks = [node.compile(work_dir) for node in self.rdeps]
+        sub_tasks = yield DeferredList(sub_tasks)
+        sub_config = CompileConfig()
+        any_deps_modified = False
+        for success, data_ in sub_tasks:
+            if not success:
+                raise data_
+            this_modified, this_config = data_
+            sub_config += this_config
+            any_deps_modified = any_deps_modified or this_modified
+
+        my_includes = set()  # XXX should exe's have include dirs?
+
+        my_tasks = []
+        for src in self._srcs:
+            bsrc = os.path.basename(src)
+            name, ext = split_extension(bsrc, raise_if_missing=True)
+
+            output_path = os.path.join(work_dir, 'abcd_' + name)
+            logger.info('cxx %s', src)
+            # print 'CL', self._path, src
+            my_tasks.append(cl_obj(
+                src=i2o(self._path + '/' + src),
+                include_dirs=sub_config.include_dirs | my_includes,
+                output_path=output_path,
+            ))
+
+        my_tasks = yield DeferredList(my_tasks)
+        my_objs = set()
+        for success, data in my_tasks:
+            if not success:
+                raise data
+            ok, output = data
+            if not ok:
+                raise Exception('one exe src did not compile')
+            my_objs.add(output)
+
+        my_config = CompileConfig(
+            obj_inputs=my_objs,
+            include_dirs=my_includes,
+        )
+
+        all_config = my_config + sub_config
+
+        my_exe_name = self.selector.replace('/', '__').replace(':', '__')
+
+        my_exe = os.path.join(work_dir, 'abcd_' + my_exe_name + '.exe')
+        logger.info('exe %s', my_exe_name)
+        exe_result = yield link_exe(
+            lib_dirs=all_config.lib_dirs,
+            inputs=all_config.lib_inputs | all_config.obj_inputs,
+            output_path=my_exe,
+        )
+
+        self._output_exe = my_exe
+        returnValue(my_exe)
 
 
 class CxxTestTarget(CxxExeTarget):
