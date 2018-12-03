@@ -15,7 +15,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
-#include <PixelToaster.h>
+#include "3rdparty/pixeltoaster/PixelToaster.h"
 
 namespace rqdq {
 namespace rqv {

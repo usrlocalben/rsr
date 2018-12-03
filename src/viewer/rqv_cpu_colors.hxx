@@ -1,6 +1,6 @@
 #pragma once
 #include <array>
-#include <PixelToaster.h>
+#include "3rdparty/pixeltoaster/PixelToaster.h"
 
 namespace rqdq {
 namespace rqv {

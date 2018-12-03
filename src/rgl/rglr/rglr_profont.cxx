@@ -6,7 +6,7 @@
 #include <sstream>
 #include <vector>
 
-#include <picopng.h>
+#include "3rdparty/picopng/picopng.h"
 
 namespace rqdq {
 namespace rglr {

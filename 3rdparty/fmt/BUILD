@@ -1,9 +1,14 @@
+load("//:copts.bzl", "RSR_DEFAULT_COPTS")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name='fmt',
     hdrs=glob(["include/fmt/*.h"]),
+    includes = ["include"],
     srcs=[
         "src/format.cc",
-        "src/posix.cc",],
-    strip_include_prefix = "include",)
+        "src/posix.cc",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )

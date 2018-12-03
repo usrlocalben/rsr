@@ -3,7 +3,7 @@
  */
 #pragma once
 #include <vector>
-#include <aligned_allocator.hpp>
+#include "3rdparty/aligned_allocator/aligned_allocator.hxx"
 
 namespace rqdq {
 namespace rcls {

@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <tmmintrin.h>
 #include <intrin.h>
-#include <sse_pow.h>
+#include "3rdparty/sse-pow/sse_pow.h"
 
 //#define USE_SSE3
 

@@ -8,7 +8,7 @@
 #include <vector>
 #include <tuple>
 
-#include <ryg-srgb.h>
+#include "3rdparty/ryg-srgb/ryg-srgb.h"
 
 namespace rqdq {
 namespace rqv {

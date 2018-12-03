@@ -1,3 +1,5 @@
+load("//:copts.bzl", "RSR_DEFAULT_COPTS")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
@@ -5,4 +7,3 @@ cc_library(
     hdrs = glob(["include/*.h", "include/*.inl"]),
     strip_include_prefix = "include",
     )
-

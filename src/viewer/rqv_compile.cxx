@@ -25,7 +25,7 @@
 #include <variant>
 #include <vector>
 
-#include <gason.h>
+#include "3rdparty/gason/gason.h"
 
 namespace rqdq {
 namespace {

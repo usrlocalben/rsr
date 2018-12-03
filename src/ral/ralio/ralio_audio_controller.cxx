@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 
-#include <bass.h>
+#include "3rdparty/bass/bass.h"
 
 
 namespace rqdq {

@@ -4,7 +4,7 @@
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include <PixelToaster.h>
+#include "3rdparty/pixeltoaster/PixelToaster.h"
 
 
 namespace rqdq {

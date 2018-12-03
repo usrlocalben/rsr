@@ -7,7 +7,7 @@
 #include <string>
 #include <memory>
 
-#include <exprtk.hpp>
+#include "3rdparty/exprtk/exprtk.hpp"
 
 
 namespace rqdq {

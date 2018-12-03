@@ -10,7 +10,7 @@
 #include <deque>
 #include <mutex>
 #include <stdexcept>
-#include <PixelToaster.h>
+#include "3rdparty/pixeltoaster/PixelToaster.h"
 
 namespace rqdq {
 

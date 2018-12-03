@@ -5,7 +5,7 @@
 #include <string>
 #include <variant>
 
-#include <gason.h>
+#include "3rdparty/gason/gason.h"
 
 using namespace std::string_literals;
 

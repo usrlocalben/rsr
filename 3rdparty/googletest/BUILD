@@ -1,4 +1,6 @@
-cxx_library(
+load("//:copts.bzl", "RSR_DEFAULT_COPTS")
+
+cc_library(
     name='gtest',
     srcs=[
         'src/gtest.cc',
@@ -11,10 +13,12 @@ cxx_library(
         'src/gtest-typed-test.cc',
         ],
     include_dir='include',
-)
+    copts = RSR_DEFAULT_COPTS,
+    )
 
-cxx_library(
+cc_library(
     name='gtest_main',
     srcs=['src/gtest_main.cc'],
     deps=[':gtest'],
-)
+    copts = RSR_DEFAULT_COPTS,
+    )

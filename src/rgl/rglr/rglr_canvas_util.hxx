@@ -3,7 +3,7 @@
 #include "src/rml/rmlg/rmlg_irect.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 
-#include <ryg-srgb.h>
+#include "3rdparty/ryg-srgb/ryg-srgb.h"
 
 namespace rqdq {
 namespace rglr {

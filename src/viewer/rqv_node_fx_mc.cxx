@@ -1,12 +1,12 @@
 #include "src/viewer/rqv_node_fx_mc.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
-#include "src/rgl/rglv/rglv_mesh.hxx"
+//#include "src/rgl/rglv/rglv_mesh.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
 #include "src/viewer/rqv_node_base.hxx"
 #include "src/viewer/rqv_node_material.hxx"
 #include "src/viewer/rqv_node_value.hxx"
-#include "src/viewer/rqv_shaders.hxx"
+//#include "src/viewer/rqv_shaders.hxx"
 
 #include <memory>
 #include <string>

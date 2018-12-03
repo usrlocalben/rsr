@@ -10,11 +10,11 @@
 #include <string>
 #include <vector>
 
-#include <fmt/format.h>
-#include <fmt/printf.h>
-#include <PixelToaster.h>
-#include <picopng.h>
-#include <ryg-srgb.h>
+#include "3rdparty/fmt/include/fmt/format.h"
+#include "3rdparty/fmt/include/fmt/printf.h"
+#include "3rdparty/pixeltoaster/PixelToaster.h"
+#include "3rdparty/picopng/picopng.h"
+#include "3rdparty/ryg-srgb/ryg-srgb.h"
 
 
 namespace rqdq {

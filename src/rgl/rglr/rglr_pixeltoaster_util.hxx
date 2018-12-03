@@ -4,7 +4,7 @@
 #pragma once
 #include "src/rgl/rglr/rglr_canvas.hxx"
 
-#include <PixelToaster.h>
+#include "3rdparty/pixeltoaster/PixelToaster.h"
 
 namespace rqdq {
 namespace rglr {

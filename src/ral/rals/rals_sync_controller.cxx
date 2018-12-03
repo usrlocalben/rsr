@@ -6,7 +6,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <rocket/sync.h>
+#include "3rdparty/rocket/rocket/sync.h"
 
 
 namespace rqdq {

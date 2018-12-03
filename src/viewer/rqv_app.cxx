@@ -31,11 +31,10 @@
 #include <thread>
 #include <vector>
 
-#include <fmt/format.h>
-#include <fmt/printf.h>
-#include <gason.h>
-#include <PixelToaster.h>
-#include <rocket/sync.h>
+#include "3rdparty/fmt/include/fmt/format.h"
+#include "3rdparty/fmt/include/fmt/printf.h"
+#include "3rdparty/gason/gason.h"
+#include "3rdparty/pixeltoaster/PixelToaster.h"
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #undef min
