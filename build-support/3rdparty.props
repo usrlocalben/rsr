@@ -6,18 +6,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>
-        $(SolutionDir)\3rdparty\aligned_allocator;
-        $(SolutionDir)\3rdparty\bass;
-        $(SolutionDir)\3rdparty\directx\Include;
-        $(SolutionDir)\3rdparty\exprtk;
-        $(SolutionDir)\3rdparty\fmt\include;
-        $(SolutionDir)\3rdparty\gason;
-        $(SolutionDir)\3rdparty\picopng;
-        $(SolutionDir)\3rdparty\pixeltoaster;
-        $(SolutionDir)\3rdparty\rocket;
-        $(SolutionDir)\3rdparty\ryg-srgb;
-        $(SolutionDir)\3rdparty\sse-pow;
-        $(SolutionDir)\3rdparty\tuple_hash;
+        $(SolutionDir);
 	%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>

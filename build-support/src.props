@@ -6,21 +6,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>
-	$(SolutionDir)\src\ral\ralio;
-	$(SolutionDir)\src\ral\rals;
-	$(SolutionDir)\src\rcl\rclma;
-	$(SolutionDir)\src\rcl\rclmt;
-	$(SolutionDir)\src\rcl\rclr;
-	$(SolutionDir)\src\rcl\rcls;
-	$(SolutionDir)\src\rcl\rclt;
-	$(SolutionDir)\src\rcl\rclx;
-	$(SolutionDir)\src\rgl\rglr;
-	$(SolutionDir)\src\rgl\rglv;
-	$(SolutionDir)\src\rml\rmlg;
-	$(SolutionDir)\src\rml\rmlm;
-	$(SolutionDir)\src\rml\rmls;
-	$(SolutionDir)\src\rml\rmlv;
-	$(SolutionDir)\src\viewer;
+	$(SolutionDir);
 	%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>
