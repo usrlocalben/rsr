@@ -2,7 +2,6 @@
 #include "src/ral/ralio/ralio_audio_controller.hxx"
 #include "src/ral/rals/rals_sync_controller.hxx"
 #include "src/rcl/rclma/rclma_framepool.hxx"
-#include "src/rcl/rclmt/rclmt_barrier.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclr/rclr_algorithm.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
@@ -37,8 +36,6 @@
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-#undef min
-#undef max
 
 namespace rqdq {
 namespace rqv {

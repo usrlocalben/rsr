@@ -6,6 +6,7 @@
 #include <cassert>
 #include <chrono>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <random>
 #include <thread>
@@ -64,13 +65,13 @@ int thread_count;
 
 std::vector<std::thread> pool;
 
-Barrier *start_barrier;
-Barrier *end_barrier;
+std::unique_ptr<Barrier> startBarrier;
+std::unique_ptr<Barrier> endBarrier;
 
 thread_local double mark_start_time;
 
 
-void init(const int threads) {
+void init(const int numThreads) {
 	assert(sizeof(jobsys::Job) == DESIRED_JOB_SIZE_IN_BYTES);
 
 	//	std::cout << "extra bytes: " << member_size(Job, data) << std::endl;
@@ -78,11 +79,11 @@ void init(const int threads) {
 	thread_id = 0; // init should be run in main thread...
 	generation = 1;
 	total_jobs = 0;
-	thread_count = threads;
+	thread_count = numThreads;
 
 	jobpools.clear();
 	jobqueues.clear();
-	for (int ti = 0; ti < threads; ti++) {
+	for (int ti=0; ti<numThreads; ti++) {
 		auto telemetry = std::vector<struct JobStat>(NUMBER_OF_JOBS);
 		auto timer = rcls::Timer();
 		telemetry_stores.push_back(telemetry);
@@ -95,12 +96,11 @@ void init(const int threads) {
 		jobpools.push_back(job_pool_ptr);
 		jobqueues.push_back(std::make_unique<Queue>()); }
 
-	start_barrier = new Barrier(threads);
-	end_barrier = new Barrier(threads);
+	startBarrier = std::make_unique<Barrier>(numThreads);
+	endBarrier = std::make_unique<Barrier>(numThreads);
 
-	for (int ti = 0; ti < threads; ti++) {
-		if (ti > 0) {
-			pool.push_back(std::thread(thread_main, ti)); }}}
+	for (int ti=1; ti<numThreads; ti++) {
+		pool.push_back(std::thread(thread_main, ti)); }}
 
 
 void reset() {
@@ -214,18 +214,18 @@ void finish(Job* job) {
 
 void work_start() {
 	should_work.store(true);
-	start_barrier->wait();}
+	startBarrier->Join();}
 
 
 void work_end() {
 	should_work.store(false);
-	end_barrier->wait();}
+	endBarrier->Join();}
 
 
 void stop() {
 	should_work.store(false);
 	should_quit.store(true);
-	start_barrier->wait();}
+	startBarrier->Join();}
 
 
 
@@ -233,11 +233,11 @@ void stop() {
 void thread_main(int id) {
 	thread_id = id;
 	while (true) {
-		start_barrier->wait();
+		startBarrier->Join();
 		if (should_quit) break;
 		while (should_work == true) {
 			help(); }
-		end_barrier->wait(); }}
+		endBarrier->Join(); }}
 
 
 void join() {
