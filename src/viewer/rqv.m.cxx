@@ -30,7 +30,7 @@ int main() {
 			threads = concurrency; } }
 
 	jobsys::init(threads); // threads);
-	framepool::init();
+	framepool::Init();
 
 	try {
 		auto app = Application();
@@ -128,7 +128,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE h0, LPSTR lpCmdLine, int nCmdShow)
 
 	int threads = std::thread::hardware_concurrency();
 	jobsys::init(threads);
-	framepool::init();
+	framepool::Init();
 	auto app = Application();
 	/*
 	if (want720p) {

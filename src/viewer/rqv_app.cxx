@@ -310,7 +310,7 @@ void Application::impl::run() {
 
 			if (d_nice) jobsys::work_start();
 			jobsys::reset();
-			framepool::reset();
+			framepool::Reset();
 
 #ifdef ENABLE_MUSIC
 			double musicPositionInRows = syncController.GetPositionInRows();

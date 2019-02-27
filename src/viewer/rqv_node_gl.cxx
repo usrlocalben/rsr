@@ -82,8 +82,8 @@ void LayerNode::draw(rglv::GL * dc, int width, int height, float aspect, rclmt::
 	using namespace rglv;
 	namespace framepool = rclma::framepool;
 
-	mat4* pmat = reinterpret_cast<mat4*>(framepool::allocate(64));
-	mat4* mvmat = reinterpret_cast<mat4*>(framepool::allocate(64));
+	mat4* pmat = reinterpret_cast<mat4*>(framepool::Allocate(64));
+	mat4* mvmat = reinterpret_cast<mat4*>(framepool::Allocate(64));
 	if (camera_node) {
 		*pmat = camera_node->getProjectionMatrix(aspect);
 		*mvmat = camera_node->getModelViewMatrix(); }

@@ -3,6 +3,7 @@
 dist
 wvenv
 venv
+bazel-*
 
 #editor
 .idea
@@ -11,5 +12,4 @@ venv
 
 #python
 *.pyc
-
 

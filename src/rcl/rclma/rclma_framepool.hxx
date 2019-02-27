@@ -4,9 +4,9 @@ namespace rqdq {
 namespace rclma {
 
 namespace framepool {
-	void init();
-	void reset();
-	void* allocate(const int); }
+	void Init();
+	void Reset();
+	void* Allocate(const int); }
 
 }  // close package namespace
 }  // close enterprise namespace

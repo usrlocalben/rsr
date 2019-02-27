@@ -66,11 +66,11 @@ void RepeatOp::draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4
 	rmlv::vec3 p{0,0,0};
 	rmlv::vec3 r{0,0,0};
 	rmlv::vec3 s{1,1,1};
-	auto& counter = *reinterpret_cast<std::atomic<int>*>(rclma::framepool::allocate(sizeof(std::atomic<int>)));
+	auto& counter = *reinterpret_cast<std::atomic<int>*>(framepool::Allocate(sizeof(std::atomic<int>)));
 	counter = cnt;
 	for (int i = 0; i < cnt; i++) {
 		if (depth < DEPTH_FORK_UNTIL) {
-			mat4& M = *reinterpret_cast<mat4*>(framepool::allocate(64));
+			mat4& M = *reinterpret_cast<mat4*>(framepool::Allocate(64));
 			M = *mvmat  * mat4::rotate(r.x * M_PI * 2, 1, 0, 0);
 			M = M * mat4::rotate(r.y * M_PI * 2, 0, 1, 0);
 			M = M * mat4::rotate(r.z * M_PI * 2, 0, 0, 1);
@@ -131,7 +131,7 @@ void TranslateOp::draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::m
 	namespace framepool = rclma::framepool;
 	namespace jobsys = rclmt::jobsys;
 
-	mat4& M = *reinterpret_cast<mat4*>(framepool::allocate(64));
+	mat4& M = *reinterpret_cast<mat4*>(framepool::Allocate(64));
 
 	rmlv::vec3 scale = {1.0f, 1.0f, 1.0f};
 	if (scale_source_node != nullptr) {
