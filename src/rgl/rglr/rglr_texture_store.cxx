@@ -49,7 +49,7 @@ void TextureStore::load_dir(const std::string& prepend) {
 	static const std::vector<std::string> extensions{ "*.png" }; // , "*.jpg" };
 
 	for (auto& ext : extensions) {
-		for (auto& fn : rcls::fileglob(prepend + ext)) {
+		for (auto& fn : rcls::FindGlob(prepend + ext)) {
 			//std::cout << "scanning [" << prepend << "][" << fn << "]" << std::endl;
 			this->load_any(prepend, fn); }}}
 

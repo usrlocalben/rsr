@@ -14,36 +14,33 @@ namespace rclx {
 class JSONFile {
 public:
 	JSONFile(const std::string& path) :d_path(path) {
-		d_lastMTime = getMTime();
-		reload(); }
+		d_lastMTime = GetMTime();
+		Reload(); }
 
-	bool isOutOfDate() const {
-		long long mTime = getMTime();
-		if (mTime != d_lastMTime) {
+	bool IsOutOfDate() const {
+		int64_t mTime = GetMTime();
+		return GetMTime() != d_lastMTime; }
+
+	bool Refresh() {
+		if (IsOutOfDate()) {
+			d_lastMTime = GetMTime();
+			Reload();
 			return true; }
-		return false; }
+		return false;}
 
-	bool refresh() {
-		long long mTime = getMTime();
-		if (mTime != d_lastMTime) {
-			d_lastMTime = mTime;
-			reload();
-			return true; }
-		return false; }
-
-	bool isValid() const {
+	bool IsValid() const {
 		return d_valid; }
 
-	const JsonValue& docroot() const {
+	const JsonValue& GetRoot() const {
 		if (!d_valid) {
 			throw std::runtime_error("document is not valid"); }
 		return *d_jsonRoot.get(); }
 
 private:
-	void reload();
+	void Reload();
 
-	long long getMTime() const {
-		return rcls::getmtime(d_path); }
+	int64_t GetMTime() const {
+		return rcls::GetMTime(d_path); }
 
 private:
 	int d_generation = 0;

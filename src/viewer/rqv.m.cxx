@@ -22,7 +22,7 @@ int main() {
 	JSONFile config_json("data/viewer_config.json");
 	int threads = std::thread::hardware_concurrency();
 
-	if (auto jv = jv_find(config_json.docroot(), "concurrency", JSON_NUMBER)) {
+	if (auto jv = jv_find(config_json.GetRoot(), "concurrency", JSON_NUMBER)) {
 		const auto concurrency = int(jv->toNumber());
 		if (concurrency <= 0) {
 			threads = int(std::thread::hardware_concurrency()) + concurrency; }
@@ -34,9 +34,9 @@ int main() {
 
 	try {
 		auto app = Application();
-		if (auto jv = jv_find(config_json.docroot(), "nice", JSON_TRUE)) {
+		if (auto jv = jv_find(config_json.GetRoot(), "nice", JSON_TRUE)) {
 			app.setNice(true); }
-		else if (auto jv = jv_find(config_json.docroot(), "nice", JSON_FALSE)) {
+		else if (auto jv = jv_find(config_json.GetRoot(), "nice", JSON_FALSE)) {
 			app.setNice(false); }
 		app.run(); }
 	catch (const std::exception& err) {

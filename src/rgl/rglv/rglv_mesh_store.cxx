@@ -33,7 +33,7 @@ void MeshStore::load_dir(const std::string& prefix,
 
 	const std::string spec = "*.obj";
 
-	for (auto& fn : rcls::fileglob(prefix + spec)) {
+	for (auto& fn : rcls::FindGlob(prefix + spec)) {
 		// cout << "loading mesh [" << prefix << "][" << fn << "]" << endl;
 		auto [tmp_mesh, tmp_materials] = rglv::loadOBJ(prefix, fn);
 		int material_base_idx = materialstore.size();

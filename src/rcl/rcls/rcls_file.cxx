@@ -8,17 +8,14 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
 #include <Windows.h>
-#undef min
-#undef max
 
 namespace rqdq {
 namespace rcls {
 
 using namespace std;
 
-vector<string> fileglob(const string& pathpat) {
+vector<string> FindGlob(const string& pathpat) {
 	vector<string> lst;
 	WIN32_FIND_DATA ffd;
 
@@ -35,64 +32,54 @@ vector<string> fileglob(const string& pathpat) {
 * example from
 * http://nickperrysays.wordpress.com/2011/05/24/monitoring-a-file-last-modified-date-with-visual-c/
 */
-long long getmtime(const string& fn) {
-	long long mtime = -1;
-	HANDLE hFile = CreateFileA(fn.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+int64_t GetMTime(const string& path) {
+	int64_t mtime = -1;
+	HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (hFile != INVALID_HANDLE_VALUE) {
 		FILETIME ftCreate, ftAccess, ftWrite;
 		if (!GetFileTime(hFile, &ftCreate, &ftAccess, &ftWrite)) {
-			mtime = 0;
-		}
+			mtime = 0; }
 		else {
-			mtime = (long long)ftWrite.dwHighDateTime << 32 | ftWrite.dwLowDateTime;
-		}
-		CloseHandle(hFile);
-	}
-	return mtime;
-}
+			mtime = (int64_t)ftWrite.dwHighDateTime << 32 | ftWrite.dwLowDateTime; }
+		CloseHandle(hFile); }
+	return mtime; }
 
 
-vector<char> file_get_contents(const string& fn) {
+vector<char> file_get_contents(const string& path) {
 	vector<char> buf;
-	ifstream f(fn);
+	ifstream f(path);
 	f.exceptions(ifstream::badbit | ifstream::failbit | ifstream::eofbit);
 	f.seekg(0, ios::end);
 	streampos length(f.tellg());
 	if (length) {
-		cout << "reading " << length << " bytes from " << fn << endl;
+		cout << "reading " << length << " bytes from " << path << endl;
 		f.seekg(0, ios::beg);
 		buf.resize(static_cast<size_t>(length));
-		f.read(buf.data(), static_cast<std::size_t>(length));
-	}
+		f.read(buf.data(), static_cast<std::size_t>(length)); }
 	else {
-		cout << "nothing to read from " << fn << endl;
-	}
-	return buf;
-}
+		cout << "nothing to read from " << path << endl; }
+	return buf; }
 
 
-void file_get_contents(const string& fn, vector<char>& buf) {
-	ifstream f(fn);
-	f.exceptions(ifstream::badbit | ifstream::failbit | ifstream::eofbit);
-	f.seekg(0, ios::end);
-	streampos length(f.tellg());
+void LoadBytes(const string& path, vector<char>& buf) {
+	ifstream fd(path);
+	fd.exceptions(ifstream::badbit | ifstream::failbit | ifstream::eofbit);
+	fd.seekg(0, ios::end);
+	streampos length(fd.tellg());
 	if (length) {
-		f.seekg(0, ios::beg);
+		fd.seekg(0, ios::beg);
 		buf.resize(static_cast<size_t>(length));
-		f.read(&buf.front(), static_cast<std::size_t>(length));
-	}
-}
+		fd.read(buf.data(), buf.size()); }}
 
 
-vector<string> loadFileAsLines(const string& filename) {
-	ifstream f(filename);
-	vector<string> data;
+vector<string> LoadLines(const string& path) {
+	ifstream fd(path);
+	vector<string> out;
+	string line;
+	while (getline(fd, line)) {
+		out.emplace_back(line); }
+	return out; }
 
-	string ln;
-	while (!getline(f, ln).eof()) {
-		data.push_back(ln); }
-
-	return data; }
 
 }  // close package namespace
 }  // close enterprise namespace

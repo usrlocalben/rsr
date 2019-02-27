@@ -6,14 +6,14 @@
 namespace rqdq {
 namespace rcls {
 
-std::vector<std::string> fileglob(const std::string& pathpat);
+std::vector<std::string> FindGlob(const std::string& pathpat);
 
-long long getmtime(const std::string& fn);
+int64_t GetMTime(const std::string& path);
 
-std::vector<char> file_get_contents(const std::string& fn);
-void file_get_contents(const std::string& fn, std::vector<char>& buf);
+std::vector<char> LoadBytes(const std::string& path);
+void LoadBytes(const std::string& path, std::vector<char>& buf);
 
-std::vector<std::string> loadFileAsLines(const std::string& filename);
+std::vector<std::string> LoadLines(const std::string& path);
 
 }  // close package namespace
 }  // close enterprise namespace

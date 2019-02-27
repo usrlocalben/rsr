@@ -7,9 +7,9 @@ namespace rcls {
 class Timer {
 public:
 	Timer() :beg_(clock_::now()) {}
-	void reset() {
+	void Reset() {
 		beg_ = clock_::now(); }
-	double elapsed() const {
+	double GetElapsed() const {
 		return std::chrono::duration_cast<second_>(clock_::now() - beg_).count(); }
 private:
 	typedef std::chrono::high_resolution_clock clock_;

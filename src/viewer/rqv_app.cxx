@@ -232,17 +232,17 @@ void Application::impl::run() {
 
 	// initial read from scene.json
 	JSONFile sceneJson("data/scene.json");
-	if (!sceneJson.isValid()) {
+	if (!sceneJson.IsValid()) {
 		cout << "error while reading data/scene.json, can't continue.\n";
 		return; }
-	if (auto success = recompile(sceneJson.docroot()); !success) {
+	if (auto success = recompile(sceneJson.GetRoot()); !success) {
 		cout << "compile failed, can't continue.\n";
 		return; }
 
 	JSONFile config_json("data/viewer_config.json");
 
 #ifdef ENABLE_MUSIC
-	if (auto jv = jv_find(config_json.docroot(), "soundtrack", JSON_OBJECT)) {
+	if (auto jv = jv_find(config_json.GetRoot(), "soundtrack", JSON_OBJECT)) {
 		if (auto result = deserializeSoundtrack(*jv)) {
 			d_soundtrack = result.value(); }
 		else {
@@ -251,7 +251,7 @@ void Application::impl::run() {
 		cout << "compiled with ENABLE_MUSIC but soundtrack config not found, can't continue\n";
 		return; }
 
-	if (auto jv = jv_find(config_json.docroot(), "sync", JSON_OBJECT)) {
+	if (auto jv = jv_find(config_json.GetRoot(), "sync", JSON_OBJECT)) {
 		if (auto result = deserializeSyncConfig(*jv)) {
 			d_syncConfig = result.value(); }
 		else {
@@ -291,11 +291,11 @@ void Application::impl::run() {
 		while (!d_quit) {
 			maybeUpdateDisplay();
 
-			if (sceneJson.isOutOfDate()) {
+			if (sceneJson.IsOutOfDate()) {
 				jobsys::_sleep(100);
-				sceneJson.refresh();
-				if (sceneJson.isValid()) {
-					recompile(sceneJson.docroot()); }}
+				sceneJson.Refresh();
+				if (sceneJson.IsValid()) {
+					recompile(sceneJson.GetRoot()); }}
 
 			if (capture_mouse && reset_mouse_next_frame) {
 				reset_mouse_next_frame = false;

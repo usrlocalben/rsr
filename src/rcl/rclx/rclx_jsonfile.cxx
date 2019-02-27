@@ -3,20 +3,18 @@
 
 #include <iostream>
 #include <memory>
-// #include <conio.h>
 
 namespace rqdq {
 namespace rclx {
 
 
-void JSONFile::reload() {
+void JSONFile::Reload() {
 	d_jsonRoot = std::make_unique<JsonValue>();
 	d_allocator = std::make_unique<JsonAllocator>();
 	d_bytes.clear();
 
-	rcls::file_get_contents(d_path, d_bytes);
-	d_bytes.push_back(0);
-	// cout << string(d_bytes.data()) << endl;
+	rcls::LoadBytes(d_path, d_bytes);
+	d_bytes.emplace_back(0);
 	char* dataBegin = d_bytes.data();
 	char* dataEnd;
 

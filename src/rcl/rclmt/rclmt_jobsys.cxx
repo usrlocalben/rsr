@@ -107,7 +107,7 @@ void reset() {
 	// XXX in debug, search pool for unfinished jobs
 	for (int ti = 0; ti < thread_count; ti++) {
 		telemetry_stores[ti].clear();
-		telemetry_timers[ti].reset(); }
+		telemetry_timers[ti].Reset(); }
 	generation++;
 	total_jobs = 0; }
 
@@ -181,9 +181,9 @@ void execute(Job* job) {
 	while (!can_execute(job)) {
 		help(); }
 
-	double start_time = telemetry_timers[thread_id].elapsed();
+	double start_time = telemetry_timers[thread_id].GetElapsed();
 	(job->function)(job, thread_id, job->data);
-	double end_time = telemetry_timers[thread_id].elapsed();
+	double end_time = telemetry_timers[thread_id].GetElapsed();
 	telemetry_stores[thread_id].push_back({
 		start_time, end_time,
 		uint32_t(std::hash<void*>{}(job->function))
@@ -249,10 +249,10 @@ void noop([[maybe_unused]] jobsys::Job *job, [[maybe_unused]] const int tid, voi
 
 
 void mark_start() {
-	mark_start_time = telemetry_timers[thread_id].elapsed(); }
+	mark_start_time = telemetry_timers[thread_id].GetElapsed(); }
 
 void mark_end(const uint32_t bits) {
-	double mark_end_time = telemetry_timers[thread_id].elapsed();
+	double mark_end_time = telemetry_timers[thread_id].GetElapsed();
 	telemetry_stores[thread_id].push_back({
 		mark_start_time, mark_end_time, bits }); }
 

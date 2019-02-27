@@ -126,7 +126,7 @@ MaterialStore loadMaterials(const std::string& fn) {
 		m.kd.z = pow(m.kd.z, p);
 		mlst.append(m.to_material()); };
 
-	auto lines = rcls::loadFileAsLines(fn);
+	auto lines = rcls::LoadLines(fn);
 
 	m.reset();
 	for (auto& line : lines) {
@@ -171,7 +171,7 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 
 	// std::cout << "---- loading [" << fn << "]:" << std::endl;
 
-	auto lines = rcls::loadFileAsLines(prepend + fn);
+	auto lines = rcls::LoadLines(prepend + fn);
 
 	std::string group_name("defaultgroup");
 	int material_idx = -1;
