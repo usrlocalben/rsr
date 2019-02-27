@@ -5,15 +5,15 @@
 namespace rqdq {
 namespace rclt {
 
-std::vector<std::string> explode(const std::string& str, char ch);
+std::vector<std::string> Split(const std::string& str, char ch);
 
-std::string trim(const std::string& s);
+std::string Trim(const std::string& s);
 
-bool consumePrefix(std::string& str, const std::string& prefix);
+bool ConsumePrefix(std::string& str, const std::string& prefix);
 
 struct UTF8Codec {
-	static std::wstring decode(const std::string&);
-	static std::string encode(const std::wstring&); };
+	static std::wstring Decode(const std::string&);
+	static std::string Encode(const std::wstring&); };
 
 }  // close package namespace
 }  // close enterprise namespace

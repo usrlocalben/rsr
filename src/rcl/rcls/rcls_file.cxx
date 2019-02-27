@@ -19,11 +19,11 @@ vector<string> FindGlob(const string& pathpat) {
 	vector<string> lst;
 	WIN32_FIND_DATA ffd;
 
-	HANDLE hFind = FindFirstFileW(rclt::UTF8Codec::decode(pathpat).c_str(), &ffd);
+	HANDLE hFind = FindFirstFileW(rclt::UTF8Codec::Decode(pathpat).c_str(), &ffd);
 	if (hFind != INVALID_HANDLE_VALUE) {
 		do {
 			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-			lst.push_back(rclt::UTF8Codec::encode(wstring{ffd.cFileName}));
+			lst.push_back(rclt::UTF8Codec::Encode(wstring{ffd.cFileName}));
 		} while (FindNextFile(hFind, &ffd) != 0); }
 	return lst; }
 

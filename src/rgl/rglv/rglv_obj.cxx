@@ -74,7 +74,7 @@ struct faceidx {
 
 
 faceidx to_faceidx(const std::string& data) {
-	auto tmp = rclt::explode(data, '/'); // "nn/nn/nn" or "nn//nn", 1+ indexed!!
+	auto tmp = rclt::Split(data, '/'); // "nn/nn/nn" or "nn//nn", 1+ indexed!!
 	return faceidx{
 		tmp[0].length() ? std::stol(tmp[0]) - 1 : 0, // vv
 		tmp[1].length() ? std::stol(tmp[1]) - 1 : 0, // vt
@@ -133,7 +133,7 @@ MaterialStore loadMaterials(const std::string& fn) {
 
 		// remove comments, trim, skip empty lines
 		auto tmp = line.substr(0, line.find('#'));
-		tmp = rclt::trim(tmp);
+		tmp = rclt::Trim(tmp);
 		if (tmp.size() == 0) continue;
 
 		// create a stream
@@ -184,7 +184,7 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 	for (auto& line : lines) {
 
 		auto tmp = line.substr(0, line.find('#'));
-		tmp = rclt::trim(tmp);
+		tmp = rclt::Trim(tmp);
 		if (tmp.size() == 0) continue;
 		std::stringstream ss(tmp, std::stringstream::in);
 
@@ -228,7 +228,7 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 		else if (cmd == "f") {
 			// face indices
 			std::string data = line.substr(line.find(' ') + 1, std::string::npos);
-			auto faces = rclt::explode(data, ' ');
+			auto faces = rclt::Split(data, ' ');
 			std::vector<faceidx> indexes;
 			for (auto& facechunk : faces) {
 				indexes.push_back(to_faceidx(facechunk)); }

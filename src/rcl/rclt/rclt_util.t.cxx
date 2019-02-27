@@ -9,15 +9,15 @@ using namespace rqdq;
 namespace {
 
 TEST(Trim, TrimsWhitespacePrefix) {
-	EXPECT_EQ(rclt::trim("   hey"), "hey"); }
+	EXPECT_EQ(rclt::Trim("   hey"), "hey"); }
 
 TEST(Trim, TrimsWhitespaceSuffix) {
-	EXPECT_EQ(rclt::trim("hey   "), "hey"); }
+	EXPECT_EQ(rclt::Trim("hey   "), "hey"); }
 
 TEST(Trim, TrimsWhitespaceBoth) {
-	EXPECT_EQ(rclt::trim("   hey   "), "hey"); }
+	EXPECT_EQ(rclt::Trim("   hey   "), "hey"); }
 
 TEST(Trim, NoWhitespaceIsIdentity) {
-	EXPECT_EQ(rclt::trim("hey"), "hey"); }
+	EXPECT_EQ(rclt::Trim("hey"), "hey"); }
 
 }  // close unnamed namespace

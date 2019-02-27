@@ -39,7 +39,7 @@ using namespace std::string_literals;
 using namespace std;
 using namespace rclx;
 using namespace rmlv;
-using rclt::explode;
+using rclt::Split;
 
 using NodeList = std::vector<std::shared_ptr<NodeBase>>;
 
@@ -613,7 +613,7 @@ bool link(NodeList& nodes) {
 			// deserialize reference
 			string depId;
 			string depSlot;
-			auto parts = explode(depNodeRef, ':');
+			auto parts = Split(depNodeRef, ':');
 			if (parts.size() == 1) {
 				depId = parts[0];  depSlot = "default"s; }
 			else {
