@@ -265,7 +265,7 @@ void Application::impl::run() {
 
 	AudioController audioController;
 
-	auto result = audioController.createStream(d_soundtrack.path);
+	auto result = audioController.CreateStream(d_soundtrack.path);
 	if (!result.has_value()) {
 		cout << "failed to load " << d_soundtrack.path << ", can't continue.\n";
 		return; }
@@ -277,13 +277,13 @@ void Application::impl::run() {
 
 	rals::SyncController syncController(std::string("data/sync"), soundtrack, rowsPerSecond);
 #ifndef SYNC_PLAYER
-	syncController.connect();
+	syncController.Connect();
 #endif
 	for (const auto& name : d_syncConfig.trackNames) {
-		syncController.addTrack(name); }
+		syncController.AddTrack(name); }
 
-	audioController.start();
-	soundtrack.play();
+	audioController.Start();
+	soundtrack.Play();
 #endif //ENABLE_MUSIC
 
 	if (!d_nice) { jobsys::work_start();}
@@ -313,8 +313,8 @@ void Application::impl::run() {
 			framepool::reset();
 
 #ifdef ENABLE_MUSIC
-			double musicPositionInRows = syncController.positionInRows();
-			syncController.forEachValue(musicPositionInRows, [this](const auto& name, auto value) {
+			double musicPositionInRows = syncController.GetPositionInRows();
+			syncController.ForEachValue(musicPositionInRows, [this](const auto& name, auto value) {
 				d_syncNode->upsert(name, float(value)); });
 
 #ifdef SYNC_PLAYER
@@ -323,8 +323,8 @@ void Application::impl::run() {
 				d_quit = true; }  // end of soundtrack == end of demo
 #else
 			// host send-and-receive
-			if (syncController.update((int)floor(musicPositionInRows))) {
-				syncController.connect(); }
+			if (syncController.Update((int)floor(musicPositionInRows))) {
+				syncController.Connect(); }
 #endif
 #endif // ENABLE_MUSIC
 
@@ -338,7 +338,7 @@ void Application::impl::run() {
 			if (d_nice) { jobsys::work_end();}
 
 #ifdef ENABLE_MUSIC
-			audioController.fillBuffers();  // decrease chance of missing vsync
+			audioController.FillBuffers();  // decrease chance of missing vsync
 #endif
 
 			renderTimeInMillis.add(d_renderTimer.time() * 1000.0);
@@ -356,7 +356,7 @@ void Application::impl::run() {
 	cout << "terminated.\n";
 #ifdef ENABLE_MUSIC
 #ifndef SYNC_PLAYER
-	syncController.saveTracks();
+	syncController.SaveTracks();
 #endif
 #endif
 }

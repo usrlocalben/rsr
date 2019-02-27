@@ -16,14 +16,13 @@ MSVC_FLAGS = [
     "/D_ENABLE_EXTENDED_ALIGNED_STORAGE",
     "/DWIN32_LEAN_AND_MEAN",  # Don't bloat namespace with incompatible winsock versions.
     "/DNOMINMAX",  # Don't define min and max macros (windows.h)
+
+    #"/DENABLE_MUSIC",
+    #"/DSYNC_PLAYER",
     ]
 
 MSVC_RELEASE_FLAGS = [
-    "/Oi",  # intrinsic functions: enable
-    "/Ot",  # optimizer mode: speed
-    "/Ob2",  # inline expansion: level 2
     "/fp:fast",  # fpu mode: less precise
-    "/DNDEBUG",  # disable assert, etc
     ]
 
 RSR_DEFAULT_COPTS = MSVC_FLAGS + MSVC_RELEASE_FLAGS

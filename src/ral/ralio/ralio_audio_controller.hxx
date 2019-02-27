@@ -23,11 +23,11 @@ public:
 
 	~AudioStream();
 
-	void play() const;
-	void pause() const;
-	bool isPlaying() const;
-	double position() const;
-	void setPosition(double seconds);
+	void Play() const;
+	void Pause() const;
+	bool IsPlaying() const;
+	double GetPosition() const;
+	void SetPosition(double seconds);
 
 private:
 	unsigned long d_hstream = 0; };
@@ -36,9 +36,9 @@ private:
 class AudioController {
 public:
 	AudioController();
-	std::optional<AudioStream> createStream(std::string);
-	void start();
-	void fillBuffers();
+	std::optional<AudioStream> CreateStream(std::string);
+	void Start();
+	void FillBuffers();
 	~AudioController(); };
 
 

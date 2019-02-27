@@ -18,14 +18,14 @@ public:
 	SyncController(SyncController&&) = default;
 	SyncController& operator=(SyncController&&) = default;
 	
-	void connect();
-	void addTrack(const std::string&);
-	double positionInRows();
+	void Connect();
+	void AddTrack(const std::string&);
+	double GetPositionInRows();
 
-	void forEachValue(double, std::function<void(const std::string&, double value)>);
+	void ForEachValue(double, std::function<void(const std::string&, double value)>);
 
-	int update(int positionInRows);
-	void saveTracks();
+	int Update(int positionInRows);
+	void SaveTracks();
 };
 
 }  // close package namespace

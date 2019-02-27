@@ -14,6 +14,6 @@ cc_library(
         ],
     hdrs = ["rocket/sync.h"],
     strip_include_prefix = "rocket",
-    copts = RSR_DEFAULT_COPTS,
-    #deps=[':socketlib'],
+    copts = ["/DWIN32",] + RSR_DEFAULT_COPTS,
+    linkopts = ['-DEFAULTLIB:ws2_32.lib'],
     )

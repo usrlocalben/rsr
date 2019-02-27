@@ -16,29 +16,29 @@ AudioStream::~AudioStream() {
 		BASS_StreamFree(d_hstream); }}
 
 
-void AudioStream::play() const {
+void AudioStream::Play() const {
 	assert(d_hstream);
 	BASS_ChannelPlay(d_hstream, false); }
 
 
-void AudioStream::pause() const {
+void AudioStream::Pause() const {
 	assert(d_hstream);
 	BASS_ChannelPause(d_hstream); }
 
 
-bool AudioStream::isPlaying() const {
+bool AudioStream::IsPlaying() const {
 	assert(d_hstream);
 	return BASS_ChannelIsActive(d_hstream) == BASS_ACTIVE_PLAYING; }
 
 
-double AudioStream::position() const {
+double AudioStream::GetPosition() const {
 	assert(d_hstream);
 	QWORD pos = BASS_ChannelGetPosition(d_hstream, BASS_POS_BYTE);
 	double seconds = BASS_ChannelBytes2Seconds(d_hstream, pos);
 	return seconds; }
 
 
-void AudioStream::setPosition(double seconds) {
+void AudioStream::SetPosition(double seconds) {
 	assert(d_hstream);
 	QWORD pos = BASS_ChannelSeconds2Bytes(d_hstream, seconds);
 	BASS_ChannelSetPosition(d_hstream, pos, BASS_POS_BYTE); }
@@ -50,7 +50,7 @@ AudioController::AudioController() {
 		throw std::runtime_error("failed to initialize BASS system"); }}
 
 
-std::optional<AudioStream> AudioController::createStream(std::string path) {
+std::optional<AudioStream> AudioController::CreateStream(std::string path) {
 	auto stream = BASS_StreamCreateFile(false, path.c_str(), 0, 0, BASS_STREAM_PRESCAN);
 	if (!stream) {
 		return {}; }
@@ -58,11 +58,11 @@ std::optional<AudioStream> AudioController::createStream(std::string path) {
 		return AudioStream(stream); }}
 
 
-void AudioController::start() {
+void AudioController::Start() {
 	BASS_Start(); }
 
 
-void AudioController::fillBuffers() {
+void AudioController::FillBuffers() {
 	BASS_Update(0); }
 
 
