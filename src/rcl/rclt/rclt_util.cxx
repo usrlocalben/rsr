@@ -16,7 +16,7 @@ namespace rclt {
 std::wstring UTF8Codec::Decode(const std::string& str) {
 	if (str.empty()) {
 		return std::wstring{}; }
-	int needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.c_str(), str.size(), NULL, 0);
+	int needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.c_str(), str.size(), nullptr, 0);
 	if (needed == 0) {
 		throw std::runtime_error("error decoding UTF8"); }
 	std::wstring out(needed, 0);
@@ -27,11 +27,11 @@ std::wstring UTF8Codec::Decode(const std::string& str) {
 std::string UTF8Codec::Encode(const std::wstring& str) {
 	if (str.empty()) {
 		return std::string{}; }
-	int needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str.c_str(), str.size(), NULL, 0, NULL, NULL);
+	int needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str.c_str(), str.size(), nullptr, 0, nullptr, nullptr);
 	if (needed == 0) {
 		throw std::runtime_error("error decoding wchars"); }
 	std::string out(needed, 0);
-	WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.size(), out.data(), needed, NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.size(), out.data(), needed, nullptr, nullptr);
 	return out; }
 
 
@@ -58,14 +58,14 @@ bool ConsumePrefix(std::string& str, const std::string& prefix) {
 
 std::string Trim(const std::string &s) {
 	std::string::const_iterator it = s.begin();
-	while (it != s.end() && isspace(*it))
-		it++;
+	while (it != s.end() && (isspace(*it) != 0)) {
+		it++; }
 
 	std::string::const_reverse_iterator rit = s.rbegin();
-	while (rit.base() != it && isspace(*rit))
-		rit++;
+	while (rit.base() != it && (isspace(*rit) != 0)) {
+		rit++; }
 
 	return std::string(it, rit.base()); }
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclt
+}  // namespace rqdq
