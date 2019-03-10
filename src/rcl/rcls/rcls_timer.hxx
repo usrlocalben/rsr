@@ -17,5 +17,5 @@ private:
 	std::chrono::time_point<clock_> beg_; };
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rcls
+}  // namespace rqdq

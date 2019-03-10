@@ -14,5 +14,5 @@ using list = std::list<T, aligned_allocator<T, 64>>;
 template<typename T>
 using vector = std::vector<T, aligned_allocator<T, 64>>;
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rcls
+}  // namespace rqdq

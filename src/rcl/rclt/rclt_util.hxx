@@ -16,5 +16,5 @@ struct UTF8Codec {
 	static std::string Encode(const std::wstring&); };
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclt
+}  // namespace rqdq

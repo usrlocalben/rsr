@@ -27,5 +27,5 @@ void JSONFile::Reload() {
 		d_generation++; }}
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclx
+}  // namespace rqdq

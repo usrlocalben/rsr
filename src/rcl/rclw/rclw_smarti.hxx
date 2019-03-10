@@ -26,5 +26,5 @@ private:
 	I* i_; };
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclw
+}  // namespace rqdq

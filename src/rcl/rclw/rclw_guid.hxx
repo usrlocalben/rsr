@@ -11,5 +11,5 @@ struct CLSIDSerializer {
 };
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclw
+}  // namespace rqdq

@@ -20,5 +20,5 @@ std::string JoinPath(const std::string& a, const std::string& b, const std::stri
 void EnsureOpenable(const std::wstring& path);
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rcls
+}  // namespace rqdq

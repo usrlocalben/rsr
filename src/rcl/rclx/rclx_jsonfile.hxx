@@ -52,5 +52,5 @@ private:
 	bool d_valid = false;
 	};
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclx
+}  // namespace rqdq

@@ -31,5 +31,5 @@ template <typename T>
 int len(const T& container) {
 	return int(container.size()); }
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclr
+}  // namespace rqdq

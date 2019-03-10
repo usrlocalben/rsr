@@ -22,5 +22,5 @@ private:
 	uint32_t d_generation = 0; };
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclmt
+}  // namespace rqdq

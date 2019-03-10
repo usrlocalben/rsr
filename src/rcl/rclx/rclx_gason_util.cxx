@@ -55,5 +55,5 @@ std::variant<std::monostate, std::string, rmlv::vec3> jv_decode_ref_or_vec3(cons
 			return *value; } }
 	return {}; }
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclx
+}  // namespace rqdq

@@ -6,7 +6,11 @@ namespace rclma {
 namespace framepool {
 	void Init();
 	void Reset();
-	void* Allocate(const int); }
+	void* Allocate(const int);
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace framepool
+
+
+}  // namespace rclma
+}  // namespace rqdq

@@ -1,10 +1,10 @@
 #include "src/rcl/rclma/rclma_framepool.hxx"
-#include "src/rcl/rclmt/rclmt_jobsys.hxx"
 
 #include <vector>
 
-namespace rqdq {
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
 
+namespace rqdq {
 namespace {
 
 thread_local int thread_id;
@@ -25,10 +25,10 @@ int Ceil16(const int x) {
 		segments += 1; }
 	return segments << 4; }
 
-}  // close unnamed namespace
+
+}  // namespace
 
 namespace rclma {
-
 
 namespace framepool {
 
@@ -53,7 +53,9 @@ void* Allocate(int amt) {
 	sp += amt;
 	return out; }
 
-}  // close framepool namespace
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace framepool
+
+
+}  // namespace rclma
+}  // namespace rqdq

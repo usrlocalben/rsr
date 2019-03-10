@@ -176,5 +176,5 @@ void _sleep(int ms);
 }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclmt
+}  // namespace rqdq
