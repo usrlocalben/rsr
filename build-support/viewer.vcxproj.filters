@@ -1,0 +1,212 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(SolutionDir)\src\viewer\main.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\app.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\compile.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\cpu_colors.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\jobsys_vis.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\resource.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\shaders.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\base.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\camera.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\computed.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_auraforlaura.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_carpet.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_foo.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_mc.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_xyquad.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\gl.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\gpu.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\material.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\output.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\render.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\ral\ralio\ralio_audio_controller.cxx">
+      <Filter>ral</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\ral\rals\rals_sync_controller.cxx">
+      <Filter>ral</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclma\rclma_framepool.cxx">
+      <Filter>rcl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclmt\rclmt_barrier.cxx">
+      <Filter>rcl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclmt\rclmt_jobsys.cxx">
+      <Filter>rcl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclr\rclr_algorithm.cxx">
+      <Filter>rcl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclt\rclt_util.cxx">
+      <Filter>rcl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclx\rclx_gason_util.cxx">
+      <Filter>rcl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rcl\rclx\rclx_jsonfile.cxx">
+      <Filter>rcl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_blend.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_canvas.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_canvas_util.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_display_mode.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_kawase.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_pixeltoaster_util.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_profont.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_texture.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_texture_load.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_texture_sampler.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_texture_store.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_camera.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_fragment.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_clipper.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gl.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gpu.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gpu_protocol.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_material.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_marching_cubes.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_math.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_math.t.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_mesh.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_mesh_store.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_obj.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_packed_stream.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_packed_stream.t.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_triangle.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_triangle.t.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_vao.cxx">
+      <Filter>rgl</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlg\rmlg_pow2.cxx">
+      <Filter>rml</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlm\rmlm_mat4.cxx">
+      <Filter>rml</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_mmutil.cxx">
+      <Filter>rml</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_mvec4.cxx">
+      <Filter>rml</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_soa.cxx">
+      <Filter>rml</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_vec.cxx">
+      <Filter>rml</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\value.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\translate.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="node">
+      <UniqueIdentifier>{4b7e2372-69d2-4e28-a380-de24da1bcd94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ral">
+      <UniqueIdentifier>{e3bad9c3-5c68-44bf-9110-402188ce1226}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="rcl">
+      <UniqueIdentifier>{76b79f59-e294-463c-b07b-9142b1b0bf1d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="rgl">
+      <UniqueIdentifier>{a792906c-ce60-45f7-84c1-f0f8614a543f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="rml">
+      <UniqueIdentifier>{a3d625e4-da2e-471c-992e-17da3668ec6a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

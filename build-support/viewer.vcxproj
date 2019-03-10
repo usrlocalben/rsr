@@ -214,34 +214,34 @@
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_mvec4.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_soa.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_vec.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv.m.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_app.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_compile.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_cpu_colors.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_jobsys_vis.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_base.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_camera.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_computed.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_auraforlaura.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_carpet.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_foo.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_mc.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_fx_xyquad.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_gl.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_gpu.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_material.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_output.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_render.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_translate.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_value.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\main.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\app.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\compile.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\cpu_colors.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\jobsys_vis.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\base.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\camera.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\computed.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_auraforlaura.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_carpet.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_foo.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_mc.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_xyquad.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\gl.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\gpu.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\material.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\output.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\render.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\translate.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\value.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\resource.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_shaders.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\shaders.cxx" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="viewer.rc" />
+    <ResourceCompile Include="resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
