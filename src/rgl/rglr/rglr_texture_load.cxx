@@ -1,4 +1,9 @@
 #include "src/rgl/rglr/rglr_texture_load.hxx"
+
+#include <fstream>
+#include <string>
+#include <vector>
+
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rcl/rcls/rcls_file.hxx"
 #include "src/rgl/rglr/rglr_texture.hxx"
@@ -6,16 +11,11 @@
 #include "src/rml/rmlv/rmlv_mvec4.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include <fstream>
-#include <string>
-#include <vector>
-
 #include "3rdparty/fmt/include/fmt/format.h"
 #include "3rdparty/fmt/include/fmt/printf.h"
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 #include "3rdparty/picopng/picopng.h"
 #include "3rdparty/ryg-srgb/ryg-srgb.h"
-
 
 namespace rqdq {
 namespace rglr {
@@ -85,5 +85,6 @@ std::vector<uint8_t> load_file(const std::string& filename) {
 		file.read(reinterpret_cast<char*>(buffer.data()), size); }
 	return buffer; }
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

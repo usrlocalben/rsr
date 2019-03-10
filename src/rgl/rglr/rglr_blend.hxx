@@ -34,7 +34,10 @@ struct UniformAlpha {
 */
 
 #undef BLEND_ARGS
-}  // close BlendProgram namespace
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace BlendProgram
+
+
+}  // namespace rglr
+}  // namespace rqdq

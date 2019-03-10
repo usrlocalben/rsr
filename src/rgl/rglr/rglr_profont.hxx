@@ -1,8 +1,8 @@
 #pragma once
-#include "src/rml/rmlv/rmlv_vec.hxx"
-
 #include <unordered_map>
 #include <vector>
+
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 
@@ -35,5 +35,6 @@ private:
 	std::unordered_map<char, rmlv::ivec2> charmap;
 	std::vector<uint8_t> bitmap; };
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

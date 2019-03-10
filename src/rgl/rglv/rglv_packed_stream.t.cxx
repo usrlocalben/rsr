@@ -1,7 +1,7 @@
+#include <iostream>
+
 #include "src/rgl/rglv/rglv_packed_stream.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
-
-#include <iostream>
 
 #include <gtest/gtest.h>
 
@@ -32,4 +32,4 @@ TEST(PackedStream, BasicOperation) {
 	EXPECT_EQ(ps.consumeByte(), 8);
 	EXPECT_EQ(ps.consumeByte(), 38); }
 
-}  // close unnamed namespace
+}  // namespace

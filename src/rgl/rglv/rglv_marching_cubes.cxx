@@ -3,9 +3,10 @@
  * http://paulbourke.net/geometry/polygonise
  */
 #include "src/rgl/rglv/rglv_marching_cubes.hxx"
-#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <array>
+
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 namespace rqdq {
 namespace rglv {
@@ -324,5 +325,6 @@ const std::array<std::array<char, 16>, 256> tritable = {{
 	{{ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1} }
 }};
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

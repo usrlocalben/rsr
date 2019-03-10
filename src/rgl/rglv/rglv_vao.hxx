@@ -1,14 +1,13 @@
 #pragma once
+#include <cassert>
+#include <optional>
+
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include <cassert>
-#include <optional>
-
 namespace rqdq {
 namespace rglv {
-
 
 struct Float2Array {
 	rmlv::vec2 at(int idx) const {
@@ -143,5 +142,5 @@ struct VertexArray_F3F3F3 {
 	Float3Array a2; };
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglv
+}  // namespace rqdq

@@ -1,7 +1,7 @@
 #pragma once
-#include "src/rcl/rcls/rcls_aligned_containers.hxx"
-
 #include <string>
+
+#include "src/rcl/rcls/rcls_aligned_containers.hxx"
 
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 
@@ -27,5 +27,5 @@ struct Texture {
 		height = h; }};
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglr
+}  // namespace rqdq

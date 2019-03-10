@@ -1,3 +1,8 @@
+#include <array>
+#include <cmath>
+#include <iostream>
+#include <string>
+
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rgl/rglr/rglr_blend.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
@@ -8,11 +13,6 @@
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
-
-#include <array>
-#include <cmath>
-#include <iostream>
-#include <string>
 
 using namespace std;
 using namespace rqdq;

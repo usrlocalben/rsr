@@ -1,9 +1,4 @@
 #include "src/rgl/rglv/rglv_mesh_store.hxx"
-#include "src/rcl/rcls/rcls_file.hxx"
-#include "src/rgl/rglr/rglr_texture_store.hxx"
-#include "src/rgl/rglv/rglv_material.hxx"
-#include "src/rgl/rglv/rglv_obj.hxx"
-#include "src/rgl/rglv/rglv_mesh.hxx"
 
 #include <iostream>
 #include <map>
@@ -11,21 +6,26 @@
 #include <tuple>
 #include <unordered_map>
 
+#include "src/rcl/rcls/rcls_file.hxx"
+#include "src/rgl/rglr/rglr_texture_store.hxx"
+#include "src/rgl/rglv/rglv_material.hxx"
+#include "src/rgl/rglv/rglv_obj.hxx"
+#include "src/rgl/rglv/rglv_mesh.hxx"
 
 namespace rqdq {
-
 namespace {
+
 template <typename T>
 int len(const T& container) {
-	return int(container.size());
-}
-}
+	return int(container.size()); }
+
+
+}  // namespace
 
 namespace rglv {
 
 using std::cout;
 using std::endl;
-
 
 void MeshStore::load_dir(const std::string& prefix,
 						 rglv::MaterialStore& materialstore,
@@ -49,5 +49,6 @@ void MeshStore::load_dir(const std::string& prefix,
 
 		store.push_back(tmp_mesh); }}
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

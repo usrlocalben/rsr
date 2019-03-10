@@ -1,13 +1,14 @@
 #include "src/rgl/rglv/rglv_mesh.hxx"
-#include "src/rcl/rclr/rclr_algorithm.hxx"
-#include "src/rgl/rglv/rglv_vao.hxx"
-#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <iostream>
 #include <map>
 #include <string>
 #include <tuple>
 #include <unordered_map>
+
+#include "src/rcl/rclr/rclr_algorithm.hxx"
+#include "src/rgl/rglv/rglv_vao.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include "3rdparty/tuple_hash/tuple_hash.hxx"
 
@@ -232,5 +233,5 @@ std::tuple<VertexArray_F3F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3F3(c
 	return std::tuple{vao, idx}; }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglv
+}  // namespace rqdq

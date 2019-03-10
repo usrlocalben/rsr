@@ -1,9 +1,9 @@
 #pragma once
-#include "src/rcl/rcls/rcls_aligned_containers.hxx"
-#include "src/rml/rmlv/rmlv_vec.hxx"
-
 #include <optional>
 #include <string>
+
+#include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 namespace rqdq {
 namespace rglv {
@@ -42,8 +42,8 @@ struct MaterialStore {
 		d_store.push_back(m); }
 
 private:
-	rcls::vector<Material> d_store;
-	};
+	rcls::vector<Material> d_store; };
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

@@ -1,7 +1,7 @@
 #include "src/rgl/rglv/rglv_math.hxx"
+
 #include "src/rml/rmlv/rmlv_vec.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
-
 
 namespace rqdq {
 namespace rglv {
@@ -79,6 +79,5 @@ mat4 look_at(vec3 pos, vec3 center, vec3 up) {
 	return mrot * mpos; }
 
 
-
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglv
+}  // namespace rqdq

@@ -33,5 +33,5 @@ void Material::print() const {
 	std::cout << "  texture[" << this->imagename << "]" << std::endl; }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglv
+}  // namespace rqdq

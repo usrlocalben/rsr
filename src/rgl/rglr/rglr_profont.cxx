@@ -1,10 +1,11 @@
 #include "src/rgl/rglr/rglr_profont.hxx"
-#include "src/rcl/rclr/rclr_algorithm.hxx"
-#include "src/rgl/rglr/rglr_canvas.hxx"
 
 #include <functional>
 #include <sstream>
 #include <vector>
+
+#include "src/rcl/rclr/rclr_algorithm.hxx"
+#include "src/rgl/rglr/rglr_canvas.hxx"
 
 #include "3rdparty/picopng/picopng.h"
 
@@ -231,8 +232,8 @@ std::vector<uint8_t> profontbits = {
 	128,109,75,30,87,248,25,212,250,73,21,118,158,58,129,23,11,32,92,75,32,
 	32,250,78,210,11,84,232,133,2,164,142,222,244,126,57,70,2,213,182,5,188,
 	135,35,43,28,88,255,39,19,0,63,178,247,18,249,203,47,1,6,0,6,98,18,137,
-	114,34,4,253,0,0,0,0,73,69,78,68,174,66,96,130
-};
+	114,34,4,253,0,0,0,0,73,69,78,68,174,66,96,130 };
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

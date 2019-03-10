@@ -1,9 +1,9 @@
+#include <string>
+#include <iostream>
+
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
-
-#include <string>
-#include <iostream>
 
 #include <gtest/gtest.h>
 

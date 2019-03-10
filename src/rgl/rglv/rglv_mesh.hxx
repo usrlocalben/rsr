@@ -1,16 +1,14 @@
 #pragma once
-#include "src/rcl/rcls/rcls_aligned_containers.hxx"
-#include "src/rgl/rglv/rglv_vao.hxx"
-#include "src/rml/rmlv/rmlv_vec.hxx"
-
 #include <string>
 #include <tuple>
 #include <array>
 
+#include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rgl/rglv/rglv_vao.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 namespace rqdq {
 namespace rglv {
-
 
 struct Face {
 	std::array<int, 3> point_idx;
@@ -64,5 +62,5 @@ std::tuple<rglv::VertexArray_F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3
 std::tuple<rglv::VertexArray_F3F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3F3(const Mesh&);
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglv
+}  // namespace rqdq

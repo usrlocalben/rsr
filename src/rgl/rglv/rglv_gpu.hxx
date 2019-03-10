@@ -1,4 +1,12 @@
 #pragma once
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <iostream>
+#include <numeric>
+#include <optional>
+#include <vector>
+
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclr/rclr_algorithm.hxx"
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
@@ -20,16 +28,7 @@
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include <algorithm>
-#include <array>
-#include <cassert>
-#include <iostream>
-#include <numeric>
-#include <optional>
-#include <vector>
-
 #include "3rdparty/fmt/include/fmt/printf.h"
-
 
 namespace rqdq {
 namespace {
@@ -37,9 +36,10 @@ namespace {
 constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
 constexpr auto maxVAOSizeInVertices = 500000L;
 
-}  // close unnamed namespace
-namespace rglv {
 
+}  // namespace
+
+namespace rglv {
 
 struct VertexInput {
 	rmlv::qfloat4 a0;
@@ -1105,5 +1105,6 @@ private:
 	GPUStats d_stats0;
 	GPUStats d_stats1; };
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

@@ -1,14 +1,14 @@
 #include "src/rgl/rglr/rglr_kawase.hxx"
-#include "src/rgl/rglr/rglr_canvas.hxx"
-#include "src/rml/rmlv/rmlv_mvec4.hxx"
 
 #include <algorithm>
 #include <array>
 
+#include "src/rgl/rglr/rglr_canvas.hxx"
+#include "src/rml/rmlv/rmlv_mvec4.hxx"
+
 using std::array;
 using std::min;
 using std::max;
-
 
 namespace rqdq {
 namespace rglr {
@@ -87,5 +87,6 @@ void Kawase::blur_copy(const int y0,
 
 }
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

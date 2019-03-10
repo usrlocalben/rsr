@@ -1,4 +1,9 @@
 #pragma once
+#include <array>
+#include <deque>
+#include <mutex>
+#include <stdexcept>
+
 #include "src/rgl/rglr/rglr_canvas.hxx"
 #include "src/rgl/rglv/rglv_gpu_protocol.hxx"
 #include "src/rgl/rglv/rglv_packed_stream.hxx"
@@ -6,17 +11,9 @@
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include <array>
-#include <deque>
-#include <mutex>
-#include <stdexcept>
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 
 namespace rqdq {
-
-namespace {
-}  // close unnamed namespace
-
 namespace rglv {
 
 constexpr int GL_TRIANGLES = 0;
@@ -234,5 +231,6 @@ private:
 	bool d_dirty;
 	std::deque<GLState> d_states; };
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

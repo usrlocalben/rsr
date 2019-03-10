@@ -14,7 +14,9 @@ struct Kawase {
 	               FloatingPointCanvas& dst);
 	};
 
-}
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace Blur
+
+
+}  // namespace rglr
+}  // namespace rqdq

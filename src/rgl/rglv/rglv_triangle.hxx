@@ -1,14 +1,14 @@
 #pragma once
-#include "src/rml/rmlg/rmlg_irect.hxx"
-#include "src/rml/rmlv/rmlv_mvec4.hxx"
-#include "src/rml/rmlv/rmlv_soa.hxx"
-#include "src/rml/rmlv/rmlv_vec.hxx"
-
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <iostream>
 #include <xmmintrin.h>
+
+#include "src/rml/rmlg/rmlg_irect.hxx"
+#include "src/rml/rmlv/rmlv_mvec4.hxx"
+#include "src/rml/rmlv/rmlv_soa.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 
 namespace rqdq {
@@ -26,10 +26,11 @@ inline int iround(const float x) {
 
 inline int iround(const float x) {
 	return int(x); }
-}
+
+
+}  // namespace
 
 namespace rglv {
-
 
 /*
  * SoA helper for triangle vertex interpolants, qfloat
@@ -229,5 +230,5 @@ void draw_triangle(const int target_height, const rmlg::irect& r, int x1, int x2
 			fp.render(frag_coord, trimask, bary, frontfacing); }}}
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglv
+}  // namespace rqdq

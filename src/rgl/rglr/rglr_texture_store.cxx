@@ -1,13 +1,13 @@
 #include "src/rgl/rglr/rglr_texture_store.hxx"
-#include "src/rcl/rcls/rcls_file.hxx"
-#include "src/rgl/rglr/rglr_texture_load.hxx"
 
 #include <string>
 #include <vector>
 
+#include "src/rcl/rcls/rcls_file.hxx"
+#include "src/rgl/rglr/rglr_texture_load.hxx"
+
 #include "3rdparty/fmt/include/fmt/format.h"
 #include "3rdparty/fmt/include/fmt/printf.h"
-
 
 namespace rqdq {
 namespace rglr {
@@ -62,5 +62,6 @@ void TextureStore::print() {
 		fmt::printf("  data@ 0x%p\n", ptr);
 		i++; }}
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

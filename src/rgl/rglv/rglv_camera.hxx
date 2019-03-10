@@ -5,15 +5,14 @@
  * todo: velocity/acceleration
  */
 #pragma once
+#include <iostream>
+
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 
-#include <iostream>
-
 namespace rqdq {
 namespace rglv {
-
 
 class HandyCam {
 public:
@@ -74,5 +73,6 @@ private:
 	double d_mouse_speed;
 	};
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

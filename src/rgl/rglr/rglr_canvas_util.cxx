@@ -1,15 +1,15 @@
 #include "src/rgl/rglr/rglr_canvas_util.hxx"
+
+#include <algorithm>
+
 #include "src/rgl/rglr/rglr_canvas.hxx"
 #include "src/rml/rmlg/rmlg_irect.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
-
-#include <algorithm>
 
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 
 namespace rqdq {
 namespace rglr {
-
 
 rglr::TrueColorCanvas make_subcanvas(rglr::TrueColorCanvas& src, const rmlg::irect rect) {
 	auto left = rect.left.x < 0 ? src.width() + rect.left.x : rect.left.x;
@@ -173,5 +173,6 @@ void canvas_shader_rows_x(
 }
 */
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

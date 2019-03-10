@@ -127,5 +127,5 @@ void copyRect(
 			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow2Addr), _mm_unpackhi_epi64(packed[0].v, packed[1].v)); }}}
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglr
+}  // namespace rqdq

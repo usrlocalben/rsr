@@ -1,9 +1,9 @@
 #pragma once
-#include "src/rml/rmlv/rmlv_vec.hxx"
-
 #include <cassert>
 #include <iostream>
 #include <vector>
+
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 namespace rqdq {
 namespace rglv {
@@ -75,8 +75,8 @@ public:
 		return rmlv::vec4{ x, y, z, w }; }
 
 	inline auto unappend(int many) {
-		d_head -= many; }
-};
+		d_head -= many; } };
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

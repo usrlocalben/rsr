@@ -1,9 +1,4 @@
 #include "src/rgl/rglv/rglv_obj.hxx"
-#include "src/rcl/rcls/rcls_file.hxx"
-#include "src/rcl/rclt/rclt_util.hxx"
-#include "src/rgl/rglv/rglv_material.hxx"
-#include "src/rgl/rglv/rglv_mesh.hxx"
-#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <cmath>
 #include <fstream>
@@ -12,6 +7,12 @@
 #include <string>
 #include <tuple>
 #include <vector>
+
+#include "src/rcl/rcls/rcls_file.hxx"
+#include "src/rcl/rclt/rclt_util.hxx"
+#include "src/rgl/rglv/rglv_material.hxx"
+#include "src/rgl/rglv/rglv_mesh.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 namespace rqdq {
 
@@ -163,7 +164,9 @@ MaterialStore loadMaterials(const std::string& fn) {
 		push(); }
 
 	return mlst; }
-}  // close unnamed namespace
+
+
+}  // namespace
 
 namespace rglv {
 
@@ -246,5 +249,6 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 	mesh.compute_edges();
 	return std::tuple<Mesh, MaterialStore>(mesh, materials); }
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

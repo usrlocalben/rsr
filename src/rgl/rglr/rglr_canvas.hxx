@@ -6,7 +6,6 @@
 
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 
-
 namespace rqdq {
 namespace rglr {
 
@@ -174,5 +173,6 @@ private:
 	int _stride = 0;
 	float _aspect = 1.0f; };
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

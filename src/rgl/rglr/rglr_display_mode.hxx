@@ -8,7 +8,8 @@ struct DisplayMode {
 	int height_in_pixels;
 	};
 
-}  // close package namespace
+
+}  // namespace rglr
 
 inline bool operator==(const rglr::DisplayMode& lhs, const rglr::DisplayMode& rhs) {
 	return lhs.width_in_pixels == rhs.width_in_pixels &&
@@ -18,4 +19,5 @@ inline bool operator==(const rglr::DisplayMode& lhs, const rglr::DisplayMode& rh
 inline bool operator!=(const rglr::DisplayMode& lhs, const rglr::DisplayMode& rhs) {
 	return !operator==(lhs, rhs); }
 
-}  // close enterprise namespace
+
+}  // namespace rqdq

@@ -1,7 +1,7 @@
 #pragma once
-#include "src/rgl/rglr/rglr_texture.hxx"
-
 #include <string>
+
+#include "src/rgl/rglr/rglr_texture.hxx"
 
 namespace rqdq {
 namespace rglr {
@@ -9,5 +9,6 @@ namespace rglr {
 Texture load_png(const std::string& filename, const std::string& name, bool premultiply);
 Texture load_any(const std::string& prefix, const std::string& fn, const std::string& name, bool premultiply);
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

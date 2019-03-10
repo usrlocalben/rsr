@@ -1,17 +1,15 @@
 #pragma once
+#include <string>
+#include <tuple>
+#include <array>
+
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rgl/rglr/rglr_texture_store.hxx"
 #include "src/rgl/rglv/rglv_material.hxx"
 #include "src/rgl/rglv/rglv_mesh.hxx"
 
-#include <string>
-#include <tuple>
-#include <array>
-
-
 namespace rqdq {
 namespace rglv {
-
 
 class MeshStore {
 public:
@@ -25,9 +23,8 @@ public:
 	void load_dir(const std::string& prepend, rglv::MaterialStore& materialstore, rglr::TextureStore& texturestore);
 
 private:
-	rcls::vector<Mesh> store;
-	};
+	rcls::vector<Mesh> store; };
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglv
+}  // namespace rqdq

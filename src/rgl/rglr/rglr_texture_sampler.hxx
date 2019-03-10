@@ -1,15 +1,14 @@
 #pragma once
+#include <cassert>
+
 #include "src/rml/rmlg/rmlg_pow2.hxx"
 #include "src/rml/rmlv/rmlv_mvec4.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
-
-#include <cassert>
 
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 
 namespace rqdq {
 namespace rglr {
-
 
 template <int dim>
 inline int levelOfDetail(const rmlv::qfloat uCoord, const rmlv::qfloat vCoord) {
@@ -212,5 +211,5 @@ struct ts_pow2_mipmap {
 		return out; } };
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglr
+}  // namespace rqdq

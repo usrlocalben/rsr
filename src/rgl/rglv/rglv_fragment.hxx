@@ -1,14 +1,12 @@
 #pragma once
+#include <xmmintrin.h>
+
 #include "src/rgl/rglv/rglv_triangle.hxx"
 #include "src/rml/rmlv/rmlv_mvec4.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 
-#include <xmmintrin.h>
-
-
 namespace rqdq {
 namespace rglv {
-
 
 /*constants used for preparing 2x2 SoA gangs*/
 const rmlv::mvec4f FQX{_mm_setr_ps(0,1,0,1)};
@@ -82,5 +80,5 @@ inline rmlv::mvec4f ddy(const rmlv::mvec4f& a) {
 	return rmlv::mvec4f(_mm_sub_ps(quadbot, quadtop)); }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglv
+}  // namespace rqdq

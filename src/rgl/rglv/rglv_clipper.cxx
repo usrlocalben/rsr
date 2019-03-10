@@ -5,7 +5,6 @@
 namespace rqdq {
 namespace rglv {
 
-
 std::string plane_name(const Plane plane) {
 	switch (plane) {
 	case Plane::Left:   return "left";
@@ -18,5 +17,6 @@ std::string plane_name(const Plane plane) {
 		assert(false);
 		return "invalid"; }}
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

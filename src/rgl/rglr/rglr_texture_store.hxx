@@ -1,8 +1,8 @@
 #pragma once
-#include "src/rgl/rglr/rglr_texture.hxx"
-
 #include <string>
 #include <vector>
+
+#include "src/rgl/rglr/rglr_texture.hxx"
 
 namespace rqdq {
 namespace rglr {
@@ -20,5 +20,6 @@ public:
 private:
 	std::vector<Texture> store; };
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

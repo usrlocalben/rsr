@@ -1,13 +1,12 @@
 #pragma once
+#include <xmmintrin.h>
+
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include <xmmintrin.h>
-
 namespace rqdq {
 namespace rglv {
-
 
 /*
  * perspective divide, SoA version
@@ -145,5 +144,5 @@ inline rmlm::mat4 make_device_matrix(const int width, const int height) {
 	return md_origin * (md_scale * md_yfix); }
 
 
-} // close package namespace
-} // close enterprise namespace
+} // namespace rglv
+} // namespace rqdq

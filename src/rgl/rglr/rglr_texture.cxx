@@ -7,7 +7,6 @@
 
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 
-
 namespace rqdq {
 namespace rglr {
 
@@ -82,5 +81,5 @@ void Texture::maybe_make_mipmap() {
 }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglr
+}  // namespace rqdq

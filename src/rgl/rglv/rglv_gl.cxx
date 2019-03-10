@@ -1,9 +1,10 @@
 #include "src/rgl/rglv/rglv_gl.hxx"
+
+#include <cassert>
+
 #include "src/rgl/rglv/rglv_gpu_protocol.hxx"
 #include "src/rgl/rglv/rglv_packed_stream.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
-
-#include <cassert>
 
 namespace rqdq {
 namespace rglv {
@@ -75,5 +76,6 @@ void GL::maybeUpdateState() {
 	d_commands.appendPtr(&d_states.back());
 	d_dirty = false; }
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

@@ -1,11 +1,11 @@
 #pragma once
+#include <cassert>
+#include <string>
+
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_mvec4.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
-
-#include <cassert>
-#include <string>
 
 namespace rqdq {
 namespace rglv {
@@ -98,5 +98,6 @@ private:
 	// const rmlv::mvec4f GUARDBAND_WWWW{GUARDBAND_FACTOR, GUARDBAND_FACTOR, 1.0f, 0.0f};
 	};
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglv
+}  // namespace rqdq

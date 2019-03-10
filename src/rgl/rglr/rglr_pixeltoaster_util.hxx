@@ -39,8 +39,8 @@ public:
 
 private:
 	PixelToaster::Framebuffer *ptfb;
-	PixelToaster::Display &display;
-	};
+	PixelToaster::Display &display; };
 
-}  // close package namespace
-}  // close enterprise namespace
+
+}  // namespace rglr
+}  // namespace rqdq

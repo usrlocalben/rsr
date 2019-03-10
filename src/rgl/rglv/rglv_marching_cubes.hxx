@@ -1,11 +1,11 @@
 #pragma once
-#include "src/rgl/rglv/rglv_gpu.hxx"
-#include "src/rgl/rglv/rglv_vao.hxx"
-#include "src/rml/rmlv/rmlv_vec.hxx"
-
 #include <array>
 #include <mutex>
 #include <functional>
+
+#include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_vao.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 namespace rqdq {
 namespace rglv {
@@ -109,5 +109,5 @@ void march_sdf_vao(
 			vao.append(edge_vertex[vertex], edge_normal[vertex], vec3{0}); }}}
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rglv
+}  // namespace rqdq
