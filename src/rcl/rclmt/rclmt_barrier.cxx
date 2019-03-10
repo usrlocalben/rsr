@@ -5,7 +5,6 @@
 namespace rqdq {
 namespace rclmt {
 
-
 Barrier::Barrier(int numThreads)
 	:d_numThreads(numThreads), d_numThreadsStillActive(numThreads) {
 	assert(numThreads > 0); }
@@ -26,5 +25,5 @@ bool Barrier::Join() {
 	return false; }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rclmt
+}  // namespace rqdq

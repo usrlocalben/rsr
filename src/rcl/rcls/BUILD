@@ -28,3 +28,22 @@ cc_library(
         ],
     copts = RSR_DEFAULT_COPTS,
     )
+
+cc_library(
+    name = "console",
+    srcs = ["rcls_console.cxx"],
+    hdrs = ["rcls_console.hxx"],
+    deps=[
+        "//src/rcl/rclt:util",
+        ":text_canvas",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "text_canvas",
+    srcs = ["rcls_text_canvas.cxx"],
+    hdrs = ["rcls_text_canvas.hxx"],
+    deps=[],
+    copts = RSR_DEFAULT_COPTS,
+    )

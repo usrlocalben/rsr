@@ -15,5 +15,6 @@ struct UTF8Codec {
 	static std::wstring Decode(const std::string&);
 	static std::string Encode(const std::wstring&); };
 
+
 }  // close package namespace
 }  // close enterprise namespace

@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 
-
 namespace rqdq {
 namespace rcls {
 
@@ -14,6 +13,12 @@ std::vector<char> LoadBytes(const std::string& path);
 void LoadBytes(const std::string& path, std::vector<char>& buf);
 
 std::vector<std::string> LoadLines(const std::string& path);
+
+std::string JoinPath(const std::string& a, const std::string& b);
+std::string JoinPath(const std::string& a, const std::string& b, const std::string& c);
+
+void EnsureOpenable(const std::wstring& path);
+
 
 }  // close package namespace
 }  // close enterprise namespace

@@ -1,13 +1,17 @@
 #include "src/rcl/rcls/rcls_file.hxx"
-#include "src/rcl/rclt/rclt_util.hxx"
 
 #include <algorithm>
 #include <cctype>
 #include <codecvt>
+#include <cstring>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
+
+#include "src/rcl/rclt/rclt_util.hxx"
+
 #include <Windows.h>
 
 namespace rqdq {
@@ -80,6 +84,39 @@ vector<string> LoadLines(const string& path) {
 	while (getline(fd, line)) {
 		out.emplace_back(line); }
 	return out; }
+
+
+std::string JoinPath(const std::string& a, const std::string& b) {
+	std::string out(a);
+	if (out.back() != '\\') {
+		out.push_back('\\'); }
+
+	if (b.empty()) {
+		return out; }
+
+	if (b.front() == '\\') {
+		out.assign(b); }
+	else {
+		out += b; }
+
+	return out; }
+
+
+std::string JoinPath(const std::string& a, const std::string& b, const std::string& c) {
+	std::string out = JoinPath(a, b);
+	return JoinPath(out, c); }
+
+
+void EnsureOpenable(const std::wstring& path) {
+	const auto tmp = rclt::UTF8Codec::Encode(path);
+	const char* pathPtr = tmp.c_str();
+	OFSTRUCT ofs;
+	HFILE hfile;
+	memset(&ofs, 0, sizeof(OFSTRUCT));
+	ofs.cBytes = sizeof(OFSTRUCT);
+	hfile = OpenFile(pathPtr, &ofs, OF_EXIST);
+	if (hfile == 0) {
+		throw std::runtime_error("file is not openable");}}
 
 
 }  // namespace rcls

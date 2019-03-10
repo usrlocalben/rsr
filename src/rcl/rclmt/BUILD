@@ -29,3 +29,69 @@ cc_test(
         ],
     copts = RSR_DEFAULT_COPTS,
     )
+
+cc_library(
+    name = "deferred",
+    srcs = ["rclmt_deferred.cxx"],
+    hdrs = ["rclmt_deferred.hxx"],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "event",
+    srcs = ["rclmt_event.cxx"],
+    hdrs = ["rclmt_event.hxx"],
+    deps = [
+        "//3rdparty/fmt",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "reactor",
+    srcs = ["rclmt_reactor.cxx"],
+    hdrs = ["rclmt_reactor.hxx"],
+    deps = [
+        "//3rdparty/fmt",
+        ":event",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "reactor_file",
+    srcs = ["rclmt_reactor_file.cxx"],
+    hdrs = ["rclmt_reactor_file.hxx"],
+    deps = [
+        "//3rdparty/fmt",
+        "//src/rcl/rclt:util",
+        "//src/rcl/rclw:winfile",
+        ":deferred",
+        ":event",
+        ":reactor",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "reactor_delay",
+    srcs = ["rclmt_reactor_delay.cxx"],
+    hdrs = ["rclmt_reactor_delay.hxx"],
+    deps = [
+        "//3rdparty/fmt",
+        ":reactor",
+        ":event",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "reactor_keyboard",
+    srcs = ["rclmt_reactor_keyboard.cxx"],
+    hdrs = ["rclmt_reactor_keyboard.hxx"],
+    deps = [
+        ":reactor",
+        ":event",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )

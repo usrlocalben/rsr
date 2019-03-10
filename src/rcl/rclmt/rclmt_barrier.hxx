@@ -9,7 +9,6 @@
 namespace rqdq {
 namespace rclmt {
 
-
 class Barrier {
 public:
 	Barrier(int numThreads);
