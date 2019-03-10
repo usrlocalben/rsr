@@ -237,12 +237,6 @@
     <ClCompile Include="$(SolutionDir)\src\viewer\resource.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\shaders.cxx" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="resource.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="resource.rc" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -187,12 +187,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="resource.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="resource.rc" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="node">
       <UniqueIdentifier>{4b7e2372-69d2-4e28-a380-de24da1bcd94}</UniqueIdentifier>
     </Filter>
