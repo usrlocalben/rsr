@@ -24,7 +24,7 @@ int main() {
 		jobsys::wait(root);
 		jobsys::reset(); }
 	std::cout << batches << " batches of " << jobsPerBatch << " jobs, ";
-	std::cout << "took " << tm.elapsed() << " seconds\n";
+	std::cout << "took " << tm.GetElapsed() << " seconds\n";
 
 	jobsys::stop();
 	jobsys::join();

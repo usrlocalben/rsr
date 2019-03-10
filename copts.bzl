@@ -14,7 +14,6 @@ MSVC_FLAGS = [
     "/DUNICODE",
     "/D_UNICODE",
     "/D_ENABLE_EXTENDED_ALIGNED_STORAGE",
-    "/DWIN32_LEAN_AND_MEAN",  # Don't bloat namespace with incompatible winsock versions.
     "/DNOMINMAX",  # Don't define min and max macros (windows.h)
 
     #"/DENABLE_MUSIC",

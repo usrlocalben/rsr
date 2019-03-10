@@ -234,11 +234,11 @@
     <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_render.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_translate.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\rqv_node_value.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\rqv_resource.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\resource.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\rqv_shaders.cxx" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="rqv_resource.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="viewer.rc" />

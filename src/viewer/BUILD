@@ -4,7 +4,10 @@ package(default_visibility = ["//visibility:public"])
 
 cc_binary(
     name = "viewer",
-    srcs = ["rqv.m.cxx"],
+    srcs = [
+        "rqv.m.cxx",
+        ":resource_data",
+        ],
     deps = [
         "//3rdparty/fmt",
         "//3rdparty/gason",
@@ -13,10 +16,30 @@ cc_binary(
         "//src/rcl/rclx:gason_util",
         "//src/rcl/rclx:jsonfile",
         ":app",
-        ":resource",
-        ":splash",
+        ":resource_decl",
         ],
     copts = RSR_DEFAULT_COPTS,
+    linkopts = ["-SUBSYSTEM:CONSOLE",],
+    )
+
+cc_binary(
+    name = "demo",
+    srcs = [
+        "rqv.m.cxx",
+        ":resource_data",
+        ],
+    deps = [
+        "//3rdparty/fmt",
+        "//3rdparty/gason",
+        "//src/rcl/rclma:framepool",
+        "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
+        "//src/rcl/rclx:jsonfile",
+        ":app",
+        ":resource_decl",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    linkopts = ["-SUBSYSTEM:WINDOWS",],
     )
 
 cc_library(
@@ -335,24 +358,29 @@ cc_library(
     )
 
 cc_library(
-    name = "resource",
-    srcs = ["rqv_resource.cxx"],
-    hdrs = ["rqv_resource.h"],
+    name = "resource_decl",
+    srcs = ["resource.cxx"],
+    hdrs = ["resource.h"],
     copts = RSR_DEFAULT_COPTS,
     )
 
-cc_library(
-    name = "splash",
-    srcs = ["resources.obj"],)
-#genrule(
-#    name = "splash",
-#    outs = ["viewer.obj"],
-#    cmd = "rc 
-
-#win_resource(
-#    name = "splash",
-#    deps = [":resource"],
-#    src="viewer.rc")
+genrule(
+    name = "resource_data",
+    srcs = ["resources.rc", "resource.h"],
+    outs = ["resources.o"],
+    cmd = " ".join([
+        "$(location compile-resources.sh)",
+        "$(location resources.rc)",
+        "$(location resource.h)",
+        "$@",
+        "$(location gen_vsenv_stub.sh)",
+        ]),
+    output_to_bindir = 1,
+    tools = [
+        "compile-resources.sh",
+        "gen_vsenv_stub.sh",
+        ],
+    )
 
 cc_library(
     name = "node_material",

@@ -1,5 +1,7 @@
 load("//:copts.bzl", "RSR_DEFAULT_COPTS")
 
+package(default_visibility = ["//visibility:public"])
+
 cc_library(
     name='gtest',
     srcs=[
@@ -12,7 +14,7 @@ cc_library(
         'src/gtest-test-part.cc',
         'src/gtest-typed-test.cc',
         ],
-    include_dir='include',
+    includes=["include"],
     copts = RSR_DEFAULT_COPTS,
     )
 

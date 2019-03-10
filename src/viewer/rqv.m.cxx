@@ -3,7 +3,7 @@
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rcl/rclx/rclx_jsonfile.hxx"
 #include "src/viewer/rqv_app.hxx"
-#include "src/viewer/rqv_resource.h"
+#include "src/viewer/resource.h"
 
 #include <thread>
 
