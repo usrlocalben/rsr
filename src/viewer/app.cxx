@@ -9,8 +9,10 @@
 #include <thread>
 #include <vector>
 
+#ifdef ENABLE_MUSIC
 #include "src/ral/ralio/ralio_audio_controller.hxx"
 #include "src/ral/rals/rals_sync_controller.hxx"
+#endif
 #include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclr/rclr_algorithm.hxx"
@@ -41,7 +43,9 @@ namespace rqdq {
 namespace rqv {
 
 using namespace PixelToaster;
+#ifdef ENABLE_MUSIC
 using namespace ralio;
+#endif
 using namespace rclma;
 using namespace rclmt;
 using namespace rclx;

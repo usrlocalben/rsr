@@ -2,73 +2,80 @@ load("//:copts.bzl", "RSR_DEFAULT_COPTS")
 
 package(default_visibility = ["//visibility:public"])
 
+
+main_srcs = [
+    "main.cxx",
+    ":resource_data",]
+main_deps_minus_app = [
+        "//3rdparty/fmt",
+        "//3rdparty/gason",
+        "//src/rcl/rclma:framepool",
+        "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
+        "//src/rcl/rclx:jsonfile",
+        ":resource_decl",]
 cc_binary(
     name = "viewer",
-    srcs = [
-        "main.cxx",
-        ":resource_data", ],
-    deps = [
-        "//3rdparty/fmt",
-        "//3rdparty/gason",
-        "//src/rcl/rclma:framepool",
-        "//src/rcl/rclmt:jobsys",
-        "//src/rcl/rclx:gason_util",
-        "//src/rcl/rclx:jsonfile",
-        ":app",
-        ":resource_decl", ],
+    srcs = main_srcs,
+    deps = main_deps_minus_app + [":app_silent",],
     copts = RSR_DEFAULT_COPTS,
     linkopts = ["-SUBSYSTEM:CONSOLE",],)
-
-
+cc_binary(
+    name = "editor",
+    srcs = main_srcs,
+    deps = main_deps_minus_app + ["app_music_editor",],
+    copts = RSR_DEFAULT_COPTS,
+    linkopts = ["-SUBSYSTEM:CONSOLE",],)
 cc_binary(
     name = "demo",
-    srcs = [
-        "main.cxx",
-        ":resource_data", ],
-    deps = [
-        "//3rdparty/fmt",
-        "//3rdparty/gason",
-        "//src/rcl/rclma:framepool",
-        "//src/rcl/rclmt:jobsys",
-        "//src/rcl/rclx:gason_util",
-        "//src/rcl/rclx:jsonfile",
-        ":app",
-        ":resource_decl", ],
+    srcs = main_srcs,
+    deps = main_deps_minus_app + ["app_music_player",],
     copts = RSR_DEFAULT_COPTS,
     linkopts = ["-SUBSYSTEM:WINDOWS",],)
 
 
+app_srcs = ["app.cxx"]
+app_hdrs = ["app.hxx"]
+app_deps = [
+    "//3rdparty/fmt",
+    "//3rdparty/gason",
+    "//3rdparty/pixeltoaster",
+    "//src/rcl/rclma:framepool",
+    "//src/rcl/rclmt:barrier",
+    "//src/rcl/rclmt:jobsys",
+    "//src/rcl/rclr:algorithm",
+    "//src/rcl/rclx:gason_util",
+    "//src/rcl/rclx:jsonfile",
+    "//src/rgl/rglr:display_mode",
+    "//src/rgl/rglr:pixeltoaster_util",
+    "//src/rgl/rglr:profont",
+    "//src/rgl/rglr:texture_store",
+    "//src/rgl/rglv:camera",
+    "//src/rgl/rglv:material",
+    "//src/rgl/rglv:mesh_store",
+    "//src/rml/rmls:bench",
+    "//src/rml/rmlv:vec",
+    "//src/viewer/node:camera",
+    "//src/viewer/node:output",
+    "//src/viewer/node:value",
+    ":compile",
+    ":jobsys_vis",]
 cc_library(
-    name = "app",
-    srcs = ["app.cxx"],
-    hdrs = ["app.hxx"],
-    deps = [
-        "//3rdparty/fmt",
-        "//3rdparty/gason",
-        "//3rdparty/pixeltoaster",
-        "//src/ral/ralio:audio_controller",
-        "//src/ral/rals:sync_controller",
-        "//src/rcl/rclma:framepool",
-        "//src/rcl/rclmt:barrier",
-        "//src/rcl/rclmt:jobsys",
-        "//src/rcl/rclr:algorithm",
-        "//src/rcl/rclx:gason_util",
-        "//src/rcl/rclx:jsonfile",
-        "//src/rgl/rglr:display_mode",
-        "//src/rgl/rglr:pixeltoaster_util",
-        "//src/rgl/rglr:profont",
-        "//src/rgl/rglr:texture_store",
-        "//src/rgl/rglv:camera",
-        "//src/rgl/rglv:material",
-        "//src/rgl/rglv:mesh_store",
-        "//src/rml/rmls:bench",
-        "//src/rml/rmlv:vec",
-        "//src/viewer/node:camera",
-        "//src/viewer/node:output",
-        "//src/viewer/node:value",
-        ":compile",
-        ":jobsys_vis", ],
+    name = "app_silent", srcs = app_srcs, hdrs = app_hdrs,
+    deps = app_deps,
     copts = RSR_DEFAULT_COPTS,)
+cc_library(
+    name = "app_music_editor", srcs = app_srcs, hdrs = app_hdrs,
+    deps = app_deps + [
+        "//src/ral/ralio:audio_controller",
+        "//src/ral/rals:sync_controller_editor",],
+    copts = ["/DENABLE_MUSIC",] + RSR_DEFAULT_COPTS)
+cc_library(
+    name = "app_music_player", srcs = app_srcs, hdrs = app_hdrs,
+    deps = app_deps + [
+        "//src/ral/ralio:audio_controller",
+        "//src/ral/rals:sync_controller_player",],
+    copts = ["/DENABLE_MUSIC", "/DSYNC_PLAYER",] + RSR_DEFAULT_COPTS)
 
 
 cc_library(
@@ -155,59 +162,3 @@ genrule(
     tools = [
         "compile-resources.sh",
         "gen_vsenv_stub.sh", ],)
-
-
-cc_library(
-    name = "node_material",
-    srcs = ["rqv_node_material.cxx"],
-    hdrs = ["rqv_node_material.hxx"],
-    deps = [
-        "//src/rcl/rclmt:jobsys",
-        "//src/rgl/rglr:texture",
-        "//src/rgl/rglv:gl",
-        "//src/rml/rmlm:mat4",
-        ":node_base",
-        ":node_gl",
-        ":shaders", ],
-    copts = RSR_DEFAULT_COPTS,)
-
-
-cc_library(
-    name = "node_fx_auraforlaura",
-    srcs = ["rqv_node_fx_auraforlaura.cxx"],
-    hdrs = ["rqv_node_fx_auraforlaura.hxx"],
-    deps = [
-        "//3rdparty/pixeltoaster",
-        "//src/rcl/rclmt:jobsys",
-        "//src/rcl/rcls:aligned_containers",
-        "//src/rcl/rcls:timer",
-        "//src/rgl/rglr:texture",
-        "//src/rgl/rglv:gl",
-        "//src/rgl/rglv:mesh",
-        "//src/rgl/rglv:vao",
-        "//src/rml/rmlm:mat4",
-        ":node_base",
-        ":node_gl",
-        ":node_material",
-        ":shaders", ],
-    copts = RSR_DEFAULT_COPTS,)
-
-
-cc_library(
-    name = "node_fx_carpet",
-    srcs = ["rqv_node_fx_carpet.cxx"],
-    hdrs = ["rqv_node_fx_carpet.hxx"],
-    deps = [
-        "//src/rcl/rclmt:jobsys",
-        "//src/rcl/rcls:aligned_containers",
-        "//src/rcl/rcls:timer",
-        "//src/rgl/rglr:texture",
-        "//src/rgl/rglv:gl",
-        "//src/rgl/rglv:mesh",
-        "//src/rgl/rglv:vao",
-        "//src/rml/rmlm:mat4",
-        ":node_base",
-        ":node_gl",
-        ":node_material",
-        ":shaders", ],
-    copts = RSR_DEFAULT_COPTS,)
