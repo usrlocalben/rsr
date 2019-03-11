@@ -71,7 +71,7 @@ public:
 
 			bottom.store(t + 1, std::memory_order_relaxed);
 			return job; }
-		
+
 		// deque was already empty
 		bottom.store(t, std::memory_order_relaxed);
 		return nullptr; }
