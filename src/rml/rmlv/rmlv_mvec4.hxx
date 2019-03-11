@@ -386,5 +386,5 @@ inline mvec4f smoothstep(const mvec4f& a, const mvec4f& b, const mvec4f& t) {
 	return x*x * (mvec4f(3) - mvec4f(2) * x); }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rmlv
+}  // namespace rqdq

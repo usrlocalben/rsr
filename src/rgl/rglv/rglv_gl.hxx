@@ -90,7 +90,7 @@ struct GLState {
 
 class GL {
 public:
-	GL() :d_activeMatrixStack(&d_modelViewMatrixStack), d_dirty(false) {}
+	GL() :d_activeMatrixStack(&d_modelViewMatrixStack) {}
 
 	void glPushMatrix() {
 		d_dirty = true;
@@ -205,9 +205,9 @@ public:
 	//void drawElements(const VertexArray_F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3&);
-	void glDrawElements(const int mode, const int count, const int type, const uint16_t * indices, const bool enableClipping=true);
-	void glDrawArrays(const int mode, const int start, const int count, const bool enableClipping=true);
-	void glClear(const rmlv::vec4 color);
+	void glDrawElements(int mode, int count, int type, const uint16_t* indices, bool enableClipping=true);
+	void glDrawArrays(int mode, int start, int count, bool enableClipping=true);
+	void glClear(rmlv::vec4 color);
 	void storeHalfsize(rglr::FloatingPointCanvas *dst);
 	void storeUnswizzled(rglr::FloatingPointCanvas *dst);
 	void storeTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst);
@@ -228,7 +228,7 @@ private:
 	rmlm::Mat4Stack* d_activeMatrixStack;
 
 	GLState d_cs;
-	bool d_dirty;
+	bool d_dirty{false};
 	std::deque<GLState> d_states; };
 
 

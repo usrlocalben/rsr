@@ -13,10 +13,12 @@ constexpr auto M_PI = 3.14159265358979323846;
 
 
 
-
+// XXX use std clamp
 inline float clamp(const float& x, const float &a, const float &b) {
-	if (x < a) return a;
-	if (x > b) return b;
+	if (x < a) {
+		return a; }
+	if (x > b) {
+		return b; }
 	return x; }
 
 
@@ -44,7 +46,7 @@ inline double fastpow(double a, double b) {
 		double d;
 		int x[2];
 	} u = { a };
-	u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447);
+	u.x[1] = static_cast<int>(b * (u.x[1] - 1072632447) + 1072632447);
 	u.x[0] = 0;
 	return u.d; }
 
@@ -319,8 +321,8 @@ inline auto unpack_udec3(uint32_t N) {
 	auto z = float( ((N >> 2)  & ((1 << 10) - 1)) / ((1 << 10) - 1) );
 	return std::tuple{x, y, z}; }
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rmlv
+}  // namespace rqdq
 
 namespace std {
 
@@ -345,7 +347,7 @@ struct hash<rqdq::rmlv::vec4> {
 		using std::hash;
 		return hash<float>()(k.x) ^ hash<float>()(k.y) ^ hash<float>()(k.z) ^ hash<float>()(k.w); }};
 
-}  // close std namespace
+}  // namespace std
 
 std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec2& v);
 std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec4& v);

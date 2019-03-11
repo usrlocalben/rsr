@@ -11,6 +11,16 @@ MSVC_FLAGS = [
     "/wd4005",  # macro redefinition
     "/wd4267",  # conversion from 'size_t' to 'type', possible loss of data
 
+    # for clang-cl
+    #"-Wno-builtin-macro-redefined",
+    #"-Wno-unused-local-typedef",
+    #"-Wno-reorder",
+    #"-Wno-new-returns-null",
+    #"-Wno-comment",
+    #"-Wno-char-subscripts",
+    #"-Wno-unused-command-line-argument",
+    #"-Wno-unused-variable",
+
     "/DUNICODE",
     "/D_UNICODE",
     "/D_ENABLE_EXTENDED_ALIGNED_STORAGE",

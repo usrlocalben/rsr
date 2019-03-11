@@ -31,7 +31,7 @@ struct HandyCamNode : public CameraNode {
 
 struct ManCamNode : public CameraNode {
 	ManCamNode(const std::string& name, const InputList& inputs, float ha, float va, float fov, rmlv::vec2 origin) :CameraNode(name, inputs), ha(ha), va(va), fov(fov), origin(origin) {}
-	virtual void connect(const std::string&, NodeBase*, const std::string&);
+	void connect(const std::string& /*attr*/, NodeBase* /*node*/, const std::string& /*slot*/) override;
 
 	ValuesBase* position_node = nullptr;
 	std::string position_slot;

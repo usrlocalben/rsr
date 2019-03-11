@@ -30,7 +30,7 @@ union isse {
     };
 
 
-static float srgb8_to_float( uint8 val ) {
+static inline float srgb8_to_float( uint8 val ) {
 
 	// There's just 256 different input valus - just use a table.
 	static float table[256];
@@ -85,7 +85,7 @@ static const uint fp32_to_srgb8_tab4[104] = {
 };
 
 
-static uint8 float_to_srgb8(float in) {
+static inline uint8 float_to_srgb8(float in) {
 
     static const FP32 almostone = { 0x3f7fffff }; // 1-eps
     static const FP32 lutthresh = { 0x3b800000 }; // 2^(-8)

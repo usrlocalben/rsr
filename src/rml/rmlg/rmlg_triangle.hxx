@@ -20,5 +20,5 @@ inline float triangle2Area(const rmlv::vec2 p1, const rmlv::vec2 p2, const rmlv:
 	const float area = d31.x*d21.y - d31.y*d21.x;
 	return area; }
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rmlg
+}  // namespace rqdq

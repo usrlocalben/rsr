@@ -40,9 +40,6 @@ void render_jobsys(const int left, const int top, const float xscale, rglr::True
 		PixelToaster::TrueColorPixel(0x9fc34f), PixelToaster::TrueColorPixel(0xf179d9),
 		PixelToaster::TrueColorPixel(0xb4e532), PixelToaster::TrueColorPixel(0xebc630)
 	} };
-	auto next_color = [&color_idx]() {
-		auto idx = (color_idx++) % task_colors.size();
-		return task_colors[idx]; };
 
 	// create raster data from a JobStat instance
 	struct job_span {
@@ -51,7 +48,7 @@ void render_jobsys(const int left, const int top, const float xscale, rglr::True
 		PixelToaster::TrueColorPixel color;
 	};
 
-	auto to_span = [&color_mask](const struct jobsys::JobStat& jobstat, const float scale) {
+	auto to_span = [](const struct jobsys::JobStat& jobstat, const float scale) {
 		const auto left = int(jobstat.start_time * scale);
 		const auto right = int(jobstat.end_time * scale);
 

@@ -115,10 +115,7 @@ struct MultiValueNode : public ValuesBase {
 
 	NamedValue get(const std::string& name) override {
 		auto search = kv.find(name);
-		if (search != kv.end()) {
-			return search->second; }
-		else {
-			return not_found_value; }}};
+		return search == kv.end() ? not_found_value : search->second; }
 
 
 struct FloatNode : public ValuesBase {
@@ -130,7 +127,7 @@ struct FloatNode : public ValuesBase {
 
 	NamedValue get(const std::string& name) override {
 		float value = d_value;
-		if (x_node) { value = x_node->get(x_slot).as_float(); }
+		if (x_node != nullptr) { value = x_node->get(x_slot).as_float(); }
 		return NamedValue{ "", value }; }
 
 	void connect(const std::string& attr, NodeBase* other, const std::string& slot) override {
@@ -142,7 +139,7 @@ struct FloatNode : public ValuesBase {
 
 	std::vector<NodeBase*> deps() override {
 		std::vector<NodeBase*> out;
-		if (x_node) out.push_back(x_node);
+		if (x_node != nullptr) { out.push_back(x_node); }
 		return out; }};
 
 
@@ -155,10 +152,10 @@ struct Vec2Node : public ValuesBase {
 
 	NamedValue get(const std::string& name) override {
 		rmlv::vec2 value = d_value;
-		if (x_node) value.x = x_node->get(x_slot).as_float();
-		if (y_node) value.y = y_node->get(y_slot).as_float();
-		if (name == "x") return NamedValue{ "x", value.x };
-		if (name == "y") return NamedValue{ "y", value.y };
+		if (x_node != nullptr) { value.x = x_node->get(x_slot).as_float(); }
+		if (y_node != nullptr) { value.y = y_node->get(y_slot).as_float(); }
+		if (name == "x") { return NamedValue{ "x", value.x }; }
+		if (name == "y") { return NamedValue{ "y", value.y }; }
 		return NamedValue{ "", value }; }
 
 	void connect(const std::string& attr, NodeBase* other, const std::string& slot) override {
@@ -173,8 +170,8 @@ struct Vec2Node : public ValuesBase {
 
 	std::vector<NodeBase*> deps() override {
 		std::vector<NodeBase*> out;
-		if (x_node) out.push_back(x_node);
-		if (y_node) out.push_back(y_node);
+		if (x_node != nullptr) { out.push_back(x_node); }
+		if (y_node != nullptr) { out.push_back(y_node); }
 		return out; }};
 
 
@@ -187,13 +184,13 @@ struct Vec3Node : public ValuesBase {
 
 	NamedValue get(const std::string& name) override {
 		rmlv::vec3 value = d_value;
-		if (x_node) value.x = x_node->get(x_slot).as_float();
-		if (y_node) value.y = y_node->get(y_slot).as_float();
-		if (z_node) value.z = z_node->get(z_slot).as_float();
-		if (name == "x") return NamedValue{ "x", value.x };
-		if (name == "y") return NamedValue{ "y", value.y };
-		if (name == "z") return NamedValue{ "z", value.z };
-		if (name == "xy") return NamedValue{ "xy", value.xy() };
+		if (x_node != nullptr) { value.x = x_node->get(x_slot).as_float(); }
+		if (y_node != nullptr) { value.y = y_node->get(y_slot).as_float(); }
+		if (z_node != nullptr) { value.z = z_node->get(z_slot).as_float(); }
+		if (name == "x") { return NamedValue{ "x", value.x }; }
+		if (name == "y") { return NamedValue{ "y", value.y }; }
+		if (name == "z") { return NamedValue{ "z", value.z }; }
+		if (name == "xy") { return NamedValue{ "xy", value.xy() }; }
 		return NamedValue{ "", value }; }
 
 	void connect(const std::string& attr, NodeBase* other, const std::string& slot) override {
@@ -211,9 +208,9 @@ struct Vec3Node : public ValuesBase {
 
 	std::vector<NodeBase*> deps() override {
 		std::vector<NodeBase*> out;
-		if (x_node) out.push_back(x_node);
-		if (y_node) out.push_back(y_node);
-		if (z_node) out.push_back(z_node);
+		if (x_node != nullptr) { out.push_back(x_node); }
+		if (y_node != nullptr) { out.push_back(y_node); }
+		if (z_node != nullptr) { out.push_back(z_node); }
 		return out; }};
 
 

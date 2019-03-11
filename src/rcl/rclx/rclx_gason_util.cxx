@@ -52,7 +52,8 @@ std::variant<std::monostate, std::string, rmlv::vec3> jv_decode_ref_or_vec3(cons
 		return data.toString();
 	case JSON_OBJECT:
 		if (auto value = jv_decode_vec3(data)) {
-			return *value; } }
+			return *value; }
+	default: break; }
 	return {}; }
 
 }  // namespace rclx

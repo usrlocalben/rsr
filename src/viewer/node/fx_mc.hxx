@@ -153,10 +153,10 @@ struct FxMC : GlNode {
 		d_buffers[1].reserve(4096);
 		d_buffers[2].reserve(4096); }
 
-	void connect(const std::string&, NodeBase*, const std::string&) override;
+	void connect(const std::string& /*attr*/, NodeBase* /*other*/, const std::string& /*slot*/) override;
 	void main() override;
 
-	void draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) override;
+	void draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth) override;
 
 	void swapBuffers();
 	rglv::VertexArray_F3F3F3& allocVAO();
@@ -172,10 +172,9 @@ struct FxMC : GlNode {
 			rclmt::jobsys::run(link); }}
 
 	rclmt::jobsys::Job* resolve(AABB block, int dim, rclmt::jobsys::Job* parent = nullptr) {
-		if (parent) {
+		if (parent != nullptr) {
 			return rclmt::jobsys::make_job_as_child(parent, FxMC::resolveJmp, std::tuple{this, block, dim}); }
-		else {
-			return rclmt::jobsys::make_job(FxMC::resolveJmp, std::tuple{this, block, dim}); }}
+		return rclmt::jobsys::make_job(FxMC::resolveJmp, std::tuple{this, block, dim}); }
 	static void resolveJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<FxMC*, AABB, int>* data) {
 		auto&[self, block, dim] = *data;
 		self->resolveImpl(block, dim, threadId);}

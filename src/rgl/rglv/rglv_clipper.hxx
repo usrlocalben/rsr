@@ -28,20 +28,20 @@ constexpr std::array<Plane, 5> clipping_panes = {
 	};
 
 
-std::string plane_name(const Plane plane);
+std::string plane_name(Plane plane);
 
 
 class Clipper {
 public:
-	Clipper() {}
+	Clipper() = default;
 
 	inline unsigned clip_point(const rmlv::vec4& p) const {
-		const int left = (p.w + p.x < 0) << 0;
-		const int bottom = (p.w + p.y < 0) << 1;
-		const int near = (p.w + p.z < 0) << 2;
+		const int left = static_cast<int>(p.w + p.x < 0) << 0;
+		const int bottom = static_cast<int>(p.w + p.y < 0) << 1;
+		const int near = static_cast<int>(p.w + p.z < 0) << 2;
 
-		const int right = (p.w - p.x < 0) << 3;
-		const int top = (p.w - p.y < 0) << 4;
+		const int right = static_cast<int>(p.w - p.x < 0) << 3;
+		const int top = static_cast<int>(p.w - p.y < 0) << 4;
 		//auto far = (p.w - p.z < 0) << 5;
 		const unsigned flags = left | bottom | near | right | top;  //| far
 		return flags; }

@@ -11,7 +11,7 @@
 namespace rqdq {
 namespace rmlv {
 
-typedef mvec4f qfloat;
+using qfloat = mvec4f;
 
 struct qfloat2 {
 	inline qfloat2() = default;
@@ -202,5 +202,5 @@ inline void load_interleaved_lut(const float *bp, mvec4i ofs, qfloat4& out) {
 
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rmlv
+}  // namespace rqdq

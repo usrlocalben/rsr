@@ -1,8 +1,9 @@
 #pragma once
-#include <memory>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
@@ -22,8 +23,8 @@ public:
 	int indegree_wait;
 	std::vector<rclmt::jobsys::Job*> links;
 
-	NodeBase(const std::string& name, const InputList& inputs)
-		:name(name), inputs(inputs), indegree_wait(0) {}
+	NodeBase(std::string  name, InputList  inputs)
+		:name(std::move(name)), inputs(std::move(inputs)), indegree_wait(0) {}
 	virtual ~NodeBase() = default;
 
 	void add_links_to(rclmt::jobsys::Job* parent) {

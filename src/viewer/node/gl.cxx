@@ -78,7 +78,7 @@ void LayerNode::main() {
 			glnode->run(); } }}
 
 
-void LayerNode::draw(rglv::GL * dc, int width, int height, float aspect, rclmt::jobsys::Job * link) {
+void LayerNode::render(rglv::GL * dc, int width, int height, float aspect, rclmt::jobsys::Job * link) {
 	using namespace rmlm;
 	using namespace rglv;
 	namespace framepool = rclma::framepool;
@@ -139,12 +139,12 @@ rmlv::vec3 LayerChooser::getBackgroundColor() {
 	return layerNode->getBackgroundColor(); }
 
 
-void LayerChooser::draw(rglv::GL * dc, int width, int height, float aspect, rclmt::jobsys::Job * link) {
+void LayerChooser::render(rglv::GL * dc, int width, int height, float aspect, rclmt::jobsys::Job * link) {
 	auto layerNode = getSelectedLayer();
 	if (layerNode == nullptr) {
 		rclmt::jobsys::run(link); }
 	else {
-		layerNode->draw(dc, width, height, aspect, link); }}
+		layerNode->render(dc, width, height, aspect, link); }}
 
 
 LayerNode* LayerChooser::getSelectedLayer() const {

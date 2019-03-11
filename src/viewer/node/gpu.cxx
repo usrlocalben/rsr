@@ -91,7 +91,7 @@ void GPUNode::drawImpl() {
 	jobsys::Job *postJob = post();
 	add_links_to(postJob);
 	for (auto layer : layers) {
-		layer->draw(&gpu.IC(), targetWidth, targetHeight, targetAspect, jobsys::make_job(GPUNode::all_then, std::tuple{&pcnt, postJob})); } }
+		layer->render(&gpu.IC(), targetWidth, targetHeight, targetAspect, jobsys::make_job(GPUNode::all_then, std::tuple{&pcnt, postJob})); } }
 
 
 }  // namespace rqv

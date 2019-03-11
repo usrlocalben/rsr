@@ -12,7 +12,7 @@ inline bool is_pow2(unsigned x) {
 
 inline int ilog2(unsigned x) {
 	int pow = 0;
-	while (x) {
+	while (x != 0u) {
 		x >>= 1;
 		pow++; }
 	return pow - 1; }
@@ -34,5 +34,5 @@ inline float mFast_Log2(float val) {
 	return (log_2); }
 */
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rmlg
+}  // namespace rqdq

@@ -51,5 +51,5 @@ struct ibox3 {
 		return front.z - back.z; } };
 */
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rmlg
+}  // namespace rqdq

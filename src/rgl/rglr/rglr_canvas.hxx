@@ -18,7 +18,7 @@ inline PixelToaster::TrueColorPixel to_tc_from_fpp(PixelToaster::FloatingPointPi
 
 
 struct QFloatCanvas {
-	QFloatCanvas() :_width(2), _height(2), _stride2(1) {
+	QFloatCanvas()  {
 		buffer.reserve(1);
 		_ptr = buffer.data(); }
 
@@ -49,14 +49,14 @@ struct QFloatCanvas {
 private:
 	rcls::vector<rmlv::qfloat> buffer;
 	rmlv::qfloat* _ptr;
-	int _width;
-	int _height;
-	int _stride2;
+	int _width{2};
+	int _height{2};
+	int _stride2{1};
 	};
 
 
 struct QFloat4Canvas {
-	QFloat4Canvas() :_width(0), _height(0), _stride2(0), _ptr(nullptr) {}
+	QFloat4Canvas()  {}
 
 	QFloat4Canvas(const int width, const int height)
 		:_width(width), _height(height), _stride2(width / 2) {
@@ -84,12 +84,11 @@ struct QFloat4Canvas {
 		_stride2 = width / 2; }
 
 	rmlv::vec4 get_pixel(int x, int y) {
-		const float* data = reinterpret_cast<const float*>(_ptr);
+		const auto* data = reinterpret_cast<const float*>(_ptr);
 		const int channels = 4;
 		const int pixelsPerQuad = 4;
 		const int elemsPerQuad = channels * pixelsPerQuad;
 		const int widthInQuads = _width / 2;
-		const int heightInQuads = _height / 2;
 
 		const int Yquad = y / 2;
 		const int Xquad = x / 2;
@@ -107,10 +106,10 @@ struct QFloat4Canvas {
 
 private:
 	rcls::vector<rmlv::qfloat4> buffer;
-	rmlv::qfloat4* _ptr;
-	int _width;
-	int _height;
-	int _stride2;
+	rmlv::qfloat4* _ptr{nullptr};
+	int _width{0};
+	int _height{0};
+	int _stride2{0};
 	};
 
 
@@ -156,7 +155,7 @@ struct FloatingPointCanvas {
 		_stride(stride == 0 ? width : stride),
 		_aspect(float(width) / float(height)) {}
 
-	FloatingPointCanvas() :_ptr(nullptr), _width(0), _height(0), _stride(0), _aspect(1.0f) {}
+	FloatingPointCanvas()  {}
 
 	auto data() { return _ptr; }
 	const auto cdata() const { return _ptr; }

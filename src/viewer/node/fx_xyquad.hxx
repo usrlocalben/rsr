@@ -67,9 +67,6 @@ struct FxXYQuad : GlNode {
 		vec3 pll{ leftTop.x, rightBottom.y, z }; vec3 plr{ rightBottom.x, rightBottom.y, z };
 		vec3 tll{ 0.0f, 0.0f, 0 };               vec3 tlr{ 1.0f, 0.0f, 0 };
 
-		std::array<vec3, 3> quad_ul = { pur, pul, pll };
-		std::array<vec3, 3> quad_lr = { pur, pll, plr };
-
 		vec3 normal{ 0, 0, 1.0f };
 
 		// quad upper left

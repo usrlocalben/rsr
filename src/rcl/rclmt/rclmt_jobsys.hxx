@@ -15,7 +15,7 @@ constexpr int NUMBER_OF_JOBS = 65536;
 constexpr int MASK = NUMBER_OF_JOBS - 1u;
 constexpr int MAX_LINK = 4u;
 
-typedef void(*JobFunction)(struct Job*, const int thread_id, const void*);
+using JobFunction = void (*)(struct Job *, const int, const void *);
 
 
 struct Job {
@@ -71,10 +71,10 @@ public:
 
 			bottom.store(t + 1, std::memory_order_relaxed);
 			return job; }
-		else {
-			// deque was already empty
-			bottom.store(t, std::memory_order_relaxed);
-			return nullptr; } }
+		
+		// deque was already empty
+		bottom.store(t, std::memory_order_relaxed);
+		return nullptr; }
 
 	Job* steal() {
 		auto t = top.load(std::memory_order_relaxed);
@@ -85,9 +85,9 @@ public:
 			if (!top.compare_exchange_weak(t, t + 1)) {
 				return nullptr; }
 			return job; }
-		else {
-			// queue is empty
-			return nullptr; } }
+
+		// queue is empty
+		return nullptr; }
 
 private:
 	Job* jobs[NUMBER_OF_JOBS];
@@ -102,7 +102,7 @@ extern std::vector<std::vector<struct JobStat>> telemetry_stores;
 
 void run(Job* job);
 void wait(const Job* job);
-void init(const int threads);
+void init(int threads);
 void reset();
 void stop();
 void join();
@@ -113,7 +113,7 @@ void work_end();
 Job* allocate_job();
 
 void mark_start();
-void mark_end(const uint32_t bits);
+void mark_end(uint32_t bits);
 
 template <typename T>
 Job* make_job(T function) {
@@ -168,12 +168,13 @@ inline void move_links(Job* src, Job* dst) {
 		add_link(dst, src->link[i]); }
 	src->link_count = 0; }
 
-void noop(jobsys::Job* job, const int tid, void*);
+void noop(jobsys::Job* job, int tid, void*);
 
 void _sleep(int ms);
 
+
 #undef member_size
-}
+}  // namespace jobsys
 
 
 }  // namespace rclmt

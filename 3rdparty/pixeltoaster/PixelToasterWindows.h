@@ -1230,7 +1230,7 @@ namespace PixelToaster
 					{
 						const auto mode_width = int(mode.Width);
 						const auto mode_height = int(mode.Height);
-						if ( mode_width >= width && mode_height >= height && ( bestWidth == 0 || mode_width <= bestWidth && mode_height <= bestHeight ) )
+						if ( mode_width >= width && mode_height >= height && ( bestWidth == 0 || (mode_width <= bestWidth && mode_height <= bestHeight) ) )
 						{
 							if ( modeset_enable ) {
 								if ( mode_height == modeset_height && mode_width == modeset_width ) {
@@ -1408,7 +1408,6 @@ namespace PixelToaster
 		Format textureFormat;
 		Mode mode;
 		bool windowed;
-		bool lost;
 		bool drawAsQuad;
 		bool scalesUp;
 	};

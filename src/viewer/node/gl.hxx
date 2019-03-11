@@ -14,7 +14,7 @@ namespace rqv {
 
 struct GlNode : public NodeBase {
 	GlNode(const std::string& name, const InputList& inputs) :NodeBase(name, inputs) {}
-	virtual void draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) = 0; };
+	virtual void draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) = 0; };
 
 
 struct GroupNode : public GlNode {
@@ -24,7 +24,7 @@ struct GroupNode : public GlNode {
 public:
 	GroupNode(const std::string& name, const InputList& inputs) :GlNode(name, inputs) {}
 
-	void connect(const std::string&, NodeBase*, const std::string&) override;
+	void connect(const std::string& /*attr*/, NodeBase* /*node*/, const std::string& /*slot*/) override;
 	std::vector<NodeBase*> deps() override {
 		std::vector<NodeBase*> out;
 		for (auto dep : gls) {
@@ -33,9 +33,9 @@ public:
 
 	void main() override;
 
-	static void all_then(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data);
+	static void all_then(rclmt::jobsys::Job* job, unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data);
 
-	virtual void draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth);};
+	void draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) override;};
 
 
 
@@ -46,22 +46,22 @@ struct LayerNode : public GroupNode {
 public:
 	LayerNode(const std::string& name, const InputList& inputs) :GroupNode(name, inputs) {}
 
-	void connect(const std::string&, NodeBase*, const std::string&) override;
+	void connect(const std::string& /*unused*/, NodeBase* /*unused*/, const std::string& /*unused*/) override;
 	std::vector<NodeBase*> deps() override {
 		auto deps = GroupNode::deps();
-		if (camera_node) deps.push_back(camera_node);
-		if (color_node) deps.push_back(color_node);
+		if (camera_node != nullptr) { deps.push_back(camera_node); }
+		if (color_node != nullptr) { deps.push_back(color_node); }
 		return deps;}
 
 	void main() override;
 
 	virtual rmlv::vec3 getBackgroundColor() {
 		auto color = rmlv::vec3{0.0f};
-		if (color_node) {
+		if (color_node != nullptr) {
 			color = color_node->get(color_slot).as_vec3(); }
 		return color; }
 
-	virtual void draw(rglv::GL* dc, int width, int height, float aspect, rclmt::jobsys::Job *link);
+	virtual void render(rglv::GL* dc, int width, int height, float aspect, rclmt::jobsys::Job *link);
 
 	rclmt::jobsys::Job* post() {
 		return rclmt::jobsys::make_job(LayerNode::postJmp, std::tuple{this}); }
@@ -80,12 +80,12 @@ struct LayerChooser : public LayerNode {
 
 	LayerChooser(const std::string& name, const InputList& inputs) :LayerNode(name, inputs) {}
 
-	void connect(const std::string&, NodeBase*, const std::string&) override;
+	void connect(const std::string& /*unused*/, NodeBase* /*unused*/, const std::string& /*unused*/) override;
 	std::vector<NodeBase*> deps() override;
 	void main() override;
 
 	rmlv::vec3 getBackgroundColor() override;
-	void draw(rglv::GL* dc, int width, int height, float aspect, rclmt::jobsys::Job *link) override;
+	void render(rglv::GL* dc, int width, int height, float aspect, rclmt::jobsys::Job *link) override;
 
 private:	
 	LayerNode* getSelectedLayer() const;

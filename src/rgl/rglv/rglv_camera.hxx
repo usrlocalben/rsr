@@ -16,12 +16,7 @@ namespace rglv {
 
 class HandyCam {
 public:
-	HandyCam():
-		d_position({0,0,5}),
-		d_angle({3.14, 0.0}),
-		d_field_of_view(45.0),
-		d_mouse_speed(0.010)
-		{}
+	HandyCam() = default;
 
 	/**
 	 * update camera angle using mouse/pixel delta
@@ -66,11 +61,10 @@ private:
 		auto z = cos(d_angle.x - 3.14f / 2.0f);
 		return rmlv::vec3{ x, y, z }; }
 
-	rmlv::vec3 d_position;
-	rmlv::vec3 d_direction;
-	rmlv::vec2 d_angle;
-	double d_field_of_view;
-	double d_mouse_speed;
+	rmlv::vec3 d_position{0,0,5};
+	rmlv::vec2 d_angle{3.14, 0};
+	double d_field_of_view{45.0};
+	double d_mouse_speed{0.010};
 	};
 
 

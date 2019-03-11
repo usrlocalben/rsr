@@ -103,7 +103,8 @@ struct Edge {
 		c = dy*((startx << 4) - x1) + dx*((starty << 4) - y1);
 
 		// correct for top/left fill convention
-		if (dy > 0 || (dy == 0 && dx > 0)) c++;
+		if (dy > 0 || (dy == 0 && dx > 0)) {
+			c++; }
 
 		c = (c - 1) >> 4;
 

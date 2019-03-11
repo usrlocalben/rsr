@@ -36,7 +36,7 @@ struct MaterialNode : NodeBase {
 		const bool filter
 	) :NodeBase(name, inputs), d_program(program), d_filter(filter) {}
 
-	void connect(const std::string&, NodeBase*, const std::string&) override;
+	void connect(const std::string& /*attr*/, NodeBase* /*node*/, const std::string& /*slot*/) override;
 	std::vector<NodeBase*> deps() override;
 
 	void main() override {
@@ -47,13 +47,13 @@ struct MaterialNode : NodeBase {
 		if (texture0_node == nullptr && texture1_node == nullptr) {
 			jobsys::run(postSetup); }
 		else {
-			if (texture0_node) {
+			if (texture0_node != nullptr) {
 				texture0_node->add_link(after_all(postSetup));}
-			if (texture1_node) {
+			if (texture1_node != nullptr) {
 				texture1_node->add_link(after_all(postSetup));}
-			if (texture0_node) {
+			if (texture0_node != nullptr) {
 				texture0_node->run(); }
-			if (texture1_node) {
+			if (texture1_node != nullptr) {
 				texture1_node->run(); }}}
 
 	virtual void apply(rglv::GL*);};
@@ -69,7 +69,7 @@ struct ImageNode : TextureNode {
 		const rglr::Texture texture
 	) :TextureNode(name, inputs), d_texture(texture) {}
 
-	virtual const rglr::Texture& getTexture() { return d_texture; };};
+	const rglr::Texture& getTexture() override { return d_texture; };};
 
 
 }  // namespace rqv

@@ -12,9 +12,9 @@ constexpr int maxSizeInBytes = 100000;
 
 
 class FastPackedStream {
-	int d_head;
-	int d_tail;
-	int d_mark;
+	int d_head{0};
+	int d_tail{0};
+	int d_mark{0};
 	std::vector<uint8_t> store;
 	uint8_t* d_buf;
 
@@ -30,7 +30,7 @@ class FastPackedStream {
 		return ptr; }
 
 public:
-	FastPackedStream() :d_head(0), d_tail(0), d_mark(0) {
+	FastPackedStream()  {
 		store.reserve(maxSizeInBytes);
 		d_buf = store.data(); }
 

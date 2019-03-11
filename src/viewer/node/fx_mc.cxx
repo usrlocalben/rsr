@@ -151,7 +151,7 @@ void FxMC::draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* c
 	auto& buffer = d_buffers[d_activeBuffer];
 	for (int ai=0; ai<d_bufferEnd[d_activeBuffer]; ai++) {
 		auto& vao = buffer[ai];
-		if (vao.size()) {
+		if (vao.size() != 0) {
 			const int elements = vao.size();
 			vao.pad();
 			dc.glUseArray(vao);

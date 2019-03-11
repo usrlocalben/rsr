@@ -44,12 +44,11 @@ static const std::greater<float> greater;
 inline float calc_offset(const float a, const float b, const float target) {
 	if (1) {
 		return (target - a) / (b - a); }
-	else {
-		const auto delta = b - a;
-		if (delta == 0.0) {
-			return 0.5f; }
-		else {
-			return (target - a) / delta; }}}
+
+	const auto delta = b - a;
+	if (delta == 0.0) {
+		return 0.5f; }
+	return (target - a) / delta; }
 
 
 /*
@@ -84,7 +83,8 @@ void march_sdf_vao(
 
 	auto edge_flags = cube_edge_flags[flag_index];
 
-	if (!edge_flags) return;
+	if (!edge_flags) {
+		return; }
 
 	const float ep = delta; // 0.001f;
 

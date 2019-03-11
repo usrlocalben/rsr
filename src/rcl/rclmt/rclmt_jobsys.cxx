@@ -186,7 +186,7 @@ void execute(Job* job) {
 	double end_time = telemetry_timers[thread_id].GetElapsed();
 	telemetry_stores[thread_id].push_back({
 		start_time, end_time,
-		uint32_t(std::hash<void*>{}(job->function))
+		uint32_t(std::hash<void*>{}(reinterpret_cast<void*>(job->function)))
 	});
 
 	finish(job); }

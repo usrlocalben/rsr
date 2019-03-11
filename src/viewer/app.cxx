@@ -145,7 +145,7 @@ public:
 	void setNice(bool value) { d_nice = value; }
 
 private:
-	bool defaultKeyHandlers();
+	bool defaultKeyHandlers() const;
 	void onKeyPressed(PixelToaster::DisplayInterface& display, PixelToaster::Key key);
 	void onKeyDown(PixelToaster::DisplayInterface& display, PixelToaster::Key key);
 	void onKeyUp(PixelToaster::DisplayInterface& display, PixelToaster::Key key);
@@ -185,8 +185,6 @@ private:
 	bool capture_mouse = false;
 	bool reset_mouse_next_frame = false;
 	int mouse_x_position_in_px, mouse_y_position_in_px;
-
-	int next_mode_idx = 0;
 
 	bool measuring = false;
 	bool start_measuring = false;
@@ -359,7 +357,7 @@ void Application::impl::run() {
 }
 
 
-bool Application::impl::defaultKeyHandlers() {
+bool Application::impl::defaultKeyHandlers() const {
 	return false; }
 
 
@@ -436,7 +434,8 @@ void Application::impl::onKeyDown(DisplayInterface& display, Key key) {
 		break;
 	case Key::Shift:
 		keys_shifted = true;
-		break; }}
+		break;
+	default: break; }}
 
 
 void Application::impl::onKeyUp(DisplayInterface& display, Key key) {
@@ -446,7 +445,8 @@ void Application::impl::onKeyUp(DisplayInterface& display, Key key) {
 		break;
 	case Key::Shift:
 		keys_shifted = false;
-		break; }}
+		break;
+	default: break; }}
 
 
 void Application::impl::onMouseMove(DisplayInterface& display, Mouse mouse) {

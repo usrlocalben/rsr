@@ -177,7 +177,7 @@ const int maxStackDepth = 16;
 
 class Mat4Stack {
 public:
-	Mat4Stack() :d_sp(0) {}
+	Mat4Stack()  {}
 	void push() {
 		assert(d_sp + 1 < maxStackDepth);
 		d_stack[d_sp + 1] = d_stack[d_sp];
@@ -198,7 +198,7 @@ public:
 		load(mat4::ident()); }
 private:
 	std::array<mat4, maxStackDepth> d_stack;
-	int d_sp; };
+	int d_sp{0}; };
 
 
 struct qmat4 {
@@ -240,5 +240,5 @@ inline rmlv::qfloat3 mul_w0(const qmat4& a, const rmlv::qfloat3& b) {
 		}; }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rmlm
+}  // namespace rqdq

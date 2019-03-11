@@ -18,7 +18,6 @@ public:
 		Reload(); }
 
 	bool IsOutOfDate() const {
-		int64_t mTime = GetMTime();
 		return GetMTime() != d_lastMTime; }
 
 	bool Refresh() {
