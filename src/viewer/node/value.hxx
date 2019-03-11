@@ -115,7 +115,7 @@ struct MultiValueNode : public ValuesBase {
 
 	NamedValue get(const std::string& name) override {
 		auto search = kv.find(name);
-		return search == kv.end() ? not_found_value : search->second; }
+		return search == kv.end() ? not_found_value : search->second; }};
 
 
 struct FloatNode : public ValuesBase {

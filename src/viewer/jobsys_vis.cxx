@@ -48,7 +48,7 @@ void render_jobsys(const int left, const int top, const float xscale, rglr::True
 		PixelToaster::TrueColorPixel color;
 	};
 
-	auto to_span = [](const struct jobsys::JobStat& jobstat, const float scale) {
+	auto to_span = [=](const struct jobsys::JobStat& jobstat, const float scale) {
 		const auto left = int(jobstat.start_time * scale);
 		const auto right = int(jobstat.end_time * scale);
 

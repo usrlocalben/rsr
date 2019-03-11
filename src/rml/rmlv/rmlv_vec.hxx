@@ -1,9 +1,9 @@
-
 #pragma once
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <iostream>
+
 #include <xmmintrin.h>
 
 namespace rqdq {
