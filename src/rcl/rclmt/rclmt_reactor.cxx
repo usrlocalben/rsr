@@ -2,9 +2,10 @@
 
 #include <algorithm>
 #include <functional>
+#include <iostream>
+#include <stdexcept>
 #include <utility>
 #include <vector>
-#include <stdexcept>
 
 #include "src/rcl/rclmt/rclmt_event.hxx"
 
@@ -22,6 +23,8 @@ Reactor& Reactor::GetInstance() {
 void Reactor::Run() {
 	std::vector<HANDLE> pendingEvents;
 	while (!d_shouldQuit) {
+		if (d_events.empty()) {
+			throw std::runtime_error("reactor event list is empty."); }
 		pendingEvents.clear();
 		for (auto& re : d_events) {
 			pendingEvents.emplace_back(re.handle); }
@@ -32,14 +35,29 @@ void Reactor::Run() {
 			}
 		else if (WAIT_OBJECT_0 <= result && result < (WAIT_OBJECT_0+pendingEvents.size())) {
 			const int eventIdx = result - WAIT_OBJECT_0;
-			auto& re = d_events[eventIdx];
-			if (re.func) {
-				re.func(); }
-			if (!re.persist) {
-				d_events.erase(d_events.begin() + eventIdx); }}
+			const auto handle = pendingEvents[eventIdx];
+
+			d_events[eventIdx].func();
+			// func() might cause d_events to be modified, invalidating eventIdx, and re
+
+			auto search = std::find_if(d_events.begin(), d_events.end(),
+			                           [=](auto& item) { return item.handle == handle; });
+			if (search == d_events.end()) {
+				throw std::runtime_error("event being processed was not found after executing the callback"); }
+			if (!search->persist) {
+				d_events.erase(search); }}
 		else {
 			auto err = GetLastError();
-			throw std::runtime_error(fmt::sprintf("WaitForMultipleObjects error %d", err)); }}}
+			std::string msg;
+			bool first = true;
+			for (auto item : pendingEvents) {
+				if (first) {
+					msg += fmt::sprintf("%p", item);
+					first = false; }
+				else {
+					msg += fmt::sprintf(", %p", item); }}
+			msg = fmt::sprintf("WaitForMultipleObjects error %d, items: %s", err, msg);
+			throw std::runtime_error(msg); }}}
 
 
 void Reactor::Stop() {
@@ -47,13 +65,11 @@ void Reactor::Stop() {
 
 
 void Reactor::ListenMany(const rclmt::Event& event, std::function<void()> cb) {
-	d_events.emplace_back(ReactorEvent{ event.Get(), std::move(cb) });
-	d_events.back().persist = true; }
+	d_events.emplace_back(ReactorEvent{ event.Get(), std::move(cb), true }); }
 
 
 void Reactor::ListenOnce(const rclmt::Event& event, std::function<void()> cb) {
-	d_events.emplace_back(ReactorEvent{ event.Get(), std::move(cb) });
-	d_events.back().persist = false; }
+	d_events.emplace_back(ReactorEvent{ event.Get(), std::move(cb), false }); }
 
 
 bool Reactor::RemoveEventByHandle(HANDLE handle) {

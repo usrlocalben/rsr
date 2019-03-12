@@ -7,16 +7,13 @@
 #include <Windows.h>
 
 namespace rqdq {
-namespace {
+namespace rclmt {
 
 struct ReactorEvent {
-	HANDLE handle;
+	HANDLE handle{nullptr};
 	std::function<void()> func;
-	bool persist = false; };
+	bool persist{false}; };
 
-}  // namespace
-
-namespace rclmt {
 
 class Reactor {
 private:
