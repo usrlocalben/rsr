@@ -19,6 +19,8 @@ std::string JoinPath(const std::string& a, const std::string& b, const std::stri
 
 void EnsureOpenable(const std::wstring& path);
 
+void EnsureDirectoryExists(const std::string& path);
+
 
 }  // namespace rcls
 }  // namespace rqdq
