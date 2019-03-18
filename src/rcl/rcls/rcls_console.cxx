@@ -13,13 +13,23 @@
 #include <Windows.h>
 
 namespace rqdq {
+namespace {
+
+DWORD oldConsoleInputMode;
+
+
+}  // namespace
+
 namespace rcls {
 
 Console::Console(HANDLE hStdout, HANDLE hStdin)
-	:d_stdout{hStdout}, d_stdin{hStdin}, d_activeKeys(65536, false) {}
+	:d_stdout{hStdout}, d_stdin{hStdin}, d_activeKeys(65536, false)  {
+	GetConsoleMode(d_stdin, &oldConsoleInputMode);
+	SetConsoleMode(d_stdin, 0); }
 
 
-Console::~Console() = default;
+Console::~Console() {
+	SetConsoleMode(d_stdin, oldConsoleInputMode); }
 
 
 Console& Console::GetInstance() {

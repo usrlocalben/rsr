@@ -74,9 +74,9 @@ cc_library(
     )
 
 cc_library(
-    name = "reactor_delay",
-    srcs = ["rclmt_reactor_delay.cxx"],
-    hdrs = ["rclmt_reactor_delay.hxx"],
+    name = "reactor_timer",
+    srcs = ["rclmt_reactor_timer.cxx"],
+    hdrs = ["rclmt_reactor_timer.hxx"],
     deps = [
         "//3rdparty/fmt",
         ":reactor",

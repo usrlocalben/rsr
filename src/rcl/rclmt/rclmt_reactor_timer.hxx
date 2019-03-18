@@ -7,8 +7,10 @@ namespace rqdq {
 namespace rclmt {
 
 int Delay(double millis, std::function<void()> func, Reactor* reactor=nullptr);
+int Repeat(double millis, std::function<void()> func, Reactor* reactor=nullptr);
 
-void CancelDelay(int id, Reactor* reactor=nullptr);
+void CancelDelay(int id);
+void CancelRepeat(int id);
 
 
 }  // namespace rclmt

@@ -34,6 +34,7 @@ public:
 	// actions
 	void Signal() { SetEvent(d_handle); }
 	void SignalIn(double millis);
+	void SignalEvery(double millis);
 
 	// factories
 	static Event MakeEvent(bool initialState=false);

@@ -9,12 +9,6 @@
 namespace rqdq {
 namespace rclmt {
 
-struct ReactorEvent {
-	HANDLE handle{nullptr};
-	std::function<void()> func;
-	bool persist{false}; };
-
-
 class Reactor {
 private:
 	Reactor() = default;
@@ -26,11 +20,10 @@ public:
 
 	void ListenMany(const rclmt::Event&, std::function<void()> cb);
 	void ListenOnce(const rclmt::Event&, std::function<void()> cb);
-	bool RemoveEventByHandle(HANDLE handle);
-
 private:
-	bool d_shouldQuit = false;
-	std::vector<ReactorEvent> d_events; };
+	void ListenImpl(const rclmt::Event&, std::function<void()> cb, bool persist);
+public:
+	bool RemoveEventByHandle(HANDLE handle); };
 
 
 }  // namespace rclmt

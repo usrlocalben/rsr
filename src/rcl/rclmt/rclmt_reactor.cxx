@@ -13,6 +13,20 @@
 #include <Windows.h>
 
 namespace rqdq {
+namespace {
+
+struct ReactorEvent {
+	HANDLE handle{nullptr};
+	std::function<void()> func;
+	bool persist{false}; };
+
+bool shouldQuit = false;
+
+std::unordered_map<HANDLE, ReactorEvent> eventTab;
+
+
+}  // namespace
+
 namespace rclmt {
 
 Reactor& Reactor::GetInstance() {
@@ -22,12 +36,12 @@ Reactor& Reactor::GetInstance() {
 
 void Reactor::Run() {
 	std::vector<HANDLE> pendingEvents;
-	while (!d_shouldQuit) {
-		if (d_events.empty()) {
-			throw std::runtime_error("reactor event list is empty."); }
+	while (!shouldQuit) {
+		if (eventTab.empty()) {
+			throw std::runtime_error("reactor event table is empty."); }
 		pendingEvents.clear();
-		for (auto& re : d_events) {
-			pendingEvents.emplace_back(re.handle); }
+		for (auto& re : eventTab) {
+			pendingEvents.emplace_back(re.first); }
 		DWORD result = WaitForMultipleObjects(static_cast<DWORD>(pendingEvents.size()),
 		                                      pendingEvents.data(), FALSE, 1000);
 		if (result == WAIT_TIMEOUT) {
@@ -37,15 +51,12 @@ void Reactor::Run() {
 			const int eventIdx = result - WAIT_OBJECT_0;
 			const auto handle = pendingEvents[eventIdx];
 
-			d_events[eventIdx].func();
-			// func() might cause d_events to be modified, invalidating eventIdx, and re
-
-			auto search = std::find_if(d_events.begin(), d_events.end(),
-			                           [=](auto& item) { return item.handle == handle; });
-			if (search == d_events.end()) {
-				throw std::runtime_error("event being processed was not found after executing the callback"); }
-			if (!search->persist) {
-				d_events.erase(search); }}
+			if (eventTab[handle].persist) {
+				eventTab[handle].func(); }
+			else {
+				auto f = std::move(eventTab[handle].func);
+				eventTab.erase(handle);
+				f(); }}
 		else {
 			auto err = GetLastError();
 			std::string msg;
@@ -61,23 +72,29 @@ void Reactor::Run() {
 
 
 void Reactor::Stop() {
-	d_shouldQuit = true; }
+	shouldQuit = true; }
+
+
+void Reactor::ListenImpl(const rclmt::Event& event, std::function<void()> cb, bool persist) {
+	if (eventTab.find(event.Get()) != eventTab.end()) {
+		auto msg = fmt::sprintf("waitable handle %p already being monitored", event.Get());
+		throw std::runtime_error(msg); }
+	eventTab.emplace(event.Get(), ReactorEvent{ event.Get(), std::move(cb), persist }); }
 
 
 void Reactor::ListenMany(const rclmt::Event& event, std::function<void()> cb) {
-	d_events.emplace_back(ReactorEvent{ event.Get(), std::move(cb), true }); }
+	ListenImpl(event, std::move(cb), true); }
 
 
 void Reactor::ListenOnce(const rclmt::Event& event, std::function<void()> cb) {
-	d_events.emplace_back(ReactorEvent{ event.Get(), std::move(cb), false }); }
+	ListenImpl(event, std::move(cb), false); }
 
 
 bool Reactor::RemoveEventByHandle(HANDLE handle) {
-	auto found = std::find_if(d_events.begin(), d_events.end(),
-	                          [=](auto& item) { return item.handle == handle; });
-	if (found == d_events.end()) {
+	auto found = eventTab.find(handle);
+	if (found == eventTab.end()) {
 		return false; }  // not found is a noop
-	d_events.erase(found);
+	eventTab.erase(found);
 	return true; }
 
 
