@@ -4,8 +4,6 @@
 
 #include "src/rcl/rclmt/rclmt_event.hxx"
 
-#include <Windows.h>
-
 namespace rqdq {
 namespace rclmt {
 
@@ -23,7 +21,7 @@ public:
 private:
 	void ListenImpl(const rclmt::Event&, std::function<void()> cb, bool persist);
 public:
-	bool RemoveEventByHandle(HANDLE handle); };
+	bool RemoveEventByHandle(void* handle); };
 
 
 }  // namespace rclmt

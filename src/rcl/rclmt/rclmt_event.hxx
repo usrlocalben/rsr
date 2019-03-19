@@ -2,15 +2,13 @@
 #include <algorithm>
 #include <cassert>
 
-#include <Windows.h>
-
 namespace rqdq {
 namespace rclmt {
 
 class Event {
 public:
 	// lifecycle
-	Event(HANDLE event=nullptr) :d_handle(event) {}
+	Event(void* event=nullptr) :d_handle(event) {}
 	Event(const Event& other) = delete;
 	Event& operator=(const Event& other) = delete;
 	Event(Event&& other) noexcept {
@@ -23,16 +21,16 @@ public:
 	~Event() {
 		Close(); }
 	void Close();
-	HANDLE Release() {
+	void* Release() {
 		const auto tmp = d_handle;
 		d_handle = nullptr;
 		return tmp; }
-	HANDLE Get() const {
+	void* Get() const {
 		assert(d_handle != nullptr);
 		return d_handle; }
 
 	// actions
-	void Signal() { SetEvent(d_handle); }
+	void Signal();
 	void SignalIn(double millis);
 	void SignalEvery(double millis);
 
@@ -41,7 +39,7 @@ public:
 	static Event MakeTimer();
 
 private:
-	HANDLE d_handle = nullptr; };
+	void* d_handle = nullptr; };
 
 
 }  // namespace rclmt

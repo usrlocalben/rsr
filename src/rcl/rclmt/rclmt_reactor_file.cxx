@@ -18,30 +18,20 @@ namespace rqdq {
 namespace {
 
 struct FileOp {
-
 	FileOp() = default;
 	FileOp(const FileOp&) = delete;
 	FileOp& operator=(const FileOp&) = delete;
+	FileOp(FileOp&& other) = default;
+	FileOp& operator=(FileOp&& other) = default;
 
-	FileOp(FileOp&& other) noexcept
-		:fd(std::move(other.fd)),
-		event(std::move(other.event)),
-		request(other.request),
-		id(other.id),
-		buffer(std::move(other.buffer)),
-		good(other.good),
-		expectedSizeInBytes(other.expectedSizeInBytes),
-		deferred(std::move(other.deferred)) {}
-
-	int id = -1;
-	rclw::WinFile fd;
-	rclmt::Event event;
-	rclmt::LoadFileDeferred deferred;
-
-	bool good = true;
-	int64_t expectedSizeInBytes = 0;
-	DWORD error = 0;
-	std::vector<uint8_t> buffer;
+	int id{-1};
+	rclw::WinFile fd{};
+	rclmt::Event event{};
+	rclmt::LoadFileDeferred deferred{};
+	bool good{true};
+	int64_t expectedSizeInBytes{0};
+	DWORD error{0};
+	std::vector<uint8_t> buffer{};
 	OVERLAPPED request{}; };
 
 
@@ -95,6 +85,7 @@ void onFileOpEvent(int id) {
 	FileOp foo(std::move(op));
 	fileOps.erase(search);
 	foo.deferred.Callback(foo.buffer); }
+
 
 }  // namespace
 

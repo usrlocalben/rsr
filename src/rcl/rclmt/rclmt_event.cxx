@@ -16,6 +16,10 @@ void Event::Close() {
             CloseHandle(tmp); }}}
 
 
+void Event::Signal() {
+	SetEvent(d_handle); }
+
+
 void Event::SignalIn(double millis) {
 	const auto t = static_cast<int64_t>(-millis * 10000);
 	const auto result = SetWaitableTimer(d_handle,

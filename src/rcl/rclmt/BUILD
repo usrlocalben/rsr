@@ -95,3 +95,14 @@ cc_library(
         ],
     copts = RSR_DEFAULT_COPTS,
     )
+
+
+cc_binary(
+    name = "reactor_timer_test",
+    srcs = ["rclmt_reactor_timer.t.cxx"],
+    deps = [
+        "//3rdparty/fmt",
+        "//src/rcl/rcls:timer",
+        ":reactor",
+        ":reactor_timer", ],
+    copts = RSR_DEFAULT_COPTS,)
