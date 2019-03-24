@@ -26,7 +26,7 @@ vector<string> FindGlob(const string& pathpat) {
 	HANDLE hFind = FindFirstFileW(rclt::UTF8Codec::Decode(pathpat).c_str(), &ffd);
 	if (hFind != INVALID_HANDLE_VALUE) {
 		do {
-			if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0u) {
+			if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0U) {
 				continue; }
 			lst.push_back(rclt::UTF8Codec::Encode(wstring{ffd.cFileName}));
 		} while (FindNextFile(hFind, &ffd) != 0); }

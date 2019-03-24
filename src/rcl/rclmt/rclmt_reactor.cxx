@@ -76,7 +76,7 @@ void Reactor::Stop() {
 
 
 void Reactor::ListenImpl(const rclmt::Event& event, std::function<void()> cb, bool persist) {
-	if (eventTab.find(event.Get()) != eventTab.end()) {
+	if (eventTab.find(event.Get()) != end(eventTab)) {
 		auto msg = fmt::sprintf("waitable handle %p already being monitored", event.Get());
 		throw std::runtime_error(msg); }
 	eventTab.emplace(event.Get(), ReactorEvent{ event.Get(), std::move(cb), persist }); }
@@ -92,7 +92,7 @@ void Reactor::ListenOnce(const rclmt::Event& event, std::function<void()> cb) {
 
 bool Reactor::RemoveEventByHandle(HANDLE handle) {
 	auto found = eventTab.find(handle);
-	if (found == eventTab.end()) {
+	if (found == end(eventTab)) {
 		return false; }  // not found is a noop
 	eventTab.erase(found);
 	return true; }

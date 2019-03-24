@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rqdq {
@@ -54,7 +55,7 @@ public:
 		d_buf.resize(width*height);}
 
 	void Clear() {
-		std::fill(d_buf.begin(), d_buf.end(), ColorChar{});}
+		std::fill(begin(d_buf), end(d_buf), ColorChar{});}
 
 	ColorChar* GetDataPtr() { return d_buf.data(); }
 	int d_width;
@@ -89,7 +90,7 @@ inline TextCanvas Flatten(const TextCanvas& a, const TextCanvas& b, int x, int y
 	return out; }
 
 
-inline void WriteXY(TextCanvas& canvas, int x, int y, const std::string& text) {
+inline void WriteXY(TextCanvas& canvas, int x, int y, std::string_view text) {
 	if (0 <= y && y < canvas.d_height) {
 		for (int xx=0; xx<canvas.d_width; xx++) {
 			int ti = xx - x;
@@ -97,7 +98,7 @@ inline void WriteXY(TextCanvas& canvas, int x, int y, const std::string& text) {
 				canvas.d_buf[y*canvas.d_width + xx].ch = text[ti]; }}}}
 
 
-inline void WriteXY(TextCanvas& canvas, int x, int y, const std::string& text, const uint8_t attr) {
+inline void WriteXY(TextCanvas& canvas, int x, int y, std::string_view text, const uint8_t attr) {
 	if (0 <= y && y < canvas.d_height) {
 		for (int xx=0; xx<canvas.d_width; xx++) {
 			int ti = xx - x;

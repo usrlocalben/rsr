@@ -83,8 +83,21 @@ enum ScanCode {
 	F8 = 66,
 	F9 = 67,
 	F10 = 68,
-
-    /// ...
+	// ...
+	Home = 71,
+	CursorUp = 72,
+	PageUp = 73,
+	//
+	CursorLeft = 75,
+	//
+	CursorRight = 77,
+	//
+	End = 79,
+	CursorDown = 80,
+	PageDown = 81,
+	Insert = 82,
+	Delete = 83,
+    // ...
 	F11 = 87,
 	F12 = 88,
 	LeftWindows = 91, };

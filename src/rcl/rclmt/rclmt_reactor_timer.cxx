@@ -29,10 +29,10 @@ int timerSeq = 1;
 std::pair<int, rclmt::Event*> AllocTimer(bool type, rclmt::Reactor* reactor) {
 	TimerInfo* timer{nullptr};
 
-	auto available = std::find_if(timers.begin(), timers.end(),
+	auto available = std::find_if(begin(timers), end(timers),
 	                              [](auto& item) { return !item.inUse; });
-	if (available != timers.end()) {
-		timer = &(*available);}
+	if (available != end(timers)) {
+		timer = &*available;}
 	else {
 		timers.emplace_back();
 		timer = &timers.back();}
@@ -46,9 +46,9 @@ std::pair<int, rclmt::Event*> AllocTimer(bool type, rclmt::Reactor* reactor) {
 
 
 bool MaybeReleaseTimer(HANDLE h) {
-	auto found = std::find_if(timers.begin(), timers.end(),
+	auto found = std::find_if(begin(timers), end(timers),
 	                          [=](auto& item) { return item.event.Get() == h; });
-	if (found == timers.end()) {
+	if (found == end(timers)) {
 		throw std::runtime_error("MaybeReleaseTimer called with handle not found in timer collection"); }
 
 	auto& timer = *found;
@@ -95,9 +95,9 @@ int Repeat(const double millis, std::function<void()> func, Reactor* reactor_/*=
 
 
 void CancelTimer(int id) {
-	auto found = std::find_if(timers.begin(), timers.end(),
-	                          [=](auto& item) { return item.id = id; });
-	if (found == timers.end()) {
+	auto found = std::find_if(begin(timers), end(timers),
+	                          [=](auto& item) { return item.id == id; });
+	if (found == end(timers)) {
 		return; }  // not found is a no-op
 
 	auto& timer = *found;

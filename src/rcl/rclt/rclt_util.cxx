@@ -57,11 +57,11 @@ bool ConsumePrefix(std::string& str, const std::string& prefix) {
 
 
 std::string Trim(const std::string &s) {
-	std::string::const_iterator it = s.begin();
-	while (it != s.end() && (isspace(*it) != 0)) {
+	auto it = cbegin(s);
+	while (it != cend(s) && (isspace(*it) != 0)) {
 		it++; }
 
-	std::string::const_reverse_iterator rit = s.rbegin();
+	auto rit = crbegin(s);
 	while (rit.base() != it && (isspace(*rit) != 0)) {
 		rit++; }
 
