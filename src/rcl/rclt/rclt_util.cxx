@@ -6,12 +6,20 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <Windows.h>
 
 namespace rqdq {
 namespace rclt {
+
+
+std::wstring UTF8Codec::Decode(std::string_view str_) {
+	thread_local std::string str;
+	str.assign(str_);
+	return Decode(str); }
+
 
 std::wstring UTF8Codec::Decode(const std::string& str) {
 	if (str.empty()) {

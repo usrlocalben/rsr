@@ -17,10 +17,8 @@
 namespace rqdq {
 namespace rcls {
 
-using namespace std;
-
-vector<string> FindGlob(const string& pathpat) {
-	vector<string> lst;
+std::vector<std::string> FindGlob(const std::string& pathpat) {
+	std::vector<std::string> lst;
 	WIN32_FIND_DATA ffd;
 
 	HANDLE hFind = FindFirstFileW(rclt::UTF8Codec::Decode(pathpat).c_str(), &ffd);
@@ -28,7 +26,7 @@ vector<string> FindGlob(const string& pathpat) {
 		do {
 			if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0U) {
 				continue; }
-			lst.push_back(rclt::UTF8Codec::Encode(wstring{ffd.cFileName}));
+			lst.push_back(rclt::UTF8Codec::Encode(std::wstring{ffd.cFileName}));
 		} while (FindNextFile(hFind, &ffd) != 0); }
 	return lst; }
 
@@ -37,7 +35,7 @@ vector<string> FindGlob(const string& pathpat) {
 * example from
 * http://nickperrysays.wordpress.com/2011/05/24/monitoring-a-file-last-modified-date-with-visual-c/
 */
-int64_t GetMTime(const string& path) {
+int64_t GetMTime(const std::string& path) {
 	int64_t mtime = -1;
 	HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
 	if (hFile != INVALID_HANDLE_VALUE) {
@@ -50,37 +48,37 @@ int64_t GetMTime(const string& path) {
 	return mtime; }
 
 
-vector<char> LoadBytes(const string& path) {
-	vector<char> buf;
-	ifstream f(path);
-	f.exceptions(ifstream::badbit | ifstream::failbit | ifstream::eofbit);
-	f.seekg(0, ios::end);
-	streampos length(f.tellg());
+std::vector<char> LoadBytes(const std::string& path) {
+	std::vector<char> buf;
+	std::ifstream f(path);
+	f.exceptions(std::ifstream::badbit | std::ifstream::failbit | std::ifstream::eofbit);
+	f.seekg(0, std::ios::end);
+	std::streampos length(f.tellg());
 	if (length != 0) {
-		cout << "reading " << length << " bytes from " << path << endl;
-		f.seekg(0, ios::beg);
+		std::cout << "reading " << length << " bytes from " << path << std::endl;
+		f.seekg(0, std::ios::beg);
 		buf.resize(static_cast<size_t>(length));
 		f.read(buf.data(), static_cast<std::size_t>(length)); }
 	else {
-		cout << "nothing to read from " << path << endl; }
+		std::cout << "nothing to read from " << path << std::endl; }
 	return buf; }
 
 
-void LoadBytes(const string& path, vector<char>& buf) {
-	ifstream fd(path);
-	fd.exceptions(ifstream::badbit | ifstream::failbit | ifstream::eofbit);
-	fd.seekg(0, ios::end);
-	streampos length(fd.tellg());
+void LoadBytes(const std::string& path, std::vector<char>& buf) {
+	std::ifstream fd(path);
+	fd.exceptions(std::ifstream::badbit | std::ifstream::failbit | std::ifstream::eofbit);
+	fd.seekg(0, std::ios::end);
+	std::streampos length(fd.tellg());
 	if (length != 0) {
-		fd.seekg(0, ios::beg);
+		fd.seekg(0, std::ios::beg);
 		buf.resize(static_cast<size_t>(length));
 		fd.read(buf.data(), buf.size()); }}
 
 
-vector<string> LoadLines(const string& path) {
-	ifstream fd(path);
-	vector<string> out;
-	string line;
+std::vector<std::string> LoadLines(const std::string& path) {
+	std::ifstream fd(path);
+	std::vector<std::string> out;
+	std::string line;
 	while (getline(fd, line)) {
 		out.emplace_back(line); }
 	return out; }

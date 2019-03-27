@@ -10,6 +10,13 @@ cc_library(
     )
 
 cc_library(
+    name = "signal",
+    srcs = ["rclmt_signal.cxx"],
+    hdrs = ["rclmt_signal.hxx"],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
     name = "jobsys",
     srcs = ["rclmt_jobsys.cxx"],
     hdrs = ["rclmt_jobsys.hxx"],
