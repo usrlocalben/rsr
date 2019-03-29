@@ -1,4 +1,4 @@
-#include "src/viewer/node/camera.hxx"
+#include "camera.hxx"
 
 namespace rqdq {
 namespace rqv {

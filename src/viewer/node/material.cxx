@@ -1,4 +1,4 @@
-#include "src/viewer/node/material.hxx"
+#include "material.hxx"
 
 #include <memory>
 #include <string>

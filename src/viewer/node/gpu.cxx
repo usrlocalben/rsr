@@ -1,4 +1,4 @@
-#include "src/viewer/node/gpu.hxx"
+#include "gpu.hxx"
 
 #include <string>
 #include <vector>

@@ -1,4 +1,4 @@
-#include "src/viewer/jobsys_vis.hxx"
+#include "jobsys_vis.hxx"
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"

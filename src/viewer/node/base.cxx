@@ -1,4 +1,4 @@
-#include "src/viewer/node/base.hxx"
+#include "base.hxx"
 
 namespace rqdq {
 namespace rqv {

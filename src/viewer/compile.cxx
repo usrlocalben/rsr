@@ -1,4 +1,4 @@
-#include "src/viewer/compile.hxx"
+#include "compile.hxx"
 
 #include <map>
 #include <memory>

@@ -1,4 +1,4 @@
-#include "src/viewer/node/computed.hxx"
+#include "computed.hxx"
 
 #include <iostream>
 #include <vector>

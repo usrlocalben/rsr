@@ -1,4 +1,4 @@
-#include "src/viewer/node/fx_xyquad.hxx"
+#include "fx_xyquad.hxx"
 
 #include <memory>
 #include <string>

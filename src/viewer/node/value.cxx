@@ -1,4 +1,4 @@
-#include "src/viewer/node/value.hxx"
+#include "value.hxx"
 
 #include <memory>
 

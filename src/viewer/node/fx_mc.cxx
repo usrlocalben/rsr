@@ -1,4 +1,4 @@
-#include "src/viewer/node/fx_mc.hxx"
+#include "fx_mc.hxx"
 
 #include <memory>
 #include <string>

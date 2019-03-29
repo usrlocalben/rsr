@@ -1,4 +1,4 @@
-#include "src/viewer/node/gl.hxx"
+#include "gl.hxx"
 
 #include <memory>
 #include <string>

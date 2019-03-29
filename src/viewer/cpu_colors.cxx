@@ -1,4 +1,4 @@
-#include "src/viewer/cpu_colors.hxx"
+#include "cpu_colors.hxx"
 
 #include <array>
 

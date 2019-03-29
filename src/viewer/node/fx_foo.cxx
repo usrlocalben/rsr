@@ -1,4 +1,4 @@
-#include "src/viewer/node/fx_foo.hxx"
+#include "fx_foo.hxx"
 
 #include <memory>
 #include <string>

@@ -1,4 +1,4 @@
-#include "src/viewer/node/translate.hxx"
+#include "translate.hxx"
 
 namespace rqdq {
 namespace rqv {

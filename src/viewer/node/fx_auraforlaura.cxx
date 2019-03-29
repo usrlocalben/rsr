@@ -1,4 +1,4 @@
-#include "src/viewer/node/fx_auraforlaura.hxx"
+#include "fx_auraforlaura.hxx"
 
 #include <memory>
 #include <string>

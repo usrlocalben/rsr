@@ -1,4 +1,4 @@
-#include "src/viewer/node/fx_carpet.hxx"
+#include "fx_carpet.hxx"
 
 #include <memory>
 #include <string>

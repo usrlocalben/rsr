@@ -1,4 +1,4 @@
-#include "src/viewer/app.hxx"
+#include "app.hxx"
 
 #include <algorithm>
 #include <fstream>

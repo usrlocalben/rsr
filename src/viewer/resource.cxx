@@ -1,1 +1,1 @@
-#include "src/viewer/resource.h"
+#include "resource.h"
