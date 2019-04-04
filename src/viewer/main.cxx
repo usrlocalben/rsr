@@ -34,10 +34,10 @@ int main() {
 	try {
 		auto app = Application();
 		if (auto jv = jv_find(config_json.GetRoot(), "nice", JSON_TRUE)) {
-			app.setNice(true); }
+			app.SetNice(true); }
 		else if (auto jv = jv_find(config_json.GetRoot(), "nice", JSON_FALSE)) {
-			app.setNice(false); }
-		app.run(); }
+			app.SetNice(false); }
+		app.Run(); }
 	catch (const std::exception& err) {
 		std::cout << "exception: " << err.what() << std::endl; }
 	catch (...) {
@@ -137,8 +137,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE h0, LPSTR lpCmdLine, int nCmdShow)
 	else {
 		hackmode_enable = 0; }
 	*/
-	app.setNice(true);
-	app.setFullScreen(splashDialog.wantFullScreen);
+	app.SetNice(true);
+	app.SetFullScreen(splashDialog.wantFullScreen);
 	// app.startedFromGUI = true;  XXX for modesetting
-	app.run();
+	app.Run();
 	return 0; }

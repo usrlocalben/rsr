@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
@@ -27,36 +28,43 @@ PixelToaster::Timer ttt;
 
 namespace rqv {
 
-struct FxAuraForLaura final : GlNode {
+class FxAuraForLaura final : public GlNode {
+public:
+	FxAuraForLaura(std::string_view id, InputList inputs, const rglv::Mesh& mesh)
+		:GlNode(id, std::move(inputs)), src_(mesh), dst_(mesh) {}
+
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+	void AddDeps() override;
+	void Main() override;
+
+	void Draw(rglv::GL*, const rmlm::mat4*, const rmlm::mat4*, rclmt::jobsys::Job*, int) override;
+
+public:
+	rclmt::jobsys::Job* Compute(rclmt::jobsys::Job* parent = nullptr) {
+		if (parent) {
+			return rclmt::jobsys::make_job_as_child(parent, FxAuraForLaura::ComputeJmp, std::tuple{this}); }
+		else {
+			return rclmt::jobsys::make_job(FxAuraForLaura::ComputeJmp, std::tuple{this}); }}
+private:
+	static void ComputeJmp(rclmt::jobsys::Job* job, unsigned threadId, std::tuple<FxAuraForLaura*>* data) {
+		auto&[self] = *data;
+		self->ComputeImpl(); }
+	void ComputeImpl();
+
+private:
 	// state
-	std::array<rglv::VertexArray_F3F3F3, 3> d_buffers;
-	int d_activeBuffer = 0;
-	rcls::vector<uint16_t> d_meshIndices;
-	rglv::Mesh d_src;
-	rglv::Mesh d_dst;
+	std::array<rglv::VertexArray_F3F3F3, 3> buffers_{};
+	int activeBuffer_{0};
+	rcls::vector<uint16_t> meshIndices_;
+	rglv::Mesh src_;
+	rglv::Mesh dst_;
 
 	// inputs
-	MaterialNode* material_node = nullptr;
-	ValuesBase* freq_node = nullptr;  std::string freq_slot;
-	ValuesBase* phase_node = nullptr;  std::string phase_slot;
-
-	FxAuraForLaura(const std::string& name, const InputList& inputs, const rglv::Mesh& mesh) :GlNode(name, inputs), d_src(mesh), d_dst(mesh) {}
-
-	void connect(const std::string&, NodeBase*, const std::string&) override;
-	std::vector<NodeBase*> deps() override;
-	void main() override;
-
-	void draw(rglv::GL*, const rmlm::mat4*, const rmlm::mat4*, rclmt::jobsys::Job*, int) override;
-
-	rclmt::jobsys::Job* compute(rclmt::jobsys::Job* parent = nullptr) {
-		if (parent) {
-			return rclmt::jobsys::make_job_as_child(parent, FxAuraForLaura::computeJmp, std::tuple{this}); }
-		else {
-			return rclmt::jobsys::make_job(FxAuraForLaura::computeJmp, std::tuple{this}); }}
-	static void computeJmp(rclmt::jobsys::Job* job, unsigned threadId, std::tuple<FxAuraForLaura*>* data) {
-		auto&[self] = *data;
-		self->computeImpl(); }
-	void computeImpl();};
+	MaterialNode* materialNode_{nullptr};
+	ValuesBase* freqNode_{nullptr};
+	std::string freqSlot_{};
+	ValuesBase* phaseNode_{nullptr};
+	std::string phaseSlot_{}; };
 
 
 }  // namespace rqv

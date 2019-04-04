@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
@@ -19,86 +20,58 @@
 namespace rqdq {
 namespace rqv {
 
-struct FxXYQuad : GlNode {
-	int d_activeBuffer = 0;
-	std::array<rglv::VertexArray_F3F3F3, 3> d_buffers;
-	rcls::vector<uint16_t> mesh_idx;
+class FxXYQuad final : public GlNode {
+public:
+	FxXYQuad(std::string_view id, InputList inputs)
+		:GlNode(id, std::move(inputs)) {}
 
-	// connections
-	MaterialNode* material_node = nullptr;
-	ValuesBase* leftTop_node = nullptr; std::string leftTop_slot;
-	ValuesBase* rightBottom_node = nullptr; std::string rightBottom_slot;
-	ValuesBase* z_node = nullptr; std::string z_slot;
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
 
-	// config
-	rmlv::vec2 d_leftTop;
-	rmlv::vec2 d_rightBottom;
-	float d_z;
+	void AddDeps() override {
+		AddDep(materialNode_);
+		AddDep(leftTopNode_);
+		AddDep(rightBottomNode_);
+		AddDep(zNode_); }
 
-	FxXYQuad(
-		const std::string& name,
-		const InputList& inputs
-	) :GlNode(name, inputs) {}
+	void Reset() override {
+		activeBuffer_ = (activeBuffer_+1)%3;
+		GlNode::Reset(); }
 
-	void connect(const std::string&, NodeBase*, const std::string&) override;
+	void Main() override;
 
-	std::vector<NodeBase*> deps() override{
-		std::vector<NodeBase*> out;
-		out.push_back(material_node);
-		if (leftTop_node) out.push_back(leftTop_node);
-		if (rightBottom_node) out.push_back(rightBottom_node);
-		if (z_node) out.push_back(z_node);
-		return out; }
-
-	void main() override {
-		namespace jobsys = rclmt::jobsys;
-		using rmlv::ivec2, rmlv::vec3;
-		if (++d_activeBuffer > 2) d_activeBuffer = 0;
-		auto& vao = d_buffers[d_activeBuffer];
-		vao.clear();
-
-		rmlv::vec2 leftTop = leftTop_node->get(leftTop_slot).as_vec2();
-		rmlv::vec2 rightBottom = rightBottom_node->get(rightBottom_slot).as_vec2();
-		float z = z_node->get(z_slot).as_float();
-
-		vec3 pul{ leftTop.x, leftTop.y, z };     vec3 pur{ rightBottom.x, leftTop.y, z };
-		vec3 tul{ 0.0f, 1.0f, 0 };               vec3 tur{ 1.0f, 1.0f, 0 };
-
-		vec3 pll{ leftTop.x, rightBottom.y, z }; vec3 plr{ rightBottom.x, rightBottom.y, z };
-		vec3 tll{ 0.0f, 0.0f, 0 };               vec3 tlr{ 1.0f, 0.0f, 0 };
-
-		vec3 normal{ 0, 0, 1.0f };
-
-		// quad upper left
-		vao.append(pur, normal, tur);
-		vao.append(pul, normal, tul);
-		vao.append(pll, normal, tll);
-
-		// quad lower right
-		vao.append(pur, normal, tur);
-		vao.append(pll, normal, tll);
-		vao.append(plr, normal, tlr);
-		vao.pad();
-
-		jobsys::Job *postSetup = jobsys::make_job(jobsys::noop);
-		add_links_to(postSetup);
-		material_node->add_link(postSetup);
-		material_node->run();}
-
-	void draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) override {
+	void Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) override {
 		auto& dc = *_dc;
 		using namespace rglv;
 		std::scoped_lock<std::mutex> lock(dc.mutex);
-		if (material_node != nullptr) {
-			material_node->apply(_dc); }
+		if (materialNode_ != nullptr) {
+			materialNode_->Apply(_dc); }
 		dc.glMatrixMode(GL_PROJECTION);
 		dc.glLoadMatrix(rglv::make_glOrtho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0, -1.0));
 		dc.glMatrixMode(GL_MODELVIEW);
 		dc.glLoadMatrix(rmlm::mat4::ident());
-		dc.glUseArray(d_buffers[d_activeBuffer]);
+		dc.glUseArray(buffers_[activeBuffer_]);
 		dc.glDrawArrays(GL_TRIANGLES, 0, 6);
 		if (link != nullptr) {
-			rclmt::jobsys::run(link); } }};
+			rclmt::jobsys::run(link); } }
+
+private:
+	int activeBuffer_{0};
+	std::array<rglv::VertexArray_F3F3F3, 3> buffers_;
+	rcls::vector<uint16_t> meshIdx_;
+
+	// connections
+	MaterialNode* materialNode_{nullptr};
+	ValuesBase* leftTopNode_{nullptr};
+	std::string leftTopSlot_{};
+	ValuesBase* rightBottomNode_{nullptr};
+	std::string rightBottomSlot_{};
+	ValuesBase* zNode_{nullptr};
+	std::string zSlot_{};
+
+	// config
+	rmlv::vec2 leftTop_;
+	rmlv::vec2 rightBottom_;
+	float z_; };
 
 
 }  // namespace rqv

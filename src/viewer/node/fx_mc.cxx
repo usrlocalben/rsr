@@ -1,7 +1,9 @@
 #include "fx_mc.hxx"
 
+#include <iostream>
 #include <memory>
-#include <string>
+#include <mutex>
+#include <string_view>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
@@ -15,97 +17,94 @@
 namespace rqdq {
 namespace rqv {
 
-using namespace std;
-
-
-void FxMC::connect(const string& attr, NodeBase* other, const string& slot) {
+void FxMC::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "material") {
-		material_node = dynamic_cast<MaterialNode*>(other); }
+		materialNode_ = static_cast<MaterialNode*>(other); }
 	else if (attr == "frob") {
-		frob_node = dynamic_cast<ValuesBase*>(other);
-		frob_slot = slot; }
+		frobNode_ = static_cast<ValuesBase*>(other);
+		frobSlot_ = slot; }
 	else {
-		cout << "FxMC(" << name << ") attempted to add " << other->name << ":" << slot << " as " << attr << endl; } }
+		GlNode::Connect(attr, other, slot); }}
 
 
-void FxMC::main() {
+void FxMC::Main() {
 	using rmlv::vec3;
 	namespace jobsys = rclmt::jobsys;
 
-	swapBuffers();
-	float frob_value = 0.0f;
-	if (frob_node != nullptr) {
-		frob_value = frob_node->get(frob_slot).as_float();
-	}
-	d_field.update(frob_value);
+	SwapBuffers();
+
+	float frobValue = 0.0f;
+	if (frobNode_ != nullptr) {
+		frobValue = frobNode_->Get(frobSlot_).as_float(); }
+	field_.Update(frobValue);
 
 	AABB rootBlock = {
-		vec3{-d_range, d_range,-d_range},
-		vec3{ d_range,-d_range, d_range} };
+		vec3{-range_, range_,-range_},
+		vec3{ range_,-range_, range_} };
 
-	const int subDim = d_precision >> d_forkDepth;
+	const int subDim = precision_ >> forkDepth_;
 
-	blockDivider.clear();
-	blockDivider.compute(rootBlock, d_forkDepth);
+	blockDivider_.Clear();
+	blockDivider_.Compute(rootBlock, forkDepth_);
 
-	auto finalizeJob = finalize();
+	auto finalizeJob = Finalize();
 	std::array<jobsys::Job*, 4096> subJobs;  // enough for forkDepth==4
 	int subJobEnd = 0;
 
-	for (const auto& subBlock : blockDivider.results) {
-		subJobs[subJobEnd++] = resolve(subBlock, subDim, finalizeJob); }
+	for (const auto& subBlock : blockDivider_.results_) {
+		subJobs[subJobEnd++] = Resolve(subBlock, subDim, finalizeJob); }
 	for (int sji = 0; sji < subJobEnd; sji++) {
 		jobsys::run(subJobs[sji]); }
 	jobsys::run(finalizeJob); }
 
 
-void FxMC::resolveImpl(const AABB block, const int dim, const int threadId) {
+void FxMC::ResolveImpl(const AABB block, const int dim, const int threadId) {
 	using rmlv::vec3, rmlv::mvec4f, rmlv::qfloat, rmlv::qfloat3;
 	const int stride = 64;
 	std::array<std::array<float, stride*stride>, 2> buf;
 	int top = 1;
 	int bot = 0;
 
-	float sy = block.left_top_back.y;
-	float delta = (block.right_bottom_front.x - block.left_top_back.x) / float(dim);
+	float sy = block.leftTopBack.y;
+	float delta = (block.rightBottomFront.x - block.leftTopBack.x) / float(dim);
 	const qfloat vdelta{ delta * 4 };
 
 	const auto mid = midpoint(block);
-	const auto R = length(block.left_top_back - mid);
-	float D = d_field.sample(mid);
+	const auto R = length(block.leftTopBack - mid);
+	float D = field_.sample(mid);
 	if (abs(D)*0.5f > R) {
 		return; }
 
 /*	auto fillSlice = [&](){
-		float sz = block.left_top_back.z;
+		float sz = block.leftTopBack.z;
 		for (int iz=0; iz<dim+1; iz++, sz += delta) {
-			qfloat3 vpos{ block.left_top_back.x, sy, sz };
+			qfloat3 vpos{ block.leftTopBack.x, sy, sz };
 			vpos.x += mvec4f{ 0, delta, delta * 2, delta * 3 };
 			for (int ix = 0; ix<dim+1; ix+=4, vpos += vdelta) {
-				auto distance = d_field.sample(vpos);
+				auto distance = field_.sample(vpos);
 				_mm_storeu_ps(&(buf[bot][iz*stride + ix]), distance.v); }}};*/
 
 	auto fillSlice = [&](){
-		float sz = block.left_top_back.z;
+		float sz = block.leftTopBack.z;
 		for (int iz=0; iz<dim+1; iz++, sz += delta) {
-			vec3 pos{ block.left_top_back.x, sy, sz };
+			vec3 pos{ block.leftTopBack.x, sy, sz };
 			for (int ix = 0; ix<dim+1; ix+=1, pos.x += delta) {
-				auto distance = d_field.sample(pos);
+				auto distance = field_.sample(pos);
 				buf[bot][iz*stride + ix] = distance; }}};
 
 	fillSlice(); // load the first slice
 	sy -= delta;
-	auto& vao = allocVAO();
+	auto& vao = AllocVAO();
 
-	vec3 origin = block.left_top_back;
+	vec3 origin = block.leftTopBack;
 	for (int iy=0; iy<dim; iy++, sy -= delta) {
 		origin.y -= delta;
 		std::swap(top, bot);
 		fillSlice();
 
-		origin.z = block.left_top_back.z;
+		origin.z = block.leftTopBack.z;
 		for (int iz = 0; iz < dim; iz++, origin.z += delta) {
-			origin.x = block.left_top_back.x;
+			origin.x = block.leftTopBack.x;
 			for (int ix = 0; ix < dim; ix++, origin.x += delta) {
 				rglv::Cell cell;
 				cell.value[0] = buf[bot][ iz   *stride + ix];
@@ -131,10 +130,10 @@ void FxMC::resolveImpl(const AABB block, const int dim, const int threadId) {
 
 				cell.value[7] = buf[top][(iz+1)*stride + ix];
 				cell.pos[7] = vec3{ origin.x,         origin.y + delta, origin.z + delta };
-				rglv::march_sdf_vao(vao, origin, delta, cell, d_field); }}}}
+				rglv::march_sdf_vao(vao, origin, delta, cell, field_); }}}}
 
 
-void FxMC::draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) {
+void FxMC::Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) {
 	auto& dc = *_dc;
 	using rglv::GL_UNSIGNED_SHORT;
 	using rglv::GL_CULL_FACE;
@@ -142,39 +141,36 @@ void FxMC::draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* c
 	using rglv::GL_MODELVIEW;
 	using rglv::GL_TRIANGLES;
 	std::lock_guard<std::mutex> lock(dc.mutex);
-	if (material_node != nullptr) {
-		material_node->apply(_dc); }
+	if (materialNode_ != nullptr) {
+		materialNode_->Apply(_dc); }
 	dc.glMatrixMode(GL_PROJECTION);
 	dc.glLoadMatrix(*pmat);
 	dc.glMatrixMode(GL_MODELVIEW);
 	dc.glLoadMatrix(*mvmat);
-	auto& buffer = d_buffers[d_activeBuffer];
-	for (int ai=0; ai<d_bufferEnd[d_activeBuffer]; ai++) {
+	auto& buffer = buffers_[activeBuffer_];
+	for (int ai=0; ai<bufferEnd_[activeBuffer_]; ai++) {
 		auto& vao = buffer[ai];
 		if (vao.size() != 0) {
 			const int elements = vao.size();
 			vao.pad();
 			dc.glUseArray(vao);
-			dc.glDrawArrays(GL_TRIANGLES, 0, elements);
-		}}
+			dc.glDrawArrays(GL_TRIANGLES, 0, elements); }}
 	if (link != nullptr) {
 		rclmt::jobsys::run(link); } }
 
 
-void FxMC::swapBuffers() {
-	d_activeBuffer++;
-	if (d_activeBuffer == 3) {
-		d_activeBuffer = 0; }
-	d_bufferEnd[d_activeBuffer] = 0; }
+void FxMC::SwapBuffers() {
+	activeBuffer_ = (activeBuffer_+1) % 3;
+	bufferEnd_[activeBuffer_] = 0; }
 
 
-rglv::VertexArray_F3F3F3& FxMC::allocVAO() {
-	std::scoped_lock lock(d_bufferMutex);
-	auto& buffer = d_buffers[d_activeBuffer];
-	auto& end = d_bufferEnd[d_activeBuffer];
+rglv::VertexArray_F3F3F3& FxMC::AllocVAO() {
+	std::scoped_lock lock(bufferMutex_);
+	auto& buffer = buffers_[activeBuffer_];
+	auto& end = bufferEnd_[activeBuffer_];
 	if (end == buffer.size()) {
 		if (buffer.capacity() == buffer.size()) {
-			std::cout << "buffer is full @ " << buffer.size() << std::endl;
+			std::cerr << "buffer is full @ " << buffer.size() << std::endl;
 			throw std::runtime_error("buffer full"); }
 		buffer.push_back({}); }
 	auto& vao = buffer[end++];

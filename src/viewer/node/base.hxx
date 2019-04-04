@@ -1,7 +1,9 @@
 #pragma once
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -15,69 +17,50 @@ using InputList = std::vector<std::pair<std::string, std::string>>;
 
 class NodeBase {
 public:
-	std::string name;
-	InputList inputs;
+	NodeBase(std::string_view name, InputList inputs);
+	virtual ~NodeBase();
 
-	std::atomic<int> grpcnt;
-	bool visited;
-	int indegree_wait;
-	std::vector<rclmt::jobsys::Job*> links;
+	void AddLink(rclmt::jobsys::Job *after);
+	void Run();
+	std::string_view get_id() {
+		return id_; }
 
-	NodeBase(std::string  name, InputList  inputs)
-		:name(std::move(name)), inputs(std::move(inputs)), indegree_wait(0) {}
-	virtual ~NodeBase() = default;
+	static void DecrJob(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data);
+	rclmt::jobsys::Job* AfterAll(rclmt::jobsys::Job *job);
 
-	void add_links_to(rclmt::jobsys::Job* parent) {
-		for (auto link : links) {
-			rclmt::jobsys::add_link(parent, link); } }
 
-	void run() {
-		if (--indegree_wait > 0) {
-			return; }
-		if (!this->validate_settings()) {
-			std::cout << "node(" << name << "): validation failed" << std::endl;
-			for (auto link : links) {
-				rclmt::jobsys::run(link); } }
-		this->main(); }
+	virtual void Reset();
+	virtual void Connect(std::string_view attr, NodeBase* other, std::string_view slot);
+	virtual bool IsValid();
+	virtual void Main();
+	virtual const std::vector<NodeBase*>& Deps();
+	void inc_indegreeWaitCnt() {
+		indegreeWaitCnt_++; }
+	void set_indegreeWaitCnt(int value) {
+		indegreeWaitCnt_ = value; }
 
-	static void decrjob([[maybe_unused]] rclmt::jobsys::Job* job, [[maybe_unused]] const unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*> * data) {
-		auto [cnt, waiting_job] = *data;
-		auto& counter = *cnt;
-		int nowcnt = --counter;
-		if (nowcnt > 0) {
-			return; }
-		rclmt::jobsys::run(waiting_job); }
+	const auto& get_inputs() {
+		return inputs_; }
+protected:
+	void AddLinksTo(rclmt::jobsys::Job* parent);
+	void RunLinks();
+	virtual void AddDep(NodeBase* node);
+	virtual void AddDeps();
 
-	virtual void add_link(rclmt::jobsys::Job *after) {
-		links.push_back(after); }
 
-	rclmt::jobsys::Job* after_all(rclmt::jobsys::Job *job) {
-		grpcnt++;
-		return rclmt::jobsys::make_job(decrjob, std::tuple{&grpcnt, job}); }
-
-	virtual void reset() {
-		visited = false;
-		indegree_wait = 0;
-		links.clear();
-		grpcnt = 0; }
-
-	virtual void connect(const std::string& attr, NodeBase* node, const std::string& slot) {
-		std::cout << "NodeBase(" << name << ") attempted to add " << node->name << ":" << slot << " as " << attr << "\n"; }
-
-	virtual bool validate_settings() { return true; }
-
-	virtual void main() {
-		for (auto link : links) {
-			rclmt::jobsys::run(link); }}
-
-	virtual std::vector<NodeBase*> deps() {
-		return std::vector<NodeBase*>(); }};
+private:
+	std::vector<NodeBase*> deps_;
+	std::string id_;
+	InputList inputs_;
+	std::atomic<int> groupCnt_{0};
+	int indegreeWaitCnt_{0};
+	std::vector<rclmt::jobsys::Job*> links_; };
 
 
 using NodeList = std::vector<std::shared_ptr<NodeBase>>;
 
 
-void compute_indegrees_from(NodeBase *node);
+void ComputeIndegreesFrom(NodeBase *node);
 
 
 }  // namespace rqv

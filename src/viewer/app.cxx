@@ -144,9 +144,9 @@ optional<SyncConfig> deserializeSyncConfig(const JsonValue& data) {
 
 class Application::impl : public PixelToaster::Listener {
 public:
-	void run();
-	void setFullScreen(bool value) { d_runFullScreen = value; }
-	void setNice(bool value) { d_nice = value; }
+	void Run();
+	void SetFullScreen(bool value) { runFullScreen_ = value; }
+	void SetNice(bool value) { nice_ = value; }
 
 private:
 	bool defaultKeyHandlers() const;
@@ -157,34 +157,34 @@ private:
 	void onMouseMove(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse);
 	void onMouseWheel(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse, short wheel_amount);
 
-	void drawUI(struct TrueColorCanvas&, double, double);
+	void DrawUI(struct TrueColorCanvas&, double, double);
 
-	void prepareBuiltInNodes();
-	void maybeUpdateDisplay();
-	void computeAndRenderFrame(TrueColorCanvas canvas);
-	bool recompile(const JsonValue & docroot);
+	void PrepareBuiltInNodes();
+	void MaybeUpdateDisplay();
+	void ComputeAndRenderFrame(TrueColorCanvas canvas);
+	bool Recompile(const JsonValue & docroot);
 
-	PixelToaster::Display d_display;
-	rglv::MeshStore d_meshStore;
-	MaterialStore d_materialStore;
-	TextureStore d_textureStore;
+	PixelToaster::Display display_;
+	rglv::MeshStore meshStore_;
+	MaterialStore materialStore_;
+	TextureStore textureStore_;
 	ProPrinter pp;
-	PixelToaster::Timer d_interFrameTimer;
-	PixelToaster::Timer d_renderTimer;
-	PixelToaster::Timer d_wallClock;
+	PixelToaster::Timer interFrameTimer_;
+	PixelToaster::Timer renderTimer_;
+	PixelToaster::Timer wallClock_;
 
 	// BEGIN debugger state
-	bool d_quit = false;
-	int d_runtimeInFrames{ 0 };
-	int d_taskSize = 6;
+	bool shouldQuit_ = false;
+	int runtimeInFrames_{ 0 };
+	int taskSize_ = 6;
 	ivec2 tile_dim{ 12, 4 };
 
 	int vis_scale = 30;
 	bool debug_mode = true;
 	bool show_shader_threads = false;
-	bool d_isPaused = false;
-	bool d_runFullScreen = false;
-	bool d_nice = true;
+	bool isPaused_ = false;
+	bool runFullScreen_ = false;
+	bool nice_ = true;
 
 	bool capture_mouse = false;
 	bool reset_mouse_next_frame = false;
@@ -198,46 +198,46 @@ private:
 	double scan_min_value;
 	ivec2 scan_min_dim;
 
-	std::vector<double> d_measurementSamples;
+	std::vector<double> measurementSamples_;
 	BenchStat last_stats;
 	bool show_stats = false;
 	DisplayMode cur_mode{ 0, 0 };
 	DisplayMode change_mode = modelist[3];
-	bool d_doubleBuffer = true;
-	bool d_runningFullScreen = false;
+	bool doubleBuffer_ = true;
+	bool runningFullScreen_ = false;
 	bool show_mode_list = false;
 	bool keys_shifted = false;
 
-	HandyCam d_camera;
+	HandyCam camera_;
 	// END debugger state
 
 	// current scene and built-in nodes
-	NodeList d_nodes;
-	NodeList d_appNodes;
-	std::shared_ptr<MultiValueNode> d_globalsNode = make_shared<MultiValueNode>("globals", InputList());
-	std::shared_ptr<MultiValueNode> d_syncNode = make_shared<MultiValueNode>("sync", InputList());
-	std::shared_ptr<HandyCamNode> d_uiCameraNode = make_shared<HandyCamNode>("uiCamera", InputList(), d_camera);
+	NodeList nodes_;
+	NodeList appNodes_;
+	std::shared_ptr<MultiValueNode> globalsNode_ = make_shared<MultiValueNode>("globals", InputList());
+	std::shared_ptr<MultiValueNode> syncNode_ = make_shared<MultiValueNode>("sync", InputList());
+	std::shared_ptr<HandyCamNode> uiCameraNode_ = make_shared<HandyCamNode>("uiCamera", InputList(), camera_);
 
 #ifdef ENABLE_MUSIC
 	// music/sync
-	Soundtrack d_soundtrack;
-	SyncConfig d_syncConfig;
+	Soundtrack soundtrack_;
+	SyncConfig syncConfig_;
 #endif
 	};
 
 
-void Application::impl::run() {
-	d_textureStore.load_dir("data\\textures\\");
-	d_meshStore.load_dir("data\\meshes\\", d_materialStore, d_textureStore);
+void Application::impl::Run() {
+	textureStore_.load_dir("data\\textures\\");
+	meshStore_.load_dir("data\\meshes\\", materialStore_, textureStore_);
 
-	prepareBuiltInNodes();
+	PrepareBuiltInNodes();
 
 	// initial read from scene.json
 	JSONFile sceneJson("data/scene.json");
 	if (!sceneJson.IsValid()) {
 		cout << "error while reading data/scene.json, can't continue.\n";
 		return; }
-	if (auto success = recompile(sceneJson.GetRoot()); !success) {
+	if (auto success = Recompile(sceneJson.GetRoot()); !success) {
 		cout << "compile failed, can't continue.\n";
 		return; }
 
@@ -246,7 +246,7 @@ void Application::impl::run() {
 #ifdef ENABLE_MUSIC
 	if (auto jv = jv_find(config_json.GetRoot(), "soundtrack", JSON_OBJECT)) {
 		if (auto result = deserializeSoundtrack(*jv)) {
-			d_soundtrack = result.value(); }
+			soundtrack_ = result.value(); }
 		else {
 			return; }}
 	else {
@@ -255,7 +255,7 @@ void Application::impl::run() {
 
 	if (auto jv = jv_find(config_json.GetRoot(), "sync", JSON_OBJECT)) {
 		if (auto result = deserializeSyncConfig(*jv)) {
-			d_syncConfig = result.value(); }
+			syncConfig_ = result.value(); }
 		else {
 			return; }}
 	else {
@@ -264,62 +264,62 @@ void Application::impl::run() {
 
 	AudioController audioController;
 
-	auto result = audioController.CreateStream(d_soundtrack.path);
+	auto result = audioController.CreateStream(soundtrack_.path);
 	if (!result.has_value()) {
-		cout << "failed to load " << d_soundtrack.path << ", can't continue.\n";
+		cout << "failed to load " << soundtrack_.path << ", can't continue.\n";
 		return; }
 
 	auto soundtrack = std::move(result.value());
 
-	const double rowsPerSecond = (double(d_soundtrack.tempoInBeatsPerMinute) / 60) * d_syncConfig.precisionInRowsPerBeat;
-	const int songDurationInRows = d_soundtrack.durationInSeconds * rowsPerSecond;
+	const double rowsPerSecond = (double(soundtrack_.tempoInBeatsPerMinute) / 60) * syncConfig_.precisionInRowsPerBeat;
+	const int songDurationInRows = soundtrack_.durationInSeconds * rowsPerSecond;
 
 	rals::SyncController syncController(std::string("data/sync"), soundtrack, rowsPerSecond);
 #ifndef SYNC_PLAYER
 	syncController.Connect();
 #endif
-	for (const auto& name : d_syncConfig.trackNames) {
+	for (const auto& name : syncConfig_.trackNames) {
 		syncController.AddTrack(name); }
 
 	audioController.Start();
 	soundtrack.Play();
 #endif //ENABLE_MUSIC
 
-	if (!d_nice) { jobsys::work_start();}
+	if (!nice_) { jobsys::work_start();}
 
 	SampleSmoother renderTimeInMillis;
 	SampleSmoother frameTimeInMillis;
 	try {
-		while (!d_quit) {
-			maybeUpdateDisplay();
+		while (!shouldQuit_) {
+			MaybeUpdateDisplay();
 
 			if (sceneJson.IsOutOfDate()) {
 				jobsys::_sleep(100);
 				sceneJson.Refresh();
 				if (sceneJson.IsValid()) {
-					recompile(sceneJson.GetRoot()); }}
+					Recompile(sceneJson.GetRoot()); }}
 
 			if (capture_mouse && reset_mouse_next_frame) {
 				reset_mouse_next_frame = false;
-				d_display.center_mouse(); }
+				display_.center_mouse(); }
 
-			d_renderTimer.reset();
-			auto frame = Frame(d_display);
+			renderTimer_.reset();
+			auto frame = Frame(display_);
 			auto canvas = frame.canvas();
 
-			if (d_nice) jobsys::work_start();
+			if (nice_) jobsys::work_start();
 			jobsys::reset();
 			framepool::Reset();
 
 #ifdef ENABLE_MUSIC
 			double musicPositionInRows = syncController.GetPositionInRows();
 			syncController.ForEachValue(musicPositionInRows, [this](const auto& name, auto value) {
-				d_syncNode->upsert(name, float(value)); });
+				syncNode_->Upsert(name, float(value)); });
 
 #ifdef SYNC_PLAYER
 			// terminate when song is over
 			if (musicPositionInRows > songDurationInRows) {
-				d_quit = true; }  // end of soundtrack == end of demo
+				shouldQuit_ = true; }  // end of soundtrack == end of demo
 #else
 			// host send-and-receive
 			if (syncController.Update((int)floor(musicPositionInRows))) {
@@ -328,29 +328,29 @@ void Application::impl::run() {
 #endif // ENABLE_MUSIC
 
 			// update globals
-			d_globalsNode->upsert("wallclock", d_isPaused ? float(0) : float(d_wallClock.time()));
-			d_globalsNode->upsert("displayWidth", float(cur_mode.width_in_pixels));
-			d_globalsNode->upsert("displayHeight", float(cur_mode.height_in_pixels));
-			d_globalsNode->upsert("displayAspect", float(cur_mode.width_in_pixels) / float(cur_mode.height_in_pixels));
+			globalsNode_->Upsert("wallclock", isPaused_ ? float(0) : float(wallClock_.time()));
+			globalsNode_->Upsert("displayWidth", float(cur_mode.width_in_pixels));
+			globalsNode_->Upsert("displayHeight", float(cur_mode.height_in_pixels));
+			globalsNode_->Upsert("displayAspect", float(cur_mode.width_in_pixels) / float(cur_mode.height_in_pixels));
 
-			computeAndRenderFrame(canvas);
-			if (d_nice) { jobsys::work_end();}
+			ComputeAndRenderFrame(canvas);
+			if (nice_) { jobsys::work_end();}
 
 #ifdef ENABLE_MUSIC
 			audioController.FillBuffers();  // decrease chance of missing vsync
 #endif
 
-			renderTimeInMillis.add(d_renderTimer.time() * 1000.0);
-			frameTimeInMillis.add(d_interFrameTimer.delta() * 1000.0);
-			drawUI(canvas, renderTimeInMillis.value, frameTimeInMillis.value);
-			d_runtimeInFrames++; }}
+			renderTimeInMillis.add(renderTimer_.time() * 1000.0);
+			frameTimeInMillis.add(interFrameTimer_.delta() * 1000.0);
+			DrawUI(canvas, renderTimeInMillis.value, frameTimeInMillis.value);
+			runtimeInFrames_++; }}
 
 	catch (WindowClosed) {
 		cout << "window was closed" << endl; }
 	catch (WrongFormat) {
 		cout << "framebuffer not rgba8888" << endl; }
 
-	if (!d_nice) { jobsys::work_end();}
+	if (!nice_) { jobsys::work_end();}
 
 	cout << "terminated.\n";
 #ifdef ENABLE_MUSIC
@@ -368,12 +368,12 @@ bool Application::impl::defaultKeyHandlers() const {
 void Application::impl::onKeyPressed(DisplayInterface& display, Key key) {
 	switch (key) {
 	case Key::OpenBracket:
-		d_taskSize = max(4, d_taskSize - 1);
-		tile_dim = ivec2{ d_taskSize, d_taskSize };
+		taskSize_ = max(4, taskSize_ - 1);
+		tile_dim = ivec2{ taskSize_, taskSize_ };
 		break;
 	case Key::CloseBracket:
-		d_taskSize = min(d_taskSize + 1, 128);
-		tile_dim = ivec2{ d_taskSize, d_taskSize };
+		taskSize_ = min(taskSize_ + 1, 128);
+		tile_dim = ivec2{ taskSize_, taskSize_ };
 		break;
 	case Key::F1:
 		debug_mode = !debug_mode;
@@ -382,15 +382,15 @@ void Application::impl::onKeyPressed(DisplayInterface& display, Key key) {
 		show_shader_threads = !show_shader_threads;
 		break;
 	case Key::P:
-		d_camera.print();
-		d_isPaused= !d_isPaused;
+		camera_.print();
+		isPaused_= !isPaused_;
 		break;
-	case Key::W: d_camera.moveForward(); break;
-	case Key::S: d_camera.moveBackward(); break;
-	case Key::A: d_camera.moveLeft(); break;
-	case Key::D: d_camera.moveRight(); break;
-	case Key::E: d_camera.moveUp();  break;
-	case Key::Q: d_camera.moveDown();  break;
+	case Key::W: camera_.moveForward(); break;
+	case Key::S: camera_.moveBackward(); break;
+	case Key::A: camera_.moveLeft(); break;
+	case Key::D: camera_.moveRight(); break;
+	case Key::E: camera_.moveUp();  break;
+	case Key::Q: camera_.moveDown();  break;
 	case Key::Period:
 		vis_scale += max(vis_scale / 10, 1);
 		break;
@@ -404,10 +404,10 @@ void Application::impl::onKeyPressed(DisplayInterface& display, Key key) {
 		show_stats = false;
 		break;
 	case Key::F:
-		d_runFullScreen = !d_runFullScreen;
+		runFullScreen_ = !runFullScreen_;
 		break;
 	case Key::G:
-		d_doubleBuffer = !d_doubleBuffer;
+		doubleBuffer_ = !doubleBuffer_;
 		break;
 	case Key::N:
 		capture_mouse = !capture_mouse;
@@ -460,16 +460,16 @@ void Application::impl::onMouseMove(DisplayInterface& display, Mouse mouse) {
 	float dmy = (display.height() / 2) - mouse.y;
 	if (capture_mouse) {
 		//cout << "mm(" << dmx << ", " << dmy << ")" << endl;
-		d_camera.onMouseMove({ dmx, dmy });
+		camera_.onMouseMove({ dmx, dmy });
 		reset_mouse_next_frame = true; }}
 
 
 void Application::impl::onMouseWheel(DisplayInterface& display, Mouse mouse, short wheel_amount) {
 	int ticks = wheel_amount / 120;
-	d_camera.adjustZoom(ticks); }
+	camera_.adjustZoom(ticks); }
 
 
-void Application::impl::drawUI(
+void Application::impl::DrawUI(
 	TrueColorCanvas& canvas,
 	double renderTimeInMillis,
 	double frameTimeInMillis
@@ -490,17 +490,17 @@ void Application::impl::drawUI(
 		measuring = true;
 		start_measuring = false;
 		show_stats = false;
-		d_measurementSamples.clear(); }
+		measurementSamples_.clear(); }
 
 	if (measuring) {
-		if (d_measurementSamples.size() == MEASUREMENT_SAMPLESIZE_IN_FRAMES) {
+		if (measurementSamples_.size() == MEASUREMENT_SAMPLESIZE_IN_FRAMES) {
 			measuring = false;
-			last_stats = calc_stat(d_measurementSamples, MEASUREMENT_DISCARD);
+			last_stats = calc_stat(measurementSamples_, MEASUREMENT_DISCARD);
 			show_stats = true; }
 		else {
-			d_measurementSamples.push_back(renderTimeInMillis);
+			measurementSamples_.push_back(renderTimeInMillis);
 			stringstream ss;
-			ss << "measuring, " << d_measurementSamples.size() << " / " << MEASUREMENT_SAMPLESIZE_IN_FRAMES;
+			ss << "measuring, " << measurementSamples_.size() << " / " << MEASUREMENT_SAMPLESIZE_IN_FRAMES;
 			pp.write(ss.str(), 16, 100, canvas); } }
 
 	if (start_scanning) {
@@ -509,7 +509,7 @@ void Application::impl::drawUI(
 		tile_dim = ivec2{ 2, 2 };
 		scan_min_dim = ivec2{ 2, 2 };
 		scan_min_value = 10000.0;
-		d_measurementSamples.clear(); }
+		measurementSamples_.clear(); }
 
 	if (stop_scanning) {
 		stop_scanning = false;
@@ -528,9 +528,9 @@ void Application::impl::drawUI(
 			ss.str("");
 			ss << "          press s to stop            ";
 			pp.write(ss.str(), 16, top, canvas);  top += 10; }
-		if (d_measurementSamples.size() == SCAN_SAMPLESIZE_IN_FRAMES) {
-			last_stats = calc_stat(std::vector<double>(d_measurementSamples.begin() + 60, d_measurementSamples.end()), MEASUREMENT_DISCARD);
-			d_measurementSamples.clear();
+		if (measurementSamples_.size() == SCAN_SAMPLESIZE_IN_FRAMES) {
+			last_stats = calc_stat(std::vector<double>(measurementSamples_.begin() + 60, measurementSamples_.end()), MEASUREMENT_DISCARD);
+			measurementSamples_.clear();
 			if (last_stats._mean < scan_min_value) {
 				scan_min_value = last_stats._mean;
 				scan_min_dim = tile_dim; }
@@ -542,7 +542,7 @@ void Application::impl::drawUI(
 				scanning = false;
 				tile_dim = scan_min_dim; } }
 		else {
-			d_measurementSamples.push_back(renderTimeInMillis); } }
+			measurementSamples_.push_back(renderTimeInMillis); } }
 
 	if (debug_mode) {
 		double fps = 1.0 / (frameTimeInMillis / 1000.0);
@@ -554,7 +554,7 @@ void Application::impl::drawUI(
 		ss << "tile size: " << tile_dim.x << "x" << tile_dim.y;
 		ss << ", ";
 		ss << "visu scale: " << vis_scale;
-		if (d_isPaused) {
+		if (isPaused_) {
 			ss << "   PAUSED"; }
 		pp.write(ss.str(), 16, 27, canvas); }
 
@@ -568,7 +568,7 @@ void Application::impl::drawUI(
 		ss.str("");
 		ss << " f fullscreen   F2  show tiles     g  dblbuf        shift -&+ grid size";
 		pp.write(ss.str(), 16, -52, canvas); }
-	else if (d_runtimeInFrames < (5 * 60)) {
+	else if (runtimeInFrames_ < (5 * 60)) {
 		stringstream ss;
 		int top = canvas.height() - 11;
 		ss << "F1 debug";
@@ -595,64 +595,64 @@ void Application::impl::drawUI(
 		pp.write(string("press C to clear"), 32, top, canvas); } }
 
 
-void Application::impl::prepareBuiltInNodes() {
-	d_globalsNode = make_shared<MultiValueNode>("globals", InputList());
-	d_appNodes.push_back(d_globalsNode);
+void Application::impl::PrepareBuiltInNodes() {
+	globalsNode_ = make_shared<MultiValueNode>("globals", InputList());
+	appNodes_.push_back(globalsNode_);
 
-	d_syncNode = make_shared<MultiValueNode>("sync", InputList());
-	d_appNodes.push_back(d_uiCameraNode);
+	syncNode_ = make_shared<MultiValueNode>("sync", InputList());
+	appNodes_.push_back(syncNode_);
 
-	d_uiCameraNode = make_shared<HandyCamNode>("uiCamera", InputList(), d_camera);
-	d_appNodes.push_back(d_syncNode); }
+	uiCameraNode_ = make_shared<HandyCamNode>("uiCamera", InputList(), camera_);
+	appNodes_.push_back(uiCameraNode_); }
 
 
-void Application::impl::maybeUpdateDisplay() {
-	if (cur_mode != change_mode || d_runningFullScreen != d_runFullScreen) {
+void Application::impl::MaybeUpdateDisplay() {
+	if (cur_mode != change_mode || runningFullScreen_ != runFullScreen_) {
 		cur_mode = change_mode;
-		d_runningFullScreen = d_runFullScreen;
-		d_display.close();
-		d_display.open("rqdq 2018",
-		               cur_mode.width_in_pixels,
-		               cur_mode.height_in_pixels,
-		               d_runningFullScreen ? Output::Fullscreen : Output::Windowed,
-		               Mode::TrueColor);
-		d_display.listener(this);
-		d_display.zoom(-1.0f); }}  // auto-scale based on windows' scaling factor
+		runningFullScreen_ = runFullScreen_;
+		display_.close();
+		display_.open("rqdq 2018",
+		              cur_mode.width_in_pixels,
+		              cur_mode.height_in_pixels,
+		              runningFullScreen_ ? Output::Fullscreen : Output::Windowed,
+		              Mode::TrueColor);
+		display_.listener(this);
+		display_.zoom(-1.0f); }}  // auto-scale based on windows' scaling factor
 
 
 
 
-void Application::impl::computeAndRenderFrame(TrueColorCanvas canvas) {
+void Application::impl::ComputeAndRenderFrame(TrueColorCanvas canvas) {
 	auto rootJob = jobsys::make_job(jobsys::noop);
 
-	const auto match = rclr::find_if(d_nodes, [](const auto node) { return node->name == "nRender"; });
-	if (match != d_nodes.end()) {
+	const auto match = rclr::find_if(nodes_, [](const auto node) { return node->get_id() == "nRender"; });
+	if (match != nodes_.end()) {
 		OutputNode* outputNode = static_cast<OutputNode*>(match->get());
-		rclr::for_each(d_nodes, [](auto& node) { node->reset(); });
-		compute_indegrees_from(outputNode);
-		outputNode->indegree_wait = 1;
-		outputNode->set_tile_dim(tile_dim);
-		outputNode->set_double_buffer(d_doubleBuffer);
-		outputNode->set_output_canvas(&canvas);
-		outputNode->add_link(rootJob);
-		outputNode->run(); }
+		rclr::for_each(nodes_, [](auto& node) { node->Reset(); });
+		ComputeIndegreesFrom(outputNode);
+		outputNode->set_indegreeWaitCnt(1);
+		outputNode->SetTileDim(tile_dim);
+		outputNode->SetDoubleBuffer(doubleBuffer_);
+		outputNode->SetOutputCanvas(&canvas);
+		outputNode->AddLink(rootJob);
+		outputNode->Run(); }
 	else {
 		cout << "output node \"nRender\" not found\n"; }
 
 	jobsys::wait(rootJob); }
 
 
-bool Application::impl::recompile(const JsonValue& docroot) {
+bool Application::impl::Recompile(const JsonValue& docroot) {
 	PixelToaster::Timer compileTime;
 	NodeList newNodes;
 	bool success;
-	std::tie(success, newNodes) = compile(docroot, d_meshStore);
+	std::tie(success, newNodes) = compile(docroot, meshStore_);
 	if (success) {
-		std::copy(d_appNodes.begin(), d_appNodes.end(), std::back_inserter(newNodes));
+		std::copy(appNodes_.begin(), appNodes_.end(), std::back_inserter(newNodes));
 		success = link(newNodes);
 		if (success) {
 			auto elapsed = compileTime.delta() * 1000.0;
-			d_nodes = newNodes;
+			nodes_ = newNodes;
 			cout << fmt::sprintf("scene compiled in %.2fms\n", elapsed);
 			return true; }
 		else {
@@ -662,20 +662,20 @@ bool Application::impl::recompile(const JsonValue& docroot) {
 	return false; }
 
 
-Application::Application() :d_pImpl(std::make_unique<impl>()) {}
+Application::Application() :impl_(std::make_unique<impl>()) {}
 Application::~Application() = default;
 Application& Application::operator=(Application&&) = default;
 
-Application& Application::setNice(bool value) {
-	d_pImpl->setNice(value);
+Application& Application::SetNice(bool value) {
+	impl_->SetNice(value);
 	return *this;}
 
-Application& Application::setFullScreen(bool value) {
-	d_pImpl->setFullScreen(value);
+Application& Application::SetFullScreen(bool value) {
+	impl_->SetFullScreen(value);
 	return *this;}
 
-Application& Application::run() {
-	d_pImpl->run();
+Application& Application::Run() {
+	impl_->Run();
 	return *this;}
 
 

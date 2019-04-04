@@ -1,7 +1,8 @@
 #include "fx_auraforlaura.hxx"
 
 #include <memory>
-#include <string>
+#include <mutex>
+#include <string_view>
 
 #include "src/rgl/rglv/rglv_mesh.hxx"
 #include "src/viewer/node/base.hxx"
@@ -12,41 +13,41 @@
 namespace rqdq {
 namespace rqv {
 
-using namespace std;
-
-void FxAuraForLaura::connect(const string& attr, NodeBase* other, const string& slot) {
+void FxAuraForLaura::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "material") {
-		material_node = dynamic_cast<MaterialNode*>(other); }
+		materialNode_ = static_cast<MaterialNode*>(other); }
 	else if (attr == "freq") {
-		freq_node = dynamic_cast<ValuesBase*>(other);
-		freq_slot = slot; }
+		freqNode_ = static_cast<ValuesBase*>(other);
+		freqSlot_ = slot; }
 	else if (attr == "phase") {
-		phase_node = dynamic_cast<ValuesBase*>(other);
-		phase_slot = slot; }
+		phaseNode_ = static_cast<ValuesBase*>(other);
+		phaseSlot_ = slot; }
 	else {
-		cout << "FxAuraForLaura(" << name << ") attempted to add " << other->name << ":" << slot << " as " << attr << endl; } }
+		GlNode::Connect(attr, other, slot); }}
 
 
-std::vector<NodeBase*> FxAuraForLaura::deps() {
-	std::vector<NodeBase*> out;
-	out.push_back(material_node);
-	if (freq_node) out.push_back(freq_node);
-	if (phase_node) out.push_back(phase_node);
-	return out; }
+void FxAuraForLaura::AddDeps() {
+	AddDep(materialNode_);
+	AddDep(freqNode_);
+	AddDep(phaseNode_); }
 
 
-void FxAuraForLaura::main() {
-	rclmt::jobsys::run(compute());}
+void FxAuraForLaura::Main() {
+	rclmt::jobsys::run(Compute());}
 
-void FxAuraForLaura::computeImpl() {
+
+void FxAuraForLaura::ComputeImpl() {
 	using rmlv::ivec2;
 
-	const int numPoints = d_src.points.size();
+	const int numPoints = src_.points.size();
 
 	rmlv::vec3 freq{ 0.0f };
+	if (freqNode_ != nullptr) {
+		freq = freqNode_->Get(freqSlot_).as_vec3();
+
 	rmlv::vec3 phase{ 0.0f };
-	if (freq_node) freq = freq_node->get(freq_slot).as_vec3();
-	if (phase_node) phase = phase_node->get(phase_slot).as_vec3();
+	if (phaseNode_ != nullptr) {
+		phase = phaseNode_->Get(phaseSlot_).as_vec3(); }
 
 	//const float t = float(ttt.time());
 	/*
@@ -59,46 +60,46 @@ void FxAuraForLaura::computeImpl() {
 	const float amp = 1.0f; //sin(t*1.4)*30.0f;
 
 	for (int i=0; i<numPoints; i++) {
-		rmlv::vec3 position = d_src.points[i];
-		rmlv::vec3 normal = d_src.vertex_normals[i];
+		rmlv::vec3 position = src_.points[i];
+		rmlv::vec3 normal = src_.vertex_normals[i];
 
 		float f = (sin(position.x*freq.x + phase.x) + 0.5f);// * sin(vvn.y*freqy+t) * sin(vvn.z*freqz+t)
 		position += normal * amp * f; // normal*amp*f
 		float ff = (sin(position.y*freq.y + phase.y) + 0.5f);
 		position += normal * amp * ff;
 
-		d_dst.points[i] = position; }
-	d_dst.compute_face_and_vertex_normals();
+		dst_.points[i] = position; }
+	dst_.compute_face_and_vertex_normals();
 
-	if (d_meshIndices.size() == 0) {
-		for (const auto& face:d_src.faces) {
+	if (meshIndices_.size() == 0) {
+		for (const auto& face : src_.faces) {
 			for (auto idx : face.point_idx) {
-				d_meshIndices.push_back(idx); }}}
+				meshIndices_.push_back(idx); }}}
 
-	if (++d_activeBuffer > 2) d_activeBuffer = 0;
-	auto& vao = d_buffers[d_activeBuffer];
+	activeBuffer_ = (activeBuffer_+1)%3;
+	auto& vao = buffers_[activeBuffer_];
 	vao.clear();
 	for (int i=0; i<numPoints; i++) {
-		vao.append(d_dst.points[i], d_dst.vertex_normals[i], 0); }
+		vao.append(dst_.points[i], dst_.vertex_normals[i], 0); }
 
 	auto postSetup = rclmt::jobsys::make_job(rclmt::jobsys::noop);
-	add_links_to(postSetup);
-	material_node->add_link(postSetup);
-	material_node->run();}
+	AddLinksTo(postSetup);
+	materialNode_->AddLink(postSetup);
+	materialNode_->Run();}}
 
 
-void FxAuraForLaura::draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) {
+void FxAuraForLaura::Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) {
 	using namespace rglv;
 	auto& dc = *_dc;
 	std::lock_guard<std::mutex> lock(dc.mutex);
-	if (material_node != nullptr) {
-		material_node->apply(_dc); }
+	if (materialNode_ != nullptr) {
+		materialNode_->Apply(_dc); }
 	dc.glMatrixMode(GL_PROJECTION);
 	dc.glLoadMatrix(*pmat);
 	dc.glMatrixMode(GL_MODELVIEW);
 	dc.glLoadMatrix(*mvmat);
-	dc.glUseArray(d_buffers[d_activeBuffer]);
-	dc.glDrawElements(GL_TRIANGLES, d_meshIndices.size(), GL_UNSIGNED_SHORT, d_meshIndices.data());
+	dc.glUseArray(buffers_[activeBuffer_]);
+	dc.glDrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data());
 	if (link != nullptr) {
 		rclmt::jobsys::run(link); } }
 

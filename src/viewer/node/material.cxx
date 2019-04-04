@@ -1,7 +1,7 @@
 #include "material.hxx"
 
 #include <memory>
-#include <string>
+#include <string_view>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rgl/rglr/rglr_texture.hxx"
@@ -14,52 +14,45 @@
 namespace rqdq {
 namespace rqv {
 
-using namespace std;
-
-void MaterialNode::connect(const string& attr, NodeBase* other, const string& slot) {
+void MaterialNode::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "texture0") {
-		texture0_node = dynamic_cast<TextureNode*>(other); }
+		textureNode0_ = static_cast<TextureNode*>(other); }
 	else if (attr == "texture1") {
-		texture1_node = dynamic_cast<TextureNode*>(other); }
+		textureNode1_ = static_cast<TextureNode*>(other); }
 	else if (attr == "u0") {
-		u0_node = dynamic_cast<ValuesBase*>(other);
-		u0_slot = slot; }
+		uNode0_ = static_cast<ValuesBase*>(other);
+		uSlot0_ = slot; }
 	else if (attr == "u1") {
-		u1_node = dynamic_cast<ValuesBase*>(other);
-		u1_slot = slot; }
+		uNode1_ = static_cast<ValuesBase*>(other);
+		uSlot1_ = slot; }
 	else {
-		NodeBase::connect(attr, other, slot); }}
+		NodeBase::Connect(attr, other, slot); }}
 
 
-vector<NodeBase*> MaterialNode::deps() {
-	vector<NodeBase*> out;
-	if (texture0_node != nullptr) {
-		out.push_back(texture0_node); }
-	if (texture1_node != nullptr) {
-		out.push_back(texture1_node); }
-	if (u0_node != nullptr) {
-		out.push_back(u0_node); }
-	if (u1_node != nullptr) {
-		out.push_back(u1_node); }
-	return out; }
+void MaterialNode::AddDeps() {
+	NodeBase::AddDeps();
+	AddDep(textureNode0_);
+	AddDep(textureNode1_);
+	AddDep(uNode0_);
+	AddDep(uNode1_); }
 
 
-void MaterialNode::apply(rglv::GL* _dc) {
+void MaterialNode::Apply(rglv::GL* _dc) {
 	auto& dc = *_dc;
-	dc.glUseProgram(int(d_program));
-	if (texture0_node != nullptr) {
-		auto& texture = texture0_node->getTexture();
-		dc.glBindTexture(0, texture.buf.data(), texture.width, texture.height, texture.stride, d_filter ? 1 : 0); }
-	if (texture1_node != nullptr) {
-		auto& texture = texture1_node->getTexture();
-		dc.glBindTexture(1, texture.buf.data(), texture.width, texture.height, texture.stride, d_filter ? 1 : 0); }
+	dc.glUseProgram(int(programId_));
+	if (textureNode0_ != nullptr) {
+		auto& texture = textureNode0_->GetTexture();
+		dc.glBindTexture(0, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
+	if (textureNode1_ != nullptr) {
+		auto& texture = textureNode1_->GetTexture();
+		dc.glBindTexture(1, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
 	dc.glEnable(rglv::GL_CULL_FACE);
-	if (u0_node) {
-		dc.glColor(u0_node->get(u0_slot).as_vec3()); }
-	if (u1_node) {
-		dc.glNormal(u1_node->get(u1_slot).as_vec3()); }
+	if (uNode0_) {
+		dc.glColor(uNode0_->Get(uSlot0_).as_vec3()); }
+	if (uNode1_) {
+		dc.glNormal(uNode1_->Get(uSlot1_).as_vec3()); }
 	// dc.vertex_input_uniform(VertexInputUniform{ sin(float(gt.elapsed()*3.0f)) * 0.5f + 0.5f });
-	}
+		}
 
 
 }  // namespace rqv

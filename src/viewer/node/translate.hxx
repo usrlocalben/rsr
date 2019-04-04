@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 #include "src/rcl/rclma/rclma_framepool.hxx"
@@ -17,74 +18,74 @@ namespace rqv {
 const int DEPTH_FORK_UNTIL = 100;
 
 
-struct RepeatOp : GlNode {
-	// config
-	int cnt;
-	const rmlv::vec3 translate_fixed;
-	const rmlv::vec3 rotate_fixed;
-	const rmlv::vec3 scale_fixed;
+class RepeatOp final : public GlNode {
+public:
+	RepeatOp(std::string_view id, InputList inputs, int cnt, rmlv::vec3 translate, rmlv::vec3 rotate, rmlv::vec3 scale)
+		:GlNode(id, std::move(inputs)),
+		cnt_(cnt),
+		translateFixed_(translate),
+		rotateFixed_(rotate),
+		scaleFixed_(scale) {}
 
-	// input
-	GlNode *lower = nullptr;
-	std::string scale_source_slot = "default";
-	ValuesBase* scale_source_node = nullptr;
-	std::string rotate_source_slot = "default";
-	ValuesBase* rotate_source_node = nullptr;
-	std::string translate_source_slot = "default";
-	ValuesBase* translate_source_node = nullptr;
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
 
-	RepeatOp(
-		const std::string& name,
-		const InputList& inputs,
-		const int cnt,
-		const rmlv::vec3 translate,
-		const rmlv::vec3 rotate,
-		const rmlv::vec3 scale
-	) :
-		GlNode(name, inputs),
-		cnt(cnt),
-		translate_fixed(translate),
-		rotate_fixed(rotate),
-		scale_fixed(scale)
-	{}
+	void AddDeps() override;
 
-	void connect(const std::string& attr, NodeBase* node, const std::string& slot) override;
-	std::vector<NodeBase*> deps() override;
-	void main() override;
+	void Main() override;
 
-	void draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) override;
+	void Draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) override;
 
-	static void after_draw(rclmt::jobsys::Job* job, const int tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+	static void AfterDraw(rclmt::jobsys::Job* job, const int tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
 		if (--counter != 0) {
 			return; }
 		rclmt::jobsys::run(link); }
 
-	rclmt::jobsys::Job* drawLower(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) {
-		return rclmt::jobsys::make_job(drawLowerJmp, std::tuple{this, dc, pmat, mvmat, link, depth}); }
-	static void drawLowerJmp(rclmt::jobsys::Job* job, const int tid, std::tuple<RepeatOp*, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const, rclmt::jobsys::Job*, int>* data) {
+	rclmt::jobsys::Job* DrawLower(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) {
+		return rclmt::jobsys::make_job(DrawLowerJmp, std::tuple{this, dc, pmat, mvmat, link, depth}); }
+	static void DrawLowerJmp(rclmt::jobsys::Job* job, const int tid, std::tuple<RepeatOp*, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const, rclmt::jobsys::Job*, int>* data) {
 		auto [self, dc, pmat, mvmat, link, depth] = *data;
-		self->lower->draw(dc, pmat, mvmat, link, depth); }};
+		self->lowerNode_->Draw(dc, pmat, mvmat, link, depth); }
 
+private:
+	// config
+	int cnt_;
+	rmlv::vec3 translateFixed_{};
+	rmlv::vec3 rotateFixed_{};
+	rmlv::vec3 scaleFixed_{};
 
-struct TranslateOp : GlNode {
 	// input
-	GlNode *lower = nullptr;
-	std::string scale_source_slot = "default";
-	ValuesBase* scale_source_node = nullptr;
-	std::string rotate_source_slot = "default";
-	ValuesBase* rotate_source_node = nullptr;
-	std::string translate_source_slot = "default";
-	ValuesBase* translate_source_node = nullptr;
+	GlNode *lowerNode_{nullptr};
+	std::string scaleSlot_{"default"};
+	ValuesBase* scaleNode_{nullptr};
+	std::string rotateSlot_{"default"};
+	ValuesBase* rotateNode_{nullptr};
+	std::string translateSlot_{"default"};
+	ValuesBase* translateNode_{nullptr}; };
 
-	TranslateOp(const std::string& name, const InputList& inputs) :GlNode(name, inputs) {}
 
-	void connect(const std::string& attr, NodeBase* other, const std::string& slot) override;
-	std::vector<NodeBase*> deps() override;
-	void main() override;
+class TranslateOp final : public GlNode {
+public:
+	TranslateOp(std::string_view id, InputList inputs)
+		:GlNode(id, std::move(inputs)) {}
 
-	void draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) override; };
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+
+	void AddDeps() override;
+
+	void Main() override;
+
+	void Draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) override;
+
+private:
+	GlNode *lowerNode_{nullptr};
+	std::string scaleSlot_{"default"};
+	ValuesBase* scaleNode_{nullptr};
+	std::string rotateSlot_{"default"};
+	ValuesBase* rotateNode_{nullptr};
+	std::string translateSlot_{"default"};
+	ValuesBase* translateNode_{nullptr}; };
 
 
 }  // namespace rqv

@@ -2,6 +2,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
@@ -36,149 +37,133 @@ inline rmlv::qfloat sdSphere(const rmlv::qfloat3& pos, const float r) {
 namespace rqv {
 
 struct AABB {
-	rmlv::vec3 left_top_back;
-	rmlv::vec3 right_bottom_front; };
+	rmlv::vec3 leftTopBack;
+	rmlv::vec3 rightBottomFront; };
 
 
 inline rmlv::vec3 midpoint(AABB block) {
-	return mix(block.left_top_back, block.right_bottom_front, 0.5f);}
+	return mix(block.leftTopBack, block.rightBottomFront, 0.5f);}
 
 
-struct BlockDivider {
-	std::vector<AABB> results;
+class BlockDivider {
+public:
+	std::vector<AABB> results_;
 
-	void compute(AABB _block, int limit) {
+	void Compute(AABB _block, int limit) {
 		using rmlv::vec3;
 		if (limit == 0) {
-			results.push_back(_block);
+			results_.emplace_back(_block);
 			return; }
 
 		const auto mid = midpoint(_block);
+		const auto ltb = _block.leftTopBack;
+		const auto rbf = _block.rightBottomFront;
 
-		// BACK
-		//   TOP
-		//     LEFT
-		AABB ltb{
-			vec3{     _block.left_top_back.x,      _block.left_top_back.y, _block.left_top_back.z},
-			vec3{                      mid.x,                       mid.y,                  mid.z} };
-		//     RIGHT
-		AABB rtb{
-			vec3{                      mid.x,      _block.left_top_back.y, _block.left_top_back.z},
-			vec3{_block.right_bottom_front.x,                       mid.y,                  mid.z} };
-		//   BOTTOM
-		//     LEFT
-		AABB lbb{
-			vec3{     _block.left_top_back.x,                       mid.y, _block.left_top_back.z},
-			vec3{                      mid.x, _block.right_bottom_front.y,                  mid.z} };
-		//     RIGHT
-		AABB rbb{
-			vec3{                      mid.x,                       mid.y, _block.left_top_back.z},
-			vec3{_block.right_bottom_front.x, _block.right_bottom_front.y,                  mid.z} };
-		// FRONT
-		//   TOP
-		//     LEFT
-		AABB ltf{
-			vec3{     _block.left_top_back.x,      _block.left_top_back.y,                       mid.z},
-			vec3{                      mid.x,                       mid.y, _block.right_bottom_front.z} };
-		//     RIGHT
-		AABB rtf{
-			vec3{                      mid.x,      _block.left_top_back.y,                       mid.z},
-			vec3{_block.right_bottom_front.x,                       mid.y, _block.right_bottom_front.z} };
-		//   BOTTOM
-		//     LEFT
-		AABB lbf{
-			vec3{     _block.left_top_back.x,                       mid.y,                       mid.z},
-			vec3{                      mid.x, _block.right_bottom_front.y, _block.right_bottom_front.z} };
-		//     RIGHT
-		AABB rbf{
-			vec3{                      mid.x,                       mid.y,                       mid.z},
-			vec3{_block.right_bottom_front.x, _block.right_bottom_front.y, _block.right_bottom_front.z} };
+		const auto subBlocks = std::array{
+			// BACK
+			//   TOP
+			//     LEFT
+			AABB{ vec3{ ltb.x, ltb.y, ltb.z }, vec3{ mid.x, mid.y, mid.z } },
+			//     RIGHT
+			AABB{ vec3{ mid.x, ltb.y, ltb.z }, vec3{ rbf.x, mid.y, mid.z } },
+			//   BOTTOM
+			//     LEFT
+			AABB{ vec3{ ltb.x, mid.y, ltb.z }, vec3{ mid.x, rbf.y, mid.z } },
+			//     RIGHT
+			AABB{ vec3{ mid.x, mid.y, ltb.z }, vec3{ rbf.x, rbf.y, mid.z } },
+			// FRONT
+			//   TOP
+			//     LEFT
+			AABB{ vec3{ ltb.x, ltb.y, mid.z }, vec3{ mid.x, mid.y, rbf.z } },
+			//     RIGHT
+			AABB{ vec3{ mid.x, ltb.y, mid.z }, vec3{ rbf.x, mid.y, rbf.z } },
+			//   BOTTOM
+			//     LEFT
+			AABB{ vec3{ ltb.x, mid.y, mid.z }, vec3{ mid.x, rbf.y, rbf.z } },
+			//     RIGHT
+			AABB{ vec3{ mid.x, mid.y, mid.z }, vec3{ rbf.x, rbf.y, rbf.z } } };
 
-		std::array<AABB, 8> subBlocks = { ltb, rtb, lbb, rbb, ltf, rtf, lbf, rbf };
-		for (const auto& block : subBlocks) {
-			compute(block, limit - 1); }}
+		for (const auto& subBlock : subBlocks) {
+			Compute(subBlock, limit - 1); }}
 
-	void clear() {
-		results.clear(); } };
+	void Clear() {
+		results_.clear(); } };
+
 
 struct Surface {
-	float timeInSeconds;
-
 	float sample(rmlv::vec3 pos) const {
-		float distort = 0.60f * sin(5.0f*(pos.x + timeInSeconds / 4.0f))* sin(2.0f*(pos.y + (timeInSeconds / 1.33f))); // *sin(50.0*sz);
+		float distort = 0.60f * sin(5.0f*(pos.x + timeInSeconds_ / 4.0f))* sin(2.0f*(pos.y + (timeInSeconds_ / 1.33f))); // *sin(50.0*sz);
 		//return sdSphere(pos, 3.0f); }
-		return sdSphere(pos, 3.0f) + (distort * sin(timeInSeconds / 2.0f) + 1.0f); }
+		return sdSphere(pos, 3.0f) + (distort * sin(timeInSeconds_ / 2.0f) + 1.0f); }
 
 	rmlv::mvec4f sample(rmlv::qfloat3 pos) const {
 		using rmlv::mvec4f;
-		auto T = mvec4f{ timeInSeconds };
+		auto T = mvec4f{ timeInSeconds_ };
 		auto distort = mvec4f{0.30f} * sin(5.0f*(pos.x + T / 4.0f))* sin(2.0f*(pos.y + (T / 1.33f))); // *sin(50.0*sz);
 		//return sdSphere(pos, 3.0f); }
 		return sdSphere(pos, 3.0f) + (distort * sin(T / 2.0f) + 1.0f); }
 
-	void update(float t) {
-		timeInSeconds = t; }};
+	void Update(float t) {
+		timeInSeconds_ = t; }
+
+private:
+	float timeInSeconds_; };
 
 
-struct FxMC : GlNode {
-	Surface d_field;
+class FxMC final : public GlNode {
+public:
+	FxMC(std::string_view id, InputList inputs, int precision, int forkDepth, float range)
+		:GlNode(id, std::move(inputs)), precision_(precision), forkDepth_(forkDepth), range_(range) {
+		buffers_[0].reserve(4096);
+		buffers_[1].reserve(4096);
+		buffers_[2].reserve(4096); }
 
-	std::array<std::vector<rglv::VertexArray_F3F3F3>, 3> d_buffers;
-	std::array<std::atomic<int>, 3> d_bufferEnd = { 0,0,0 };
-	std::atomic<int> d_activeBuffer = 0;
-	std::mutex d_bufferMutex;
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+	void Main() override;
 
-	BlockDivider blockDivider;
+	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth) override;
+
+private:
+	void SwapBuffers();
+	rglv::VertexArray_F3F3F3& AllocVAO();
+
+	rclmt::jobsys::Job* Finalize() {
+		return rclmt::jobsys::make_job(FxMC::FinalizeJmp, std::tuple{this}); }
+	static void FinalizeJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<FxMC*>* data) {
+		auto&[self] = *data;
+		self->FinalizeImpl(); }
+	void FinalizeImpl() {
+		RunLinks(); }
+
+	rclmt::jobsys::Job* Resolve(AABB block, int dim, rclmt::jobsys::Job* parent = nullptr) {
+		if (parent != nullptr) {
+			return rclmt::jobsys::make_job_as_child(parent, FxMC::ResolveJmp, std::tuple{this, block, dim}); }
+		return rclmt::jobsys::make_job(FxMC::ResolveJmp, std::tuple{this, block, dim}); }
+	static void ResolveJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<FxMC*, AABB, int>* data) {
+		auto&[self, block, dim] = *data;
+		self->ResolveImpl(block, dim, threadId);}
+	void ResolveImpl(AABB block, int dim, int threadId);
+
+private:
+	Surface field_;
+
+	std::array<std::vector<rglv::VertexArray_F3F3F3>, 3> buffers_;
+	std::array<std::atomic<int>, 3> bufferEnd_{ 0, 0, 0 };
+	std::atomic<int> activeBuffer_{0};
+	std::mutex bufferMutex_{};
+
+	BlockDivider blockDivider_{};
 
 	// config
-	rglr::Texture d_envmap;
-	const int d_precision;
-	const int d_forkDepth;
-	ShaderProgramId d_program;
-	const float d_range;
+	rglr::Texture envmap_;
+	int precision_;
+	int forkDepth_;
+	float range_;
 
 	// connections
-	MaterialNode* material_node = nullptr;
-	ValuesBase* frob_node = nullptr;
-	std::string frob_slot;
-
-	FxMC(
-		const std::string& name,
-		const InputList& inputs,
-		const int precision,
-		const int forkDepth,
-		const float range
-	) :GlNode(name, inputs), d_precision(precision), d_forkDepth(forkDepth), d_range(range) {
-		d_buffers[0].reserve(4096);
-		d_buffers[1].reserve(4096);
-		d_buffers[2].reserve(4096); }
-
-	void connect(const std::string& /*attr*/, NodeBase* /*other*/, const std::string& /*slot*/) override;
-	void main() override;
-
-	void draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth) override;
-
-	void swapBuffers();
-	rglv::VertexArray_F3F3F3& allocVAO();
-
-	rclmt::jobsys::Job* finalize() {
-		return rclmt::jobsys::make_job(FxMC::finalizeJmp, std::tuple{this}); }
-	static void finalizeJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<FxMC*>* data) {
-		auto&[self] = *data;
-		self->finalizeImpl(); }
-	void finalizeImpl() {
-		// XXX could possibly defer to nodebase::main();
-		for (auto link : links) {
-			rclmt::jobsys::run(link); }}
-
-	rclmt::jobsys::Job* resolve(AABB block, int dim, rclmt::jobsys::Job* parent = nullptr) {
-		if (parent != nullptr) {
-			return rclmt::jobsys::make_job_as_child(parent, FxMC::resolveJmp, std::tuple{this, block, dim}); }
-		return rclmt::jobsys::make_job(FxMC::resolveJmp, std::tuple{this, block, dim}); }
-	static void resolveJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<FxMC*, AABB, int>* data) {
-		auto&[self, block, dim] = *data;
-		self->resolveImpl(block, dim, threadId);}
-	void resolveImpl(AABB block, int dim, int threadId); };
+	MaterialNode* materialNode_{nullptr};
+	ValuesBase* frobNode_{nullptr};
+	std::string frobSlot_; };
 
 
 }  // namespace rqv

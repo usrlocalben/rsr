@@ -1,7 +1,8 @@
 #include "fx_carpet.hxx"
 
 #include <memory>
-#include <string>
+#include <mutex>
+#include <string_view>
 
 #include "src/rgl/rglv/rglv_mesh.hxx"
 #include "src/viewer/node/base.hxx"
@@ -12,42 +13,41 @@
 namespace rqdq {
 namespace rqv {
 
-using namespace std;
-
-void FxCarpet::connect(const string& attr, NodeBase* other, const string& slot) {
+void FxCarpet::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "material") {
-		material_node = dynamic_cast<MaterialNode*>(other); }
+		materialNode_ = static_cast<MaterialNode*>(other); }
 	else if (attr == "freq") {
-		freq_node = dynamic_cast<ValuesBase*>(other);
-		freq_slot = slot; }
+		freqNode_ = static_cast<ValuesBase*>(other);
+		freqSlot_ = slot; }
 	else if (attr == "phase") {
-		phase_node = dynamic_cast<ValuesBase*>(other);
-		phase_slot = slot; }
+		phaseNode_ = static_cast<ValuesBase*>(other);
+		phaseSlot_ = slot; }
 	else {
-		GlNode::connect(attr, other, slot);}}
+		GlNode::Connect(attr, other, slot);}}
 
 
-std::vector<NodeBase*> FxCarpet::deps() {
-	std::vector<NodeBase*> out;
-	out.push_back(material_node);
-	if (freq_node) out.push_back(freq_node);
-	if (phase_node) out.push_back(phase_node);
-	return out; }
+void FxCarpet::AddDeps() {
+	AddDep(materialNode_);
+	AddDep(freqNode_);
+	AddDep(phaseNode_); }
 
 
-void FxCarpet::main() {
-	rclmt::jobsys::run(compute());}
+void FxCarpet::Main() {
+	rclmt::jobsys::run(Compute());}
 
-void FxCarpet::computeImpl() {
+
+void FxCarpet::ComputeImpl() {
 	using rmlv::ivec2, rmlv::vec3, rmlv::vec2;
-	if (++d_activeBuffer > 2) d_activeBuffer = 0;
-	auto& vao = d_buffers[d_activeBuffer];
+	activeBuffer_ = (activeBuffer_+1) % 3;
+	auto& vao = buffers_[activeBuffer_];
 	vao.clear();
 
 	rmlv::vec3 freq{ 0.0f };
 	rmlv::vec3 phase{ 0.0f };
-	if (freq_node) freq = freq_node->get(freq_slot).as_vec3();
-	if (phase_node) phase = phase_node->get(phase_slot).as_vec3();
+	if (freqNode_ != nullptr) {
+		freq = freqNode_->Get(freqSlot_).as_vec3(); }
+	if (phaseNode_ != nullptr) {
+		phase = phaseNode_->Get(phaseSlot_).as_vec3();}
 
 	vec3 leftTopP{ -1.0f, 0.5f, 0 };
 	vec3 leftTopT{ 0.0f, 1.0f, 0 };
@@ -76,22 +76,22 @@ void FxCarpet::computeImpl() {
 	emitQuad(leftTopP, leftTopT, rightBottomP, rightBottomT);
 
 	auto postSetup = rclmt::jobsys::make_job(rclmt::jobsys::noop);
-	add_links_to(postSetup);
-	material_node->add_link(postSetup);
-	material_node->run();}
+	AddLinksTo(postSetup);
+	materialNode_->AddLink(postSetup);
+	materialNode_->Run();}
 
 
-void FxCarpet::draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) {
+void FxCarpet::Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) {
 	using namespace rglv;
 	auto& dc = *_dc;
 	std::lock_guard<std::mutex> lock(dc.mutex);
-	if (material_node != nullptr) {
-		material_node->apply(_dc); }
+	if (materialNode_ != nullptr) {
+		materialNode_->Apply(_dc); }
 	dc.glMatrixMode(GL_PROJECTION);
 	dc.glLoadMatrix(*pmat);
 	dc.glMatrixMode(GL_MODELVIEW);
 	dc.glLoadMatrix(*mvmat);
-	dc.glUseArray(d_buffers[d_activeBuffer]);
+	dc.glUseArray(buffers_[activeBuffer_]);
 	dc.glDrawArrays(GL_TRIANGLES, 0, 6);
 	if (link != nullptr) {
 		rclmt::jobsys::run(link); } }

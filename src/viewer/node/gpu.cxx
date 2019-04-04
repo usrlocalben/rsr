@@ -1,6 +1,7 @@
 #include "gpu.hxx"
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <tuple>
 
@@ -18,63 +19,60 @@ using namespace std;
 namespace jobsys = rclmt::jobsys;
 
 
-GPUNode::GPUNode(const string& name,
-                 const InputList& inputs) :
-	NodeBase(name, inputs),
-	gpu() {}
+GPUNode::GPUNode(string_view id, InputList inputs)
+	:NodeBase(id, std::move(inputs)), gpu() {}
 
 
-void GPUNode::connect(const string& attr, NodeBase *other, const string& slot) {
+void GPUNode::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "layer") {
-		layers.push_back(dynamic_cast<LayerNode*>(other)); }
+		layers_.push_back(static_cast<LayerNode*>(other)); }
 	else {
-		NodeBase::connect(attr, other, slot); }}
+		NodeBase::Connect(attr, other, slot); }}
 
 
-vector<NodeBase*> GPUNode::deps() {
-	vector<NodeBase*> nodes;
-	for (auto node : layers) {
-		nodes.push_back(node); }
-	return nodes; }
+void GPUNode::AddDeps() {
+	NodeBase::AddDeps();
+	for (auto node : layers_) {
+		AddDep(node); }}
 
 
-void GPUNode::reset() {
-	NodeBase::reset();
-	width = {};
-	height = {};
-	tile_dim = {}; }
+void GPUNode::Reset() {
+	NodeBase::Reset();
+	width_ = {};
+	height_ = {};
+	tileDim_ = {}; }
 
 
-void GPUNode::main() {
+void GPUNode::Main() {
 	namespace jobsys = jobsys;
 	using rmlv::ivec2, rmlv::vec3, rmlv::vec4;
 
-	const int targetWidth = width.value_or(256);
-	const int targetHeight = height.value_or(256);
-	const ivec2 td = tile_dim.value_or(ivec2{8, 8});
+	const int targetWidth = width_.value_or(256);
+	const int targetHeight = height_.value_or(256);
+	const ivec2 td = tileDim_.value_or(ivec2{8, 8});
 	gpu.reset(ivec2{ targetWidth, targetHeight }, td);
 	auto& ic = gpu.IC();
 
 	auto backgroundColor = vec3{ 0, 0, 0 };
-	if (layers.size()) {
-		auto& firstLayer = layers[0];
-		backgroundColor = firstLayer->getBackgroundColor(); }
+	if (layers_.size()) {
+		auto& firstLayer = layers_[0];
+		backgroundColor = firstLayer->GetBackgroundColor(); }
 	ic.glClear(vec4{ backgroundColor, 1.0f });
 
-	if (layers.size() == 0) {
-		jobsys::Job *postJob = post();
-		add_links_to(postJob);
+	if (layers_.empty()) {
+		jobsys::Job *postJob = Post();
+		AddLinksTo(postJob);
 		jobsys::run(postJob);
 		return; }
 
-	jobsys::Job *drawJob = draw();
-	for (auto layer : layers) {
-		layer->add_link(after_all(drawJob)); }
-	for (auto layer : layers) {
-		layer->run(); } }
+	jobsys::Job *drawJob = Draw();
+	for (auto layer : layers_) {
+		layer->AddLink(AfterAll(drawJob)); }
+	for (auto layer : layers_) {
+		layer->Run(); } }
 
 
-void GPUNode::all_then(jobsys::Job* job, const unsigned tid, std::tuple<std::atomic<int>*, jobsys::Job*>* data) {
+void GPUNode::AllThen(jobsys::Job* job, const unsigned tid, std::tuple<std::atomic<int>*, jobsys::Job*>* data) {
 	auto [cnt, link] = *data;
 	auto& counter = *cnt;
 	if (--counter != 0) {
@@ -82,16 +80,16 @@ void GPUNode::all_then(jobsys::Job* job, const unsigned tid, std::tuple<std::ato
 	jobsys::run(link); }
 
 
-void GPUNode::drawImpl() {
-	const int targetWidth = width.value_or(256);
-	const int targetHeight = height.value_or(256);
-	const float targetAspect = aspect.value_or(float(targetWidth) / float(targetHeight));
+void GPUNode::DrawImpl() {
+	const int targetWidth = width_.value_or(256);
+	const int targetHeight = height_.value_or(256);
+	const float targetAspect = aspect_.value_or(float(targetWidth) / float(targetHeight));
 
-	pcnt = layers.size();
-	jobsys::Job *postJob = post();
-	add_links_to(postJob);
-	for (auto layer : layers) {
-		layer->render(&gpu.IC(), targetWidth, targetHeight, targetAspect, jobsys::make_job(GPUNode::all_then, std::tuple{&pcnt, postJob})); } }
+	pcnt_ = layers_.size();
+	jobsys::Job *postJob = Post();
+	AddLinksTo(postJob);
+	for (auto layer : layers_) {
+		layer->Render(&gpu.IC(), targetWidth, targetHeight, targetAspect, jobsys::make_job(GPUNode::AllThen, std::tuple{&pcnt_, postJob})); } }
 
 
 }  // namespace rqv

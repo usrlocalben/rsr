@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
@@ -21,35 +22,25 @@
 namespace rqdq {
 namespace rqv {
 
-struct FxFoo : GlNode {
+class FxFoo final : public GlNode {
+public:
+	FxFoo(std::string_view id, InputList inputs, const rglv::Mesh& mesh)
+		:GlNode(id, std::move(inputs)) {
+		std::tie(meshVAO_, meshIndices_) = rglv::make_indexed_vao_F3F3F3(mesh); }
+
+	void Connect(std::string_view, NodeBase* other, std::string_view slot) override;
+
+	void AddDeps() override;
+
+	void Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) override;
+
+private:
 	// config
-	rglv::VertexArray_F3F3F3 meshVAO;
-	rcls::vector<uint16_t> meshIndices;
+	rglv::VertexArray_F3F3F3 meshVAO_;
+	rcls::vector<uint16_t> meshIndices_;
 
 	// inputs
-	MaterialNode* material_node = nullptr;
-
-	FxFoo(const std::string& name, const InputList& inputs, const rglv::Mesh& mesh) :GlNode(name, inputs) {
-		std::tie(meshVAO, meshIndices) = rglv::make_indexed_vao_F3F3F3(mesh); }
-
-	void connect(const std::string&, NodeBase*, const std::string&) override;
-	std::vector<NodeBase*> deps() override;
-
-	void draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) override {
-		using namespace rglv;
-		auto& dc = *_dc;
-		std::lock_guard<std::mutex> lock(dc.mutex);
-		if (material_node != nullptr) {
-			material_node->apply(_dc); }
-		dc.glMatrixMode(GL_PROJECTION);
-		dc.glLoadMatrix(*pmat);
-		dc.glMatrixMode(GL_MODELVIEW);
-		dc.glLoadMatrix(*mvmat);
-		dc.glUseArray(meshVAO);
-		dc.glDrawElements(GL_TRIANGLES, meshIndices.size(), GL_UNSIGNED_SHORT, meshIndices.data());
-		if (link != nullptr) {
-			rclmt::jobsys::run(link); }}};
-
+	MaterialNode* materialNode_{nullptr}; };
 
 }  // namespace rqv
 }  // namespace rqdq

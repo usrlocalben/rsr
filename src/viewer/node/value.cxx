@@ -1,24 +1,30 @@
 #include "value.hxx"
 
 #include <memory>
+#include <stdexcept>
 
 namespace rqdq {
 namespace rqv {
 
-ValueType name_to_type(const std::string& name) {
-	if (name == "integer") {
-		return ValueType::Integer; }
-	else if (name == "real") {
-		return ValueType::Real; }
-	else if (name == "vec2") {
-		return ValueType::Vec2; }
-	else if (name == "vec3") {
-		return ValueType::Vec3; }
-	else if (name == "vec4") {
-		return ValueType::Vec4; }
+ValueType ValueTypeSerializer::Deserialize(std::string_view data) {
+	     if (data == "integer") { return ValueType::Integer; }
+	else if (data == "real")    { return ValueType::Real; }
+	else if (data == "vec2")    { return ValueType::Vec2; }
+	else if (data == "vec3")    { return ValueType::Vec3; }
+	else if (data == "vec4")    { return ValueType::Vec4; }
 	else {
-		std::cout << "invalid value type \"" << name << "\", using real" << std::endl;
+		std::cerr << "invalid value type \"" << data << "\", using real" << std::endl;
 		return ValueType::Real; }}
+
+
+std::string_view ValueTypeSerializer::Serialize(ValueType item) {
+	switch (item) {
+	case ValueType::Integer: return "integer"; 
+	case ValueType::Real:    return "real"; 
+	case ValueType::Vec2:    return "vec2"; 
+	case ValueType::Vec3:    return "vec3"; 
+	case ValueType::Vec4:    return "vec4";
+	default: throw std::runtime_error("refusing to serialize invalid ValueType"); }}
 
 
 }  // namespace rqv

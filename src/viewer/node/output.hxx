@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <string_view>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
@@ -9,33 +10,36 @@
 namespace rqdq {
 namespace rqv {
 
-struct OutputNode : public NodeBase {
-	// received
-	rglr::TrueColorCanvas * outcanvas = nullptr;
-	int width, height;
-	bool double_buffer;
-	rmlv::ivec2 tile_dim;
+class OutputNode : public NodeBase {
+public:
+	OutputNode(std::string_view id, InputList inputs)
+		:NodeBase(id, std::move(inputs)) {}
 
-	OutputNode(const std::string& name, const InputList& inputs) :NodeBase(name, inputs) {}
+	void Reset() override {
+		NodeBase::Reset();
+		doubleBuffer_ = false;
+		tileDim_ = rmlv::ivec2{8,8};
+		width_ = 0;
+		height_ = 0;
+		outCanvas_ = nullptr; }
 
-	void reset() override {
-		NodeBase::reset();
-		double_buffer = false;
-		tile_dim = rmlv::ivec2{8,8};
-		width = 0;
-		height = 0;
-		outcanvas = nullptr; }
+	virtual void SetOutputCanvas(rglr::TrueColorCanvas* canvas) {
+		outCanvas_ = canvas;
+		width_ = canvas->width();
+		height_ = canvas->height(); }
 
-	virtual void set_output_canvas(rglr::TrueColorCanvas *canvas) {
-		outcanvas = canvas;
-		width = canvas->width();
-		height = canvas->height(); }
+	virtual void SetDoubleBuffer(bool enable) {
+		doubleBuffer_ = enable; }
 
-	virtual void set_double_buffer(bool enable) {
-		double_buffer = enable; }
+	virtual void SetTileDim(rmlv::ivec2 dim) {
+		tileDim_ = std::move(dim); }
 
-	virtual void set_tile_dim(const rmlv::ivec2 dim) {
-		tile_dim = dim; }};
+protected:
+	rglr::TrueColorCanvas* outCanvas_{nullptr};
+	int width_{0};
+	int height_{0};
+	bool doubleBuffer_{false};
+	rmlv::ivec2 tileDim_{8, 8}; };
 
 
 }  // namespace rqv

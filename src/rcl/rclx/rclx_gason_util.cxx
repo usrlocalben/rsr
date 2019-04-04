@@ -1,9 +1,11 @@
 #include "src/rcl/rclx/rclx_gason_util.hxx"
-#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
+
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include "3rdparty/gason/gason.h"
 
@@ -12,8 +14,7 @@ using namespace std::string_literals;
 namespace rqdq {
 namespace rclx {
 
-
-std::optional<JsonValue> jv_find(const JsonValue& data, const std::string& key, int tag) {
+std::optional<JsonValue> jv_find(const JsonValue& data, std::string_view key, int tag) {
 	for (const auto& item : data) {
 		if (key == item->key) {
 			if (tag == -1 || item->value.getTag() == tag) {
@@ -55,6 +56,7 @@ std::variant<std::monostate, std::string, rmlv::vec3> jv_decode_ref_or_vec3(cons
 			return *value; }
 	default: break; }
 	return {}; }
+
 
 }  // namespace rclx
 }  // namespace rqdq

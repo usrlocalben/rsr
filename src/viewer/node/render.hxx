@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -17,128 +18,140 @@
 namespace rqdq {
 namespace rqv {
 
-struct RenderNode : OutputNode {
-	// internal
-	rglr::QFloat4Canvas internal_color_canvas;
-	rglr::QFloatCanvas internal_depth_canvas;
+class RenderNode : public OutputNode {
+public:
+	RenderNode(std::string_view id, InputList inputs, ShaderProgramId programId, bool sRGB)
+		:OutputNode(id, std::move(inputs)), programId_(programId), sRGB_(sRGB) {}
 
-	// config
-	const ShaderProgramId program;
-	const bool sRGB;
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
 
-	// inputs
-	GPUNode* gpu_node = nullptr;
+	void AddDeps() override;
 
-	// received
-	rglr::QFloat4Canvas* colorcanvas;
-	rglr::FloatingPointCanvas* smallcanvas;
+	void Reset() override;
 
-	RenderNode(const std::string& name, const InputList& inputs, ShaderProgramId program, bool sRGB) :OutputNode(name, inputs), program(program), sRGB(sRGB) {}
+	bool IsValid() override;
 
-	void connect(const std::string& attr, NodeBase* other, const std::string& slot) override;
-	std::vector<NodeBase*> deps() override;
-	void reset() override;
-	bool validate_settings() override;
-	void main() override;
+	void Main() override;
 
-	rclmt::jobsys::Job* render() {
-		return rclmt::jobsys::make_job(RenderNode::renderJmp, std::tuple{this}); }
-	static void renderJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<RenderNode*> * data) {
+	rclmt::jobsys::Job* Render() {
+		return rclmt::jobsys::make_job(RenderNode::RenderJmp, std::tuple{this}); }
+	static void RenderJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<RenderNode*> * data) {
 		auto&[self] = *data;
-		self->renderImpl(); }
-	void renderImpl() {
-		auto& gpu = gpu_node->gpu;
-		gpu.enableDoubleBuffering = this->double_buffer;
-		gpu.d_cc = &get_colorcanvas();
-		gpu.d_dc = &get_depthcanvas();
+		self->RenderImpl(); }
+	void RenderImpl() {
+		auto& gpu = gpuNode_->get_gpu();
+		gpu.enableDoubleBuffering = doubleBuffer_;
+		gpu.d_cc = GetColorCanvas();
+		gpu.d_dc = GetDepthCanvas();
 		auto& ic = gpu.IC();
-		if (smallcanvas != nullptr) {
-			ic.storeHalfsize(smallcanvas); }
-		if (outcanvas != nullptr) {
-			ic.glUseProgram(int(program));
-			ic.storeTrueColor(sRGB, outcanvas); }
+		if (smallCanvas_ != nullptr) {
+			ic.storeHalfsize(smallCanvas_); }
+		if (outCanvas_ != nullptr) {
+			ic.glUseProgram(int(programId_));
+			ic.storeTrueColor(sRGB_, outCanvas_); }
 		ic.endDrawing();
 		auto renderJob = gpu.render();
-		add_links_to(renderJob);
+		AddLinksTo(renderJob);
 		rclmt::jobsys::run(renderJob); }
 
-	void set_color_canvas(rglr::QFloat4Canvas *canvas) {
-		colorcanvas = canvas;
-		width = canvas->width();
-		height = canvas->height(); }
+	void SetColorCanvas(rglr::QFloat4Canvas* canvas) {
+		colorCanvas_ = canvas;
+		width_ = canvas->width();
+		height_ = canvas->height(); }
 
-	void set_small_canvas(rglr::FloatingPointCanvas *canvas) {
-		smallcanvas = canvas;
-		width = canvas->width();
-		height = canvas->height(); }
+	void SetSmallCanvas(rglr::FloatingPointCanvas* canvas) {
+		smallCanvas_ = canvas;
+		width_ = canvas->width();
+		height_ = canvas->height(); }
 
-	rglr::QFloatCanvas& get_depthcanvas() {
-		internal_depth_canvas.resize(width, height);
-		return internal_depth_canvas; }
+	rglr::QFloatCanvas* GetDepthCanvas() {
+		internalDepthCanvas_.resize(width_, height_);
+		return &internalDepthCanvas_; }
 
-	rglr::QFloat4Canvas& get_colorcanvas() {
-		if (colorcanvas != nullptr) {
+	rglr::QFloat4Canvas* GetColorCanvas() {
+		if (colorCanvas_ != nullptr) {
 			// std::cout << "renderer will use a provided colorcanvas" << std::endl;
-			return *colorcanvas; }
+			return colorCanvas_; }
 		else {
 			// std::cout << "renderer will use its internal colorcanvas" << std::endl;
-			// internal_color_canvas.resize(width, height);
-			return internal_color_canvas; } }};
+			// internalColorCanvas_.resize(width, height);
+			return &internalColorCanvas_; } }
+
+	// internal
+	rglr::QFloat4Canvas internalColorCanvas_;
+	rglr::QFloatCanvas internalDepthCanvas_;
+
+	// config
+	ShaderProgramId programId_;
+	bool sRGB_;
+
+	// inputs
+	GPUNode* gpuNode_{nullptr};
+
+	// received
+	rglr::QFloat4Canvas* colorCanvas_;
+	rglr::FloatingPointCanvas* smallCanvas_; };
 
 
 // XXX multiple inheritance can be used here
-struct RenderToTexture : TextureNode {
-	// internal
-	rglr::QFloat4Canvas internal_color_canvas;
-	rglr::QFloatCanvas internal_depth_canvas;
-	rglr::Texture d_out;
+class RenderToTexture : public TextureNode {
+public:
+	RenderToTexture(std::string_view id, InputList inputs, int width, int height, float pa, bool aa);
 
-	rglr::FloatingPointCanvas d_outCanvas;
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+
+	void AddDeps() override;
+
+	bool IsValid() override;
+
+	void Main() override;
+
+	rclmt::jobsys::Job* Render() {
+		return rclmt::jobsys::make_job(RenderToTexture::RenderJmp, std::tuple{this}); }
+	static void RenderJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<RenderToTexture*> * data) {
+		auto&[self] = *data;
+		self->RenderImpl(); }
+	void RenderImpl();
+
+	rclmt::jobsys::Job* PostProcess() {
+		return rclmt::jobsys::make_job(RenderToTexture::PostProcessJmp, std::tuple{this}); }
+	static void PostProcessJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<RenderToTexture*>* data) {
+		auto&[self] = *data;
+		self->PostProcessImpl(); }
+	void PostProcessImpl();
+
+	rglr::QFloatCanvas& GetDepthCanvas() {
+		const int renderWidth = enableAA_ ? width_*2 : width_;
+		const int renderHeight = enableAA_ ? height_*2 : height_;
+		internalDepthCanvas_.resize(renderWidth, renderHeight);
+		return internalDepthCanvas_; }
+
+	rglr::QFloat4Canvas& GetColorCanvas() {
+		const int renderWidth = enableAA_ ? width_*2 : width_;
+		const int renderHeight = enableAA_ ? height_*2 : height_;
+		internalColorCanvas_.resize(renderWidth, renderHeight);
+		return internalColorCanvas_; }
+
+	const rglr::Texture& GetTexture() override {
+		return outputTexture_; }
+
+private:
+	rglr::QFloat4Canvas internalColorCanvas_;
+	rglr::QFloatCanvas internalDepthCanvas_;
+
+	rglr::Texture outputTexture_;
+
+	rglr::FloatingPointCanvas outCanvas_;
 
 	// config
-	const int d_width;
-	const int d_height;
-	const float d_aspect;
-	const bool d_aa;
+	int width_{0};
+	int height_{0};
+	float aspect_{1.0};
+	bool enableAA_{false};
 
 	// inputs
-	GPUNode* gpu_node = nullptr;
+	GPUNode* gpuNode_{nullptr}; };
 
-	RenderToTexture(const std::string& name, const InputList& inputs, int width, int height, float pa, bool aa);
-
-	void connect(const std::string& attr, NodeBase* other, const std::string& slot) override;
-	std::vector<NodeBase*> deps() override;
-	bool validate_settings() override;
-	void main() override;
-
-	rclmt::jobsys::Job* render() {
-		return rclmt::jobsys::make_job(RenderToTexture::renderJmp, std::tuple{this}); }
-	static void renderJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<RenderToTexture*> * data) {
-		auto&[self] = *data;
-		self->renderImpl(); }
-	void renderImpl();
-
-	rclmt::jobsys::Job* postProcess() {
-		return rclmt::jobsys::make_job(RenderToTexture::postProcessJmp, std::tuple{this}); }
-	static void postProcessJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<RenderToTexture*>* data) {
-		auto&[self] = *data;
-		self->postProcessImpl(); }
-	void postProcessImpl();
-
-	rglr::QFloatCanvas& get_depthcanvas() {
-		const int renderWidth = d_aa ? d_width * 2 : d_width;
-		const int renderHeight = d_aa ? d_height * 2 : d_height;
-		internal_depth_canvas.resize(renderWidth, renderHeight);
-		return internal_depth_canvas; }
-
-	rglr::QFloat4Canvas& get_colorcanvas() {
-		const int renderWidth = d_aa ? d_width * 2 : d_width;
-		const int renderHeight = d_aa ? d_height * 2 : d_height;
-		internal_color_canvas.resize(renderWidth, renderHeight);
-		return internal_color_canvas; }
-
-	const rglr::Texture& getTexture() override {
-		return d_out; }};
 
 
 }  // namespace rqv

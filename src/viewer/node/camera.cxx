@@ -1,16 +1,16 @@
 #include "camera.hxx"
 
+#include <string_view>
+
 namespace rqdq {
 namespace rqv {
 
-using namespace std;
-
-void ManCamNode::connect(const string& attr, NodeBase* other, const std::string& slot) {
+void ManCamNode::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "position") {
-		position_node = dynamic_cast<ValuesBase*>(other);
-		position_slot = slot; }
+		positionNode_ = static_cast<ValuesBase*>(other);
+		positionSlot_ = slot; }
 	else {
-		cout << "ManCamNode(" << name << ") attempted to add " << other->name << ":" << slot << " as " << attr << endl; }}
+		CameraNode::Connect(attr, other, slot); }}
 
 
 }  // namespace rqv

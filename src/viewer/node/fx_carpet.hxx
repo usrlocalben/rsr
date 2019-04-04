@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
@@ -21,33 +22,40 @@
 namespace rqdq {
 namespace rqv {
 
-struct FxCarpet final : GlNode {
+class FxCarpet final : public GlNode {
+public:
+	FxCarpet(std::string_view id, InputList inputs)
+		:GlNode(id, std::move(inputs)) {}
+
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+	void AddDeps() override;
+	void Main() override;
+
+	void Draw(rglv::GL*, const rmlm::mat4*, const rmlm::mat4*, rclmt::jobsys::Job*, int) override;
+
+public:
+	rclmt::jobsys::Job* Compute(rclmt::jobsys::Job* parent = nullptr) {
+		if (parent) {
+			return rclmt::jobsys::make_job_as_child(parent, FxCarpet::ComputeJmp, std::tuple{this}); }
+		else {
+			return rclmt::jobsys::make_job(FxCarpet::ComputeJmp, std::tuple{this}); }}
+private:
+	static void ComputeJmp(rclmt::jobsys::Job* job, unsigned threadId, std::tuple<FxCarpet*>* data) {
+		auto&[self] = *data;
+		self->ComputeImpl(); }
+	void ComputeImpl();
+
+private:
 	// state
-	std::array<rglv::VertexArray_F3F3F3, 3> d_buffers;
-	int d_activeBuffer = 0;
+	std::array<rglv::VertexArray_F3F3F3, 3> buffers_;
+	int activeBuffer_{0};
 
 	// inputs
-	MaterialNode* material_node = nullptr;
-	ValuesBase* freq_node = nullptr;  std::string freq_slot;
-	ValuesBase* phase_node = nullptr;  std::string phase_slot;
-
-	FxCarpet(const std::string& name, const InputList& inputs) :GlNode(name, inputs) {}
-
-	void connect(const std::string&, NodeBase*, const std::string&) override;
-	std::vector<NodeBase*> deps() override;
-	void main() override;
-
-	void draw(rglv::GL*, const rmlm::mat4*, const rmlm::mat4*, rclmt::jobsys::Job*, int) override;
-
-	rclmt::jobsys::Job* compute(rclmt::jobsys::Job* parent = nullptr) {
-		if (parent) {
-			return rclmt::jobsys::make_job_as_child(parent, FxCarpet::computeJmp, std::tuple{this}); }
-		else {
-			return rclmt::jobsys::make_job(FxCarpet::computeJmp, std::tuple{this}); }}
-	static void computeJmp(rclmt::jobsys::Job* job, unsigned threadId, std::tuple<FxCarpet*>* data) {
-		auto&[self] = *data;
-		self->computeImpl(); }
-	void computeImpl();};
+	MaterialNode* materialNode_{nullptr};
+	ValuesBase* freqNode_{nullptr};
+	std::string freqSlot_{};
+	ValuesBase* phaseNode_{nullptr};
+	std::string phaseSlot_{}; };
 
 
 }  // namespace rqv

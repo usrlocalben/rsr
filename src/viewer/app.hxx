@@ -16,12 +16,12 @@ public:
 	Application& operator=(Application&&);
 	Application& operator=(const Application&) = delete;
 
-	Application& setNice(bool);
-	Application& setFullScreen(bool);
-	Application& run();
+	Application& SetNice(bool);
+	Application& SetFullScreen(bool);
+	Application& Run();
 
 private:
-	std::unique_ptr<impl> d_pImpl; };
+	std::unique_ptr<impl> impl_; };
 
 
 }  // namespace rqv

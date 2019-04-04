@@ -1,64 +1,59 @@
 #include "translate.hxx"
 
+#include <string_view>
+
 namespace rqdq {
 namespace rqv {
 
-void RepeatOp::connect(const std::string& attr, NodeBase* other, const std::string& slot) {
+void RepeatOp::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "gl") {
-		lower = dynamic_cast<GlNode*>(other);
+		lowerNode_ = static_cast<GlNode*>(other);
 		return; }
 	if (attr == "scale") {
-		scale_source_node = static_cast<ValuesBase*>(other);
-		scale_source_slot = slot;
+		scaleNode_ = static_cast<ValuesBase*>(other);
+		scaleSlot_ = slot;
 		return; }
 	if (attr == "rotate") {
-		rotate_source_node = static_cast<ValuesBase*>(other);
-		rotate_source_slot = slot;
+		rotateNode_ = static_cast<ValuesBase*>(other);
+		rotateSlot_ = slot;
 		return; }
 	if (attr == "translate") {
-		translate_source_node = static_cast<ValuesBase*>(other);
-		translate_source_slot = slot;
+		translateNode_ = static_cast<ValuesBase*>(other);
+		translateSlot_ = slot;
 		return; }
-	GlNode::connect(attr, other, slot); }
+	GlNode::Connect(attr, other, slot); }
 
 
-std::vector<NodeBase*> RepeatOp::deps() {
-	std::vector<NodeBase*> out;
-	out.push_back(lower);
-	return out; }
+void RepeatOp::AddDeps() {
+	GlNode::AddDeps();
+	AddDep(lowerNode_); }
 
 
-void RepeatOp::main() {
+void RepeatOp::Main() {
 	namespace jobsys = rclmt::jobsys;
 	auto* my_noop = jobsys::make_job(jobsys::noop);
-	add_links_to(my_noop);
-	lower->add_link(my_noop);
-	lower->run(); }
+	AddLinksTo(my_noop);
+	lowerNode_->AddLink(my_noop);
+	lowerNode_->Run(); }
 
 
-void RepeatOp::draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) {
+void RepeatOp::Draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) {
 	using rmlm::mat4;
 	using rmlv::M_PI;
 	namespace jobsys = rclmt::jobsys;
 	namespace framepool = rclma::framepool;
 
-	const rmlv::vec3 translate = [&]() {
-		if (translate_source_node != nullptr) {
-			return translate_source_node->get(translate_source_slot).as_vec3(); }
-		return translate_fixed;
-		}();
-	const rmlv::vec3 rotate = [&]() {
-		if (rotate_source_node != nullptr) {
-			return rotate_source_node->get(rotate_source_slot).as_vec3(); }
-		return rotate_fixed;
-		}();
-	const rmlv::vec3 scale = [&]() {
-		if (scale_source_node != nullptr) {
-			return scale_source_node->get(scale_source_slot).as_vec3(); }
-		return scale_fixed;
-		}();
+	auto translate = translateFixed_;
+	if (translateNode_ != nullptr) {
+		translate = translateNode_->Get(translateSlot_).as_vec3(); }
+	auto rotate = rotateFixed_;
+	if (rotateNode_ != nullptr) {
+		rotate = rotateNode_->Get(rotateSlot_).as_vec3(); }
+	auto scale = scaleFixed_;
+	if (scaleNode_ != nullptr) {
+		scale = scaleNode_->Get(scaleSlot_).as_vec3(); }
 
-	if (cnt == 0) {
+	if (cnt_ == 0) {
 		rclmt::jobsys::run(link);
 		return; }
 
@@ -66,8 +61,8 @@ void RepeatOp::draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4
 	rmlv::vec3 r{0,0,0};
 	rmlv::vec3 s{1,1,1};
 	auto& counter = *reinterpret_cast<std::atomic<int>*>(framepool::Allocate(sizeof(std::atomic<int>)));
-	counter = cnt;
-	for (int i = 0; i < cnt; i++) {
+	counter = cnt_;
+	for (int i = 0; i < cnt_; i++) {
 		if (depth < DEPTH_FORK_UNTIL) {
 			mat4& M = *reinterpret_cast<mat4*>(framepool::Allocate(64));
 			M = *mvmat  * mat4::rotate(r.x * M_PI * 2, 1, 0, 0);
@@ -75,8 +70,8 @@ void RepeatOp::draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4
 			M = M * mat4::rotate(r.z * M_PI * 2, 0, 0, 1);
 			M = M * mat4::translate(p);
 			M = M * mat4::scale(s);
-			jobsys::Job* then = jobsys::make_job(after_draw, std::tuple{&counter, link});
-			jobsys::run(drawLower(dc, pmat, &M, then, depth+1)); }
+			jobsys::Job* then = jobsys::make_job(AfterDraw, std::tuple{&counter, link});
+			jobsys::run(DrawLower(dc, pmat, &M, then, depth+1)); }
 		else {
 			mat4 M;
 			M = *mvmat * mat4::rotate(r.x * M_PI * 2, 1, 0, 0);
@@ -84,7 +79,7 @@ void RepeatOp::draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4
 			M = M * mat4::rotate(r.z * M_PI * 2, 0, 0, 1);
 			M = M * mat4::translate(p);
 			M = M * mat4::scale(s);
-			lower->draw(dc, pmat, &M, nullptr, depth + 1); }
+			lowerNode_->Draw(dc, pmat, &M, nullptr, depth + 1); }
 		p += translate;
 		r += rotate;
 		s *= scale; }
@@ -92,39 +87,38 @@ void RepeatOp::draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4
 		jobsys::run(link); } }
 
 
-void TranslateOp::connect(const std::string & attr, NodeBase * other, const std::string & slot) {
+void TranslateOp::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "gl") {
-		lower = dynamic_cast<GlNode*>(other);
+		lowerNode_ = static_cast<GlNode*>(other);
 		return; }
 	if (attr == "scale") {
-		scale_source_node = static_cast<ValuesBase*>(other);
-		scale_source_slot = slot;
+		scaleNode_ = static_cast<ValuesBase*>(other);
+		scaleSlot_ = slot;
 		return; }
 	if (attr == "rotate") {
-		rotate_source_node = static_cast<ValuesBase*>(other);
-		rotate_source_slot = slot;
+		rotateNode_ = static_cast<ValuesBase*>(other);
+		rotateSlot_ = slot;
 		return; }
 	if (attr == "translate") {
-		translate_source_node = static_cast<ValuesBase*>(other);
-		translate_source_slot = slot;
+		translateNode_ = static_cast<ValuesBase*>(other);
+		translateSlot_ = slot;
 		return; }
-	GlNode::connect(attr, other, slot); }
+	GlNode::Connect(attr, other, slot); }
 
 
-std::vector<NodeBase*> TranslateOp::deps() {
-	std::vector<NodeBase*> out;
-	out.push_back(lower);
-	return out; }
+void TranslateOp::AddDeps() {
+	GlNode::AddDeps();
+	AddDep(lowerNode_); }
 
 
-void TranslateOp::main() {
+void TranslateOp::Main() {
 	auto* my_noop = rclmt::jobsys::make_job(rclmt::jobsys::noop);
-	add_links_to(my_noop);
-	lower->add_link(my_noop);
-	lower->run(); }
+	AddLinksTo(my_noop);
+	lowerNode_->AddLink(my_noop);
+	lowerNode_->Run(); }
 
 
-void TranslateOp::draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) {
+void TranslateOp::Draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) {
 	using rmlm::mat4;
 	using rmlv::M_PI;
 	namespace framepool = rclma::framepool;
@@ -132,24 +126,24 @@ void TranslateOp::draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::m
 
 	mat4& M = *reinterpret_cast<mat4*>(framepool::Allocate(64));
 
-	rmlv::vec3 scale = {1.0f, 1.0f, 1.0f};
-	if (scale_source_node != nullptr) {
-		scale = scale_source_node->get(scale_source_slot).as_vec3(); }
+	auto scale = rmlv::vec3{1.0f, 1.0f, 1.0f};
+	if (scaleNode_ != nullptr) {
+		scale = scaleNode_->Get(scaleSlot_).as_vec3(); }
 
-	rmlv::vec3 rotate = {0,0,0};
-	if (rotate_source_node != nullptr) {
-		rotate = rotate_source_node->get(rotate_source_slot).as_vec3(); }
+	auto rotate = rmlv::vec3{0,0,0};
+	if (rotateNode_ != nullptr) {
+		rotate = rotateNode_->Get(rotateSlot_).as_vec3(); }
 
-	rmlv::vec3 translate = {0,0,0};
-	if (translate_source_node != nullptr) {
-		translate = translate_source_node->get(translate_source_slot).as_vec3(); }
+	auto translate = rmlv::vec3{0,0,0};
+	if (translateNode_ != nullptr) {
+		translate = translateNode_->Get(translateSlot_).as_vec3(); }
 
 	M = *mvmat * mat4::scale(scale);
 	M = M * mat4::rotate(rotate.x * M_PI * 2, 1, 0, 0);
 	M = M * mat4::rotate(rotate.y * M_PI * 2, 0, 1, 0);
 	M = M * mat4::rotate(rotate.z * M_PI * 2, 0, 0, 1);
 	M = M * mat4::translate(translate);
-	lower->draw(dc, pmat, &M, link, depth); }
+	lowerNode_->Draw(dc, pmat, &M, link, depth); }
 
 
 }  // namespace rqv
