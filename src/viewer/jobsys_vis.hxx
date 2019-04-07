@@ -4,7 +4,7 @@
 namespace rqdq {
 namespace rqv {
 
-void render_jobsys(const int left, const int top, const float xscale, struct rglr::TrueColorCanvas& canvas);
+void render_jobsys(int left, int top, float xscale, struct rglr::TrueColorCanvas& canvas);
 
 
 }  // namespace rqv

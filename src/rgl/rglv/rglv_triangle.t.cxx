@@ -27,7 +27,7 @@ const int TARGET_WIDTH = 8;
 const int TARGET_HEIGHT = 8;
 
 bool check_triangle_uv();
-bool check_triangle(array<vec4, 3>, array<string, 8>);
+bool check_triangle(array<vec4, 3> /*points*/, array<string, 8> /*expected*/);
 
 struct DebugWithFragCoord final : public rglv::BaseProgram {
 	template <typename TU>
@@ -96,9 +96,9 @@ int main(int argc, char **argv) {
 		string test_name{ "dx top-left fill rules #1" };
 
 		array<vec4, 3> points = {
-			vec4{ 2.0f, 4.0f, 0, 1 },
-			vec4{ 6.0f, 2.0f, 0, 1 },
-			vec4{ 1.0f, 1.0f, 0, 1 },
+			vec4{ 2.0F, 4.0F, 0, 1 },
+			vec4{ 6.0F, 2.0F, 0, 1 },
+			vec4{ 1.0F, 1.0F, 0, 1 },
 			};
 
 		array<string, 8> expected = {
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
 			cout << "." << std::flush; } }
 
 	cout << endl;
-	return total_errors ? 1 : 0; }
+	return total_errors != 0 ? 1 : 0; }
 
 
 bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
@@ -194,10 +194,10 @@ bool check_triangle_uv() {
 	const float bottom = 2560.5f;*/
 	const int width = 16;
 	const int height = 16;
-	const float fwidth = 16.0f;
-	const float fheight = 16.0f;
-	const float right = 16.5f;
-	const float bottom = 16.5f;
+	const float fwidth = 16.0F;
+	const float fheight = 16.0F;
+	const float right = 16.5F;
+	const float bottom = 16.5F;
 
 	rglr::QFloat4Canvas cbc(width, height);
 	rglr::QFloatCanvas dbc(width, height);
@@ -256,7 +256,7 @@ bool check_triangle_uv() {
 
 
 	// cout << "=========== data ============\n";
-	const float expected_accuracy = 0.01f;
+	const float expected_accuracy = 0.01F;
 	for (int yy = 0; yy < height; yy++) {
 		for (int xx = 0; xx < width; xx++) {
 			auto px = cbc.get_pixel(xx, yy);

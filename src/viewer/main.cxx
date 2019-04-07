@@ -56,7 +56,7 @@ struct SplashDialog {
 	HWND d_hDlg;
 
 	SplashDialog& create(HINSTANCE hInst) {
-		d_hDlg = CreateDialogParamW(hInst, MAKEINTRESOURCE(IDD_SPLASH), 0, DialogProcThunk, reinterpret_cast<LPARAM>(this));
+		d_hDlg = CreateDialogParamW(hInst, MAKEINTRESOURCE(IDD_SPLASH), nullptr, DialogProcThunk, reinterpret_cast<LPARAM>(this));
 		return *this; }
 
 	SplashDialog& show(int nCmdShow) {
@@ -66,10 +66,10 @@ struct SplashDialog {
 	SplashDialog& runUntilClosed() {
 		MSG msg;
 		BOOL ret;
-		while ((ret = GetMessageW(&msg, 0, 0, 0)) != 0) {
+		while ((ret = GetMessageW(&msg, nullptr, 0, 0)) != 0) {
 			if (ret == -1) {
 				throw std::runtime_error("GetMessage error"); }
-			if (!IsDialogMessageW(d_hDlg, &msg)) {
+			if (IsDialogMessageW(d_hDlg, &msg) == 0) {
 				TranslateMessage(&msg);
 				DispatchMessageW(&msg); }}
 		return *this; }
@@ -77,8 +77,8 @@ struct SplashDialog {
 	static INT_PTR CALLBACK DialogProcThunk(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		if (uMsg == WM_INITDIALOG) {
 			SetWindowLongPtr(hDlg, DWLP_USER, lParam); }
-		SplashDialog* pThis = reinterpret_cast<SplashDialog*>(GetWindowLongPtr(hDlg, DWLP_USER));
-		return pThis ? pThis->DialogProc(hDlg, uMsg, wParam, lParam) : FALSE; }
+		auto* pThis = reinterpret_cast<SplashDialog*>(GetWindowLongPtr(hDlg, DWLP_USER));
+		return pThis != nullptr ? pThis->DialogProc(hDlg, uMsg, wParam, lParam) : FALSE; }
 
 	INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		switch (uMsg) {
@@ -102,8 +102,8 @@ struct SplashDialog {
 			break;
 
 		case WM_CLOSE:
-			wantFullScreen = SendMessage(GetDlgItem(hDlg, IDC_FULLSCREEN), BM_GETCHECK, 0, 0) > 0 ? true : false;
-			want720p = SendMessage(GetDlgItem(hDlg, IDC_TDFMODE), BM_GETCHECK, 0, 0) > 0 ? true : false;
+			wantFullScreen = SendMessage(GetDlgItem(hDlg, IDC_FULLSCREEN), BM_GETCHECK, 0, 0) > 0;
+			want720p = SendMessage(GetDlgItem(hDlg, IDC_TDFMODE), BM_GETCHECK, 0, 0) > 0;
 			//run_screenmode = SendMessage( GetDlgItem(hDlg,IDC_RES), CB_GETCURSEL, 0, 0 );
 			DestroyWindow(hDlg);
 			return TRUE;

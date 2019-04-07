@@ -88,7 +88,7 @@ struct Soundtrack {
 	double durationInSeconds;};
 
 
-optional<Soundtrack> deserializeSoundtrack(const JsonValue& data) {
+optional<Soundtrack> deserializeSoundtrack(const JsonValue data) {
 	double tempo;
 	double duration = 0;
 	string path;
@@ -125,7 +125,7 @@ struct SyncConfig {
 	vector<string> trackNames; };
 
 
-optional<SyncConfig> deserializeSyncConfig(const JsonValue& data) {
+optional<SyncConfig> deserializeSyncConfig(const JsonValue data) {
 	SyncConfig sc;
 
 	if (auto search = jv_find(data, "precision", JSON_NUMBER)) {
@@ -136,7 +136,7 @@ optional<SyncConfig> deserializeSyncConfig(const JsonValue& data) {
 
 	if (auto search = jv_find(data, "tracks", JSON_ARRAY)) {
 		for (const auto item : *search) {
-			sc.trackNames.push_back(item->value.toString()); }}
+			sc.trackNames.emplace_back(item->value.toString()); }}
 	if (sc.trackNames.empty()) {
 		cout << "syncConfig: warning: no track names configured\n"; }
 	return sc; }
@@ -149,20 +149,20 @@ public:
 	void SetNice(bool value) { nice_ = value; }
 
 private:
-	bool defaultKeyHandlers() const;
-	void onKeyPressed(PixelToaster::DisplayInterface& display, PixelToaster::Key key);
-	void onKeyDown(PixelToaster::DisplayInterface& display, PixelToaster::Key key);
-	void onKeyUp(PixelToaster::DisplayInterface& display, PixelToaster::Key key);
+	bool defaultKeyHandlers() const override;
+	void onKeyPressed(PixelToaster::DisplayInterface& display, PixelToaster::Key key) override;
+	void onKeyDown(PixelToaster::DisplayInterface& display, PixelToaster::Key key) override;
+	void onKeyUp(PixelToaster::DisplayInterface& display, PixelToaster::Key key) override;
 //	void onMouseButtonDown(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse);
-	void onMouseMove(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse);
-	void onMouseWheel(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse, short wheel_amount);
+	void onMouseMove(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse) override;
+	void onMouseWheel(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse, short wheel_amount) override;
 
-	void DrawUI(struct TrueColorCanvas&, double, double);
+	void DrawUI(struct TrueColorCanvas& /*canvas*/, double /*renderTimeInMillis*/, double /*frameTimeInMillis*/);
 
 	void PrepareBuiltInNodes();
 	void MaybeUpdateDisplay();
 	void ComputeAndRenderFrame(TrueColorCanvas canvas);
-	bool Recompile(const JsonValue & docroot);
+	bool Recompile(JsonValue docroot);
 
 	PixelToaster::Display display_;
 	rglv::MeshStore meshStore_;
@@ -186,9 +186,9 @@ private:
 	bool runFullScreen_ = false;
 	bool nice_ = true;
 
-	bool capture_mouse = false;
+	bool mouseCaptured_ = false;
 	bool reset_mouse_next_frame = false;
-	int mouse_x_position_in_px, mouse_y_position_in_px;
+	rmlv::vec2 mousePositionInPx_{};
 
 	bool measuring = false;
 	bool start_measuring = false;
@@ -299,7 +299,7 @@ void Application::impl::Run() {
 				if (sceneJson.IsValid()) {
 					Recompile(sceneJson.GetRoot()); }}
 
-			if (capture_mouse && reset_mouse_next_frame) {
+			if (mouseCaptured_ && reset_mouse_next_frame) {
 				reset_mouse_next_frame = false;
 				display_.center_mouse(); }
 
@@ -307,7 +307,8 @@ void Application::impl::Run() {
 			auto frame = Frame(display_);
 			auto canvas = frame.canvas();
 
-			if (nice_) jobsys::work_start();
+			if (nice_) {
+				jobsys::work_start(); }
 			jobsys::reset();
 			framepool::Reset();
 
@@ -410,8 +411,8 @@ void Application::impl::onKeyPressed(DisplayInterface& display, Key key) {
 		doubleBuffer_ = !doubleBuffer_;
 		break;
 	case Key::N:
-		capture_mouse = !capture_mouse;
-		if (capture_mouse) {
+		mouseCaptured_ = !mouseCaptured_;
+		if (mouseCaptured_) {
 			display.capture_mouse(); }
 		else {
 			display.uncapture_mouse(); }
@@ -454,11 +455,10 @@ void Application::impl::onKeyUp(DisplayInterface& display, Key key) {
 
 
 void Application::impl::onMouseMove(DisplayInterface& display, Mouse mouse) {
-	mouse_x_position_in_px = int(mouse.x);
-	mouse_y_position_in_px = int(mouse.y);
-	float dmx = (display.width() / 2) - mouse.x;
-	float dmy = (display.height() / 2) - mouse.y;
-	if (capture_mouse) {
+	mousePositionInPx_ = { mouse.x, mouse.y };
+	float dmx = (display.width() / 2.0F) - mouse.x;
+	float dmy = (display.height() / 2.0F) - mouse.y;
+	if (mouseCaptured_) {
 		//cout << "mm(" << dmx << ", " << dmy << ")" << endl;
 		camera_.onMouseMove({ dmx, dmy });
 		reset_mouse_next_frame = true; }}
@@ -529,7 +529,7 @@ void Application::impl::DrawUI(
 			ss << "          press s to stop            ";
 			pp.write(ss.str(), 16, top, canvas);  top += 10; }
 		if (measurementSamples_.size() == SCAN_SAMPLESIZE_IN_FRAMES) {
-			last_stats = calc_stat(std::vector<double>(measurementSamples_.begin() + 60, measurementSamples_.end()), MEASUREMENT_DISCARD);
+			last_stats = calc_stat(std::vector<double>(begin(measurementSamples_) + 60, end(measurementSamples_)), MEASUREMENT_DISCARD);
 			measurementSamples_.clear();
 			if (last_stats._mean < scan_min_value) {
 				scan_min_value = last_stats._mean;
@@ -617,46 +617,49 @@ void Application::impl::MaybeUpdateDisplay() {
 		              runningFullScreen_ ? Output::Fullscreen : Output::Windowed,
 		              Mode::TrueColor);
 		display_.listener(this);
-		display_.zoom(-1.0f); }}  // auto-scale based on windows' scaling factor
-
-
+		display_.zoom(-1.0F); }}  // auto-scale based on windows' scaling factor
 
 
 void Application::impl::ComputeAndRenderFrame(TrueColorCanvas canvas) {
+	const std::string_view selector{"nRender"};
+
+	const auto match = rclr::find_if(nodes_, [=](const auto& node) { return node->get_id() == selector; });
+	if (match == end(nodes_)) {
+		std::cerr << "output node \"" << selector << "\" not found\n";
+		return; }
+
+	auto* node = dynamic_cast<OutputNode*>(match->get());
+	if (node == nullptr) {
+		std::cerr << "node with id \"" << selector << "\" is not an OutputNode\n";
+		return; }
+
 	auto rootJob = jobsys::make_job(jobsys::noop);
-
-	const auto match = rclr::find_if(nodes_, [](const auto node) { return node->get_id() == "nRender"; });
-	if (match != nodes_.end()) {
-		OutputNode* outputNode = static_cast<OutputNode*>(match->get());
-		rclr::for_each(nodes_, [](auto& node) { node->Reset(); });
-		ComputeIndegreesFrom(outputNode);
-		outputNode->set_indegreeWaitCnt(1);
-		outputNode->SetTileDim(tile_dim);
-		outputNode->SetDoubleBuffer(doubleBuffer_);
-		outputNode->SetOutputCanvas(&canvas);
-		outputNode->AddLink(rootJob);
-		outputNode->Run(); }
-	else {
-		cout << "output node \"nRender\" not found\n"; }
-
+	for (auto& n : nodes_) {
+		n->Reset(); }
+	ComputeIndegreesFrom(node);
+	node->set_indegreeWaitCnt(1);
+	node->SetTileDim(tile_dim);
+	node->SetDoubleBuffer(doubleBuffer_);
+	node->SetOutputCanvas(&canvas);
+	node->AddLink(rootJob);
+	node->Run();
 	jobsys::wait(rootJob); }
 
 
-bool Application::impl::Recompile(const JsonValue& docroot) {
+bool Application::impl::Recompile(const JsonValue docroot) {
 	PixelToaster::Timer compileTime;
 	NodeList newNodes;
 	bool success;
-	std::tie(success, newNodes) = compile(docroot, meshStore_);
+	std::tie(success, newNodes) = CompileDocument(docroot, meshStore_);
 	if (success) {
-		std::copy(appNodes_.begin(), appNodes_.end(), std::back_inserter(newNodes));
-		success = link(newNodes);
+		std::copy(begin(appNodes_), end(appNodes_), std::back_inserter(newNodes));
+		success = Link(newNodes);
 		if (success) {
 			auto elapsed = compileTime.delta() * 1000.0;
 			nodes_ = newNodes;
 			cout << fmt::sprintf("scene compiled in %.2fms\n", elapsed);
 			return true; }
-		else {
-			cout << "link failed, scene not updated!\n"; }}
+		cout << "link failed, scene not updated!\n"; }
 	else {
 		cout << "compile failed, scene not updated!\n"; }
 	return false; }
@@ -664,7 +667,7 @@ bool Application::impl::Recompile(const JsonValue& docroot) {
 
 Application::Application() :impl_(std::make_unique<impl>()) {}
 Application::~Application() = default;
-Application& Application::operator=(Application&&) = default;
+Application& Application::operator=(Application&&) noexcept = default;
 
 Application& Application::SetNice(bool value) {
 	impl_->SetNice(value);

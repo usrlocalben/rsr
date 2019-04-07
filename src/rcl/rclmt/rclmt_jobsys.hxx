@@ -10,10 +10,10 @@ namespace jobsys {
 
 #define member_size(type, member) sizeof(((type*)0)->member)
 
-constexpr int DESIRED_JOB_SIZE_IN_BYTES = 128u;
+constexpr int DESIRED_JOB_SIZE_IN_BYTES = 128U;
 constexpr int NUMBER_OF_JOBS = 65536;
-constexpr int MASK = NUMBER_OF_JOBS - 1u;
-constexpr int MAX_LINK = 4u;
+constexpr int MASK = NUMBER_OF_JOBS - 1U;
+constexpr int MAX_LINK = 4U;
 
 using JobFunction = void (*)(struct Job *, const int, const void *);
 
@@ -168,7 +168,7 @@ inline void move_links(Job* src, Job* dst) {
 		add_link(dst, src->link[i]); }
 	src->link_count = 0; }
 
-void noop(jobsys::Job* job, int tid, void*);
+void noop(jobsys::Job* job, int tid, void* /*unused*/);
 
 void _sleep(int ms);
 

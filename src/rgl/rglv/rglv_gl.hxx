@@ -79,8 +79,8 @@ struct GLState {
 	void reset() {
 		cullingEnabled = false;
 		cullFace = GL_BACK;
-		color = rmlv::vec4{1.0f,1.0f,1.0f,1.0f};
-		normal = rmlv::vec3{ 0.0f, 1.0f, 0.0f };
+		color = rmlv::vec4{1.0F,1.0F,1.0F,1.0F};
+		normal = rmlv::vec3{ 0.0F, 1.0F, 0.0F };
 		programId = 0;
 		for (auto& tu : tus) {
 			tu.reset(); }
@@ -166,7 +166,7 @@ public:
 
 	void glColor(const rmlv::vec3& v) {
 		d_dirty = true;
-		d_cs.color = rmlv::vec4{ v.x, v.y, v.z, 1.0f }; }
+		d_cs.color = rmlv::vec4{ v.x, v.y, v.z, 1.0F }; }
 
 	void glColor(const rmlv::vec4& v) {
 		d_dirty = true;
@@ -174,7 +174,7 @@ public:
 
 	void glColor(const float r, const float g, const float b) {
 		d_dirty = true;
-		d_cs.color = rmlv::vec4{ r, g, b, 1.0f }; }
+		d_cs.color = rmlv::vec4{ r, g, b, 1.0F }; }
 
 	void glNormal(const rmlv::vec3& v) {
 		d_dirty = true;

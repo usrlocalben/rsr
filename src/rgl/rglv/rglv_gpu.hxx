@@ -1061,7 +1061,7 @@ private:
 	auto generateUniforms(const GLState& state) {
 		ShaderUniforms ui;
 		ui.u0 = state.color;
-		ui.u1 = rmlv::vec4{ state.normal, 0.0f };
+		ui.u1 = rmlv::vec4{ state.normal, 0.0F };
 		//ui.u1 =
 
 		ui.mvm = state.modelViewMatrix;

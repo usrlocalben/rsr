@@ -5,8 +5,10 @@
 
 #include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/viewer/compile.hxx"
 #include "src/viewer/node/camera.hxx"
 #include "src/viewer/node/value.hxx"
 
@@ -28,7 +30,7 @@ void GroupNode::Main() {
 	jobsys::Job *doneJob = jobsys::make_job(jobsys::noop);
 	AddLinksTo(doneJob);
 
-	if (gls_.size() == 0) {
+	if (gls_.empty()) {
 		jobsys::run(doneJob); }
 	else {
 		for (auto glnode : gls_) {
@@ -84,7 +86,7 @@ void LayerNode::Render(rglv::GL * dc, int width, int height, float aspect, rclmt
 
 	mat4* pmat = reinterpret_cast<mat4*>(framepool::Allocate(64));
 	mat4* mvmat = reinterpret_cast<mat4*>(framepool::Allocate(64));
-	if (cameraNode_) {
+	if (cameraNode_ != nullptr) {
 		*pmat = cameraNode_->GetProjectionMatrix(aspect);
 		*mvmat = cameraNode_->GetModelViewMatrix(); }
 	else {
@@ -128,7 +130,7 @@ void LayerChooser::Main() {
 rmlv::vec3 LayerChooser::GetBackgroundColor() {
 	auto layerNode = GetSelectedLayer();
 	if (layerNode == nullptr) {
-		return rmlv::vec3{ 0.0f }; }
+		return rmlv::vec3{ 0.0F }; }
 	return layerNode->GetBackgroundColor(); }
 
 
@@ -149,6 +151,54 @@ LayerNode* LayerChooser::GetSelectedLayer() const {
 		return nullptr; }
 	return layers_[idx]; }
 
-
 }  // namespace rqv
+
+namespace {
+
+using namespace rqv;
+
+class LayerCompiler final : public NodeCompiler {
+	void Build() override {
+		if (!Input("CameraNode", "camera", /*required=*/true)) { return; }
+		if (!Input("ValuesBase", "color", /*required=*/false)) { return; }
+
+		if (auto jv = rclx::jv_find(data_, "gl", JSON_ARRAY)) {
+			for (const auto& item : *jv) {
+				if (item->value.getTag() == JSON_STRING) {
+					inputs_.emplace_back("gl", item->value.toString()); } } }
+		out_ = std::make_shared<LayerNode>(id_, std::move(inputs_)); }};
+
+
+class GroupCompiler final : public NodeCompiler {
+	void Build() override {
+		if (auto jv = rclx::jv_find(data_, "gl", JSON_ARRAY)) {
+			for (const auto& item : *jv) {
+				if (item->value.getTag() == JSON_STRING) {
+					inputs_.emplace_back("gl", item->value.toString()); } } }
+		out_ = std::make_shared<GroupNode>(id_, std::move(inputs_)); }};
+
+
+class LayerChooserCompiler final : public NodeCompiler {
+	void Build() override {
+		if (!Input("ValuesBase", "selector", /*required=*/true)) { return; }
+		if (auto jv = rclx::jv_find(data_, "layers", JSON_ARRAY)) {
+			for (const auto& item : *jv) {
+				if (item->value.getTag() == JSON_STRING) {
+					inputs_.emplace_back("layer", item->value.toString()); } } }
+		out_ = std::make_shared<LayerChooser>(id_, std::move(inputs_)); }};
+
+
+GroupCompiler groupCompiler{};
+LayerChooserCompiler layerChooserCompiler{};
+LayerCompiler layerCompiler{};
+
+struct init { init() {
+	NodeRegistry::GetInstance().Register(NodeInfo{ "IGl", "GlNode", [](NodeBase* node) { return dynamic_cast<GlNode*>(node) != nullptr; }, nullptr });
+	NodeRegistry::GetInstance().Register(NodeInfo{ "$group", "Group", [](NodeBase* node) { return dynamic_cast<GroupNode*>(node) != nullptr; }, &groupCompiler });
+	NodeRegistry::GetInstance().Register(NodeInfo{ "$layer", "Layer", [](NodeBase* node) { return dynamic_cast<LayerNode*>(node) != nullptr; }, &layerCompiler });
+	NodeRegistry::GetInstance().Register(NodeInfo{ "$layerChooser", "LayerChooser", [](NodeBase* node) { return dynamic_cast<LayerChooser*>(node) != nullptr; }, &layerChooserCompiler });
+}} init{};
+
+
+}  // namespace
 }  // namespace rqdq

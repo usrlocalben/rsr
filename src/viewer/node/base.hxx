@@ -17,7 +17,7 @@ using InputList = std::vector<std::pair<std::string, std::string>>;
 
 class NodeBase {
 public:
-	NodeBase(std::string_view name, InputList inputs);
+	NodeBase(std::string_view id, InputList inputs);
 	virtual ~NodeBase();
 
 	void AddLink(rclmt::jobsys::Job *after);
@@ -25,7 +25,7 @@ public:
 	std::string_view get_id() {
 		return id_; }
 
-	static void DecrJob(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data);
+	static void DecrJob(rclmt::jobsys::Job* job, unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data);
 	rclmt::jobsys::Job* AfterAll(rclmt::jobsys::Job *job);
 
 

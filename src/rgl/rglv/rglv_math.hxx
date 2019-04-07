@@ -33,15 +33,15 @@ inline rmlv::qfloat4 pdiv(rmlv::qfloat4 p) {
 inline rmlv::vec4 pdiv(rmlv::vec4 p) {
 	float invw;
 	_mm_store_ss(&invw, _mm_rcp_ss(_mm_set_ss(p.w)));
-	auto bias_z = 0.5f * (p.z * invw) + 0.5f;
+	auto bias_z = 0.5F * (p.z * invw) + 0.5F;
 	return rmlv::vec4{ p.x*invw, p.y*invw, bias_z, invw }; }
 
 
 inline rmlv::vec3 reflect(rmlv::vec3 i, rmlv::vec3 n) {
-	return i - 2.0f * dot(n, i) * n; }
+	return i - 2.0F * dot(n, i) * n; }
 
 inline rmlv::qfloat3 reflect(const rmlv::qfloat3& i, const rmlv::qfloat3& n) {
-	return i - rmlv::qfloat{2.0f} * dot(n, i) * n; }
+	return i - rmlv::qfloat{2.0F} * dot(n, i) * n; }
 
 /**
  * matrix/vector multiply, specialized for the device-matrix
@@ -131,8 +131,8 @@ inline rmlm::mat4 make_device_matrix(const int width, const int height) {
 	auto md_scale = rmlm::mat4(
 		float(width/2), 0,          0,       0,
 		     0,    float(height/2), 0,       0,
-		     0,         0,          1.0f,    0, ///zfar-znear, // 0,
-		     0,         0,          0,       1.0f);
+		     0,         0,          1.0F,    0, ///zfar-znear, // 0,
+		     0,         0,          0,       1.0F);
 
 	auto md_origin = rmlm::mat4(
 		   1,        0,       0,  float(x0+width /2),

@@ -160,7 +160,7 @@ mat4 inverse(const mat4& src) {
 
 	const auto det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
 	assert(det != 0);
-	const auto invdet = 1.0f / det;
+	const auto invdet = 1.0F / det;
 
 	for (auto& val : dst.ff) {
 		val *= invdet; }
@@ -168,5 +168,5 @@ mat4 inverse(const mat4& src) {
 	return dst; }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rmlm
+}  // namespace rqdq

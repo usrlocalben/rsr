@@ -32,7 +32,7 @@ public:
 		doubleBuffer_ = enable; }
 
 	virtual void SetTileDim(rmlv::ivec2 dim) {
-		tileDim_ = std::move(dim); }
+		tileDim_ = dim; }
 
 protected:
 	rglr::TrueColorCanvas* outCanvas_{nullptr};

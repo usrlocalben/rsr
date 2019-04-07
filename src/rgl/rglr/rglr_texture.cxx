@@ -66,7 +66,7 @@ void Texture::maybe_make_mipmap() {
 					rmlv::mvec4f(buf[row1ofs].v) + rmlv::mvec4f(buf[row1ofs + 1].v) +
 					rmlv::mvec4f(buf[row2ofs].v) + rmlv::mvec4f(buf[row2ofs + 1].v));
 
-				const auto avg2x2 = sum2x2 / rmlv::mvec4f(4.0f);
+				const auto avg2x2 = sum2x2 / rmlv::mvec4f(4.0F);
 
 				buf[dstrow++].v = avg2x2.v;
 			}

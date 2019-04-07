@@ -31,7 +31,7 @@ std::optional<rmlv::vec3> jv_decode_vec3(const JsonValue& data) {
 		// an object
 		if (auto node = data.toNode(); node) {
 			// with its first key/value pair
-			if ("$vec3"s.compare(node->key) == 0) {
+			if ("$vec3"s == node->key) {
 				// having a key of "$vec3"
 				if (auto arr = node->value; arr.getTag() == JSON_ARRAY) {
 					// and a value that is an array

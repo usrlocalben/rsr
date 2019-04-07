@@ -43,10 +43,10 @@ mat4 mat4_look_from_to(const vec4& from, const vec4& to) {
 	//	vec3_cross( up, dir, right );//vec3_normalize(up);
 
 	mat4 mrot = mat4(
-		right.x, right.y, right.z, 0.0f,
-		up.x, up.y, up.z, 0.0f,
-		dir.x, dir.y, dir.z, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		right.x, right.y, right.z, 0.0F,
+		up.x, up.y, up.z, 0.0F,
+		dir.x, dir.y, dir.z, 0.0F,
+		0.0F, 0.0F, 0.0F, 1.0F
 	);
 
 	mat4 mpos = mat4(

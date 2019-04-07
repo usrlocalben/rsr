@@ -29,14 +29,14 @@ struct QFloatCanvas {
 
 	auto data() { return _ptr; }
 	auto cdata() const { return _ptr; }
-	const auto width() const { return _width; }
-	const auto height() const { return _height; }
-	const auto stride2() const { return _stride2; }
-	const rmlg::irect rect() const {
+	auto width() const { return _width; }
+	auto height() const { return _height; }
+	auto stride2() const { return _stride2; }
+	rmlg::irect rect() const {
 		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{_width, _height} }; }
-	const float aspect() const {
+	float aspect() const {
 		if (_width == 0 || _height == 0) {
-			return 1.0f; }
+			return 1.0F; }
 		return float(_width) / float(_height); }
 
 	void resize(const int width, const int height) {
@@ -56,7 +56,7 @@ private:
 
 
 struct QFloat4Canvas {
-	QFloat4Canvas()  {}
+	QFloat4Canvas() = default;
 
 	QFloat4Canvas(const int width, const int height)
 		:_width(width), _height(height), _stride2(width / 2) {
@@ -66,14 +66,14 @@ struct QFloat4Canvas {
 	auto data() { return _ptr; }
 	auto cdata() const { return _ptr; }
 
-	const auto width() const { return _width; }
-	const auto height() const { return _height; }
-	const auto stride2() const { return _stride2; }
-	const rmlg::irect rect() const {
+	auto width() const { return _width; }
+	auto height() const { return _height; }
+	auto stride2() const { return _stride2; }
+	rmlg::irect rect() const {
 		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{_width, _height} }; }
-	const float aspect() const {
+	float aspect() const {
 		if (_width == 0 || _height == 0) {
-			return 1.0f; }
+			return 1.0F; }
 		return float(_width) / float(_height); }
 
 	void resize(const int width, const int height) {
@@ -128,11 +128,11 @@ struct TrueColorCanvas {
 
 	auto data() { return _ptr; }
 	auto cdata() const { return _ptr; }
-	const auto width() const { return _width; }
-	const auto height() const { return _height; }
-	const auto stride() const { return _stride; }
-	const auto aspect() const { return _aspect; }
-	const rmlg::irect rect() const {
+	auto width() const { return _width; }
+	auto height() const { return _height; }
+	auto stride() const { return _stride; }
+	auto aspect() const { return _aspect; }
+	rmlg::irect rect() const {
 		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{_width, _height} }; }
 private:
 	PixelToaster::TrueColorPixel * _ptr;
@@ -155,22 +155,22 @@ struct FloatingPointCanvas {
 		_stride(stride == 0 ? width : stride),
 		_aspect(float(width) / float(height)) {}
 
-	FloatingPointCanvas()  {}
+	FloatingPointCanvas() = default;
 
 	auto data() { return _ptr; }
-	const auto cdata() const { return _ptr; }
-	const auto width() const { return _width; }
-	const auto height() const { return _height; }
-	const auto stride() const { return _stride; }
-	const auto aspect() const { return _aspect; }
-	const rmlg::irect rect() const {
+	auto cdata() const { return _ptr; }
+	auto width() const { return _width; }
+	auto height() const { return _height; }
+	auto stride() const { return _stride; }
+	auto aspect() const { return _aspect; }
+	rmlg::irect rect() const {
 		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{_width, _height} }; }
 private:
 	PixelToaster::FloatingPointPixel * _ptr = nullptr;
 	int _width = 0;
 	int _height = 0;
 	int _stride = 0;
-	float _aspect = 1.0f; };
+	float _aspect = 1.0F; };
 
 
 }  // namespace rglr

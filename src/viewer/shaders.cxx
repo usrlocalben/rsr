@@ -12,7 +12,7 @@ int AmyProgram::id = int(ShaderProgramId::Amy);
 int EnvmapXProgram::id = int(ShaderProgramId::EnvmapX);
 
 
-ShaderProgramId deserialize_program_name(const string& text) {
+ShaderProgramId ShaderProgramNameSerializer::Deserialize(std::string_view text) {
 	if (text == "Default") {
 		return ShaderProgramId::Default; }
 	if (text == "Wireframe") {

@@ -18,7 +18,7 @@ void JSONFile::Reload() {
 	char* dataBegin = d_bytes.data();
 	char* dataEnd;
 
-	int status = jsonParse(dataBegin, &dataEnd, d_jsonRoot.get(), *d_allocator.get());
+	int status = jsonParse(dataBegin, &dataEnd, d_jsonRoot.get(), *d_allocator);
 	if (status != JSON_OK) {
 		std::cerr << jsonStrError(status) << " @" << (dataEnd - dataBegin) << std::endl;
 		d_valid = false; }

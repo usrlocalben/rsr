@@ -33,7 +33,7 @@ public:
 
 	void Main() override;
 
-	void Draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) override;
+	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) override;
 
 	static void AfterDraw(rclmt::jobsys::Job* job, const int tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
@@ -76,7 +76,7 @@ public:
 
 	void Main() override;
 
-	void Draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job *link, int depth) override;
+	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) override;
 
 private:
 	GlNode *lowerNode_{nullptr};

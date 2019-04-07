@@ -58,8 +58,8 @@ struct Mesh {
 		almost_equal(a.texcoord, b.texcoord)); }*/
 
 
-std::tuple<rglv::VertexArray_F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3(const Mesh&);
-std::tuple<rglv::VertexArray_F3F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3F3(const Mesh&);
+std::tuple<rglv::VertexArray_F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3(const Mesh& /*m*/);
+std::tuple<rglv::VertexArray_F3F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3F3(const Mesh& /*m*/);
 
 
 }  // namespace rglv

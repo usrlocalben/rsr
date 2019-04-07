@@ -30,7 +30,7 @@ struct MaterialStore {
 	const Material& get(const int id) const {
 		return d_store[id]; }
 
-	const int size() const {
+	int size() const {
 		return int(d_store.size()); }
 
 	template <typename func>

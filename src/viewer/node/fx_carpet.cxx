@@ -1,17 +1,55 @@
-#include "fx_carpet.hxx"
-
 #include <memory>
 #include <mutex>
 #include <string_view>
 
 #include "src/rgl/rglv/rglv_mesh.hxx"
+#include "src/viewer/compile.hxx"
+#include "src/viewer/node/gl.hxx"
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/material.hxx"
 #include "src/viewer/node/value.hxx"
 #include "src/viewer/shaders.hxx"
 
 namespace rqdq {
-namespace rqv {
+namespace {
+
+using namespace rqv;
+
+class FxCarpet final : public GlNode {
+public:
+	FxCarpet(std::string_view id, InputList inputs)
+		:GlNode(id, std::move(inputs)) {}
+
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+	void AddDeps() override;
+	void Main() override;
+
+	void Draw(rglv::GL* /*_dc*/, const rmlm::mat4* /*pmat*/, const rmlm::mat4* /*mvmat*/, rclmt::jobsys::Job* /*link*/, int /*depth*/) override;
+
+public:
+	rclmt::jobsys::Job* Compute(rclmt::jobsys::Job* parent = nullptr) {
+		if (parent != nullptr) {
+			return rclmt::jobsys::make_job_as_child(parent, FxCarpet::ComputeJmp, std::tuple{this}); }
+		
+			return rclmt::jobsys::make_job(FxCarpet::ComputeJmp, std::tuple{this}); }
+private:
+	static void ComputeJmp(rclmt::jobsys::Job* job, unsigned threadId, std::tuple<FxCarpet*>* data) {
+		auto&[self] = *data;
+		self->ComputeImpl(); }
+	void ComputeImpl();
+
+private:
+	// state
+	std::array<rglv::VertexArray_F3F3F3, 3> buffers_;
+	int activeBuffer_{0};
+
+	// inputs
+	MaterialNode* materialNode_{nullptr};
+	ValuesBase* freqNode_{nullptr};
+	std::string freqSlot_{};
+	ValuesBase* phaseNode_{nullptr};
+	std::string phaseSlot_{}; };
+
 
 void FxCarpet::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "material") {
@@ -42,18 +80,18 @@ void FxCarpet::ComputeImpl() {
 	auto& vao = buffers_[activeBuffer_];
 	vao.clear();
 
-	rmlv::vec3 freq{ 0.0f };
-	rmlv::vec3 phase{ 0.0f };
+	rmlv::vec3 freq{ 0.0F };
+	rmlv::vec3 phase{ 0.0F };
 	if (freqNode_ != nullptr) {
 		freq = freqNode_->Get(freqSlot_).as_vec3(); }
 	if (phaseNode_ != nullptr) {
 		phase = phaseNode_->Get(phaseSlot_).as_vec3();}
 
-	vec3 leftTopP{ -1.0f, 0.5f, 0 };
-	vec3 leftTopT{ 0.0f, 1.0f, 0 };
+	vec3 leftTopP{ -1.0F, 0.5F, 0 };
+	vec3 leftTopT{ 0.0F, 1.0F, 0 };
 
-	vec3 rightBottomP{ 1.0f, -0.5f, 0 };
-	vec3 rightBottomT{ 1.0f, 0.0f, 0 };
+	vec3 rightBottomP{ 1.0F, -0.5F, 0 };
+	vec3 rightBottomT{ 1.0F, 0.0F, 0 };
 
 	auto emitQuad = [&](vec3 ltp, vec3 ltt, vec3 rbp, vec3 rbt) {
 		auto LT = ltp;                    auto RT = vec3{rbp.x, ltp.y, 0};
@@ -97,5 +135,23 @@ void FxCarpet::Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat
 		rclmt::jobsys::run(link); } }
 
 
-}  // namespace rqv
+class Compiler final : public NodeCompiler {
+	void Build() override {
+		if (!Input("MaterialNode", "material", /*required=*/true)) { return; }
+		if (!Input("ValuesBase", "freq", /*required=*/true)) { return; }
+		if (!Input("ValuesBase", "phase", /*required=*/true)) { return; }
+		out_ = std::make_shared<FxCarpet>(id_, std::move(inputs_)); }};
+
+Compiler compiler{};
+
+struct init { init() {
+	NodeRegistry::GetInstance().Register(NodeInfo{
+		"$fxCarpet",
+		"FxCarpet",
+		[](NodeBase* node) { return dynamic_cast<FxCarpet*>(node) != nullptr; },
+		&compiler });
+}} init{};
+
+
+}  // namespace
 }  // namespace rqdq

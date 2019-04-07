@@ -26,7 +26,7 @@ public:
 	GroupNode(std::string_view id, InputList inputs)
 		:GlNode(id, std::move(inputs)) {}
 
-	void Connect(std::string_view attr, NodeBase* other, std::string_view) override;
+	void Connect(std::string_view attr, NodeBase* other, std::string_view /*slot*/) override;
 
 	void Main() override;
 
@@ -55,7 +55,7 @@ public:
 	void Main() override;
 
 	virtual rmlv::vec3 GetBackgroundColor() {
-		auto color = rmlv::vec3{0.0f};
+		auto color = rmlv::vec3{0.0F};
 		if (colorNode_ != nullptr) {
 			color = colorNode_->Get(colorSlot_).as_vec3(); }
 		return color; }

@@ -21,7 +21,7 @@ thread_local double mark_start_time;
 int Ceil16(const int x) {
 	int rag = x & 0xf;
 	int segments = x >> 4;
-	if (rag) {
+	if (rag != 0) {
 		segments += 1; }
 	return segments << 4; }
 

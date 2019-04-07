@@ -47,7 +47,7 @@ inline float calc_offset(const float a, const float b, const float target) {
 
 	const auto delta = b - a;
 	if (delta == 0.0) {
-		return 0.5f; }
+		return 0.5F; }
 	return (target - a) / delta; }
 
 

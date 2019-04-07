@@ -25,8 +25,8 @@ using rglv::Material;
 namespace {
 
 struct SVec3 {
-	float x, y, z;
-	SVec3() :x(0), y(0), z(0) {}
+	float x{0}, y{0}, z{0};
+	SVec3()  {}
 	SVec3(float a) :x(a), y(a), z(a) {}
 	SVec3(float x, float y, float z) :x(x), y(y), z(z) {}
 
@@ -44,8 +44,8 @@ struct SVec3 {
 
 
 struct SVec2 {
-	float x, y;
-	SVec2() :x(0), y(0) {}
+	float x{0}, y{0};
+	SVec2()  {}
 	SVec2(float x, float y) :x(x), y(y) {}
 	vec4 xy00() const {
 		// the bilinear texture sampler
@@ -53,7 +53,7 @@ struct SVec2 {
 		// will be non-negative. this
 		// offset prevents badness for
 		// some meshes. XXX
-		return vec4{ x+100.0f, y+100.0f, 0, 0 }; }
+		return vec4{ x+100.0F, y+100.0F, 0, 0 }; }
 		//return rqlma::Vec4{ x, y, 0, 0 }; };
 	vec2 xy() const {
 		// the bilinear texture sampler
@@ -61,7 +61,7 @@ struct SVec2 {
 		// will be non-negative. this
 		// offset prevents badness for
 		// some meshes. XXX
-		return vec2{ x + 100.0f, y + 100.0f }; }
+		return vec2{ x + 100.0F, y + 100.0F }; }
 		//return rqlma::Vec4{ x, y, 0, 0 }; };
 	static SVec2 read(std::stringstream& ss) {
 		float x, y;
@@ -77,9 +77,9 @@ struct faceidx {
 faceidx to_faceidx(const std::string& data) {
 	auto tmp = rclt::Split(data, '/'); // "nn/nn/nn" or "nn//nn", 1+ indexed!!
 	return faceidx{
-		tmp[0].length() ? std::stol(tmp[0]) - 1 : 0, // vv
-		tmp[1].length() ? std::stol(tmp[1]) - 1 : 0, // vt
-		tmp[2].length() ? std::stol(tmp[2]) - 1 : 0  // vn
+		tmp[0].length() != 0u ? std::stol(tmp[0]) - 1 : 0, // vv
+		tmp[1].length() != 0u ? std::stol(tmp[1]) - 1 : 0, // vt
+		tmp[2].length() != 0u ? std::stol(tmp[2]) - 1 : 0  // vn
 	}; }
 
 
@@ -95,11 +95,11 @@ struct ObjMaterial {
 	void reset() {
 		name = "__none__";
 		texture = "";
-		ka = SVec3{0.0f};
-		kd = SVec3{0.0f};
-		ks = SVec3{0.0f};
-		specpow = 1.0f;
-		density = 1.0f; }
+		ka = SVec3{0.0F};
+		kd = SVec3{0.0F};
+		ks = SVec3{0.0F};
+		specpow = 1.0F;
+		density = 1.0F; }
 
 	Material to_material() const {
 		Material mm;
@@ -135,7 +135,8 @@ MaterialStore loadMaterials(const std::string& fn) {
 		// remove comments, trim, skip empty lines
 		auto tmp = line.substr(0, line.find('#'));
 		tmp = rclt::Trim(tmp);
-		if (tmp.size() == 0) continue;
+		if (tmp.empty()) {
+			continue; }
 
 		// create a stream
 		std::stringstream ss(tmp, std::stringstream::in);
@@ -188,7 +189,8 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 
 		auto tmp = line.substr(0, line.find('#'));
 		tmp = rclt::Trim(tmp);
-		if (tmp.size() == 0) continue;
+		if (tmp.empty()) {
+			continue; }
 		std::stringstream ss(tmp, std::stringstream::in);
 
 		std::string cmd;
@@ -213,8 +215,7 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 			if (!found.has_value()) {
 				std::cout << "usemtl \"" << material_name << "\" not found in mtl\n";
 				throw std::runtime_error("usemtl not found"); }
-			else {
-				material_idx = found.value(); }}
+			material_idx = found.value(); }
 
 		else if (cmd == "v") {
 			// vertex
@@ -233,6 +234,7 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 			std::string data = line.substr(line.find(' ') + 1, std::string::npos);
 			auto faces = rclt::Split(data, ' ');
 			std::vector<faceidx> indexes;
+			indexes.reserve(faces.size());
 			for (auto& facechunk : faces) {
 				indexes.push_back(to_faceidx(facechunk)); }
 			// triangulate and make faces

@@ -120,7 +120,7 @@ struct Edge {
 	inline void inc_x() {
 		b += bdx; }
 
-	inline const rmlv::mvec4i value() {
+	inline rmlv::mvec4i value() {
 		return b; }
 	};
 

@@ -39,9 +39,8 @@ void MeshStore::load_dir(const std::string& prefix,
 		int material_base_idx = materialstore.size();
 
 		tmp_materials.for_each([&](const Material& item) {
-			if (item.imagename != "") {
-				texturestore.load_any(prefix, item.imagename);
-			}
+			if (!item.imagename.empty()) {
+				texturestore.load_any(prefix, item.imagename); }
 			materialstore.append(item); });
 
 		for (auto& item : tmp_mesh.faces) {

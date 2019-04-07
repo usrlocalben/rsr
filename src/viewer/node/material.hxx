@@ -47,7 +47,7 @@ public:
 			if (textureNode1_ != nullptr) {
 				textureNode1_->Run(); }}}
 
-	virtual void Apply(rglv::GL*);
+	virtual void Apply(rglv::GL* /*_dc*/);
 
 private:
 	// config

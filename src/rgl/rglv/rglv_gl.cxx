@@ -51,7 +51,7 @@ void GL::storeUnswizzled(rglr::FloatingPointCanvas *dst) {
 void GL::storeTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst) {
 	maybeUpdateState();
 	d_commands.appendByte(CMD_STORE_TRUECOLOR);
-	d_commands.appendByte(enableGammaCorrection);
+	d_commands.appendByte(static_cast<uint8_t>(enableGammaCorrection));
 	d_commands.appendPtr(dst); }
 
 
@@ -67,7 +67,8 @@ void GL::reset() {
 
 
 void GL::maybeUpdateState() {
-	if (!d_dirty) return;
+	if (!d_dirty) {
+		return; }
 	d_cs.modelViewMatrix = d_modelViewMatrixStack.top();
 	d_cs.projectionMatrix = d_projectionMatrixStack.top();
 	d_cs.textureMatrix = d_textureMatrixStack.top();

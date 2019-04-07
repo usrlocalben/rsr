@@ -6,7 +6,7 @@ namespace rclma {
 namespace framepool {
 	void Init();
 	void Reset();
-	void* Allocate(const int);
+	void* Allocate(int /*amt*/);
 
 
 }  // namespace framepool

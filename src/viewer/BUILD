@@ -59,7 +59,8 @@ app_deps = [
     "//src/viewer/node:output",
     "//src/viewer/node:value",
     ":compile",
-    ":jobsys_vis",]
+    ":jobsys_vis",
+    ":node_library", ]
 cc_library(
     name = "app_silent", srcs = app_srcs, hdrs = app_hdrs,
     deps = app_deps,
@@ -84,12 +85,16 @@ cc_library(
     hdrs = ["compile.hxx"],
     deps = [
         "//3rdparty/gason",
-        "//3rdparty/pixeltoaster",
         "//src/rcl/rclt:util",
         "//src/rcl/rclx:gason_util",
-        "//src/rgl/rglr:texture",
-        "//src/rgl/rglr:texture_load",
         "//src/rgl/rglv:mesh_store",
+        "//src/viewer/node:base",],
+    copts = RSR_DEFAULT_COPTS,)
+
+
+cc_library(
+    name = "node_library",
+    deps = [
         "//src/viewer/node:camera",
         "//src/viewer/node:computed",
         "//src/viewer/node:fx_auraforlaura",
@@ -103,6 +108,20 @@ cc_library(
         "//src/viewer/node:render",
         "//src/viewer/node:translate",
         "//src/viewer/node:value", ],
+    linkopts = [
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:camera)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:computed)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_auraforlaura)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_carpet)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_foo)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_mc)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_xyquad)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:gl)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:gpu)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:material)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:render)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:translate)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:value)",],
     copts = RSR_DEFAULT_COPTS,)
 
 

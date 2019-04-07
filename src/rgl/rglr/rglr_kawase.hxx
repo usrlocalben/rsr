@@ -7,9 +7,9 @@ namespace rglr {
 namespace Blur {
 
 struct Kawase {
-	void blur_copy(const int y0,
-	               const int y1,
-	               const int dist,
+	void blur_copy(int y0,
+	               int y1,
+	               int dist,
 	               const FloatingPointCanvas& src,
 	               FloatingPointCanvas& dst);
 	};

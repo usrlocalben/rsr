@@ -73,15 +73,15 @@ void render_jobsys(const int left, const int top, const float xscale, rglr::True
 		for (const auto &jobstat : thread_telemetry) {
 
 			auto span = to_span(jobstat, scale);
-			auto bright = 1.0f;
-			auto delta = 1.0f / (span.right - span.left);
+			auto bright = 1.0F;
+			auto delta = 1.0F / (span.right - span.left);
 
 			for (int bx = span.left; bx <= span.right; bx++) {
 				auto color = tc_mul(span.color, bright);
 
 				for (int by = 0; by < thick; by++) {
-					if (left + bx < canvas.width())
-						canvas.data()[(top + bar_top + by) * canvas.stride() + left + bx] = color; }
+					if (left + bx < canvas.width()) {
+						canvas.data()[(top + bar_top + by) * canvas.stride() + left + bx] = color; }}
 				bright -= delta; }}
 
 		bar_top += thick + gap; }}

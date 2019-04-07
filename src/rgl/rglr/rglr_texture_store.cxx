@@ -29,9 +29,10 @@ void TextureStore::append(Texture t) {
 	store.push_back(t); }
 
 
-const Texture * const TextureStore::find_by_name(const std::string& name) const {
+const Texture * TextureStore::find_by_name(const std::string& name) const {
 	for (auto& item : store) {
-		if (item.name == name) return &item; }
+		if (item.name == name) {
+			return &item; }}
 	return nullptr; }
 
 

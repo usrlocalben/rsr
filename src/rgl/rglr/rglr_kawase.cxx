@@ -24,7 +24,7 @@ constexpr array<const array<ofs, 4>, 5> kawase_offsets = { {
 	{{ {-4, -4}, {3, -4}, {-4, 3}, {3, 3} }},
 	{{ {-5, -5}, {4, -5}, {-5, 4}, {4, 4} }}, } };
 
-const rmlv::mvec4f ONE_OVER_16{ 1.0f / 16.0f };
+const rmlv::mvec4f ONE_OVER_16{ 1.0F / 16.0F };
 
 constexpr int SAFE_ZONE = 5;
 
@@ -85,7 +85,7 @@ void Kawase::blur_copy(const int y0,
 				(ax * ONE_OVER_16).store(&out[x].v); }}
 		out += dst.stride(); }}
 
-}
+}  // namespace Blur
 
 
 }  // namespace rglr

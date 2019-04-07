@@ -1,6 +1,11 @@
 #include "translate.hxx"
 
+#include <map>
+#include <string>
 #include <string_view>
+
+#include "src/rcl/rclx/rclx_gason_util.hxx"
+#include "src/viewer/compile.hxx"
 
 namespace rqdq {
 namespace rqv {
@@ -126,7 +131,7 @@ void TranslateOp::Draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::m
 
 	mat4& M = *reinterpret_cast<mat4*>(framepool::Allocate(64));
 
-	auto scale = rmlv::vec3{1.0f, 1.0f, 1.0f};
+	auto scale = rmlv::vec3{1.0F, 1.0F, 1.0F};
 	if (scaleNode_ != nullptr) {
 		scale = scaleNode_->Get(scaleSlot_).as_vec3(); }
 
@@ -145,6 +150,74 @@ void TranslateOp::Draw(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::m
 	M = M * mat4::translate(translate);
 	lowerNode_->Draw(dc, pmat, &M, link, depth); }
 
-
 }  // namespace rqv
+
+namespace {
+
+using namespace rqv;
+
+class TranslateCompiler final : public NodeCompiler {
+	void Build() override {
+		if (!Input("GlNode", "gl", /*required=*/true)) { return; }
+		if (!Input("ValuesBase", "rotate", /*required=*/false)) { return; }
+		if (!Input("ValuesBase", "scale", /*required=*/false)) { return; }
+		if (!Input("ValuesBase", "translate", /*required=*/false)) { return; }
+
+/*
+		map<string, vec3> slot_values = {
+			{"translate", vec3{0,0,0}},
+			{"rotate", vec3{0,0,0}},
+			{"scale", vec3{1,1,1}},
+			};
+
+		for (const auto& slot_name : { "translate", "rotate", "scale" }) {
+			if (auto jv = jv_find(data_, slot_name)) {
+				auto value = jv_decode_ref_or_vec3(*jv);
+				if (auto ptr = get_if<string>(&value)) {
+					inputs.emplace_back(slot_name, *ptr); }
+				else if (auto ptr = get_if<vec3>(&value)) {
+					slot_values[slot_name] = *ptr; } } }
+
+		if (auto jv = jv_find(data_, "gl", JSON_STRING)) {
+			inputs.emplace_back("gl", jv->toString()); }
+*/
+		out_ = std::make_shared<TranslateOp>(id_, std::move(inputs_)); }};
+
+
+class RepeatCompiler final : public NodeCompiler {
+	void Build() override {
+		using namespace rclx;
+		int many{1};
+		std::map<std::string, rmlv::vec3> slotValues = {
+			{"translate", rmlv::vec3{0,0,0}},
+			{"rotate", rmlv::vec3{0,0,0}},
+			{"scale", rmlv::vec3{1,1,1}},
+			};
+		for (const auto& slot_name : { "translate", "rotate", "scale" }) {
+			if (auto jv = jv_find(data_, slot_name)) {
+				auto value = jv_decode_ref_or_vec3(*jv);
+				if (auto ptr = std::get_if<std::string>(&value)) {
+					inputs_.emplace_back(slot_name, *ptr); }
+				else if (auto ptr = std::get_if<rmlv::vec3>(&value)) {
+					slotValues[slot_name] = *ptr; } } }
+		if (auto jv = jv_find(data_, "many", JSON_NUMBER)) {
+			many = static_cast<int>(jv->toNumber()); }
+		if (auto jv = jv_find(data_, "gl", JSON_STRING)) {
+			inputs_.emplace_back("gl", jv->toString()); }
+		out_ = std::make_shared<RepeatOp>(id_, std::move(inputs_),
+		                                  many,
+		                                  slotValues["translate"],
+		                                  slotValues["rotate"],
+		                                  slotValues["scale"]); }};
+
+TranslateCompiler translateCompiler{};
+RepeatCompiler repeatCompiler{};
+
+struct init { init() {
+	NodeRegistry::GetInstance().Register(NodeInfo{ "$repeat", "Repeat", [](NodeBase* node) { return dynamic_cast<RepeatOp*>(node) != nullptr; }, &repeatCompiler });
+	NodeRegistry::GetInstance().Register(NodeInfo{ "$translate", "Translate", [](NodeBase* node) { return dynamic_cast<TranslateOp*>(node) != nullptr; }, &translateCompiler });
+}} init{};
+
+
+}  // namespace
 }  // namespace rqdq

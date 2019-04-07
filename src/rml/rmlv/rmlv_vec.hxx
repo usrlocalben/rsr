@@ -221,10 +221,10 @@ T lerp_premul(const T& a, const T& b, const T& f) {
 T lerp(const T& a, const T& b, const T& f) {
 	return (1 - f)*a + f*b; }*/
 
-inline float mix(float a, float b, float t) { return (1.0f - t)*a + t*b; }
-inline vec2 mix(vec2 a, vec2 b, float t) { return (1.0f - t)*a + t*b; }
-inline vec3 mix(vec3 a, vec3 b, float t) { return (1.0f - t)*a + t*b; }
-inline vec4 mix(vec4 a, vec4 b, float t) { return (1.0f - t)*a + t*b; }
+inline float mix(float a, float b, float t) { return (1.0F - t)*a + t*b; }
+inline vec2 mix(vec2 a, vec2 b, float t) { return (1.0F - t)*a + t*b; }
+inline vec3 mix(vec3 a, vec3 b, float t) { return (1.0F - t)*a + t*b; }
+inline vec4 mix(vec4 a, vec4 b, float t) { return (1.0F - t)*a + t*b; }
 
 
 // dot
@@ -310,9 +310,9 @@ inline bool almost_equal(const vec4& a, const vec4& b) {
 
 
 inline uint32_t pack_udec3(float x, float y, float z) {
-	auto ix = uint32_t( (x + 1.0f) * 511.5f );
-	auto iy = uint32_t( (y + 1.0f) * 511.5f );
-	auto iz = uint32_t( (z + 1.0f) * 511.5f );
+	auto ix = uint32_t( (x + 1.0F) * 511.5F );
+	auto iy = uint32_t( (y + 1.0F) * 511.5F );
+	auto iz = uint32_t( (z + 1.0F) * 511.5F );
 	return (ix & 0x3FF) | ((iy & 0x3FF) << 10) | ((iz & 0x3FF) << 20); }
 
 inline auto unpack_udec3(uint32_t N) {

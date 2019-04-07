@@ -1,5 +1,6 @@
 #include "compile.hxx"
 
+#include <cassert>
 #include <map>
 #include <memory>
 #include <optional>
@@ -10,29 +11,16 @@
 
 #include "src/rcl/rclt/rclt_util.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
-#include "src/rgl/rglr/rglr_texture.hxx"
-#include "src/rgl/rglr/rglr_texture_load.hxx"
 #include "src/rgl/rglv/rglv_mesh_store.hxx"
-#include "src/viewer/node/camera.hxx"
-#include "src/viewer/node/computed.hxx"
-#include "src/viewer/node/fx_auraforlaura.hxx"
-#include "src/viewer/node/fx_carpet.hxx"
-#include "src/viewer/node/fx_foo.hxx"
-#include "src/viewer/node/fx_mc.hxx"
-#include "src/viewer/node/fx_xyquad.hxx"
-#include "src/viewer/node/gl.hxx"
-#include "src/viewer/node/gpu.hxx"
-#include "src/viewer/node/material.hxx"
-#include "src/viewer/node/render.hxx"
-#include "src/viewer/node/translate.hxx"
-#include "src/viewer/node/value.hxx"
+#include "src/viewer/node/base.hxx"
 
+#include "3rdparty/fmt/include/fmt/printf.h"
 #include "3rdparty/gason/gason.h"
 
 namespace rqdq {
 namespace {
 
-int idGen = 0;
+int idGen{0};
 
 }  // namespace
 
@@ -44,575 +32,174 @@ using namespace rclx;
 using namespace rmlv;
 using rclt::Split;
 
-using NodeList = std::vector<std::shared_ptr<NodeBase>>;
 
-using CompileResult = std::optional<std::tuple<std::shared_ptr<NodeBase>, NodeList>>;
-using CompileFunc = CompileResult(*)(string_view, const JsonValue&, const rglv::MeshStore&);
+NodeRegistry::NodeRegistry() = default;
 
 
-CompileResult deserializeNode(const JsonValue& data, const rglv::MeshStore& meshstore);
+NodeRegistry& NodeRegistry::GetInstance() {
+	static NodeRegistry reg{};
+	return reg; }
 
 
-#define Required(NODETYPE, ATTRNAME) \
-	if (auto jv = jv_find(data, #ATTRNAME )) { \
-		if (jv->getTag() == JSON_STRING) { \
-			inputs.emplace_back( #ATTRNAME , jv->toString()); } \
-		else if (jv->getTag() == JSON_OBJECT) { \
-			if (auto subPtr = deserializeNode(*jv, meshStore)) { \
-				auto [subNode, subDeps] = *subPtr; \
-				if (auto depNode = static_cast< NODETYPE *>(subNode.get())) { \
-					deps.emplace_back(subNode); \
-					std::copy(begin(subDeps), end(subDeps), std::back_inserter(deps)); \
-					inputs.emplace_back(#ATTRNAME, depNode->get_id()); } \
-				else { \
-					std::cout << "inline node is not a " << #NODETYPE << "\n"; \
-					return {}; }} \
-			else { \
-				std::cout << "invalid data for " << #ATTRNAME << "\n"; \
-				return {}; }} \
-		else { \
-			std::cout << #ATTRNAME << " node must be object or string\n"; \
-			return {};}} \
-	else { \
-		std::cout << "missing " << #ATTRNAME << " node\n"; \
+void NodeRegistry::Register(NodeInfo info) {
+	if (GetByTypeName(info.typeName).has_value()) {
+		auto msg = fmt::sprintf("attempted to register node type "
+								"\"%s\" twice", info.typeName);
+		throw std::runtime_error(msg); }
+	if (GetByJsonName(info.jsonName).has_value()) {
+		auto msg = fmt::sprintf("attempted to register json object "
+								"\"%s\" twice", info.jsonName);
+		throw std::runtime_error(msg); }
+
+	jsonDB_.emplace(info.jsonName, info);
+	typeDB_.emplace(info.typeName, info); }
+
+
+std::optional<NodeInfo> NodeRegistry::GetByTypeName(std::string_view typeName) {
+	static std::string key;
+	key.assign(typeName);  // XXX yuck!
+	if (auto found = typeDB_.find(key); found != end(typeDB_)) {
+		return found->second; }
+	return {}; }
+
+
+std::optional<NodeInfo> NodeRegistry::GetByJsonName(std::string_view jsonName) {
+	static std::string key;
+	key.assign(jsonName);  // XXX yuck!
+	if (auto found = jsonDB_.find(key); found != end(jsonDB_)) {
+		return found->second; }
+	return {}; }
+
+
+CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore);
+
+
+NodeCompiler::NodeCompiler() = default;
+
+
+NodeCompiler::~NodeCompiler() = default;
+
+
+CompileResult NodeCompiler::Compile(std::string_view id, JsonValue data, const rglv::MeshStore& meshStore) {
+	id_ = id;
+	data_ = data;
+	meshStore_ = &meshStore;
+	inputs_.clear();
+	deps_.clear();
+	out_.reset();
+
+	Build();
+	if (!out_) {
 		return {}; }
-
-#define Optional(NODETYPE, ATTRNAME) \
-	if (auto jv = jv_find(data, #ATTRNAME )) { \
-		if (jv->getTag() == JSON_STRING) { \
-			inputs.emplace_back( #ATTRNAME , jv->toString()); } \
-		else if (jv->getTag() == JSON_OBJECT) { \
-			if (auto subPtr = deserializeNode(*jv, meshStore)) { \
-				auto [subNode, subDeps] = *subPtr; \
-				if (auto depNode = static_cast< NODETYPE *>(subNode.get())) { \
-					deps.emplace_back(subNode); \
-					std::copy(begin(subDeps), end(subDeps), std::back_inserter(deps)); \
-					inputs.emplace_back(#ATTRNAME, depNode->get_id()); } \
-				else { \
-					std::cout << "inline node is not a " << #NODETYPE << "\n"; \
-					return {}; }} \
-			else { \
-				std::cout << "invalid data for " << #ATTRNAME << "\n"; \
-				return {}; }} \
-		else { \
-			std::cout << #ATTRNAME << " node must be object or string\n"; \
-			return {};}}
-
-
-CompileResult compileFxAuraForLaura(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-
-	Required(MaterialNode, material)
-	Required(ValuesBase, freq)
-	Required(ValuesBase, phase)
-
-	string meshPath{"notfound.obj"};
-	if (auto jv = jv_find(data, "mesh", JSON_STRING)) {
-		meshPath = jv->toString(); }
-	const auto& mesh = meshStore.get(meshPath);
-
-	return tuple{make_shared<FxAuraForLaura>(id, std::move(inputs), mesh), deps}; }
-
-
-CompileResult compileFxCarpet(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-
-	Required(MaterialNode, material)
-	Required(ValuesBase, freq)
-	Required(ValuesBase, phase)
-
-	return tuple{make_shared<FxCarpet>(id, std::move(inputs)), deps}; }
-
-
-CompileResult compilePerspective(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	Required(ValuesBase, position)
-
-	float ha = 3.14f;
-	if (auto jv = jv_find(data, "h", JSON_NUMBER)) {
-		ha = float(jv->toNumber()); }
-
-	float va = 0.0f;
-	if (auto jv = jv_find(data, "v", JSON_NUMBER)) {
-		va = float(jv->toNumber()); }
-
-	float fov = 45.0f;
-	if (auto jv = jv_find(data, "fov", JSON_NUMBER)) {
-		fov = float(jv->toNumber()); }
-
-	auto origin = rmlv::vec2{0.0f};
-	if (auto jv = jv_find(data, "originX", JSON_NUMBER)) {
-		origin.x = float(jv->toNumber()); }
-	if (auto jv = jv_find(data, "originY", JSON_NUMBER)) {
-		origin.y = float(jv->toNumber()); }
-	return tuple{make_shared<ManCamNode>(id, std::move(inputs), ha, va, fov, origin), deps}; }
-
-
-CompileResult compileOrthographic(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	return tuple{make_shared<OrthographicNode>(id, std::move(inputs)), deps}; }
-
-
-CompileResult compileComputedVec3(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-
-	string code = "var out[3] := {0, 0, 0}; return [out];";
-	vector<pair<string, string>> svars;
-
-	if (auto jv = jv_find(data, "code", JSON_STRING)) {
-		code = jv->toString();
-		if (code[0] == '{') {
-			code = "var out[3] := " + code + "; return [out];"; } }
-
-	if (auto jv = jv_find(data, "inputs", JSON_ARRAY)) {
-		for (const auto& item : *jv) {
-			auto jv_name = jv_find(item->value, "name", JSON_STRING);
-			auto jv_type = jv_find(item->value, "type", JSON_STRING);
-			auto jv_source = jv_find(item->value, "source", JSON_STRING);
-			if (jv_name && jv_type && jv_source) {
-				svars.push_back(std::pair{jv_name->toString(), jv_type->toString()});
-				inputs.emplace_back(jv_name->toString(), jv_source->toString()); } } }
-
-	return tuple{make_shared<ComputedVec3Node>(id, std::move(inputs), std::move(code), std::move(svars)), deps}; }
-
-
-CompileResult compileFxFoo(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	Required(MaterialNode, material)
-
-	string name{"notfound.obj"};
-	if (auto jv = jv_find(data, "name", JSON_STRING)) {
-		name = jv->toString(); }
-	const auto& mesh = meshStore.get(name);
-
-	return tuple{make_shared<FxFoo>(id, std::move(inputs), mesh), deps}; }
-
-
-CompileResult compileFxMC(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	Required(MaterialNode, material)
-	Required(ValuesBase, frob)
-
-	int precision = 32;
-	if (auto jv = jv_find(data, "precision", JSON_NUMBER)) {
-		precision = int(jv->toNumber()); }
-	switch (precision) {
-	case 8:
-	case 16:
-	case 32:
-	case 64:
-	case 128:
-		break;
-	default:
-		std::cout << "FxMC: precision " << precision << " must be one of (8, 16, 32, 64, 128)!  precision will be 32\n";
-		precision = 32; }
-
-	int forkDepth = 2;
-	if (auto jv = jv_find(data, "forkDepth", JSON_NUMBER)) {
-		forkDepth = int(jv->toNumber()); }
-	if (forkDepth < 0 || forkDepth > 4) {
-		std::cout << "FxMC: forkDepth " << forkDepth << " exceeds limit (0 <= n <= 4)!  forkDepth will be 2\n";
-		forkDepth = 2; }
-
-	float range = 5.0f;
-	if (auto jv = jv_find(data, "range", JSON_NUMBER)) {
-		range = float(jv->toNumber()); }
-	if (range < 0.0001f) {
-		std::cout << "FxMC: range " << range << " is too small (n<0.0001)!  range will be +/- 5.0\n";
-		range = 5.0f; }
-
-	return tuple{make_shared<FxMC>(id, std::move(inputs), precision, forkDepth, range), deps}; }
-
-
-CompileResult compileFxXYQuad(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	ShaderProgramId program = ShaderProgramId::Default;
-
-	vec2 leftTop{ -1.0f, 1.0f };
-	vec2 rightBottom{ 1.0f, -1.0f };
-	float z = 0.0f;
-
-	Required(MaterialNode, material)
-	Required(ValuesBase, leftTop)
-	Required(ValuesBase, rightBottom)
-	Required(ValuesBase, z)
-
-	return make_pair(make_shared<FxXYQuad>(id, std::move(inputs)), deps); };
-
-
-CompileResult compileMaterial(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	Optional(TextureNode, texture0)
-	Optional(TextureNode, texture1)
-	Optional(ValuesBase, u0)
-	Optional(ValuesBase, u1)
-
-	ShaderProgramId program = ShaderProgramId::Default;
-	if (auto jv = jv_find(data, "program", JSON_STRING)) {
-		program = deserialize_program_name(jv->toString()); }
-
-	bool filter = false;
-	if (auto jv = jv_find(data, "filter", JSON_TRUE)) {
-		filter = true; }
-
-	return tuple{make_shared<MaterialNode>(id, std::move(inputs), program, filter), deps}; }
-
-
-CompileResult compileImage(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-
-	rglr::Texture tex;
-	if (auto jv = jv_find(data, "file", JSON_STRING)) {
-		tex = rglr::load_png(jv->toString(), jv->toString(), false);
-		tex.maybe_make_mipmap(); }
-
-	return tuple{make_shared<ImageNode>(id, std::move(inputs), tex), deps}; }
-
-
-CompileResult compileGPU(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	if (auto jv = jv_find(data, "layers", JSON_ARRAY)) {
-		for (const auto& item : *jv) {
-			if (item->value.getTag() == JSON_STRING) {
-				inputs.emplace_back("layer", item->value.toString()); }}}
-
-	return tuple{make_shared<GPUNode>(id, std::move(inputs)), deps}; }
-
-
-CompileResult compileLayer(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	Optional(CameraNode, camera)
-	Optional(ValuesBase, color)
-	if (auto jv = jv_find(data, "gl", JSON_ARRAY)) {
-		for (const auto& item : *jv) {
-			if (item->value.getTag() == JSON_STRING) {
-				inputs.emplace_back("gl", item->value.toString()); } } }
-	return tuple{make_shared<LayerNode>(id, std::move(inputs)), deps}; }
-
-
-CompileResult compileGroup(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	if (auto jv = jv_find(data, "gl", JSON_ARRAY)) {
-		for (const auto& item : *jv) {
-			if (item->value.getTag() == JSON_STRING) {
-				inputs.emplace_back("gl", item->value.toString()); } } }
-	return tuple{make_shared<GroupNode>(id, std::move(inputs)), deps}; }
-
-
-CompileResult compileLayerChooser(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	Required(ValuesBase, selector)
-	if (auto jv = jv_find(data, "layers", JSON_ARRAY)) {
-		for (const auto& item : *jv) {
-			if (item->value.getTag() == JSON_STRING) {
-				inputs.emplace_back("layer", item->value.toString()); } } }
-	return tuple{make_shared<LayerChooser>(id, std::move(inputs)), deps}; }
-
-
-CompileResult compileRender(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	Required(GPUNode, gpu)
-
-	ShaderProgramId program = ShaderProgramId::Default;
-	if (auto jv = jv_find(data, "program", JSON_STRING)) {
-		program = deserialize_program_name(jv->toString()); }
-
-	bool srgb = true;
-	if (auto jv = jv_find(data, "sRGB", JSON_FALSE)) {
-		srgb = false; }
-
-	return tuple{make_shared<RenderNode>(id, std::move(inputs), program, srgb), deps}; }
-
-
-CompileResult compileRenderToTexture(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-
-	Required(GPUNode, gpu)
-
-	int width = 256;
-	if (auto jv = jv_find(data, "width", JSON_NUMBER)) {
-		width = int(jv->toNumber()); }
-
-	int height = 256;
-	if (auto jv = jv_find(data, "height", JSON_NUMBER)) {
-		height = int(jv->toNumber()); }
-
-	bool aa = false;
-	if (auto jv = jv_find(data, "aa", JSON_TRUE)) {
-		aa = true; }
-
-	float pa = 1.0f;
-	if (auto jv = jv_find(data, "aspect", JSON_NUMBER)) {
-		pa = float(jv->toNumber()); }
-
-	return tuple{make_shared<RenderToTexture>(id, std::move(inputs), width, height, pa, aa), deps}; }
-
-
-CompileResult compileTranslate(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	map<string, vec3> slot_values = {
-		{"translate", vec3{0,0,0}},
-		{"rotate", vec3{0,0,0}},
-		{"scale", vec3{1,1,1}},
-		};
-
-	Optional(ValuesBase, rotate)
-	Optional(ValuesBase, scale)
-	Optional(ValuesBase, translate)
-	Required(GlNode, gl)
-
-	/*
-	for (const auto& slot_name : { "translate", "rotate", "scale" }) {
-		if (auto jv = jv_find(data, slot_name)) {
-			auto value = jv_decode_ref_or_vec3(*jv);
-			if (auto ptr = get_if<string>(&value)) {
-				inputs.emplace_back(slot_name, *ptr); }
-			else if (auto ptr = get_if<vec3>(&value)) {
-				slot_values[slot_name] = *ptr; } } }
-
-	if (auto jv = jv_find(data, "gl", JSON_STRING)) {
-		inputs.emplace_back("gl", jv->toString()); }
-		*/
-	return tuple{make_shared<TranslateOp>(id, std::move(inputs)), deps}; }
-
-
-CompileResult compileRepeat(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	int many{ 1 };
-	map<string, vec3> slot_values = {
-		{"translate", vec3{0,0,0}},
-		{"rotate", vec3{0,0,0}},
-		{"scale", vec3{1,1,1}},
-		};
-	for (const auto& slot_name : { "translate", "rotate", "scale" }) {
-		if (auto jv = jv_find(data, slot_name)) {
-			auto value = jv_decode_ref_or_vec3(*jv);
-			if (auto ptr = get_if<string>(&value)) {
-				inputs.emplace_back(slot_name, *ptr); }
-			else if (auto ptr = get_if<vec3>(&value)) {
-				slot_values[slot_name] = *ptr; } } }
-	if (auto jv = jv_find(data, "many", JSON_NUMBER)) {
-		many = int(jv->toNumber()); }
-	if (auto jv = jv_find(data, "gl", JSON_STRING)) {
-		inputs.emplace_back("gl", jv->toString()); }
-	return tuple{make_shared<RepeatOp>(
-		id,
-		std::move(inputs),
-		many,
-		slot_values["translate"],
-		slot_values["rotate"],
-		slot_values["scale"]
-		), deps}; }
-
-
-CompileResult compileFloat(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	InputList inputs;
-	NodeList deps;
-	float x{ 0.0f };
-
-	if (auto jv = jv_find(data, "x", JSON_NUMBER)) {
-		x = float(jv->toNumber()); }
-	else if (auto jv = jv_find(data, "x", JSON_STRING)) {
-		inputs.emplace_back("x", jv->toString()); }
-
-	return tuple{make_shared<FloatNode>(id, std::move(inputs), x), deps}; }
-
-
-CompileResult compileVec2(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	using rclx::jv_find;
-
-	InputList inputs;
-	NodeList deps;
-	float x{ 0.0f }, y{ 0.0f };
-
-	if (auto jv = jv_find(data, "x", JSON_NUMBER)) {
-		x = float(jv->toNumber()); }
-	else if (auto jv = jv_find(data, "x", JSON_STRING)) {
-		inputs.emplace_back("x", jv->toString()); }
-
-	if (auto jv = jv_find(data, "y", JSON_NUMBER)) {
-		y = float(jv->toNumber()); }
-	else if (auto jv = jv_find(data, "y", JSON_STRING)) {
-		inputs.emplace_back("y", jv->toString()); }
-
-	return tuple{make_shared<Vec2Node>(id, std::move(inputs), vec2{x, y}), deps}; }
-
-
-CompileResult compileVec3(string_view id, const JsonValue& data, const rglv::MeshStore& meshStore) {
-	using rclx::jv_find;
-
-	InputList inputs;
-	NodeList deps;
-	float x{ 0.0f }, y{ 0.0f }, z{ 0.0f };
-
-	if (auto jv = jv_find(data, "x", JSON_NUMBER)) {
-		x = float(jv->toNumber()); }
-	else if (auto jv = jv_find(data, "x", JSON_STRING)) {
-		inputs.emplace_back("x", jv->toString()); }
-
-	if (auto jv = jv_find(data, "y", JSON_NUMBER)) {
-		y = float(jv->toNumber()); }
-	else if (auto jv = jv_find(data, "y", JSON_STRING)) {
-		inputs.emplace_back("y", jv->toString()); }
-
-	if (auto jv = jv_find(data, "z", JSON_NUMBER)) {
-		z = float(jv->toNumber()); }
-	else if (auto jv = jv_find(data, "z", JSON_STRING)) {
-		inputs.emplace_back("z", jv->toString()); }
-
-	return tuple{make_shared<Vec3Node>(id, std::move(inputs), vec3{x, y, z}), deps}; }
-
-
-enum class NodeType {
-	// value nodes
-	ComputedVec3,
-	Float,
-	Vec2,
-	Vec3,
-
-	// util nodes
-	GPU,
-	Perspective,
-	Orthographic,
-	Render,
-	RenderToTexture,
-
-	// gl nodes
-	FxAuraForLaura,
-	FxCarpet,
-	FxFoo,
-	FxMC,
-	FxXYQuad,
-	Group,
-	Image,
-	Layer,
-	LayerChooser,
-	Material,
-	Repeat,
-	Translate,
-};
-
-
-struct NodeMeta {
-	//string jsonKey;
-	NodeType nodeType;
-	CompileFunc compileFunc; };
-
-
-unordered_map<string, NodeMeta> nodeTable{
-	{"$computedVec3"s,    NodeMeta{NodeType::ComputedVec3,    compileComputedVec3}},
-	{"$float"s,           NodeMeta{NodeType::Float,           compileFloat}},
-	{"$vec2"s,            NodeMeta{NodeType::Vec2,            compileVec2}},
-	{"$vec3"s,            NodeMeta{NodeType::Vec3,            compileVec3}},
-	{"$vec3"s,            NodeMeta{NodeType::Vec3,            compileVec3}},
-
-	{"$gpu"s,             NodeMeta{NodeType::GPU,             compileGPU}},
-
-	{"$perspective"s,     NodeMeta{NodeType::Perspective,     compilePerspective}},
-	{"$orthographic"s,    NodeMeta{NodeType::Orthographic,    compileOrthographic}},
-
-	{"$render"s,          NodeMeta{NodeType::Render,          compileRender}},
-	{"$renderToTexture"s, NodeMeta{NodeType::RenderToTexture, compileRenderToTexture}},
-
-    {"$image"s,           NodeMeta{NodeType::Image,           compileImage}},
-    {"$material"s,        NodeMeta{NodeType::Material,        compileMaterial}},
-
-	{"$fxAuraForLaura"s,  NodeMeta{NodeType::FxAuraForLaura,  compileFxAuraForLaura}},
-	{"$fxCarpet"s,        NodeMeta{NodeType::FxCarpet,        compileFxCarpet}},
-	{"$fxFoo"s,           NodeMeta{NodeType::FxFoo,           compileFxFoo}},
-	{"$fxMC"s,            NodeMeta{NodeType::FxMC,            compileFxMC}},
-	{"$fxXYQuad"s,        NodeMeta{NodeType::FxXYQuad,        compileFxXYQuad}},
-	{"$group"s,           NodeMeta{NodeType::Group,           compileGroup}},
-	{"$layer"s,           NodeMeta{NodeType::Layer,           compileLayer}},
-	{"$layerChooser"s,    NodeMeta{NodeType::LayerChooser,    compileLayerChooser}},
-    {"$repeat"s,          NodeMeta{NodeType::Repeat,          compileRepeat}},
-    {"$translate"s,       NodeMeta{NodeType::Translate,       compileTranslate}},
-};
-
-
-optional<tuple<NodeMeta, JsonValue, string>> jvPartialDecodeNode(const JsonValue& data) {
+	return std::tuple{out_, deps_}; }
+
+
+bool NodeCompiler::Input(std::string_view typeName, std::string_view attrName, bool required) {
+	auto maybeTypeInfo = NodeRegistry::GetInstance().GetByTypeName(typeName);
+	if (!maybeTypeInfo.has_value()) {
+		auto msg = fmt::sprintf("node type \"%s\" not registered", typeName);
+		std::cerr << msg;
+		return false; }
+
+	if (auto jv = jv_find(data_, attrName)) {
+		if (jv->getTag() == JSON_STRING) {
+			// reference string
+			inputs_.emplace_back(attrName, jv->toString());
+			return true; }
+		if (jv->getTag() == JSON_OBJECT) {
+			// inline node
+			if (auto subPtr = CompileNode(jv.value(), *meshStore_)) {
+				auto [subNode, subDeps] = *subPtr;
+				if (maybeTypeInfo.value().IsInstance(subNode.get())) {
+					deps_.emplace_back(subNode);
+					std::copy(begin(subDeps), end(subDeps), std::back_inserter(deps_));
+					inputs_.emplace_back(attrName, subNode->get_id());
+					return true; }
+				else {
+					std::cerr << "inline node is not a " << typeName << "\n";
+					return false; }}
+			else {
+				std::cerr << "invalid data for " << attrName << "\n";
+				return false; }}
+		else {
+			std::cerr << attrName << " node must be object or string\n";
+			return false;}}
+	else {
+		if (required) {
+			std::cerr << "missing " << attrName << " node\n";
+			return false; }
+		else {
+			return true; }}}
+
+
+optional<tuple<NodeInfo, JsonValue, std::string>> IdentifyNode(JsonValue data) {
+	auto& registry = NodeRegistry::GetInstance();
 	if (data.getTag() == JSON_OBJECT) {
 		// it's an object
 		if (auto node = data.toNode(); node) {
 			// with at least one node
-			if (auto search = nodeTable.find(node->key); search != nodeTable.end()) {
+			if (auto nodeInfo = registry.GetByJsonName(node->key); nodeInfo) {
 				// the first node has a key with a valid node type
-				const auto nodeMeta = search->second;
 				if (node->value.getTag() == JSON_OBJECT) {
 					// with an object as its value
-					string guid;
+					std::string guid;
 					if (auto jv = jv_find(node->value, "id", JSON_STRING)) {
 						// that object includes an id key with string value
-						guid = jv->toString(); }
+						guid.assign(jv->toString()); }
 					else {
 						guid = fmt::sprintf("__auto%d__", idGen++); }
-					return tuple{nodeMeta, node->value, guid}; }}}}
+					return std::tuple{ nodeInfo.value(), node->value, guid }; }}
+			else {
+				std::cerr << "not registered: " << node->key << "\n"; }}}
 	return {};}
 
 
-CompileResult deserializeNode(const JsonValue& data, const rglv::MeshStore& meshStore) {
-	if (auto decoded = jvPartialDecodeNode(data)) {
-		const auto[nodeMeta, obj, guid] = *decoded;
-		return nodeMeta.compileFunc(guid, obj, meshStore);}
+CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore) {
+	if (auto info = IdentifyNode(data)) {
+		const auto[nodeInfo, data, guid] = *info;
+		return nodeInfo.compiler->Compile(guid, data, meshStore); }
 	return {}; }
 
 
-tuple<bool, NodeList> compile(const JsonValue& jsonItems, rglv::MeshStore& meshstore) {
-	using std::cout;
+tuple<bool, NodeList> CompileDocument(const JsonValue root, const rglv::MeshStore& meshStore) {
+	using std::cerr;
 	NodeList nodes;
 
 	// add the json nodes
 	bool success = true;
-	for (const auto& jsonItem : jsonItems) {
-		auto instance = deserializeNode(jsonItem->value, meshstore);
+	// XXX root is assumed to be a json list
+	for (const auto& jsonItem : root) {
+		auto instance = CompileNode(jsonItem->value, meshStore);
 		if (instance.has_value()) {
 			auto [node, deps] =  *instance;
 			nodes.push_back(node);
-			std::copy(deps.begin(), deps.end(), std::back_inserter(nodes)); }
+			std::copy(begin(deps), end(deps), std::back_inserter(nodes)); }
 		else {
-			cout << "error deserializing json item\n";
+			cerr << "error deserializing json item\n";
 			success = false; }}
 
 	return tuple{success, nodes}; }
 
 
-bool link(NodeList& nodes) {
-	using std::cout;
+bool Link(NodeList& nodes) {
+	using std::cerr;
 	unordered_map<string, int> byId;
 
 	// index by id, check for duplicates
 	std::string nodeId;
 	for (int idx=0; idx<nodes.size(); idx++) {
+		// std::cerr << "  " << nodes[idx]->get_id() << "\n";
 		nodeId.assign(nodes[idx]->get_id());  // xxx yuck
-		if (auto existing = byId.find(nodeId); existing != byId.end()) {
-			cout << "error: node id \"" << nodeId << "\" not unique\n";
+		if (auto existing = byId.find(nodeId); existing != end(byId)) {
+			cerr << "error: node id \"" << nodeId << "\" not unique\n";
 			return false; }
-		else {
-			byId[nodeId] = idx; }}
+		byId[nodeId] = idx; }
 
 	// resolve links, replace with pointers
 	for (auto& node : nodes) {
 		for (const auto& input : node->get_inputs()) {
 			const auto&[destAttr, depNodeRef] = input;
-			// cout << "node(" << node->name << ") will get input \"" << destAttr << "\" from " << depNodeRef << endl;
+			// cerr << "node(" << node->name << ") will get input \"" << destAttr << "\" from " << depNodeRef << endl;
 
 			// deserialize reference
 			string depId;
@@ -623,17 +210,14 @@ bool link(NodeList& nodes) {
 			else {
 				depId = parts[0];  depSlot = parts[1]; }
 
-			if (auto search = byId.find(depId); search != byId.end()) {
+			if (auto search = byId.find(depId); search != end(byId)) {
 				auto depNode = nodes[search->second].get();
 				node->Connect(destAttr, depNode, depSlot); } // XXX change order of args
 			else {
-				cout << "error: node for ref " << depNodeRef << " not found\n";
+				cerr << "error: node for ref " << depNodeRef << " not found\n";
 				return false; }}}
 
 	return true; }
-
-#undef Required
-#undef Optional
 
 
 }  // namespace rqv

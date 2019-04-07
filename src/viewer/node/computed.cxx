@@ -1,5 +1,3 @@
-#include "computed.hxx"
-
 #include <iostream>
 #include <vector>
 #include <string>
@@ -7,19 +5,42 @@
 #include <memory>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/compile.hxx"
 #include "src/viewer/node/value.hxx"
 
 #include "3rdparty/exprtk/exprtk.hpp"
 
 namespace rqdq {
-namespace rqv {
+namespace {
 
-using namespace std;
+using namespace rqv;
 namespace jobsys = rclmt::jobsys;
 using vec2 = rmlv::vec2;
 using vec3 = rmlv::vec3;
 using vec4 = rmlv::vec4;
+
+struct ComputedNodeState;
+
+/**
+ * vec3 computed using exprTk, with inputs from other nodes
+ */
+class ComputedVec3Node : public ValuesBase {
+public:
+	using VarDefList = std::vector<std::pair<std::string, std::string>>;
+
+	ComputedVec3Node(std::string_view id, InputList inputs, std::string code, VarDefList varDefs);
+	~ComputedVec3Node() override;
+
+	// NodeBase
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+
+	// ValuesBase
+	NamedValue Get(std::string_view name) override;
+
+private:
+	std::vector<std::unique_ptr<ComputedNodeState>> state_; };
 
 /**
  * an input value slot for a ComputedNode
@@ -36,7 +57,7 @@ struct ComputedInput {
  * per-thread state for Computed*Node
  */
 struct ComputedNodeState {
-	vector<ComputedInput> computedInputs;
+	std::vector<ComputedInput> computedInputs;
 	exprtk::symbol_table<double> symbolTable;
 	exprtk::expression<double> expression;
 	exprtk::parser<double> parser; };
@@ -46,12 +67,12 @@ ComputedVec3Node::ComputedVec3Node(
 	std::string_view id,
 	InputList inputs,
 	std::string code,
-	vector<pair<string, string>> varDefs)
+	std::vector<std::pair<std::string, std::string>> varDefs)
 	:ValuesBase(id, std::move(inputs)) {
 
 	// initialize a ComputedNodeState for each thread
 	for (int threadNum=0; threadNum<jobsys::thread_count; threadNum++) {
-		auto td = make_unique<ComputedNodeState>();
+		auto td = std::make_unique<ComputedNodeState>();
 		auto& computedInputs = td->computedInputs;
 		auto& symbolTable = td->symbolTable;
 		auto& expression = td->expression;
@@ -94,7 +115,8 @@ ComputedVec3Node::ComputedVec3Node(
 
 ComputedVec3Node::~ComputedVec3Node() = default;
 
-void ComputedVec3Node::Connect(std::string_view attr, NodeBase* other, string_view slot) {
+
+void ComputedVec3Node::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	bool connected = false;
 
 	// apply the same connections for all threads
@@ -104,11 +126,12 @@ void ComputedVec3Node::Connect(std::string_view attr, NodeBase* other, string_vi
 				computed_input.sourceNode = static_cast<ValuesBase*>(other);
 				computed_input.sourceSlot = slot;
 				connected = true; }}}
-	if (connected) return;
+	if (connected) {
+		return; }
 	ValuesBase::Connect(attr, other, slot); }
 
 
-NamedValue ComputedVec3Node::Get(string_view name) {
+NamedValue ComputedVec3Node::Get(std::string_view name) {
 	rmlv::vec3 result;
 	auto& td = state_[jobsys::thread_id];
 	auto& computedInputs = td->computedInputs;
@@ -146,8 +169,8 @@ NamedValue ComputedVec3Node::Get(string_view name) {
 
 	// compute and gather results
 	expression.value();
-	if (expression.results().count()) {
-		const auto results = expression.results();
+	if (expression.results().count() != 0u) {
+		const auto& results = expression.results();
 		const auto out = results[0];
 		exprtk::igeneric_function<double>::generic_type::vector_view data(out);
 		result = vec3{ float(data[0]), float(data[1]), float(data[2]) }; }
@@ -165,5 +188,38 @@ NamedValue ComputedVec3Node::Get(string_view name) {
 	return NamedValue{ "", result }; }
 
 
-}  // namespace rqv
+class Compiler final : public NodeCompiler {
+	void Build() override {
+		using rclx::jv_find;
+		std::string code{"var out[3] := {0, 0, 0}; return [out];"};
+		std::vector<std::pair<std::string, std::string>> svars;
+
+		if (auto jv = jv_find(data_, "code", JSON_STRING)) {
+			code.assign(jv->toString());
+			if (code[0] == '{') {
+				code = "var out[3] := " + code + "; return [out];"; }}
+
+		if (auto jv = jv_find(data_, "inputs", JSON_ARRAY)) {
+			for (const auto& item : *jv) {
+				auto jv_name = jv_find(item->value, "name", JSON_STRING);
+				auto jv_type = jv_find(item->value, "type", JSON_STRING);
+				auto jv_source = jv_find(item->value, "source", JSON_STRING);
+				if (jv_name && jv_type && jv_source) {
+					svars.push_back(std::pair{jv_name->toString(), jv_type->toString()});
+					inputs_.emplace_back(jv_name->toString(), jv_source->toString()); } } }
+
+		out_ = std::make_shared<ComputedVec3Node>(id_, std::move(inputs_), std::move(code), std::move(svars)); }};
+
+Compiler compiler{};
+
+struct init { init() {
+	NodeRegistry::GetInstance().Register(NodeInfo{
+		"$computedVec3",
+		"ComputedVec3",
+		[](NodeBase* node) { return dynamic_cast<ComputedVec3Node*>(node) != nullptr; },
+		&compiler });
+}} init{};
+
+
+}  // namespace
 }  // namespace rqdq

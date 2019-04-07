@@ -1,5 +1,5 @@
 #pragma once
-#include <string>
+#include <string_view>
 #include <tuple>
 #include <array>
 
@@ -13,14 +13,14 @@ namespace rglv {
 
 class MeshStore {
 public:
-	const Mesh& get(const std::string& name) const {
+	const Mesh& get(std::string_view name) const {
 		for (const auto& mesh : store) {
 			if (mesh.name == name) {
 				return mesh; }}
 		throw std::exception("mesh not found"); }
 
 	void print() const;
-	void load_dir(const std::string& prepend, rglv::MaterialStore& materialstore, rglr::TextureStore& texturestore);
+	void load_dir(const std::string& prefix, rglv::MaterialStore& materialstore, rglr::TextureStore& texturestore);
 
 private:
 	rcls::vector<Mesh> store; };

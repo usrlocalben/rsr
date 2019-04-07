@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace rqdq {
@@ -13,7 +14,7 @@ namespace rclx {
 
 class JSONFile {
 public:
-	JSONFile(const std::string& path) :d_path(path) {
+	JSONFile(std::string path) :d_path(std::move(path)) {
 		d_lastMTime = GetMTime();
 		Reload(); }
 
@@ -33,7 +34,7 @@ public:
 	const JsonValue& GetRoot() const {
 		if (!d_valid) {
 			throw std::runtime_error("document is not valid"); }
-		return *d_jsonRoot.get(); }
+		return *d_jsonRoot; }
 
 private:
 	void Reload();

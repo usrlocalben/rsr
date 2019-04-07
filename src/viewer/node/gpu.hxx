@@ -1,23 +1,25 @@
 #pragma once
-#include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
+#include <tuple>
 
-#include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/compile.hxx"
 #include "src/viewer/node/base.hxx"
-#include "src/viewer/node/camera.hxx"
 #include "src/viewer/node/gl.hxx"
-#include "src/viewer/node/value.hxx"
 #include "src/viewer/shaders.hxx"
+
+#include "3rdparty/ryg-srgb/ryg-srgb.h"
 
 namespace rqdq {
 namespace rqv {
+
+namespace jobsys = rclmt::jobsys;
 
 using GPU = rglv::GPU<rglv::BaseProgram, WireframeProgram, IQPostProgram, EnvmapProgram, AmyProgram, EnvmapXProgram>;
 
@@ -49,7 +51,7 @@ public:
 		self->DrawImpl(); }
 	void DrawImpl();
 
-	static void AllThen(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data);
+	static void AllThen(rclmt::jobsys::Job* job, unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data);
 
 	rclmt::jobsys::Job* Post() {
 		return rclmt::jobsys::make_job(GPUNode::PostJmp, std::tuple{this}); }

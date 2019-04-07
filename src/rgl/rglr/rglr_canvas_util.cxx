@@ -80,7 +80,7 @@ void strokeRect(const rmlg::irect rect, PixelToaster::TrueColorPixel color, rglr
 
 
 void downsampleRect(const rmlg::irect rect, QFloat4Canvas& src, FloatingPointCanvas& dst) {
-	const __m128 one_quarter = _mm_set1_ps(0.25f);
+	const __m128 one_quarter = _mm_set1_ps(0.25F);
 	for (int y = rect.top.y; y < rect.bottom.y; y += 2) {
 		auto dstpx = &dst.data()[(y >> 1) * dst.stride() + (rect.left.x >> 1)];
 		auto srcpx = &src.data()[(y >> 1) * (src.width() >> 1) + (rect.left.x >> 1)];

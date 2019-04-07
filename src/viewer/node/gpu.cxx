@@ -6,21 +6,22 @@
 #include <tuple>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rcl/rclx/rclx_gason_util.hxx"
+#include "src/rgl/rglv/rglv_gpu.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/compile.hxx"
 #include "src/viewer/node/base.hxx"
+#include "src/viewer/node/gl.hxx"
+#include "src/viewer/shaders.hxx"
 
 #include "3rdparty/ryg-srgb/ryg-srgb.h"
 
 namespace rqdq {
 namespace rqv {
 
-using namespace std;
-namespace jobsys = rclmt::jobsys;
-
-
-GPUNode::GPUNode(string_view id, InputList inputs)
-	:NodeBase(id, std::move(inputs)), gpu() {}
+GPUNode::GPUNode(std::string_view id, InputList inputs)
+	:NodeBase(id, std::move(inputs)) {}
 
 
 void GPUNode::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
@@ -54,10 +55,10 @@ void GPUNode::Main() {
 	auto& ic = gpu.IC();
 
 	auto backgroundColor = vec3{ 0, 0, 0 };
-	if (layers_.size()) {
+	if (!layers_.empty()) {
 		auto& firstLayer = layers_[0];
 		backgroundColor = firstLayer->GetBackgroundColor(); }
-	ic.glClear(vec4{ backgroundColor, 1.0f });
+	ic.glClear(vec4{ backgroundColor, 1.0F });
 
 	if (layers_.empty()) {
 		jobsys::Job *postJob = Post();
@@ -93,4 +94,30 @@ void GPUNode::DrawImpl() {
 
 
 }  // namespace rqv
+
+namespace {
+
+using namespace rqv;
+
+class Compiler final : public NodeCompiler {
+	void Build() override {
+		if (auto jv = rclx::jv_find(data_, "layers", JSON_ARRAY)) {
+			for (const auto& item : *jv) {
+				if (item->value.getTag() == JSON_STRING) {
+					inputs_.emplace_back("layer", item->value.toString()); }}}
+
+		out_ = std::make_shared<GPUNode>(id_, std::move(inputs_)); }};
+
+
+Compiler compiler{};
+
+struct init { init() {
+	NodeRegistry::GetInstance().Register(NodeInfo{
+		"$gpu",
+		"GPUNode",
+		[](NodeBase* node) { return dynamic_cast<GPUNode*>(node) != nullptr; },
+		&compiler });
+}} init{};
+
+}  // namespace
 }  // namespace rqdq

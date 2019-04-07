@@ -12,7 +12,7 @@ inline bool is_pow2(unsigned x) {
 
 inline int ilog2(unsigned x) {
 	int pow = 0;
-	while (x != 0u) {
+	while (x != 0U) {
 		x >>= 1;
 		pow++; }
 	return pow - 1; }

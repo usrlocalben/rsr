@@ -36,11 +36,11 @@ private:
 class AudioController {
 public:
 	AudioController();
-	std::optional<AudioStream> CreateStream(std::string);
+	std::optional<AudioStream> CreateStream(std::string /*path*/);
 	void Start();
 	void FillBuffers();
 	~AudioController(); };
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace ralio
+}  // namespace rqdq

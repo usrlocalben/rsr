@@ -20,7 +20,7 @@ struct SyncController::impl {
 	impl(std::string pathPrefix, ralio::AudioStream& audio, double rowsPerSecond)
 		:d_audio(audio), d_rowsPerSecond(rowsPerSecond) {
 		d_syncDevice = sync_create_device(pathPrefix.c_str());
-		if (!d_syncDevice) {
+		if (d_syncDevice == nullptr) {
 			throw std::runtime_error("failed to create rocket"); }}
 
 	~impl() {
@@ -29,8 +29,8 @@ struct SyncController::impl {
 #ifndef SYNC_PLAYER
 	void Connect(bool throwOnError=true) {
 		auto error = sync_tcp_connect(d_syncDevice, "localhost", SYNC_DEFAULT_PORT);
-		d_connected = !error;
-		if (throwOnError && error) {
+		d_connected = (error == 0);
+		if (throwOnError && (error != 0)) {
 			throw std::runtime_error("could not connect to rocket host and throwOnError=true"); }}
 #endif
 
@@ -63,7 +63,7 @@ struct SyncController::impl {
 #ifndef SYNC_PLAYER
 	static void cb_Pause(void* data, int flag) {
 		impl& self = *reinterpret_cast<impl*>(data);
-		if (flag) {
+		if (flag != 0) {
 			self.d_audio.Pause(); }
 		else {
 			self.d_audio.Play(); }}
@@ -75,7 +75,7 @@ struct SyncController::impl {
 
 	static int cb_IsPlaying(void* data) {
 		impl& self = *reinterpret_cast<impl*>(data);
-		return self.d_audio.IsPlaying(); }
+		return static_cast<int>(self.d_audio.IsPlaying()); }
 
 	const struct sync_cb d_syncCallbacks = { cb_Pause, cb_SetPosition, cb_IsPlaying };
 
@@ -110,6 +110,5 @@ double SyncController::GetPositionInRows() { return d_pImpl->GetPositionInRows()
 void SyncController::ForEachValue(double positionInRows, std::function<void(const std::string&, double value)> func) { d_pImpl->ForEachValue(positionInRows, func); }
 
 
-
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace rals
+}  // namespace rqdq

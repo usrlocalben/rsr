@@ -12,13 +12,13 @@ namespace ralio {
 
 
 AudioStream::~AudioStream() {
-	if (d_hstream) {
+	if (d_hstream != 0u) {
 		BASS_StreamFree(d_hstream); }}
 
 
 void AudioStream::Play() const {
 	assert(d_hstream);
-	BASS_ChannelPlay(d_hstream, false); }
+	BASS_ChannelPlay(d_hstream, 0); }
 
 
 void AudioStream::Pause() const {
@@ -45,17 +45,16 @@ void AudioStream::SetPosition(double seconds) {
 
 
 AudioController::AudioController() {
-	auto success = BASS_Init(-1, 44100, 0, 0, 0);
-	if (!success) {
+	auto success = BASS_Init(-1, 44100, 0, nullptr, nullptr);
+	if (success == 0) {
 		throw std::runtime_error("failed to initialize BASS system"); }}
 
 
 std::optional<AudioStream> AudioController::CreateStream(std::string path) {
-	auto stream = BASS_StreamCreateFile(false, path.c_str(), 0, 0, BASS_STREAM_PRESCAN);
-	if (!stream) {
+	auto stream = BASS_StreamCreateFile(0, path.c_str(), 0, 0, BASS_STREAM_PRESCAN);
+	if (stream == 0u) {
 		return {}; }
-	else {
-		return AudioStream(stream); }}
+	return AudioStream(stream); }
 
 
 void AudioController::Start() {
@@ -70,5 +69,5 @@ AudioController::~AudioController() {
 	BASS_Free(); }
 
 
-}  // close package namespace
-}  // close enterprise namespace
+}  // namespace ralio
+}  // namespace rqdq

@@ -24,7 +24,7 @@ std::vector<uint8_t> decode_png(std::vector<uint8_t>& png_bits) {
 	std::vector<uint8_t> bitmap;
 
 	unsigned long w, h;
-	int error = decodePNG(image, w, h, png_bits.empty() ? 0 : png_bits.data(), (int)png_bits.size());
+	int error = decodePNG(image, w, h, png_bits.empty() ? nullptr : png_bits.data(), static_cast<int>(png_bits.size()));
 
 	if (error != 0) {
 		std::stringstream ss;
@@ -64,8 +64,8 @@ int ProPrinter::char_to_offset(const char ch) const {
 	if (cxy == charmap.end()) {
 		// char-not-found mapped to Space
 		return 0; }
-	else {
-		return charmap_to_offset(cxy->second); }}
+	
+		return charmap_to_offset(cxy->second); }
 
 
 void ProPrinter::draw_glyph(const char ch, int left, int top, TrueColorCanvas& canvas) const {
@@ -85,7 +85,7 @@ void ProPrinter::draw_glyph(const char ch, int left, int top, TrueColorCanvas& c
 				//if (canvas_x >= 0 && canvas_x < canvas.width()) {
 				if (0 <= canvas_x && canvas_x < canvas.width()) {
 
-					dst[canvas_x].integer = src[x] ? 0xffffffff : 0;}}}
+					dst[canvas_x].integer = src[x] != 0u ? 0xffffffff : 0;}}}
 
 		dst += canvas.stride();
 		src += BITMAP_STRIDE; }}

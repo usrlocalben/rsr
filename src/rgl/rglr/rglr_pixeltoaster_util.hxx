@@ -10,12 +10,12 @@ namespace rqdq {
 namespace rglr {
 
 class WrongFormat : public std::exception {
-	const char* what() const throw() override {
+	const char* what() const noexcept override {
 		return "Framebuffer is not RGBA8888"; } };
 
 
 class WindowClosed : public std::exception {
-	const char* what() const throw() override {
+	const char* what() const noexcept override {
 		return "Window was closed"; } };
 
 

@@ -49,7 +49,7 @@ inline rmlv::qfloat3 fwidth(const tri_qfloat& a) {
 
 inline rmlv::qfloat3 hash3(const rmlv::qfloat& n) {
 	/*utility from iq's shadertoy entry "Repelling"*/
-	return fract(sin(rmlv::qfloat3{n, n + 1.0f, n + 2.0f}) * 43758.5453123f); }
+	return fract(sin(rmlv::qfloat3{n, n + 1.0F, n + 2.0F}) * 43758.5453123F); }
 
 
 inline rmlv::qfloat3 smoothstep(const float a, const rmlv::qfloat3& b, const tri_qfloat& x) {

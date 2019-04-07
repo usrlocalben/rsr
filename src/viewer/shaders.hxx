@@ -1,4 +1,6 @@
 #pragma once
+#include <string_view>
+
 #include "src/rgl/rglv/rglv_fragment.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
@@ -16,10 +18,11 @@ enum class ShaderProgramId {
 	IQ,
 	Envmap,
 	Amy,
-	EnvmapX,
-	};
+	EnvmapX, };
 
-ShaderProgramId deserialize_program_name(const std::string&);
+
+struct ShaderProgramNameSerializer {
+	static ShaderProgramId Deserialize(std::string_view text); };
 
 
 /*
@@ -58,7 +61,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 			0.0f }; }
 
 	inline static rmlv::qfloat edgefactor(const rglv::tri_qfloat& _BP) {
-		static const rmlv::qfloat thickfactor(1.5f);
+		static const rmlv::qfloat thickfactor(1.5F);
 		rmlv::qfloat3 d = rglv::fwidth(_BP);
 		rmlv::qfloat3 a3 = rglv::smoothstep(0, d*thickfactor, _BP);
 		return vmin(a3.v[0], vmin(a3.v[1], a3.v[2])); } };
@@ -69,8 +72,8 @@ struct IQPostProgram final : public rglv::BaseProgram {
 	inline static rmlv::qfloat3 shadeCanvas(const rmlv::qfloat2 q, const rmlv::qfloat3 source) {
 		//const auto q = gl_FragCoord / targetSize;
 		auto col = source;
-		col = pow(col, rmlv::qfloat3(0.45f, 0.5f, 0.55f));
-		col *= 0.2f + 0.8f * pow(16.0f * q.x * q.y * (1.0f - q.x) * (1.0f - q.y), 0.2f);
+		col = pow(col, rmlv::qfloat3(0.45F, 0.5F, 0.55F));
+		col *= 0.2F + 0.8F * pow(16.0F * q.x * q.y * (1.0F - q.x) * (1.0F - q.y), 0.2F);
 		col += (1.0 / 255.0) * rglv::hash3(q.x + 13.0*q.y);
 		return col; }};
 
@@ -93,13 +96,13 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 
 		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, IN_POSITION);
 		rmlv::qfloat3 e = normalize(position.xyz());
-		rmlv::qfloat4 vn = mix(IN_SMOOTH_NORMAL, IN_FACE_NORMAL, 0.0f); // in_uniform.roughness);
+		rmlv::qfloat4 vn = mix(IN_SMOOTH_NORMAL, IN_FACE_NORMAL, 0.0F); // in_uniform.roughness);
 		rmlv::qfloat3 n = normalize(mul(gl_NormalMatrix, vn).xyz());
 		rmlv::qfloat3 r = rglv::reflect(e, n);
 
-		rmlv::qfloat m = rmlv::qfloat{2.0f} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0f)*(r.z + 1.0f)));
-		rmlv::qfloat uu = r.x / m + 0.5f;
-		rmlv::qfloat vv = r.y / m + 0.5f;
+		rmlv::qfloat m = rmlv::qfloat{2.0F} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0F)*(r.z + 1.0F)));
+		rmlv::qfloat uu = r.x / m + 0.5F;
+		rmlv::qfloat vv = r.y / m + 0.5F;
 		OUT_ENVMAP_UV = { uu, vv, 0 };
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
@@ -189,13 +192,13 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 
 		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, IN_POSITION);
 		rmlv::qfloat3 e = normalize(position.xyz());
-		rmlv::qfloat4 vn = mix(IN_SMOOTH_NORMAL, IN_FACE_NORMAL, 0.0f); // in_uniform.roughness);
+		rmlv::qfloat4 vn = mix(IN_SMOOTH_NORMAL, IN_FACE_NORMAL, 0.0F); // in_uniform.roughness);
 		rmlv::qfloat3 n = normalize(mul(gl_NormalMatrix, vn).xyz());
 		rmlv::qfloat3 r = rglv::reflect(e, n);
 
-		rmlv::qfloat m = rmlv::qfloat{2.0f} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0f)*(r.z + 1.0f)));
-		rmlv::qfloat uu = r.x / m + 0.5f;
-		rmlv::qfloat vv = r.y / m + 0.5f;
+		rmlv::qfloat m = rmlv::qfloat{2.0F} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0F)*(r.z + 1.0F)));
+		rmlv::qfloat uu = r.x / m + 0.5F;
+		rmlv::qfloat vv = r.y / m + 0.5F;
 		OUT_ENVMAP_UV = { uu, vv, 0 };
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 

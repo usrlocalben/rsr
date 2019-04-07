@@ -82,7 +82,7 @@ public:
 		case Plane::Top:    return (aws - a.y) / ((aws - a.y) - (bws - b.y));
 		case Plane::Near:   return (a.w + a.z) / ((a.w + a.z) - (b.w + b.z));
 		case Plane::Far:    return (a.w - a.z) / ((a.w - a.z) - (b.w - b.z));
-		default: assert(false); return 0.0f; } }
+		default: assert(false); return 0.0F; } }
 
 	/*
 	inline unsigned clip_point(const rmlv::mvec4f& p) {
@@ -94,7 +94,7 @@ public:
 	*/
 
 private:
-	const float factor{ 4.0f };
+	const float factor{ 4.0F };
 	// const rmlv::mvec4f GUARDBAND_WWWW{GUARDBAND_FACTOR, GUARDBAND_FACTOR, 1.0f, 0.0f};
 	};
 

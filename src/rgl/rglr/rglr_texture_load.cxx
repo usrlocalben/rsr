@@ -30,10 +30,10 @@ Texture load_png(const std::string& filename, const std::string& name, const boo
 	auto data = load_file(filename);
 
 	unsigned long w, h;
-	int error = decodePNG(image, w, h, data.empty() ? 0 : data.data(), (unsigned long)data.size());
+	int error = decodePNG(image, w, h, data.empty() ? nullptr : data.data(), static_cast<unsigned long>(data.size()));
 	if (error != 0) {
 		std::cout << "error(" << error << ") decoding png from [" << filename << "]" << std::endl;
-		while (1); }
+		while (1) {}}
 
 	rcls::vector<PixelToaster::FloatingPointPixel> pc;
 
@@ -45,7 +45,7 @@ Texture load_png(const std::string& filename, const std::string& name, const boo
 		dst.r = srgb8_to_float(*(ic++));
 		dst.g = srgb8_to_float(*(ic++));
 		dst.b = srgb8_to_float(*(ic++));
-		dst.a = *(ic++) / 255.0f; // XXX is alpha srgb?
+		dst.a = *(ic++) / 255.0F; // XXX is alpha srgb?
 		if (premultiply) {
 			dst.r *= dst.a;
 			dst.g *= dst.a;
@@ -64,9 +64,8 @@ Texture load_any(const std::string& prefix, const std::string& fn, const std::st
 //	else if (ext == ".jpg") {
 //		return loadJpg(prefix + fn, name);
 //	}
-	else {
-		std::cout << "unsupported texture extension \"" << ext << "\"" << std::endl;
-		while (1); }}
+	std::cout << "unsupported texture extension \"" << ext << "\"" << std::endl;
+	while (1) {}}
 
 
 std::vector<uint8_t> load_file(const std::string& filename) {

@@ -26,7 +26,7 @@ public:
 	 */
 	void onMouseMove(rmlv::vec2 delta) {
 		d_angle += d_mouse_speed * delta;
-		d_angle.y = rmlv::clamp(d_angle.y, -(rmlv::M_PI / 2.0f), rmlv::M_PI / 2.0f); }
+		d_angle.y = rmlv::clamp(d_angle.y, -(rmlv::M_PI / 2.0F), rmlv::M_PI / 2.0F); }
 
 public:
 	rmlm::mat4 getMatrix() const {
@@ -39,8 +39,8 @@ public:
 	void moveBackward() { d_position -= makeDirectionVector(); }
 	void moveLeft()     { d_position -= makeRightVector(); }
 	void moveRight()    { d_position += makeRightVector(); }
-	void moveUp()       { d_position += rmlv::vec3{ 0, 0.5f, 0 }; }
-	void moveDown()     { d_position -= rmlv::vec3{ 0, 0.5f, 0 }; }
+	void moveUp()       { d_position += rmlv::vec3{ 0, 0.5F, 0 }; }
+	void moveDown()     { d_position -= rmlv::vec3{ 0, 0.5F, 0 }; }
 
 	float getFieldOfView() const { return d_field_of_view; }
 	void adjustZoom(const int ticks) { d_field_of_view += float(ticks); }
@@ -56,9 +56,9 @@ private:
 		return rmlv::vec3{ x, y, z }; }
 
 	rmlv::vec3 makeRightVector() const {
-		auto x = sin(d_angle.x - 3.14f / 2.0f);
-		auto y = 0.0f;
-		auto z = cos(d_angle.x - 3.14f / 2.0f);
+		auto x = sin(d_angle.x - 3.14F / 2.0F);
+		auto y = 0.0F;
+		auto z = cos(d_angle.x - 3.14F / 2.0F);
 		return rmlv::vec3{ x, y, z }; }
 
 	rmlv::vec3 d_position{0,0,5};

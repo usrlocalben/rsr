@@ -27,7 +27,7 @@ enum class ValueType {
 
 struct ValueTypeSerializer {
 	static ValueType Deserialize(std::string_view data);
-	static std::string_view Serialize(ValueType value); };
+	static std::string_view Serialize(ValueType item); };
 
 
 template <class... Fs>
@@ -126,7 +126,7 @@ public:
 		thread_local std::string tmp;
 		tmp.assign(name);  // xxx yuck
 		auto search = db_.find(tmp);
-		return search == db_.end() ? notFoundValue_ : search->second; }
+		return search == end(db_) ? notFoundValue_ : search->second; }
 
 private:
 	std::unordered_map<std::string, NamedValue> db_{};

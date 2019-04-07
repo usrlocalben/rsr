@@ -16,10 +16,12 @@ cc_library(
     srcs = ["camera.cxx"],
     hdrs = ["camera.hxx"],
     deps = [
+        "//src/rcl/rclx:gason_util",
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:vec",
         "//src/rgl/rglv:camera",
         "//src/rgl/rglv:math",
+        "//src/viewer:compile",
         ":base",
         ":value", ],
     copts = RSR_DEFAULT_COPTS,)
@@ -28,11 +30,12 @@ cc_library(
 cc_library(
     name = "computed",
     srcs = ["computed.cxx"],
-    hdrs = ["computed.hxx"],
     deps = [
         "//3rdparty/exprtk",
         "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
         "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
         ":value", ],
     copts = RSR_DEFAULT_COPTS,)
 
@@ -40,10 +43,10 @@ cc_library(
 cc_library(
     name = "fx_foo",
     srcs = ["fx_foo.cxx"],
-    hdrs = ["fx_foo.hxx"],
     deps = [
         "//3rdparty/pixeltoaster",
         "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
         "//src/rcl/rcls:aligned_containers",
         "//src/rcl/rcls:timer",
         "//src/rgl/rglr:texture",
@@ -51,6 +54,7 @@ cc_library(
         "//src/rgl/rglv:mesh",
         "//src/rgl/rglv:vao",
         "//src/rml/rmlm:mat4",
+        "//src/viewer:compile",
         "//src/viewer:shaders",
         ":base",
         ":gl",
@@ -61,11 +65,11 @@ cc_library(
 cc_library(
     name = "fx_mc",
     srcs = ["fx_mc.cxx"],
-    hdrs = ["fx_mc.hxx"],
     deps = [
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rcls:aligned_containers",
         "//src/rcl/rcls:timer",
+        "//src/rcl/rclx:gason_util",
         "//src/rgl/rglr:texture",
         "//src/rgl/rglv:gl",
         "//src/rgl/rglv:marching_cubes",
@@ -73,6 +77,7 @@ cc_library(
         "//src/rml/rmlv:vec",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:mvec4",
+        "//src/viewer:compile",
         "//src/viewer:shaders",
         ":base",
         ":gl",
@@ -84,7 +89,6 @@ cc_library(
 cc_library(
     name = "fx_xyquad",
     srcs = ["fx_xyquad.cxx"],
-    hdrs = ["fx_xyquad.hxx"],
     deps = [
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rcls:aligned_containers",
@@ -94,6 +98,7 @@ cc_library(
         "//src/rgl/rglv:vao",
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
         "//src/viewer:shaders",
         ":base",
         ":gl",
@@ -109,10 +114,12 @@ cc_library(
     deps = [
         "//src/rcl/rclma:framepool",
         "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
         "//src/rgl/rglv:camera",
         "//src/rgl/rglv:gl",
         "//src/rgl/rglv:math",
         "//src/rml/rmlm:mat4",
+        "//src/viewer:compile",
         ":base",
         ":camera",
         ":value", ],
@@ -139,11 +146,13 @@ cc_library(
         "//3rdparty/ryg-srgb",
         "//src/rcl/rclma:framepool",
         "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
         "//src/rcl/rclr:algorithm",
         "//src/rgl/rglv:gpu",
         "//src/rgl/rglv:math",
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
         "//src/viewer:shaders",
         ":base",
         ":camera",
@@ -158,12 +167,14 @@ cc_library(
     hdrs = ["render.hxx"],
     deps = [
         "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
         "//src/rgl/rglr:canvas",
         "//src/rgl/rglr:texture",
         "//src/rgl/rglr:texture_store",
         "//src/rgl/rglv:mesh",
         "//src/rgl/rglv:mesh_store",
         "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
         "//src/viewer:shaders",
         ":base",
         ":gpu",
@@ -179,9 +190,11 @@ cc_library(
     deps = [
         "//src/rcl/rclma:framepool",
         "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
         "//src/rgl/rglv:gl",
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
         ":base",
         ":gl",
         ":value", ],
@@ -195,6 +208,7 @@ cc_library(
     deps = [
         "//src/rcl/rclmt:jobsys",
         "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
         ":base", ],
     copts = RSR_DEFAULT_COPTS,)
 
@@ -208,6 +222,7 @@ cc_library(
         "//src/rgl/rglr:texture",
         "//src/rgl/rglv:gl",
         "//src/rml/rmlm:mat4",
+        "//src/viewer:compile",
         "//src/viewer:shaders",
         ":base",
         ":gl", ],
@@ -217,9 +232,9 @@ cc_library(
 cc_library(
     name = "fx_auraforlaura",
     srcs = ["fx_auraforlaura.cxx"],
-    hdrs = ["fx_auraforlaura.hxx"],
     deps = [
         "//3rdparty/pixeltoaster",
+        "//src/rcl/rclx:gason_util",
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rcls:aligned_containers",
         "//src/rcl/rcls:timer",
@@ -229,16 +244,17 @@ cc_library(
         "//src/rgl/rglv:vao",
         "//src/rml/rmlm:mat4",
         "//src/viewer:shaders",
+        "//src/viewer:compile",
         ":base",
         ":gl",
         ":material", ],
+    #linkopts = ["-WHOLEARCHIVE:$(output_execpath)/node/fx_auraforlaura.lib"],
     copts = RSR_DEFAULT_COPTS,)
 
 
 cc_library(
     name = "fx_carpet",
     srcs = ["fx_carpet.cxx"],
-    hdrs = ["fx_carpet.hxx"],
     deps = [
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rcls:aligned_containers",
@@ -248,6 +264,7 @@ cc_library(
         "//src/rgl/rglv:mesh",
         "//src/rgl/rglv:vao",
         "//src/rml/rmlm:mat4",
+        "//src/viewer:compile",
         "//src/viewer:shaders",
         ":base",
         ":gl",

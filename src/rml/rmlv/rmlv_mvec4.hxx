@@ -73,7 +73,7 @@ struct alignas(16) mvec4f {
 	inline static mvec4f zero() { return _mm_setzero_ps(); }
 
 	inline static mvec4f one() {
-		return _mm_set1_ps(1.0f); }
+		return _mm_set1_ps(1.0F); }
 	/*
 		compute 1.0f, but does not work on clang
 		__m128i t = _mm_cmpeq_epi16(t, t);
@@ -245,7 +245,7 @@ inline mvec4f saturate(const mvec4f& a) {
 
 inline mvec4f fract(const mvec4f& a) {
 	/*fractional part of a*/
-	return a - itof(ftoi_round(a - mvec4f{0.5f})); }
+	return a - itof(ftoi_round(a - mvec4f{0.5F})); }
 
 
 /*
@@ -320,7 +320,7 @@ instructions if the inputs are known to fit, and also if they are in the range -
 
 inline mvec4f wrap1(const mvec4f& a) {
 	/*wrap a float to the range -1 ... +1 */
-	const __m128 magic = _mm_set1_ps(25165824.0f); // 0x4bc00000
+	const __m128 magic = _mm_set1_ps(25165824.0F); // 0x4bc00000
 	const mvec4f z = a + magic;
 	return a - (z - magic); }
 
@@ -342,15 +342,15 @@ inline mvec4f nick_sin(const mvec4f& x) {
 
 inline mvec4f sin1hp(const mvec4f& x) {
 	/*higher-precision sin(), input must be in the range -1 ... 1 */
-	const mvec4f Q(3.1f);
-	const mvec4f P(3.6f);
+	const mvec4f Q(3.1F);
+	const mvec4f P(3.6F);
 	mvec4f y = x - (x * abs(x));
 	return y * (Q + P * abs(y)); }
 
 
 inline mvec4f sin1lp(const mvec4f& x) {
 	/*low-precision sin(), input must be in the range -1 ... 1*/
-	return mvec4f{4.0f} * (x - x * abs(x)); }
+	return mvec4f{4.0F} * (x - x * abs(x)); }
 
 
 inline mvec4f sin(const mvec4f& x) {

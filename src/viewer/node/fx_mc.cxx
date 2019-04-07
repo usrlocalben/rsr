@@ -1,21 +1,162 @@
-#include "fx_mc.hxx"
-
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <string_view>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
-//#include "src/rgl/rglv/rglv_mesh.hxx"
+#include "src/rgl/rglv/rglv_marching_cubes.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
+#include "src/viewer/compile.hxx"
 #include "src/viewer/node/base.hxx"
+#include "src/viewer/node/gl.hxx"
 #include "src/viewer/node/material.hxx"
 #include "src/viewer/node/value.hxx"
-//#include "src/viewer/shaders.hxx"
 
 namespace rqdq {
-namespace rqv {
+namespace {
+
+using namespace rqv;
+
+
+inline float sdSphere(const rmlv::vec3& pos, const float r) {
+	return length(pos) - r; }
+
+
+inline rmlv::qfloat sdSphere(const rmlv::qfloat3& pos, const float r) {
+	return rmlv::length(pos) - r; }
+
+
+struct AABB {
+	rmlv::vec3 leftTopBack;
+	rmlv::vec3 rightBottomFront; };
+
+
+inline rmlv::vec3 midpoint(AABB block) {
+	return mix(block.leftTopBack, block.rightBottomFront, 0.5F);}
+
+
+class BlockDivider {
+public:
+	std::vector<AABB> results_;
+
+	void Compute(AABB _block, int limit) {
+		using rmlv::vec3;
+		if (limit == 0) {
+			results_.emplace_back(_block);
+			return; }
+
+		const auto mid = midpoint(_block);
+		const auto ltb = _block.leftTopBack;
+		const auto rbf = _block.rightBottomFront;
+
+		const auto subBlocks = std::array{
+			// BACK
+			//   TOP
+			//     LEFT
+			AABB{ vec3{ ltb.x, ltb.y, ltb.z }, vec3{ mid.x, mid.y, mid.z } },
+			//     RIGHT
+			AABB{ vec3{ mid.x, ltb.y, ltb.z }, vec3{ rbf.x, mid.y, mid.z } },
+			//   BOTTOM
+			//     LEFT
+			AABB{ vec3{ ltb.x, mid.y, ltb.z }, vec3{ mid.x, rbf.y, mid.z } },
+			//     RIGHT
+			AABB{ vec3{ mid.x, mid.y, ltb.z }, vec3{ rbf.x, rbf.y, mid.z } },
+			// FRONT
+			//   TOP
+			//     LEFT
+			AABB{ vec3{ ltb.x, ltb.y, mid.z }, vec3{ mid.x, mid.y, rbf.z } },
+			//     RIGHT
+			AABB{ vec3{ mid.x, ltb.y, mid.z }, vec3{ rbf.x, mid.y, rbf.z } },
+			//   BOTTOM
+			//     LEFT
+			AABB{ vec3{ ltb.x, mid.y, mid.z }, vec3{ mid.x, rbf.y, rbf.z } },
+			//     RIGHT
+			AABB{ vec3{ mid.x, mid.y, mid.z }, vec3{ rbf.x, rbf.y, rbf.z } } };
+
+		for (const auto& subBlock : subBlocks) {
+			Compute(subBlock, limit - 1); }}
+
+	void Clear() {
+		results_.clear(); } };
+
+
+struct Surface {
+	float sample(rmlv::vec3 pos) const {
+		float distort = 0.60F * sin(5.0F*(pos.x + timeInSeconds_ / 4.0F))* sin(2.0F*(pos.y + (timeInSeconds_ / 1.33F))); // *sin(50.0*sz);
+		//return sdSphere(pos, 3.0f); }
+		return sdSphere(pos, 3.0F) + (distort * sin(timeInSeconds_ / 2.0F) + 1.0F); }
+
+	rmlv::mvec4f sample(rmlv::qfloat3 pos) const {
+		using rmlv::mvec4f;
+		auto T = mvec4f{ timeInSeconds_ };
+		auto distort = mvec4f{0.30F} * sin(5.0F*(pos.x + T / 4.0F))* sin(2.0F*(pos.y + (T / 1.33F))); // *sin(50.0*sz);
+		//return sdSphere(pos, 3.0f); }
+		return sdSphere(pos, 3.0F) + (distort * sin(T / 2.0F) + 1.0F); }
+
+	void Update(float t) {
+		timeInSeconds_ = t; }
+
+private:
+	float timeInSeconds_; };
+
+
+class FxMC final : public GlNode {
+public:
+	FxMC(std::string_view id, InputList inputs, int precision, int forkDepth, float range)
+		:GlNode(id, std::move(inputs)), precision_(precision), forkDepth_(forkDepth), range_(range) {
+		buffers_[0].reserve(4096);
+		buffers_[1].reserve(4096);
+		buffers_[2].reserve(4096); }
+
+	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+	void Main() override;
+
+	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth) override;
+
+private:
+	void SwapBuffers();
+	rglv::VertexArray_F3F3F3& AllocVAO();
+
+	rclmt::jobsys::Job* Finalize() {
+		return rclmt::jobsys::make_job(FxMC::FinalizeJmp, std::tuple{this}); }
+	static void FinalizeJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<FxMC*>* data) {
+		auto&[self] = *data;
+		self->FinalizeImpl(); }
+	void FinalizeImpl() {
+		RunLinks(); }
+
+	rclmt::jobsys::Job* Resolve(AABB block, int dim, rclmt::jobsys::Job* parent = nullptr) {
+		if (parent != nullptr) {
+			return rclmt::jobsys::make_job_as_child(parent, FxMC::ResolveJmp, std::tuple{this, block, dim}); }
+		return rclmt::jobsys::make_job(FxMC::ResolveJmp, std::tuple{this, block, dim}); }
+	static void ResolveJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<FxMC*, AABB, int>* data) {
+		auto&[self, block, dim] = *data;
+		self->ResolveImpl(block, dim, threadId);}
+	void ResolveImpl(AABB block, int dim, int threadId);
+
+private:
+	Surface field_;
+
+	std::array<std::vector<rglv::VertexArray_F3F3F3>, 3> buffers_;
+	std::array<std::atomic<int>, 3> bufferEnd_{ 0, 0, 0 };
+	std::atomic<int> activeBuffer_{0};
+	std::mutex bufferMutex_{};
+
+	BlockDivider blockDivider_{};
+
+	// config
+	rglr::Texture envmap_;
+	int precision_;
+	int forkDepth_;
+	float range_;
+
+	// connections
+	MaterialNode* materialNode_{nullptr};
+	ValuesBase* frobNode_{nullptr};
+	std::string frobSlot_; };
+
 
 void FxMC::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	if (attr == "material") {
@@ -33,7 +174,7 @@ void FxMC::Main() {
 
 	SwapBuffers();
 
-	float frobValue = 0.0f;
+	float frobValue = 0.0F;
 	if (frobNode_ != nullptr) {
 		frobValue = frobNode_->Get(frobSlot_).as_float(); }
 	field_.Update(frobValue);
@@ -72,7 +213,7 @@ void FxMC::ResolveImpl(const AABB block, const int dim, const int threadId) {
 	const auto mid = midpoint(block);
 	const auto R = length(block.leftTopBack - mid);
 	float D = field_.sample(mid);
-	if (abs(D)*0.5f > R) {
+	if (abs(D)*0.5F > R) {
 		return; }
 
 /*	auto fillSlice = [&](){
@@ -178,5 +319,51 @@ rglv::VertexArray_F3F3F3& FxMC::AllocVAO() {
 	return vao; }
 
 
-}  // namespace rqv
+class Compiler final : public NodeCompiler {
+	void Build() override {
+		using rclx::jv_find;
+		if (!Input("MaterialNode", "material", /*required=*/true)) { return; }
+		if (!Input("ValuesBase", "frob", /*required=*/true)) { return; }
+
+		int precision{32};
+		if (auto jv = jv_find(data_, "precision", JSON_NUMBER)) {
+			precision = static_cast<int>(jv->toNumber()); }
+		switch (precision) {
+		case 8:
+		case 16:
+		case 32:
+		case 64:
+		case 128:
+			break;
+		default:
+			std::cerr << "FxMC: precision " << precision << " must be one of (8, 16, 32, 64, 128)!  precision will be 32\n";
+			precision = 32; }
+
+		int forkDepth{2};
+		if (auto jv = jv_find(data_, "forkDepth", JSON_NUMBER)) {
+			forkDepth = static_cast<int>(jv->toNumber()); }
+		if (forkDepth < 0 || forkDepth > 4) {
+			std::cerr << "FxMC: forkDepth " << forkDepth << " exceeds limit (0 <= n <= 4)!  forkDepth will be 2\n";
+			forkDepth = 2; }
+
+		float range{5.0F};
+		if (auto jv = jv_find(data_, "range", JSON_NUMBER)) {
+			range = static_cast<float>(jv->toNumber()); }
+		if (range < 0.0001F) {
+			std::cerr << "FxMC: range " << range << " is too small (n<0.0001)!  range will be +/- 5.0\n";
+			range = 5.0F; }
+
+		out_ = std::make_shared<FxMC>(id_, std::move(inputs_), precision, forkDepth, range); }};
+
+Compiler compiler{};
+
+struct init { init() {
+	NodeRegistry::GetInstance().Register(NodeInfo{
+		"$fxMC",
+		"FxMC",
+		[](NodeBase* node) { return dynamic_cast<FxMC*>(node) != nullptr; },
+		&compiler });
+}} init{};
+
+}  // namespace
 }  // namespace rqdq

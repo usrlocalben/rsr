@@ -19,8 +19,8 @@ void MaterialStore::print() const {
 
 std::optional<int> MaterialStore::find_by_name(const std::string& name) const {
 	for (int i = 0; i<d_store.size(); i++) {
-		if (d_store[i].name == name)
-			return i; }
+		if (d_store[i].name == name) {
+			return i; }}
 	return {}; }
 
 

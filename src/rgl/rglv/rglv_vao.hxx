@@ -37,10 +37,10 @@ struct Float3Array {
 		return rmlv::qfloat3{ _mm_load_ps(&x[idx]), _mm_load_ps(&y[idx]), _mm_load_ps(&z[idx]) };}
 
 	rmlv::qfloat4 loadxyz1(const int idx) const {
-		return rmlv::qfloat4{ _mm_load_ps(&x[idx]), _mm_load_ps(&y[idx]), _mm_load_ps(&z[idx]), _mm_set1_ps(1.0f) };}
+		return rmlv::qfloat4{ _mm_load_ps(&x[idx]), _mm_load_ps(&y[idx]), _mm_load_ps(&z[idx]), _mm_set1_ps(1.0F) };}
 
 	rmlv::qfloat4 loadxyz0(const int idx) const {
-		return rmlv::qfloat4{ _mm_load_ps(&x[idx]), _mm_load_ps(&y[idx]), _mm_load_ps(&z[idx]), _mm_set1_ps(0.0f) };}
+		return rmlv::qfloat4{ _mm_load_ps(&x[idx]), _mm_load_ps(&y[idx]), _mm_load_ps(&z[idx]), _mm_set1_ps(0.0F) };}
 
 	int size() const {
 		assert(x.size() == y.size() && y.size() == z.size());
@@ -77,8 +77,8 @@ struct VertexArray_F3F3 {
 		const int rag = size() % 4;
 		const int needed = 4 - rag;
 		for (int i = 0; i < needed; i++) {
-			a0.push_back({0.0f});
-			a1.push_back({0.0f});}}
+			a0.push_back({0.0F});
+			a1.push_back({0.0F});}}
 
 	Float3Array a0;
 	Float3Array a1; };
@@ -104,9 +104,9 @@ struct VertexArray_F3F3F2 {
 		const int rag = size() % 4;
 		const int needed = 4 - rag;
 		for (int i = 0; i < needed; i++) {
-			a0.push_back({0.0f});
-			a2.push_back({0.0f});
-			a1.push_back({0.0f});}}
+			a0.push_back({0.0F});
+			a2.push_back({0.0F});
+			a1.push_back({0.0F});}}
 
 	Float3Array a0;
 	Float3Array a1;
@@ -133,9 +133,9 @@ struct VertexArray_F3F3F3 {
 		const int rag = size() % 4;
 		const int needed = 4 - rag;
 		for (int i = 0; i < needed; i++) {
-			a0.push_back({0.0f});
-			a1.push_back({0.0f});
-			a2.push_back({0.0f});}}
+			a0.push_back({0.0F});
+			a1.push_back({0.0F});
+			a2.push_back({0.0F});}}
 
 	Float3Array a0;
 	Float3Array a1;

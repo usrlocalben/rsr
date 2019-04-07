@@ -72,10 +72,9 @@ public:
 		if (colorCanvas_ != nullptr) {
 			// std::cout << "renderer will use a provided colorcanvas" << std::endl;
 			return colorCanvas_; }
-		else {
-			// std::cout << "renderer will use its internal colorcanvas" << std::endl;
-			// internalColorCanvas_.resize(width, height);
-			return &internalColorCanvas_; } }
+		// std::cout << "renderer will use its internal colorcanvas" << std::endl;
+		// internalColorCanvas_.resize(width, height);
+		return &internalColorCanvas_; }
 
 	// internal
 	rglr::QFloat4Canvas internalColorCanvas_;

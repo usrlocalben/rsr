@@ -166,8 +166,8 @@ struct ts_pow2_mipmap {
 
 		auto fx = up - itof(tx0);
 		auto fy = vp - itof(ty0);
-		auto fx1 = mvec4f{1.0f} - fx;
-		auto fy1 = mvec4f{1.0f} - fy;
+		auto fx1 = mvec4f{1.0F} - fx;
+		auto fy1 = mvec4f{1.0F} - fy;
 
 		auto w1 = fx1 * fy1;
 		auto w2 = fx  * fy1;

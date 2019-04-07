@@ -13,9 +13,9 @@ std::string Trim(const std::string& s);
 bool ConsumePrefix(std::string& str, const std::string& prefix);
 
 struct UTF8Codec {
-	static std::wstring Decode(std::string_view);
-	static std::wstring Decode(const std::string&);
-	static std::string Encode(const std::wstring&); };
+	static std::wstring Decode(std::string_view /*str_*/);
+	static std::wstring Decode(const std::string& /*str*/);
+	static std::string Encode(const std::wstring& /*str*/); };
 
 
 }  // namespace rclt

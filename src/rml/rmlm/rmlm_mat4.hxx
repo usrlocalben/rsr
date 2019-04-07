@@ -56,7 +56,7 @@ struct alignas(64) mat4 {
 			0, 0, 0, 1 }; }
 
 	static inline mat4 translate(const rmlv::vec4& a) {
-		assert(rmlv::almost_equal(a.w, 1.0f));
+		assert(rmlv::almost_equal(a.w, 1.0F));
 		return mat4{
 			1, 0, 0, a.x,
 			0, 1, 0, a.y,
@@ -81,7 +81,7 @@ struct alignas(64) mat4 {
 		/*glRotate() matrix*/
 		const float s = sin(theta);
 		const float c = cos(theta);
-		const float t = 1.0f - c;
+		const float t = 1.0F - c;
 
 		const float tx = t * x;
 		const float ty = t * y;
@@ -111,7 +111,7 @@ inline mat4 transpose(const mat4& m) {
 		m.ff[12], m.ff[13], m.ff[14], m.ff[15] }; }
 
 
-mat4 inverse(const mat4& m);
+mat4 inverse(const mat4& src);
 
 
 inline rmlv::vec4 operator*(const mat4 a, const rmlv::vec4 b) {
@@ -135,7 +135,7 @@ inline mat4 operator*(const mat4& lhs, const mat4& rhs) {
 
 
 inline rmlv::vec4 mul_w1(const mat4& a, const rmlv::vec4& b) {
-	assert(rmlv::almost_equal(b.w, 1.0f));
+	assert(rmlv::almost_equal(b.w, 1.0F));
 	return rmlv::vec4{
 		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z + a.ff[12],
 		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z + a.ff[13],
@@ -154,7 +154,7 @@ inline rmlv::vec4 mul_w1(const mat4& a, const rmlv::vec3& b) {
 
 
 inline rmlv::vec4 mul_w0(const mat4& a, const rmlv::vec4& b) {
-	assert(rmlv::almost_equal(b.w, 0.0f));
+	assert(rmlv::almost_equal(b.w, 0.0F));
 	return rmlv::vec4{
 		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z,
 		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z,
@@ -177,7 +177,7 @@ const int maxStackDepth = 16;
 
 class Mat4Stack {
 public:
-	Mat4Stack()  {}
+	Mat4Stack() = default;
 	void push() {
 		assert(d_sp + 1 < maxStackDepth);
 		d_stack[d_sp + 1] = d_stack[d_sp];

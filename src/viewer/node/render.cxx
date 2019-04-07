@@ -5,6 +5,9 @@
 #include <string_view>
 #include <vector>
 
+#include "src/rcl/rclx/rclx_gason_util.hxx"
+#include "src/viewer/node/gpu.hxx"
+
 namespace rqdq {
 namespace rqv {
 
@@ -108,6 +111,61 @@ void RenderToTexture::PostProcessImpl() {
 	outputTexture_.maybe_make_mipmap();
 	RunLinks(); }
 
-
 }  // namespace rqv
+
+namespace {
+
+using namespace rqv;
+
+class RenderCompiler final : public NodeCompiler {
+	void Build() override {
+		using rclx::jv_find;
+		if (!Input("GPUNode", "gpu", /*required=*/true)) { return; }
+
+		ShaderProgramId programId = ShaderProgramId::Default;
+		if (auto jv = jv_find(data_, "program", JSON_STRING)) {
+			programId = ShaderProgramNameSerializer::Deserialize(jv->toString()); }
+
+		bool srgb{true};
+		if (auto jv = jv_find(data_, "sRGB", JSON_FALSE)) {
+			srgb = false; }
+
+		out_ = std::make_shared<RenderNode>(id_, std::move(inputs_), programId, srgb); }};
+
+
+class RenderToTextureCompiler final : public NodeCompiler {
+	void Build() override {
+		using rclx::jv_find;
+		if (!Input("GPUNode", "gpu", /*required=*/true)) { return; }
+
+		int width{256};
+		if (auto jv = jv_find(data_, "width", JSON_NUMBER)) {
+			width = static_cast<int>(jv->toNumber()); }
+
+		int height{256};
+		if (auto jv = jv_find(data_, "height", JSON_NUMBER)) {
+			height = static_cast<int>(jv->toNumber()); }
+
+		bool aa{false};
+		if (auto jv = jv_find(data_, "aa", JSON_TRUE)) {
+			aa = true; }
+
+		float pa{1.0F};
+		if (auto jv = jv_find(data_, "aspect", JSON_NUMBER)) {
+			pa = static_cast<float>(jv->toNumber()); }
+
+		out_ = std::make_shared<RenderToTexture>(id_, std::move(inputs_), width, height, pa, aa); }};
+
+
+RenderCompiler renderCompiler{};
+RenderToTextureCompiler renderToTextureCompiler{};
+
+struct init { init() {
+	// XXX add an IOutput abstract type?
+	NodeRegistry::GetInstance().Register(NodeInfo{ "$render",       "Render",       [](NodeBase* node) { return dynamic_cast<RenderNode*>(node) != nullptr; },       &renderCompiler });
+	NodeRegistry::GetInstance().Register(NodeInfo{ "$renderToTexture", "RenderToTexture", [](NodeBase* node) { return dynamic_cast<RenderToTexture*>(node) != nullptr; },       &renderToTextureCompiler });
+}} init{};
+
+
+}  // namespace
 }  // namespace rqdq
