@@ -21,7 +21,7 @@ class WindowClosed : public std::exception {
 
 class Frame {
 public:
-	Frame(PixelToaster::Display &display) : display(display) {
+	explicit Frame(PixelToaster::Display &display) : display(display) {
 		ptfb = display.update_begin();
 		if (ptfb == nullptr) {
 			throw WindowClosed(); }

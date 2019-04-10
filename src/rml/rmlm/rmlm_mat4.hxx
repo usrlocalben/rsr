@@ -13,17 +13,15 @@ namespace rmlm {
 
 
 struct alignas(64) mat4 {
-
 	inline mat4() = default;
 	inline mat4(
-		const float a00, const float a01, const float a02, const float a03,
-		const float a10, const float a11, const float a12, const float a13,
-		const float a20, const float a21, const float a22, const float a23,
-		const float a30, const float a31, const float a32, const float a33) noexcept :ff({ {
+		float a00, float a01, float a02, float a03,
+		float a10, float a11, float a12, float a13,
+		float a20, float a21, float a22, float a23,
+		float a30, float a31, float a32, float a33) noexcept :ff({ {
 				a00, a10, a20, a30, a01, a11, a21, a31, a02, a12, a22, a32, a03, a13, a23, a33} }) {}
 
-	inline mat4(const std::array<float, 16>& src) {
-		std::copy(src.begin(), src.end(), ff.begin()); }
+	inline mat4(std::array<float, 16> src) :ff(std::move(src)) {}
 
 	void print();
 
@@ -34,28 +32,28 @@ struct alignas(64) mat4 {
 			0, 0, 1, 0,
 			0, 0, 0, 1 }; }
 
-	static inline mat4 scale(const rmlv::vec3& a) {
+	static inline mat4 scale(rmlv::vec3 a) {
 		return mat4{
 			a.x, 0, 0, 0,
 			0, a.y, 0, 0,
 			0, 0, a.z, 0,
 			0, 0, 0, 1 }; }
 
-	static inline mat4 scale(const rmlv::vec4& a) {
+	static inline mat4 scale(rmlv::vec4 a) {
 		return mat4{
 			a.x, 0, 0, 0,
 			0, a.y, 0, 0,
 			0, 0, a.z, 0,
 			0, 0, 0, 1 }; }
 
-	static inline mat4 scale(const float x, const float y, const float z) {
+	static inline mat4 scale(float x, float y, float z) {
 		return mat4{
 			x, 0, 0, 0,
 			0, y, 0, 0,
 			0, 0, z, 0,
 			0, 0, 0, 1 }; }
 
-	static inline mat4 translate(const rmlv::vec4& a) {
+	static inline mat4 translate(rmlv::vec4 a) {
 		assert(rmlv::almost_equal(a.w, 1.0F));
 		return mat4{
 			1, 0, 0, a.x,
@@ -63,14 +61,14 @@ struct alignas(64) mat4 {
 			0, 0, 1, a.z,
 			0, 0, 0, 1 }; }
 
-	static inline mat4 translate(const rmlv::vec3& a) {
+	static inline mat4 translate(rmlv::vec3 a) {
 		return mat4{
 			1, 0, 0, a.x,
 			0, 1, 0, a.y,
 			0, 0, 1, a.z,
 			0, 0, 0, 1 }; }
 
-	static inline mat4 translate(const float x, const float y, const float z) {
+	static inline mat4 translate(float x, float y, float z) {
 		return mat4{
 			1, 0, 0, x,
 			0, 1, 0, y,
@@ -103,7 +101,7 @@ struct alignas(64) mat4 {
 	};
 
 
-inline mat4 transpose(const mat4& m) {
+inline mat4 transpose(mat4 m) {
 	return mat4{
 		m.ff[ 0], m.ff[ 1], m.ff[ 2], m.ff[ 3],
 		m.ff[ 4], m.ff[ 5], m.ff[ 6], m.ff[ 7],
@@ -111,10 +109,10 @@ inline mat4 transpose(const mat4& m) {
 		m.ff[12], m.ff[13], m.ff[14], m.ff[15] }; }
 
 
-mat4 inverse(const mat4& src);
+mat4 inverse(mat4 src);
 
 
-inline rmlv::vec4 operator*(const mat4 a, const rmlv::vec4 b) {
+inline rmlv::vec4 operator*(const mat4 a, rmlv::vec4 b) {
 	return rmlv::vec4{
 		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z + a.ff[12]*b.w,
 		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z + a.ff[13]*b.w,
@@ -140,8 +138,7 @@ inline rmlv::vec4 mul_w1(const mat4& a, const rmlv::vec4& b) {
 		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z + a.ff[12],
 		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z + a.ff[13],
 		a.ff[2]*b.x + a.ff[6]*b.y + a.ff[10]*b.z + a.ff[14],
-		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z + a.ff[15]
-		}; }
+		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z + a.ff[15] }; }
 
 
 inline rmlv::vec4 mul_w1(const mat4& a, const rmlv::vec3& b) {
@@ -149,8 +146,7 @@ inline rmlv::vec4 mul_w1(const mat4& a, const rmlv::vec3& b) {
 		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z + a.ff[12],
 		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z + a.ff[13],
 		a.ff[2]*b.x + a.ff[6]*b.y + a.ff[10]*b.z + a.ff[14],
-		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z + a.ff[15]
-		}; }
+		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z + a.ff[15] }; }
 
 
 inline rmlv::vec4 mul_w0(const mat4& a, const rmlv::vec4& b) {
@@ -159,8 +155,7 @@ inline rmlv::vec4 mul_w0(const mat4& a, const rmlv::vec4& b) {
 		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z,
 		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z,
 		a.ff[2]*b.x + a.ff[6]*b.y + a.ff[10]*b.z,
-		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z
-		}; }
+		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z }; }
 
 
 inline rmlv::vec4 mul_w0(const mat4& a, const rmlv::vec3& b) {
@@ -168,18 +163,17 @@ inline rmlv::vec4 mul_w0(const mat4& a, const rmlv::vec3& b) {
 		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z,
 		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z,
 		a.ff[2]*b.x + a.ff[6]*b.y + a.ff[10]*b.z,
-		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z
-		}; }
+		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z }; }
 
 
-const int maxStackDepth = 16;
+constexpr int kMaxStackDepth = 16;
 
 
 class Mat4Stack {
 public:
 	Mat4Stack() = default;
 	void push() {
-		assert(d_sp + 1 < maxStackDepth);
+		assert(d_sp + 1 < kMaxStackDepth);
 		d_stack[d_sp + 1] = d_stack[d_sp];
 		d_sp += 1; }
 	void pop() {
@@ -197,7 +191,7 @@ public:
 		d_sp = 0;
 		load(mat4::ident()); }
 private:
-	std::array<mat4, maxStackDepth> d_stack;
+	std::array<mat4, kMaxStackDepth> d_stack;
 	int d_sp{0}; };
 
 
@@ -210,8 +204,7 @@ struct qmat4 {
 		rmlv::mvec4f{m.ff[0x08]}, rmlv::mvec4f{m.ff[0x09]}, rmlv::mvec4f{m.ff[0x0a]}, rmlv::mvec4f{m.ff[0x0b]},
 		rmlv::mvec4f{m.ff[0x0c]}, rmlv::mvec4f{m.ff[0x0d]}, rmlv::mvec4f{m.ff[0x0e]}, rmlv::mvec4f{m.ff[0x0f]} } }) {}
 
-	std::array<rmlv::mvec4f, 16> f;
-	};
+	std::array<rmlv::mvec4f, 16> f; };
 
 
 inline rmlv::qfloat4 mul_w1(const qmat4& a, const rmlv::qfloat3& b) {
@@ -219,8 +212,7 @@ inline rmlv::qfloat4 mul_w1(const qmat4& a, const rmlv::qfloat3& b) {
 		a.f[0]*b.x + a.f[4]*b.y + a.f[ 8]*b.z + a.f[12],
 		a.f[1]*b.x + a.f[5]*b.y + a.f[ 9]*b.z + a.f[13],
 		a.f[2]*b.x + a.f[6]*b.y + a.f[10]*b.z + a.f[14],
-		a.f[3]*b.x + a.f[7]*b.y + a.f[11]*b.z + a.f[15]
-		}; }
+		a.f[3]*b.x + a.f[7]*b.y + a.f[11]*b.z + a.f[15] }; }
 
 
 inline rmlv::qfloat4 mul(const qmat4& a, const rmlv::qfloat4& b) {
@@ -228,16 +220,14 @@ inline rmlv::qfloat4 mul(const qmat4& a, const rmlv::qfloat4& b) {
 		a.f[0]*b.x + a.f[4]*b.y + a.f[ 8]*b.z + a.f[12]*b.w,
 		a.f[1]*b.x + a.f[5]*b.y + a.f[ 9]*b.z + a.f[13]*b.w,
 		a.f[2]*b.x + a.f[6]*b.y + a.f[10]*b.z + a.f[14]*b.w,
-		a.f[3]*b.x + a.f[7]*b.y + a.f[11]*b.z + a.f[15]*b.w
-		}; }
+		a.f[3]*b.x + a.f[7]*b.y + a.f[11]*b.z + a.f[15]*b.w }; }
 
 
 inline rmlv::qfloat3 mul_w0(const qmat4& a, const rmlv::qfloat3& b) {
 	return rmlv::qfloat3{
 		a.f[0]*b.x + a.f[4]*b.y + a.f[ 8]*b.z,
 		a.f[1]*b.x + a.f[5]*b.y + a.f[ 9]*b.z,
-		a.f[2]*b.x + a.f[6]*b.y + a.f[10]*b.z
-		}; }
+		a.f[2]*b.x + a.f[6]*b.y + a.f[10]*b.z }; }
 
 
 }  // namespace rmlm

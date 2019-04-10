@@ -11,7 +11,7 @@ namespace rclmt {
 
 class Barrier {
 public:
-	Barrier(int numThreads);
+	explicit Barrier(int numThreads);
 	bool Join();
 
 private:

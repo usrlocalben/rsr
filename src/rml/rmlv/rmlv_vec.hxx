@@ -12,17 +12,6 @@ namespace rmlv {
 constexpr auto M_PI = 3.14159265358979323846;
 
 
-
-// XXX use std clamp
-inline float clamp(const float& x, const float &a, const float &b) {
-	if (x < a) {
-		return a; }
-	if (x > b) {
-		return b; }
-	return x; }
-
-
-
 inline double fract(const double x) {
 	double b;
 	return modf(x, &b);
@@ -56,28 +45,27 @@ struct alignas(8) vec2 {
 	constexpr vec2(float a) noexcept :x(a), y(a) {}
 	constexpr vec2(float a, float b) noexcept :x(a), y(b) {}
 
-	vec2 operator+(const vec2& b) const { return vec2(x + b.x, y + b.y); }
-	vec2 operator-(const vec2& b) const { return vec2(x - b.x, y - b.y); }
-	vec2 operator*(const vec2& b) const { return vec2(x * b.x, y * b.y); }
-	vec2 operator/(const vec2& b) const { return vec2(x / b.x, y / b.y); }
+	vec2 operator+(vec2 rhs) const { return { x+rhs.x, y+rhs.y }; }
+	vec2 operator-(vec2 rhs) const { return { x-rhs.x, y-rhs.y }; }
+	vec2 operator*(vec2 rhs) const { return { x*rhs.x, y*rhs.y }; }
+	vec2 operator/(vec2 rhs) const { return { x/rhs.x, y/rhs.y }; }
 
-	vec2 operator+(const float b) const { return vec2(x + b, y + b); }
-	vec2 operator-(const float b) const { return vec2(x - b, y - b); }
-	vec2 operator*(const float b) const { return vec2(x * b, y * b); }
-	vec2 operator/(const float b) const { return vec2(x / b, y / b); }
+	vec2 operator+(float rhs) const { return { x+rhs, y+rhs }; }
+	vec2 operator-(float rhs) const { return { x-rhs, y-rhs }; }
+	vec2 operator*(float rhs) const { return { x*rhs, y*rhs }; }
+	vec2 operator/(float rhs) const { return { x/rhs, y/rhs }; }
 
-	vec2& operator+=(const vec2& b) { x += b.x; y += b.y; return *this; }
-	vec2& operator-=(const vec2& b) { x -= b.x; y -= b.y; return *this; }
-	vec2& operator*=(const vec2& b) { x *= b.x; y *= b.y; return *this; }
-	vec2& operator/=(const vec2& b) { x /= b.x; y /= b.y; return *this; }
+	vec2& operator+=(vec2 rhs) { x += rhs.x; y += rhs.y; return *this; }
+	vec2& operator-=(vec2 rhs) { x -= rhs.x; y -= rhs.y; return *this; }
+	vec2& operator*=(vec2 rhs) { x *= rhs.x; y *= rhs.y; return *this; }
+	vec2& operator/=(vec2 rhs) { x /= rhs.x; y /= rhs.y; return *this; }
 
-	vec2& operator+=(const float b) { x += b; y += b; return *this; }
-	vec2& operator-=(const float b) { x -= b; y -= b; return *this; }
-	vec2& operator*=(const float b) { x *= b; y *= b; return *this; }
-	vec2& operator/=(const float b) { x /= b; y /= b; return *this; }
+	vec2& operator+=(float rhs) { x += rhs; y += rhs; return *this; }
+	vec2& operator-=(float rhs) { x -= rhs; y -= rhs; return *this; }
+	vec2& operator*=(float rhs) { x *= rhs; y *= rhs; return *this; }
+	vec2& operator/=(float rhs) { x /= rhs; y /= rhs; return *this; }
 
-	bool operator==(const vec2& other) const {
-		return x==other.x && y==other.y; }
+	bool operator==(vec2 rhs) const { return x==rhs.x && y==rhs.y; }
 
 	union {
 		struct { float x, y; };
@@ -86,34 +74,34 @@ struct alignas(8) vec2 {
 
 struct alignas(4) vec3 {
 	vec3() = default;
-	constexpr vec3(const float a) noexcept : x(a), y(a), z(a) {}
-	constexpr vec3(const float a, const float b, const float c) noexcept : x(a), y(b), z(c) {}
-	constexpr vec3(const vec2 a, const float z) noexcept : x(a.x), y(a.y), z(z) {}
+	constexpr vec3(float a) noexcept : x(a), y(a), z(a) {}
+	constexpr vec3(float a, float b, float c) noexcept : x(a), y(b), z(c) {}
+	constexpr vec3(vec2 a, float z) noexcept : x(a.x), y(a.y), z(z) {}
 
-	vec3 operator+(const vec3& b) const { return { x + b.x, y + b.y, z + b.z }; }
-	vec3 operator-(const vec3& b) const { return { x - b.x, y - b.y, z - b.z }; }
-	vec3 operator*(const vec3& b) const { return { x * b.x, y * b.y, z * b.z }; }
-	vec3 operator/(const vec3& b) const { return { x / b.x, y / b.y, z / b.z }; }
+	vec3 operator+(vec3 rhs) const { return { x+rhs.x, y+rhs.y, z+rhs.z }; }
+	vec3 operator-(vec3 rhs) const { return { x-rhs.x, y-rhs.y, z-rhs.z }; }
+	vec3 operator*(vec3 rhs) const { return { x*rhs.x, y*rhs.y, z*rhs.z }; }
+	vec3 operator/(vec3 rhs) const { return { x/rhs.x, y/rhs.y, z/rhs.z }; }
 
-	vec3 operator+(const float b) const { return { x + b, y + b, z + b }; }
-	vec3 operator-(const float b) const { return { x - b, y - b, z - b }; }
-	vec3 operator*(const float b) const { return { x * b, y * b, z * b }; }
-	vec3 operator/(const float b) const { return { x / b, y / b, z / b }; }
+	vec3 operator+(float rhs) const { return { x+rhs, y+rhs, z+rhs }; }
+	vec3 operator-(float rhs) const { return { x-rhs, y-rhs, z-rhs }; }
+	vec3 operator*(float rhs) const { return { x*rhs, y*rhs, z*rhs }; }
+	vec3 operator/(float rhs) const { return { x/rhs, y/rhs, z/rhs }; }
 
-	vec3& operator+=(const vec3& b) { x += b.x; y += b.y; z += b.z; return *this; }
-	vec3& operator-=(const vec3& b) { x -= b.x; y -= b.y; z -= b.z; return *this; }
-	vec3& operator*=(const vec3& b) { x *= b.x; y *= b.y; z *= b.z; return *this; }
-	vec3& operator/=(const vec3& b) { x /= b.x; y /= b.y; z /= b.z; return *this; }
+	vec3& operator+=(vec3 rhs) { x += rhs.x; y += rhs.y; z += rhs.z; return *this; }
+	vec3& operator-=(vec3 rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; return *this; }
+	vec3& operator*=(vec3 rhs) { x *= rhs.x; y *= rhs.y; z *= rhs.z; return *this; }
+	vec3& operator/=(vec3 rhs) { x /= rhs.x; y /= rhs.y; z /= rhs.z; return *this; }
 
-	vec3& operator+=(const float b) { x += b; y += b; z += b; return *this; }
-	vec3& operator-=(const float b) { x -= b; y -= b; z -= b; return *this; }
-	vec3& operator*=(const float b) { x *= b; y *= b; z *= b; return *this; }
-	vec3& operator/=(const float b) { x /= b; y /= b; z /= b; return *this; }
+	vec3& operator+=(float rhs) { x += rhs; y += rhs; z += rhs; return *this; }
+	vec3& operator-=(float rhs) { x -= rhs; y -= rhs; z -= rhs; return *this; }
+	vec3& operator*=(float rhs) { x *= rhs; y *= rhs; z *= rhs; return *this; }
+	vec3& operator/=(float rhs) { x /= rhs; y /= rhs; z /= rhs; return *this; }
 
-	bool operator==(const vec3& other) const {
-		return x==other.x && y==other.y && z==other.z; }
+	bool operator==(const vec3& rhs) const {
+		return x==rhs.x && y==rhs.y && z==rhs.z; }
 
-	vec2 xy() const { return vec2{x, y}; }
+	vec2 xy() const { return { x, y }; }
 
 	union {
 		struct { float x, y, z; };
@@ -124,30 +112,30 @@ struct alignas(16) vec4 {
 	vec4() = default;
 	constexpr vec4(float a, float b, float c, float d) :x(a), y(b), z(c), w(d) {}
 	constexpr vec4(float a) : x(a), y(a), z(a), w(a) {}
-	constexpr vec4(const vec3 a, float b) : x(a.x), y(a.y), z(a.z), w(b) {}
+	constexpr vec4(vec3 a, float b) : x(a.x), y(a.y), z(a.z), w(b) {}
 
-	vec4 operator+(const vec4& b) const { return { x + b.x, y + b.y, z + b.z, w + b.w }; }
-	vec4 operator-(const vec4& b) const { return { x - b.x, y - b.y, z - b.z, w - b.w }; }
-	vec4 operator*(const vec4& b) const { return { x * b.x, y * b.y, z * b.z, w * b.w }; }
-	vec4 operator/(const vec4& b) const { return { x / b.x, y / b.y, z / b.z, w / b.w }; }
+	vec4 operator+(vec4 rhs) const { return { x+rhs.x, y+rhs.y, z+rhs.z, w+rhs.w }; }
+	vec4 operator-(vec4 rhs) const { return { x-rhs.x, y-rhs.y, z-rhs.z, w-rhs.w }; }
+	vec4 operator*(vec4 rhs) const { return { x*rhs.x, y*rhs.y, z*rhs.z, w*rhs.w }; }
+	vec4 operator/(vec4 rhs) const { return { x/rhs.x, y/rhs.y, z/rhs.z, w/rhs.w }; }
 
-	vec4 operator+(const float b) const { return { x + b, y + b, z + b, w + b }; }
-	vec4 operator-(const float b) const { return { x - b, y - b, z - b, w - b }; }
-	vec4 operator*(const float b) const { return { x * b, y * b, z * b, w * b }; }
-	vec4 operator/(const float b) const { return { x / b, y / b, z / b, w / b }; }
+	vec4 operator+(float rhs) const { return { x+rhs, y+rhs, z+rhs, w+rhs }; }
+	vec4 operator-(float rhs) const { return { x-rhs, y-rhs, z-rhs, w-rhs }; }
+	vec4 operator*(float rhs) const { return { x*rhs, y*rhs, z*rhs, w*rhs }; }
+	vec4 operator/(float rhs) const { return { x/rhs, y/rhs, z/rhs, w/rhs }; }
 
-	vec4& operator+=(const vec4& b) { x += b.x; y += b.y; z += b.z; w += b.w; return *this; }
-	vec4& operator-=(const vec4& b) { x -= b.x; y -= b.y; z -= b.z; w -= b.w; return *this; }
-	vec4& operator*=(const vec4& b) { x *= b.x; y *= b.y; z *= b.z; w *= b.w; return *this; }
-	vec4& operator/=(const vec4& b) { x /= b.x; y /= b.y; z /= b.z; w /= b.w; return *this; }
+	vec4& operator+=(vec4 rhs) { x += rhs.x; y += rhs.y; z += rhs.z; w += rhs.w; return *this; }
+	vec4& operator-=(vec4 rhs) { x -= rhs.x; y -= rhs.y; z -= rhs.z; w -= rhs.w; return *this; }
+	vec4& operator*=(vec4 rhs) { x *= rhs.x; y *= rhs.y; z *= rhs.z; w *= rhs.w; return *this; }
+	vec4& operator/=(vec4 rhs) { x /= rhs.x; y /= rhs.y; z /= rhs.z; w /= rhs.w; return *this; }
 
-	vec4& operator+=(const float b) { x += b; y += b; z += b; w += b; return *this; }
-	vec4& operator-=(const float b) { x -= b; y -= b; z -= b; w -= b; return *this; }
-	vec4& operator*=(const float b) { x *= b; y *= b; z *= b; w *= b; return *this; }
-	vec4& operator/=(const float b) { x /= b; y /= b; z /= b; w /= b; return *this; }
+	vec4& operator+=(float rhs) { x += rhs; y += rhs; z += rhs; w += rhs; return *this; }
+	vec4& operator-=(float rhs) { x -= rhs; y -= rhs; z -= rhs; w -= rhs; return *this; }
+	vec4& operator*=(float rhs) { x *= rhs; y *= rhs; z *= rhs; w *= rhs; return *this; }
+	vec4& operator/=(float rhs) { x /= rhs; y /= rhs; z /= rhs; w /= rhs; return *this; }
 
-	vec2 xy() { return vec2{ x, y }; }
-	vec3 xyz() { return vec3{ x, y, z }; }
+	vec2 xy() { return { x, y }; }
+	vec3 xyz() { return { x, y, z }; }
 
 	union {
 		struct { float x, y, z, w; };
@@ -349,7 +337,7 @@ struct hash<rqdq::rmlv::vec4> {
 
 }  // namespace std
 
-std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec2& v);
-std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec4& v);
-std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::vec3& v);
-std::ostream& operator<<(std::ostream& os, const rqdq::rmlv::ivec2& v);
+std::ostream& operator<<(std::ostream& os, rqdq::rmlv::vec2 v);
+std::ostream& operator<<(std::ostream& os, rqdq::rmlv::vec4 v);
+std::ostream& operator<<(std::ostream& os, rqdq::rmlv::vec3 v);
+std::ostream& operator<<(std::ostream& os, rqdq::rmlv::ivec2 v);

@@ -66,9 +66,9 @@ inline void store_bytes(uint8_t* dst, const mvec4i a) {
 
 struct alignas(16) mvec4f {
 	inline mvec4f() = default;
-	inline mvec4f(const float a, const float b, const float c, const float d) : v(_mm_set_ps(d, c, b, a)) {}
-	inline mvec4f(const float a) : v(_mm_set1_ps(a)) {}
-	inline mvec4f(__m128 m) : v(m) {}
+	inline mvec4f(float a, float b, float c, float d) :v(_mm_set_ps(d, c, b, a)) {}
+	inline mvec4f(float a) :v(_mm_set1_ps(a)) {}
+	inline mvec4f(__m128 m) :v(m) {}
 
 	inline static mvec4f zero() { return _mm_setzero_ps(); }
 
@@ -95,25 +95,25 @@ struct alignas(16) mvec4f {
 		_mm_store_ps(reinterpret_cast<float*>(a), v);
 		return vec2{ a[0], a[1] }; }
 
-	inline mvec4f operator+(const mvec4f& b) const { return _mm_add_ps(v, b.v); }
-	inline mvec4f operator-(const mvec4f& b) const { return _mm_sub_ps(v, b.v); }
-	inline mvec4f operator*(const mvec4f& b) const { return _mm_mul_ps(v, b.v); }
-	inline mvec4f operator/(const mvec4f& b) const { return _mm_div_ps(v, b.v); }
+	inline mvec4f operator+(mvec4f rhs) const { return _mm_add_ps(v, rhs.v); }
+	inline mvec4f operator-(mvec4f rhs) const { return _mm_sub_ps(v, rhs.v); }
+	inline mvec4f operator*(mvec4f rhs) const { return _mm_mul_ps(v, rhs.v); }
+	inline mvec4f operator/(mvec4f rhs) const { return _mm_div_ps(v, rhs.v); }
 
-	inline mvec4f& operator+=(const mvec4f& b) { v = _mm_add_ps(v, b.v); return *this; }
-	inline mvec4f& operator-=(const mvec4f& b) { v = _mm_sub_ps(v, b.v); return *this; }
-	inline mvec4f& operator*=(const mvec4f& b) { v = _mm_mul_ps(v, b.v); return *this; }
-	inline mvec4f& operator/=(const mvec4f& b) { v = _mm_div_ps(v, b.v); return *this; }
+	inline mvec4f& operator+=(mvec4f rhs) { v = _mm_add_ps(v, rhs.v); return *this; }
+	inline mvec4f& operator-=(mvec4f rhs) { v = _mm_sub_ps(v, rhs.v); return *this; }
+	inline mvec4f& operator*=(mvec4f rhs) { v = _mm_mul_ps(v, rhs.v); return *this; }
+	inline mvec4f& operator/=(mvec4f rhs) { v = _mm_div_ps(v, rhs.v); return *this; }
 
-	inline mvec4f operator+(const float b) const { return _mm_add_ps(v, _mm_set1_ps(b)); }
-	inline mvec4f operator-(const float b) const { return _mm_sub_ps(v, _mm_set1_ps(b)); }
-	inline mvec4f operator*(const float b) const { return _mm_mul_ps(v, _mm_set1_ps(b)); }
-	inline mvec4f operator/(const float b) const { return _mm_div_ps(v, _mm_set1_ps(b)); }
+	inline mvec4f operator+(float rhs) const { return _mm_add_ps(v, _mm_set1_ps(rhs)); }
+	inline mvec4f operator-(float rhs) const { return _mm_sub_ps(v, _mm_set1_ps(rhs)); }
+	inline mvec4f operator*(float rhs) const { return _mm_mul_ps(v, _mm_set1_ps(rhs)); }
+	inline mvec4f operator/(float rhs) const { return _mm_div_ps(v, _mm_set1_ps(rhs)); }
 
-	inline mvec4f& operator+=(const float b) { v = _mm_add_ps(v, _mm_set1_ps(b)); return *this; }
-	inline mvec4f& operator-=(const float b) { v = _mm_sub_ps(v, _mm_set1_ps(b)); return *this; }
-	inline mvec4f& operator*=(const float b) { v = _mm_mul_ps(v, _mm_set1_ps(b)); return *this; }
-	inline mvec4f& operator/=(const float b) { v = _mm_div_ps(v, _mm_set1_ps(b)); return *this; }
+	inline mvec4f& operator+=(float rhs) { v = _mm_add_ps(v, _mm_set1_ps(rhs)); return *this; }
+	inline mvec4f& operator-=(float rhs) { v = _mm_sub_ps(v, _mm_set1_ps(rhs)); return *this; }
+	inline mvec4f& operator*=(float rhs) { v = _mm_mul_ps(v, _mm_set1_ps(rhs)); return *this; }
+	inline mvec4f& operator/=(float rhs) { v = _mm_div_ps(v, _mm_set1_ps(rhs)); return *this; }
 
 	inline mvec4f xxxx() const { return _mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, 0)); }
 	inline mvec4f yyyy() const { return _mm_shuffle_ps(v, v, _MM_SHUFFLE(1, 1, 1, 1)); }

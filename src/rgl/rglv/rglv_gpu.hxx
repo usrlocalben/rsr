@@ -31,15 +31,11 @@
 #include "3rdparty/fmt/include/fmt/printf.h"
 
 namespace rqdq {
-namespace {
+namespace rglv {
 
 constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
+
 constexpr auto maxVAOSizeInVertices = 500000L;
-
-
-}  // namespace
-
-namespace rglv {
 
 struct VertexInput {
 	rmlv::qfloat4 a0;

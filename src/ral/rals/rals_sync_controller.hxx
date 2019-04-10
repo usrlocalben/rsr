@@ -1,16 +1,15 @@
 #pragma once
-#include "src/ral/ralio/ralio_audio_controller.hxx"
-
 #include <functional>
 #include <memory>
+
+#include "src/ral/ralio/ralio_audio_controller.hxx"
 
 namespace rqdq {
 namespace rals {
 
-
 class SyncController {
 	struct impl;
-	std::unique_ptr<impl> d_pImpl;
+	std::unique_ptr<impl> impl_;
 
 public:
 	SyncController(std::string pathPrefix, ralio::AudioStream& soundtrack, double rowsPerSecond);
@@ -25,8 +24,8 @@ public:
 	void ForEachValue(double /*positionInRows*/, std::function<void(const std::string&, double value)> /*func*/);
 
 	int Update(int positionInRows);
-	void SaveTracks();
-};
+	void SaveTracks(); };
+
 
 }  // namespace rals
 }  // namespace rqdq

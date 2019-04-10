@@ -1,4 +1,4 @@
-#include "src/ral/ralio/ralio_audio_controller.hxx"
+#include "ralio_audio_controller.hxx"
 
 #include <cassert>
 #include <optional>
@@ -10,38 +10,52 @@
 namespace rqdq {
 namespace ralio {
 
+AudioStream::AudioStream(unsigned long hStream)
+	:hStream_(hStream) {}
 
-AudioStream::~AudioStream() {
-	if (d_hstream != 0u) {
-		BASS_StreamFree(d_hstream); }}
+
+AudioStream::AudioStream(AudioStream&& other) noexcept
+	:hStream_(other.hStream_) { other.hStream_ = 0; }
+
+
+AudioStream& AudioStream::operator=(AudioStream&& other) noexcept {
+	if (this != &other) {
+		hStream_ = other.hStream_;
+		other.hStream_ = 0; }
+	return *this; }
+
+
+AudioStream::~AudioStream() noexcept {
+	if (hStream_ != 0u) {
+		BASS_StreamFree(hStream_); }}
 
 
 void AudioStream::Play() const {
-	assert(d_hstream);
-	BASS_ChannelPlay(d_hstream, 0); }
+	assert(hStream_);
+	BASS_ChannelPlay(hStream_, 0); }
 
 
 void AudioStream::Pause() const {
-	assert(d_hstream);
-	BASS_ChannelPause(d_hstream); }
+	assert(hStream_);
+	BASS_ChannelPause(hStream_); }
 
 
 bool AudioStream::IsPlaying() const {
-	assert(d_hstream);
-	return BASS_ChannelIsActive(d_hstream) == BASS_ACTIVE_PLAYING; }
+	assert(hStream_);
+	return BASS_ChannelIsActive(hStream_) == BASS_ACTIVE_PLAYING; }
 
 
 double AudioStream::GetPosition() const {
-	assert(d_hstream);
-	QWORD pos = BASS_ChannelGetPosition(d_hstream, BASS_POS_BYTE);
-	double seconds = BASS_ChannelBytes2Seconds(d_hstream, pos);
+	assert(hStream_);
+	QWORD pos = BASS_ChannelGetPosition(hStream_, BASS_POS_BYTE);
+	double seconds = BASS_ChannelBytes2Seconds(hStream_, pos);
 	return seconds; }
 
 
 void AudioStream::SetPosition(double seconds) {
-	assert(d_hstream);
-	QWORD pos = BASS_ChannelSeconds2Bytes(d_hstream, seconds);
-	BASS_ChannelSetPosition(d_hstream, pos, BASS_POS_BYTE); }
+	assert(hStream_);
+	QWORD pos = BASS_ChannelSeconds2Bytes(hStream_, seconds);
+	BASS_ChannelSetPosition(hStream_, pos, BASS_POS_BYTE); }
 
 
 AudioController::AudioController() {

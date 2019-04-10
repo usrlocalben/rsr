@@ -1,5 +1,4 @@
 #pragma once
-
 #include <optional>
 #include <string>
 
@@ -8,20 +7,14 @@ namespace ralio {
 
 class AudioStream {
 	friend class AudioController;
-	AudioStream(unsigned long hstream) :d_hstream(hstream) {}
-
-	AudioStream(const AudioStream&) = delete;
-	AudioStream& operator=(const AudioStream& other) = delete;
+	explicit AudioStream(unsigned long hStream);
 
 public:
-	AudioStream(AudioStream&& other) :d_hstream(other.d_hstream) { other.d_hstream = 0; }
-	AudioStream& operator=(AudioStream&& other) {
-		if (this != &other) {
-			d_hstream = other.d_hstream;
-			other.d_hstream = 0; }
-		return *this; }
-
-	~AudioStream();
+	AudioStream(const AudioStream&) = delete;
+	AudioStream& operator=(const AudioStream& other) = delete;
+	AudioStream(AudioStream&& other) noexcept;
+	AudioStream& operator=(AudioStream&& other) noexcept;
+	~AudioStream() noexcept;
 
 	void Play() const;
 	void Pause() const;
@@ -30,7 +23,7 @@ public:
 	void SetPosition(double seconds);
 
 private:
-	unsigned long d_hstream = 0; };
+	unsigned long hStream_{0}; };
 
 
 class AudioController {

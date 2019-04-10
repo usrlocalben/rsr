@@ -5,6 +5,7 @@
  * todo: velocity/acceleration
  */
 #pragma once
+#include <algorithm>
 #include <iostream>
 
 #include "src/rml/rmlm/rmlm_mat4.hxx"
@@ -26,7 +27,8 @@ public:
 	 */
 	void onMouseMove(rmlv::vec2 delta) {
 		d_angle += d_mouse_speed * delta;
-		d_angle.y = rmlv::clamp(d_angle.y, -(rmlv::M_PI / 2.0F), rmlv::M_PI / 2.0F); }
+		float halfPi{ rmlv::M_PI / 2.0F };
+		d_angle.y = std::clamp(d_angle.y, -halfPi, halfPi); }
 
 public:
 	rmlm::mat4 getMatrix() const {

@@ -1,11 +1,11 @@
 #include "src/rml/rmlm/rmlm_mat4.hxx"
-#include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include <cassert>
 #include <iostream>
 
-#include "3rdparty/fmt/include/fmt/printf.h"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 
+#include "3rdparty/fmt/include/fmt/printf.h"
 
 namespace rqdq {
 namespace rmlm {
@@ -17,11 +17,10 @@ void mat4::print() {
 	fmt::printf("[% 11.4f,% 11.4f,% 11.4f,% 11.4f]\n", cr[0][0], cr[1][0], cr[2][0], cr[3][0]);
 	fmt::printf("[% 11.4f,% 11.4f,% 11.4f,% 11.4f]\n", cr[0][1], cr[1][1], cr[2][1], cr[3][1]);
 	fmt::printf("[% 11.4f,% 11.4f,% 11.4f,% 11.4f]\n", cr[0][2], cr[1][2], cr[2][2], cr[3][2]);
-	fmt::printf("[% 11.4f,% 11.4f,% 11.4f,% 11.4f]\n", cr[0][3], cr[1][3], cr[2][3], cr[3][3]);
-}
+	fmt::printf("[% 11.4f,% 11.4f,% 11.4f,% 11.4f]\n", cr[0][3], cr[1][3], cr[2][3], cr[3][3]); }
 
 
-mat4 inverse(const mat4& src) {
+mat4 inverse(const mat4 src) {
 	/*compute the inverse of the mat4 src
 
 	the last remaining zed3d bits ;)

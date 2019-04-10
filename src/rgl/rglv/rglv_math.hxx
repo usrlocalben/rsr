@@ -119,29 +119,26 @@ inline rmlm::mat4 make_gluPerspective(const float fovy, const float aspect, cons
 
 
 inline rmlm::mat4 make_device_matrix(const int width, const int height) {
-	const auto x0 = 0;
-	const auto y0 = 0;
+	rmlm::mat4 yFix{
+		1,  0,  0,  0,
+		0, -1,  0,  0,
+		0,  0,  1,  0,
+		0,  0,  0,  1};
 
-	auto md_yfix = rmlm::mat4(
-		   1,        0,       0,       0,
-		   0,       -1,       0,       0,
-		   0,        0,       1,       0,
-		   0,        0,       0,       1);
+	rmlm::mat4 scale{
+		width/2.0F,      0,              0,          0,
+		     0,    height/2.0F,          0,          0,
+		     0,          0,            1.0F,         0, ///zfar-znear, // 0,
+		     0,          0,              0,        1.0F};
 
-	auto md_scale = rmlm::mat4(
-		float(width/2), 0,          0,       0,
-		     0,    float(height/2), 0,       0,
-		     0,         0,          1.0F,    0, ///zfar-znear, // 0,
-		     0,         0,          0,       1.0F);
+	rmlm::mat4 origin{
+		1.0F,         0,         0,  width /2.0F,
+		  0,        1.0F,        0,  height/2.0F,
+		  0,          0,       1.0F,       0,
+		  0,          0,         0,      1.0F };
 
-	auto md_origin = rmlm::mat4(
-		   1,        0,       0,  float(x0+width /2),
-		   0,        1,       0,  float(y0+height/2),
-		   0,        0,       1,       0,
-		   0,        0,       0,       1);
-
-	//md = mat4_mul(md_origin, mat4_mul(md_scale, md_yfix));
-	return md_origin * (md_scale * md_yfix); }
+	//md = mat4_mul(origin, mat4_mul(scale, yFix));
+	return origin * (scale * yFix); }
 
 
 } // namespace rglv

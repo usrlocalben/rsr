@@ -42,7 +42,7 @@ static const std::greater<float> greater;
 
 
 inline float calc_offset(const float a, const float b, const float target) {
-	if (1) {
+	if (true) {
 		return (target - a) / (b - a); }
 
 	const auto delta = b - a;
