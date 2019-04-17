@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string_view>
 #include <tuple>
@@ -32,7 +33,7 @@ public:
 	virtual void Build() = 0;
 
 protected:
-	bool Input(std::string_view typeName, std::string_view attrName, bool required);
+	bool Input(std::string_view attrName, bool required);
 
 	std::string_view id_{};
 	JsonValue data_;
@@ -43,25 +44,17 @@ protected:
 	NodeList deps_{}; };
 
 
-struct NodeInfo {
-	const std::string_view jsonName;
-	const std::string_view typeName;
-	std::function<bool(NodeBase*)> IsInstance;
-	NodeCompiler* const compiler; };
-
-
 class NodeRegistry {
 private:
 	NodeRegistry();
 public:
 	static NodeRegistry& GetInstance();
-	void Register(NodeInfo info);
-	std::optional<NodeInfo> GetByTypeName(std::string_view typeName);
-	std::optional<NodeInfo> GetByJsonName(std::string_view jsonName);
+	void Register(std::string_view jsonName, NodeCompiler* compiler);
+	NodeCompiler* Get(std::string_view jsonName);
+	NodeCompiler* Get(const std::string& jsonName);
 
 private:
-	std::unordered_map<std::string, NodeInfo> jsonDB_;
-	std::unordered_map<std::string, NodeInfo> typeDB_; };
+	std::unordered_map<std::string, NodeCompiler*> db_; };
 
 
 bool Link(NodeList& nodes);

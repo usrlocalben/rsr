@@ -8,7 +8,7 @@
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 #include "src/viewer/compile.hxx"
-#include "src/viewer/node/value.hxx"
+#include "src/viewer/node/i_value.hxx"
 
 #include "3rdparty/exprtk/exprtk.hpp"
 
@@ -26,7 +26,7 @@ struct ComputedNodeState;
 /**
  * vec3 computed using exprTk, with inputs from other nodes
  */
-class ComputedVec3Node : public ValuesBase {
+class ComputedVec3Node : public IValue {
 public:
 	using VarDefList = std::vector<std::pair<std::string, std::string>>;
 
@@ -34,13 +34,16 @@ public:
 	~ComputedVec3Node() override;
 
 	// NodeBase
-	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
+	void Reset() override;
 
-	// ValuesBase
-	NamedValue Get(std::string_view name) override;
+	// IValue
+	NamedValue Eval(std::string_view name) override;
 
 private:
-	std::vector<std::unique_ptr<ComputedNodeState>> state_; };
+	std::vector<std::unique_ptr<ComputedNodeState>> state_;
+	std::vector<std::unordered_map<std::string, NamedValue>> cache_; };
+
 
 /**
  * an input value slot for a ComputedNode
@@ -48,7 +51,7 @@ private:
 struct ComputedInput {
 	std::string name{};
 	ValueType type{ValueType::Real};
-	ValuesBase* sourceNode{nullptr};
+	IValue* sourceNode{nullptr};
 	std::string sourceSlot{};
 	std::vector<double> data{}; };
 
@@ -68,10 +71,12 @@ ComputedVec3Node::ComputedVec3Node(
 	InputList inputs,
 	std::string code,
 	std::vector<std::pair<std::string, std::string>> varDefs)
-	:ValuesBase(id, std::move(inputs)) {
+	:IValue(id, std::move(inputs)) {
 
 	// initialize a ComputedNodeState for each thread
 	for (int threadNum=0; threadNum<jobsys::thread_count; threadNum++) {
+		cache_.emplace_back();
+
 		auto td = std::make_unique<ComputedNodeState>();
 		auto& computedInputs = td->computedInputs;
 		auto& symbolTable = td->symbolTable;
@@ -116,52 +121,66 @@ ComputedVec3Node::ComputedVec3Node(
 ComputedVec3Node::~ComputedVec3Node() = default;
 
 
-void ComputedVec3Node::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
+bool ComputedVec3Node::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
 	bool connected = false;
-
 	// apply the same connections for all threads
 	for (auto& td : state_) {
 		for (auto& computed_input : td->computedInputs) {
 			if (computed_input.name == attr) {
-				computed_input.sourceNode = static_cast<ValuesBase*>(other);
+				computed_input.sourceNode = dynamic_cast<IValue*>(other);
 				computed_input.sourceSlot = slot;
+				if (computed_input.sourceNode == nullptr) {
+					TYPE_ERROR(IValue);
+					return false; }
 				connected = true; }}}
 	if (connected) {
-		return; }
-	ValuesBase::Connect(attr, other, slot); }
+		return true; }
+	return IValue::Connect(attr, other, slot); }
 
 
-NamedValue ComputedVec3Node::Get(std::string_view name) {
+void ComputedVec3Node::Reset() {
+	for (auto& cache : cache_) {
+		cache.clear(); }}
+
+
+NamedValue ComputedVec3Node::Eval(std::string_view name) {
 	rmlv::vec3 result;
 	auto& td = state_[jobsys::thread_id];
+	auto& cache = cache_[jobsys::thread_id];
 	auto& computedInputs = td->computedInputs;
 	auto& expression = td->expression;
+
+	thread_local std::string cacheKey;
+	cacheKey.assign(name);
+	auto search = cache.find(cacheKey);
+	if (search != end(cache)) {
+		return search->second; }
 
 	// load inputs
 	for (auto& ci : computedInputs) {
 		if (ci.sourceNode != nullptr) {
 			switch (ci.type) {
 			case ValueType::Integer:
-				{int value = ci.sourceNode->Get(ci.sourceSlot).as_int();
+				{int value = ci.sourceNode->Eval(ci.sourceSlot).as_int();
 				ci.data[0] = double(value); }
 				break;
 			case ValueType::Real:
-				{float value = ci.sourceNode->Get(ci.sourceSlot).as_float();
+				{float value = ci.sourceNode->Eval(ci.sourceSlot).as_float();
 				ci.data[0] = double(value); }
 				break;
 			case ValueType::Vec2:
-				{vec2 value = ci.sourceNode->Get(ci.sourceSlot).as_vec2();
+				{vec2 value = ci.sourceNode->Eval(ci.sourceSlot).as_vec2();
 				ci.data[0] = double(value.x);
 				ci.data[1] = double(value.y); }
 				break;
 			case ValueType::Vec3:
-				{vec3 value = ci.sourceNode->Get(ci.sourceSlot).as_vec3();
+				{vec3 value = ci.sourceNode->Eval(ci.sourceSlot).as_vec3();
 				ci.data[0] = double(value.x);
 				ci.data[1] = double(value.y);
 				ci.data[2] = double(value.z); }
 				break;
 			case ValueType::Vec4:
-				{vec4 value = ci.sourceNode->Get(ci.sourceSlot).as_vec4();
+				{vec4 value = ci.sourceNode->Eval(ci.sourceSlot).as_vec4();
 				ci.data[0] = double(value.x);
 				ci.data[1] = double(value.y);
 				ci.data[2] = double(value.z);
@@ -177,15 +196,19 @@ NamedValue ComputedVec3Node::Get(std::string_view name) {
 	else {
 		result = vec3(0, 0, 0); }
 
+	NamedValue out;
 	if (name == "x") {
-		return NamedValue{ "x", result.x }; }
-	if (name == "y") {
-		return NamedValue{ "y", result.y }; }
-	if (name == "z") {
-		return NamedValue{ "z", result.z }; }
-	if (name == "xy") {
-		return NamedValue{ "xy", result.xy() }; }
-	return NamedValue{ "", result }; }
+		out = NamedValue{ result.x }; }
+	else if (name == "y") {
+		out = NamedValue{ result.y }; }
+	else if (name == "z") {
+		out = NamedValue{ result.z }; }
+	else if (name == "xy") {
+		out = NamedValue{ result.xy() }; }
+	else {
+		out = NamedValue{ result }; };
+	cache[cacheKey] = out;
+	return out; }
 
 
 class Compiler final : public NodeCompiler {
@@ -213,11 +236,7 @@ class Compiler final : public NodeCompiler {
 Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register(NodeInfo{
-		"$computedVec3",
-		"ComputedVec3",
-		[](NodeBase* node) { return dynamic_cast<ComputedVec3Node*>(node) != nullptr; },
-		&compiler });
+	NodeRegistry::GetInstance().Register("$computedVec3", &compiler);
 }} init{};
 
 

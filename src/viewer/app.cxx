@@ -29,9 +29,9 @@
 #include "src/rml/rmlv/rmlv_vec.hxx"
 #include "src/viewer/compile.hxx"
 #include "src/viewer/jobsys_vis.hxx"
-#include "src/viewer/node/camera.hxx"
-#include "src/viewer/node/output.hxx"
-#include "src/viewer/node/value.hxx"
+#include "src/viewer/node/multivalue.hxx"
+#include "src/viewer/node/i_output.hxx"
+#include "src/viewer/node/uicamera.hxx"
 
 #include "3rdparty/fmt/include/fmt/format.h"
 #include "3rdparty/fmt/include/fmt/printf.h"
@@ -59,9 +59,6 @@ const int MEASUREMENT_SAMPLESIZE_IN_FRAMES = 1100;
 const int SCAN_SAMPLESIZE_IN_FRAMES = 120;
 const ivec2 SCAN_SIZE_LIMIT_IN_TILES{ 16, 16 };
 const double MEASUREMENT_DISCARD = 0.05;  // discard worst 5% because of os noise
-
-
-
 
 
 struct SampleSmoother {
@@ -214,9 +211,9 @@ private:
 	// current scene and built-in nodes
 	NodeList nodes_;
 	NodeList appNodes_;
-	std::shared_ptr<MultiValueNode> globalsNode_ = make_shared<MultiValueNode>("globals", InputList());
-	std::shared_ptr<MultiValueNode> syncNode_ = make_shared<MultiValueNode>("sync", InputList());
-	std::shared_ptr<HandyCamNode> uiCameraNode_ = make_shared<HandyCamNode>("uiCamera", InputList(), camera_);
+	std::shared_ptr<MultiValueNode> globalsNode_;
+	std::shared_ptr<MultiValueNode> syncNode_;
+	std::shared_ptr<UICamera> uiCameraNode_;
 
 #ifdef ENABLE_MUSIC
 	// music/sync
@@ -597,13 +594,13 @@ void Application::impl::DrawUI(
 
 void Application::impl::PrepareBuiltInNodes() {
 	globalsNode_ = make_shared<MultiValueNode>("globals", InputList());
-	appNodes_.push_back(globalsNode_);
+	appNodes_.emplace_back(globalsNode_);
 
 	syncNode_ = make_shared<MultiValueNode>("sync", InputList());
-	appNodes_.push_back(syncNode_);
+	appNodes_.emplace_back(syncNode_);
 
-	uiCameraNode_ = make_shared<HandyCamNode>("uiCamera", InputList(), camera_);
-	appNodes_.push_back(uiCameraNode_); }
+	uiCameraNode_ = make_shared<UICamera>("uiCamera", InputList(), camera_);
+	appNodes_.emplace_back(uiCameraNode_); }
 
 
 void Application::impl::MaybeUpdateDisplay() {
@@ -628,7 +625,7 @@ void Application::impl::ComputeAndRenderFrame(TrueColorCanvas canvas) {
 		std::cerr << "output node \"" << selector << "\" not found\n";
 		return; }
 
-	auto* node = dynamic_cast<OutputNode*>(match->get());
+	auto* node = dynamic_cast<IOutput*>(match->get());
 	if (node == nullptr) {
 		std::cerr << "node with id \"" << selector << "\" is not an OutputNode\n";
 		return; }

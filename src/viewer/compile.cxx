@@ -41,34 +41,26 @@ NodeRegistry& NodeRegistry::GetInstance() {
 	return reg; }
 
 
-void NodeRegistry::Register(NodeInfo info) {
-	if (GetByTypeName(info.typeName).has_value()) {
-		auto msg = fmt::sprintf("attempted to register node type "
-								"\"%s\" twice", info.typeName);
-		throw std::runtime_error(msg); }
-	if (GetByJsonName(info.jsonName).has_value()) {
+void NodeRegistry::Register(std::string_view jsonName, NodeCompiler* compiler) {
+	if (Get(jsonName) != nullptr) {
 		auto msg = fmt::sprintf("attempted to register json object "
-								"\"%s\" twice", info.jsonName);
+								"\"%s\" twice", jsonName);
 		throw std::runtime_error(msg); }
-
-	jsonDB_.emplace(info.jsonName, info);
-	typeDB_.emplace(info.typeName, info); }
+	db_.emplace(jsonName, compiler); }
 
 
-std::optional<NodeInfo> NodeRegistry::GetByTypeName(std::string_view typeName) {
-	static std::string key;
-	key.assign(typeName);  // XXX yuck!
-	if (auto found = typeDB_.find(key); found != end(typeDB_)) {
-		return found->second; }
-	return {}; }
-
-
-std::optional<NodeInfo> NodeRegistry::GetByJsonName(std::string_view jsonName) {
+NodeCompiler* NodeRegistry::Get(std::string_view jsonName) {
 	static std::string key;
 	key.assign(jsonName);  // XXX yuck!
-	if (auto found = jsonDB_.find(key); found != end(jsonDB_)) {
+	if (auto found = db_.find(key); found != end(db_)) {
 		return found->second; }
-	return {}; }
+	return nullptr; }
+
+
+NodeCompiler* NodeRegistry::Get(const std::string& jsonName) {
+	if (auto found = db_.find(jsonName); found != end(db_)) {
+		return found->second; }
+	return nullptr; }
 
 
 CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore);
@@ -94,13 +86,7 @@ CompileResult NodeCompiler::Compile(std::string_view id, JsonValue data, const r
 	return std::tuple{out_, deps_}; }
 
 
-bool NodeCompiler::Input(std::string_view typeName, std::string_view attrName, bool required) {
-	auto maybeTypeInfo = NodeRegistry::GetInstance().GetByTypeName(typeName);
-	if (!maybeTypeInfo.has_value()) {
-		auto msg = fmt::sprintf("node type \"%s\" not registered", typeName);
-		std::cerr << msg;
-		return false; }
-
+bool NodeCompiler::Input(std::string_view attrName, bool required) {
 	if (auto jv = jv_find(data_, attrName)) {
 		if (jv->getTag() == JSON_STRING) {
 			// reference string
@@ -110,14 +96,10 @@ bool NodeCompiler::Input(std::string_view typeName, std::string_view attrName, b
 			// inline node
 			if (auto subPtr = CompileNode(jv.value(), *meshStore_)) {
 				auto [subNode, subDeps] = *subPtr;
-				if (maybeTypeInfo.value().IsInstance(subNode.get())) {
-					deps_.emplace_back(subNode);
-					std::copy(begin(subDeps), end(subDeps), std::back_inserter(deps_));
-					inputs_.emplace_back(attrName, subNode->get_id());
-					return true; }
-				else {
-					std::cerr << "inline node is not a " << typeName << "\n";
-					return false; }}
+				deps_.emplace_back(subNode);
+				std::copy(begin(subDeps), end(subDeps), std::back_inserter(deps_));
+				inputs_.emplace_back(attrName, subNode->get_id());
+				return true; }
 			else {
 				std::cerr << "invalid data for " << attrName << "\n";
 				return false; }}
@@ -132,13 +114,13 @@ bool NodeCompiler::Input(std::string_view typeName, std::string_view attrName, b
 			return true; }}}
 
 
-optional<tuple<NodeInfo, JsonValue, std::string>> IdentifyNode(JsonValue data) {
+optional<tuple<NodeCompiler*, JsonValue, std::string>> IdentifyNode(JsonValue data) {
 	auto& registry = NodeRegistry::GetInstance();
 	if (data.getTag() == JSON_OBJECT) {
 		// it's an object
 		if (auto node = data.toNode(); node) {
 			// with at least one node
-			if (auto nodeInfo = registry.GetByJsonName(node->key); nodeInfo) {
+			if (auto nodeCompiler = registry.Get(string_view{node->key}); nodeCompiler != nullptr) {
 				// the first node has a key with a valid node type
 				if (node->value.getTag() == JSON_OBJECT) {
 					// with an object as its value
@@ -148,7 +130,7 @@ optional<tuple<NodeInfo, JsonValue, std::string>> IdentifyNode(JsonValue data) {
 						guid.assign(jv->toString()); }
 					else {
 						guid = fmt::sprintf("__auto%d__", idGen++); }
-					return std::tuple{ nodeInfo.value(), node->value, guid }; }}
+					return std::tuple{ nodeCompiler, node->value, guid }; }}
 			else {
 				std::cerr << "not registered: " << node->key << "\n"; }}}
 	return {};}
@@ -156,8 +138,8 @@ optional<tuple<NodeInfo, JsonValue, std::string>> IdentifyNode(JsonValue data) {
 
 CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore) {
 	if (auto info = IdentifyNode(data)) {
-		const auto[nodeInfo, data, guid] = *info;
-		return nodeInfo.compiler->Compile(guid, data, meshStore); }
+		const auto[nodeCompiler, data, guid] = *info;
+		return nodeCompiler->Compile(guid, data, meshStore); }
 	return {}; }
 
 
@@ -212,7 +194,9 @@ bool Link(NodeList& nodes) {
 
 			if (auto search = byId.find(depId); search != end(byId)) {
 				auto depNode = nodes[search->second].get();
-				node->Connect(destAttr, depNode, depSlot); } // XXX change order of args
+				auto success = node->Connect(destAttr, depNode, depSlot);  // XXX change order of args
+				if (!success) {
+					return false; }}
 			else {
 				cerr << "error: node for ref " << depNodeRef << " not found\n";
 				return false; }}}

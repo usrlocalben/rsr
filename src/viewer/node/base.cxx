@@ -62,8 +62,9 @@ void NodeBase::Reset() {
 	groupCnt_ = 0; }
 
 
-void NodeBase::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
-	std::cerr << "NodeBase(" << id_ << ") attempted to connect " << attr << " to " << other->id_ << ":" << slot << "\n"; }
+bool NodeBase::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
+	std::cerr << "NodeBase(" << id_ << ") attempted to connect " << attr << " to " << other->id_ << ":" << slot << "\n";
+	return false; }
 
 
 bool NodeBase::IsValid() {

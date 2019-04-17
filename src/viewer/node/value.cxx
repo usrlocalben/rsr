@@ -1,38 +1,151 @@
-#include "value.hxx"
-
 #include <memory>
 #include <stdexcept>
+#include <string_view>
 
 #include "src/rcl/rclx/rclx_gason_util.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 #include "src/viewer/compile.hxx"
+#include "src/viewer/node/base.hxx"
+#include "src/viewer/node/i_value.hxx"
 
 namespace rqdq {
-namespace rqv {
-
-ValueType ValueTypeSerializer::Deserialize(std::string_view data) {
-    if (data == "integer") { return ValueType::Integer; }
-	if (data == "real")    { return ValueType::Real; }
-	if (data == "vec2")    { return ValueType::Vec2; }
-	if (data == "vec3")    { return ValueType::Vec3; }
-	if (data == "vec4")    { return ValueType::Vec4; }
-	std::cerr << "invalid value type \"" << data << "\", using real" << std::endl;
-	return ValueType::Real; }
-
-
-std::string_view ValueTypeSerializer::Serialize(ValueType item) {
-	switch (item) {
-	case ValueType::Integer: return "integer";
-	case ValueType::Real:    return "real";
-	case ValueType::Vec2:    return "vec2";
-	case ValueType::Vec3:    return "vec3";
-	case ValueType::Vec4:    return "vec4";
-	default: throw std::runtime_error("refusing to serialize invalid ValueType"); }}
-
-}  // namespace rqv
-
 namespace {
 
 using namespace rqv;
+
+class FloatNode : public IValue {
+public:
+	FloatNode(std::string_view id, InputList inputs, float value)
+		:IValue(id, std::move(inputs)), value_(value) {}
+
+	NamedValue Eval(std::string_view name) override {
+		thread_local std::string tmp;
+		tmp.assign(name);
+		float value = value_;
+		if (xNode_ != nullptr) { value = xNode_->Eval(xSlot_).as_float(); }
+		return NamedValue{ value }; }
+
+	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+		if (attr == "x") {
+			xNode_ = dynamic_cast<IValue*>(other);
+			xSlot_ = slot;
+			if (xNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		return IValue::Connect(attr, other, slot); }
+
+protected:
+	void AddDeps() override {
+		IValue::AddDeps();
+		AddDep(xNode_); }
+
+private:
+	float value_{};
+	IValue* xNode_{nullptr};
+	std::string xSlot_{}; };
+
+
+class Vec2Node : public IValue {
+public:
+	Vec2Node(std::string_view id, InputList inputs, rmlv::vec2 value)
+		:IValue(id, std::move(inputs)), value_(value) {}
+
+	NamedValue Eval(std::string_view name) override {
+		rmlv::vec2 value = value_;
+		if (xNode_ != nullptr) { value.x = xNode_->Eval(xSlot_).as_float(); }
+		if (yNode_ != nullptr) { value.y = yNode_->Eval(ySlot_).as_float(); }
+		if (name == "x") { return NamedValue{ value.x }; }
+		if (name == "y") { return NamedValue{ value.y }; }
+		return NamedValue{ value }; }
+
+	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+		if (attr == "x") {
+			xNode_ = dynamic_cast<IValue*>(other);
+			xSlot_ = slot;
+			if (xNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		if (attr == "y") {
+			yNode_ = dynamic_cast<IValue*>(other);
+			ySlot_ = slot;
+			if (yNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		return IValue::Connect(attr, other, slot); }
+
+protected:
+	void AddDeps() override {
+		IValue::AddDeps();
+		AddDep(xNode_);
+		AddDep(yNode_); }
+
+private:
+	rmlv::vec2 value_{};
+	IValue* xNode_{nullptr};
+	IValue* yNode_{nullptr};
+	std::string xSlot_{};
+	std::string ySlot_{}; };
+
+
+class Vec3Node : public IValue {
+public:
+	Vec3Node(std::string_view id, InputList inputs, rmlv::vec3 value)
+		:IValue(id, std::move(inputs)), value_(value) {}
+
+	NamedValue Eval(std::string_view name) override {
+		rmlv::vec3 value = value_;
+		if (xNode_ != nullptr) { value.x = xNode_->Eval(xSlot_).as_float(); }
+		if (yNode_ != nullptr) { value.y = yNode_->Eval(ySlot_).as_float(); }
+		if (zNode_ != nullptr) { value.z = zNode_->Eval(zSlot_).as_float(); }
+		if (name == "x") { return NamedValue{ value.x }; }
+		if (name == "y") { return NamedValue{ value.y }; }
+		if (name == "z") { return NamedValue{ value.z }; }
+		if (name == "xy") { return NamedValue{ value.xy() }; }
+		return NamedValue{ value }; }
+
+	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+		if (attr == "x") {
+			xNode_ = dynamic_cast<IValue*>(other);
+			xSlot_ = slot;
+			if (xNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		if (attr == "y") {
+			yNode_ = dynamic_cast<IValue*>(other);
+			ySlot_ = slot;
+			if (yNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		if (attr == "z") {
+			zNode_ = dynamic_cast<IValue*>(other);
+			zSlot_ = slot;
+			if (zNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		return IValue::Connect(attr, other, slot); }
+
+protected:
+	void AddDeps() override {
+		IValue::AddDeps();
+		AddDep(xNode_);
+		AddDep(yNode_);
+		AddDep(zNode_); }
+
+private:
+	rmlv::vec3 value_;
+	IValue* xNode_{nullptr};
+	IValue* yNode_{nullptr};
+	IValue* zNode_{nullptr};
+	std::string xSlot_{};
+	std::string ySlot_{};
+	std::string zSlot_{}; };
+
 
 class FloatCompiler final : public NodeCompiler {
 	void Build() override {
@@ -93,26 +206,9 @@ Vec2Compiler vec2Compiler{};
 Vec3Compiler vec3Compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register(NodeInfo{
-		"IValue",
-		"ValuesBase",
-		[](NodeBase* node) { return dynamic_cast<ValuesBase*>(node) != nullptr; },
-		nullptr });
-	NodeRegistry::GetInstance().Register(NodeInfo{
-		"$float",
-		"Float",
-		[](NodeBase* node) { return dynamic_cast<FloatNode*>(node) != nullptr; },
-		&floatCompiler });
-	NodeRegistry::GetInstance().Register(NodeInfo{
-		"$vec2",
-		"Vec2",
-		[](NodeBase* node) { return dynamic_cast<Vec2Node*>(node) != nullptr; },
-		&vec2Compiler });
-	NodeRegistry::GetInstance().Register(NodeInfo{
-		"$vec3",
-		"Vec3",
-		[](NodeBase* node) { return dynamic_cast<Vec3Node*>(node) != nullptr; },
-		&vec3Compiler });
+	NodeRegistry::GetInstance().Register("$float", &floatCompiler);
+	NodeRegistry::GetInstance().Register("$vec2", &vec2Compiler);
+	NodeRegistry::GetInstance().Register("$vec3", &vec3Compiler);
 }} init{};
 
 

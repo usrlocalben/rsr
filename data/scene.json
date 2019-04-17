@@ -9,7 +9,7 @@
 		"color": "amyBackgroundColor",
 		"gl": [ "nAmy" ]}},
 	
-	{"$layerChooser": {"id": "chooser",
+	{"$layerSelect": {"id": "chooser",
 		"selector": {"$float": {"x": 1}},
 		"layers": ["nPIPLayer", "lEffects"]}},
 

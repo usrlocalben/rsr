@@ -1,0 +1,106 @@
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rcl/rclx/rclx_gason_util.hxx"
+#include "src/rgl/rglv/rglv_gl.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/viewer/compile.hxx"
+#include "src/viewer/node/base.hxx"
+#include "src/viewer/node/i_layer.hxx"
+#include "src/viewer/node/i_value.hxx"
+
+namespace rqdq {
+namespace {
+
+using namespace rqv;
+namespace jobsys = rclmt::jobsys;
+
+class Impl : public ILayer {
+public:
+	using ILayer::ILayer;
+
+	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+		if (attr == "layer") {
+			auto tmp = dynamic_cast<ILayer*>(other);
+			if (tmp == nullptr) {
+				TYPE_ERROR(ILayer);
+				return false; }
+			layers_.push_back(tmp);
+			return true; }
+		if (attr == "selector") {
+			selectorNode_ = dynamic_cast<IValue*>(other);
+			selectorSlot_ = slot;
+			if (selectorNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		return ILayer::Connect(attr, other, slot); }
+
+	void Main() override {
+		using rmlv::ivec2;
+		jobsys::Job *doneJob = jobsys::make_job(jobsys::noop);
+		AddLinksTo(doneJob);
+
+		auto layerNode = GetSelectedLayer();
+		if (layerNode == nullptr) {
+			jobsys::run(doneJob); }
+		else {
+			layerNode->AddLink(AfterAll(doneJob));
+			layerNode->Run(); }}
+
+	rmlv::vec3 GetBackgroundColor() override {
+		auto layerNode = GetSelectedLayer();
+		if (layerNode == nullptr) {
+			return rmlv::vec3{ 0.0F }; }
+		return layerNode->GetBackgroundColor(); }
+
+	void Render(rglv::GL* dc, int width, int height, float aspect, rclmt::jobsys::Job *link) override {
+		auto layerNode = GetSelectedLayer();
+		if (layerNode == nullptr) {
+			rclmt::jobsys::run(link); }
+		else {
+			layerNode->Render(dc, width, height, aspect, link); }}
+
+protected:
+	void AddDeps() override {
+		ILayer::AddDeps();
+		AddDep(selectorNode_);
+		AddDep(GetSelectedLayer()); }
+
+private:	
+	ILayer* GetSelectedLayer() const {
+		if (layers_.empty()) {
+			return nullptr; }
+		auto idx = selectorNode_->Eval(selectorSlot_).as_int();
+		const int lastLayer = int(layers_.size() - 1);
+		if (idx < 0 || lastLayer < idx) {
+			return nullptr; }
+		return layers_[idx]; }
+
+	std::vector<ILayer*> layers_;
+	IValue* selectorNode_{nullptr};
+	std::string selectorSlot_; };
+
+
+class Compiler final : public NodeCompiler {
+	void Build() override {
+		if (!Input("selector", /*required=*/true)) { return; }
+		if (auto jv = rclx::jv_find(data_, "layers", JSON_ARRAY)) {
+			for (const auto& item : *jv) {
+				if (item->value.getTag() == JSON_STRING) {
+					inputs_.emplace_back("layer", item->value.toString()); } } }
+		out_ = std::make_shared<Impl>(id_, std::move(inputs_)); }};
+
+Compiler compiler{};
+
+struct init { init() {
+	NodeRegistry::GetInstance().Register("$layerSelect", &compiler);
+}} init{};
+
+
+}  // namespace
+}  // namespace rqdq

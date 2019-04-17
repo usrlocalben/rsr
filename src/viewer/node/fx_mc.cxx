@@ -10,9 +10,9 @@
 #include "src/rgl/rglv/rglv_vao.hxx"
 #include "src/viewer/compile.hxx"
 #include "src/viewer/node/base.hxx"
-#include "src/viewer/node/gl.hxx"
-#include "src/viewer/node/material.hxx"
-#include "src/viewer/node/value.hxx"
+#include "src/viewer/node/i_gl.hxx"
+#include "src/viewer/node/i_material.hxx"
+#include "src/viewer/node/i_value.hxx"
 
 namespace rqdq {
 namespace {
@@ -102,26 +102,106 @@ private:
 	float timeInSeconds_; };
 
 
-class FxMC final : public GlNode {
+class Impl final : public IGl {
 public:
-	FxMC(std::string_view id, InputList inputs, int precision, int forkDepth, float range)
-		:GlNode(id, std::move(inputs)), precision_(precision), forkDepth_(forkDepth), range_(range) {
+	Impl(std::string_view id, InputList inputs, int precision, int forkDepth, float range)
+		:IGl(id, std::move(inputs)), precision_(precision), forkDepth_(forkDepth), range_(range) {
 		buffers_[0].reserve(4096);
 		buffers_[1].reserve(4096);
 		buffers_[2].reserve(4096); }
 
-	void Connect(std::string_view attr, NodeBase* other, std::string_view slot) override;
-	void Main() override;
+	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+		if (attr == "material") {
+			materialNode_ = dynamic_cast<IMaterial*>(other);
+			if (materialNode_ == nullptr) {
+				TYPE_ERROR(IMaterial);
+				return false; }
+			return true; }
+		if (attr == "frob") {
+			frobNode_ = dynamic_cast<IValue*>(other);
+			frobSlot_ = slot;
+			if (frobNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		return IGl::Connect(attr, other, slot); }
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth) override;
+	void Main() override {
+		using rmlv::vec3;
+		namespace jobsys = rclmt::jobsys;
+
+		SwapBuffers();
+
+		float frobValue = 0.0F;
+		if (frobNode_ != nullptr) {
+			frobValue = frobNode_->Eval(frobSlot_).as_float(); }
+		field_.Update(frobValue);
+
+		AABB rootBlock = {
+			vec3{-range_, range_,-range_},
+			vec3{ range_,-range_, range_} };
+
+		const int subDim = precision_ >> forkDepth_;
+
+		blockDivider_.Clear();
+		blockDivider_.Compute(rootBlock, forkDepth_);
+
+		auto finalizeJob = Finalize();
+		std::array<jobsys::Job*, 4096> subJobs;  // enough for forkDepth==4
+		int subJobEnd = 0;
+
+		for (const auto& subBlock : blockDivider_.results_) {
+			subJobs[subJobEnd++] = Resolve(subBlock, subDim, finalizeJob); }
+		for (int sji = 0; sji < subJobEnd; sji++) {
+			jobsys::run(subJobs[sji]); }
+		jobsys::run(finalizeJob); }
+
+	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth) override {
+		auto& dc = *_dc;
+		using rglv::GL_UNSIGNED_SHORT;
+		using rglv::GL_CULL_FACE;
+		using rglv::GL_PROJECTION;
+		using rglv::GL_MODELVIEW;
+		using rglv::GL_TRIANGLES;
+		std::lock_guard<std::mutex> lock(dc.mutex);
+		if (materialNode_ != nullptr) {
+			materialNode_->Apply(_dc); }
+		dc.glMatrixMode(GL_PROJECTION);
+		dc.glLoadMatrix(*pmat);
+		dc.glMatrixMode(GL_MODELVIEW);
+		dc.glLoadMatrix(*mvmat);
+		auto& buffer = buffers_[activeBuffer_];
+		for (int ai=0; ai<bufferEnd_[activeBuffer_]; ai++) {
+			auto& vao = buffer[ai];
+			if (vao.size() != 0) {
+				const int elements = vao.size();
+				vao.pad();
+				dc.glUseArray(vao);
+				dc.glDrawArrays(GL_TRIANGLES, 0, elements); }}
+		if (link != nullptr) {
+			rclmt::jobsys::run(link); } }
 
 private:
-	void SwapBuffers();
-	rglv::VertexArray_F3F3F3& AllocVAO();
+	void SwapBuffers() {
+		activeBuffer_ = (activeBuffer_+1) % 3;
+		bufferEnd_[activeBuffer_] = 0; }
+
+	rglv::VertexArray_F3F3F3& AllocVAO() {
+		std::scoped_lock lock(bufferMutex_);
+		auto& buffer = buffers_[activeBuffer_];
+		auto& end = bufferEnd_[activeBuffer_];
+		if (end == buffer.size()) {
+			if (buffer.capacity() == buffer.size()) {
+				std::cerr << "buffer is full @ " << buffer.size() << std::endl;
+				throw std::runtime_error("buffer full"); }
+			buffer.push_back({}); }
+		auto& vao = buffer[end++];
+		vao.clear();
+		return vao; }
 
 	rclmt::jobsys::Job* Finalize() {
-		return rclmt::jobsys::make_job(FxMC::FinalizeJmp, std::tuple{this}); }
-	static void FinalizeJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<FxMC*>* data) {
+		return rclmt::jobsys::make_job(Impl::FinalizeJmp, std::tuple{this}); }
+	static void FinalizeJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<Impl*>* data) {
 		auto&[self] = *data;
 		self->FinalizeImpl(); }
 	void FinalizeImpl() {
@@ -129,12 +209,84 @@ private:
 
 	rclmt::jobsys::Job* Resolve(AABB block, int dim, rclmt::jobsys::Job* parent = nullptr) {
 		if (parent != nullptr) {
-			return rclmt::jobsys::make_job_as_child(parent, FxMC::ResolveJmp, std::tuple{this, block, dim}); }
-		return rclmt::jobsys::make_job(FxMC::ResolveJmp, std::tuple{this, block, dim}); }
-	static void ResolveJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<FxMC*, AABB, int>* data) {
+			return rclmt::jobsys::make_job_as_child(parent, Impl::ResolveJmp, std::tuple{this, block, dim}); }
+		return rclmt::jobsys::make_job(Impl::ResolveJmp, std::tuple{this, block, dim}); }
+	static void ResolveJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<Impl*, AABB, int>* data) {
 		auto&[self, block, dim] = *data;
 		self->ResolveImpl(block, dim, threadId);}
-	void ResolveImpl(AABB block, int dim, int threadId);
+	void ResolveImpl(AABB block, int dim, int threadId) {
+		using rmlv::vec3, rmlv::mvec4f, rmlv::qfloat, rmlv::qfloat3;
+		const int stride = 64;
+		std::array<std::array<float, stride*stride>, 2> buf;
+		int top = 1;
+		int bot = 0;
+
+		float sy = block.leftTopBack.y;
+		float delta = (block.rightBottomFront.x - block.leftTopBack.x) / float(dim);
+		const qfloat vdelta{ delta * 4 };
+
+		const auto mid = midpoint(block);
+		const auto R = length(block.leftTopBack - mid);
+		float D = field_.sample(mid);
+		if (abs(D)*0.5F > R) {
+			return; }
+
+	/*	auto fillSlice = [&](){
+			float sz = block.leftTopBack.z;
+			for (int iz=0; iz<dim+1; iz++, sz += delta) {
+				qfloat3 vpos{ block.leftTopBack.x, sy, sz };
+				vpos.x += mvec4f{ 0, delta, delta * 2, delta * 3 };
+				for (int ix = 0; ix<dim+1; ix+=4, vpos += vdelta) {
+					auto distance = field_.sample(vpos);
+					_mm_storeu_ps(&(buf[bot][iz*stride + ix]), distance.v); }}};*/
+
+		auto fillSlice = [&](){
+			float sz = block.leftTopBack.z;
+			for (int iz=0; iz<dim+1; iz++, sz += delta) {
+				vec3 pos{ block.leftTopBack.x, sy, sz };
+				for (int ix = 0; ix<dim+1; ix+=1, pos.x += delta) {
+					auto distance = field_.sample(pos);
+					buf[bot][iz*stride + ix] = distance; }}};
+
+		fillSlice(); // load the first slice
+		sy -= delta;
+		auto& vao = AllocVAO();
+
+		vec3 origin = block.leftTopBack;
+		for (int iy=0; iy<dim; iy++, sy -= delta) {
+			origin.y -= delta;
+			std::swap(top, bot);
+			fillSlice();
+
+			origin.z = block.leftTopBack.z;
+			for (int iz = 0; iz < dim; iz++, origin.z += delta) {
+				origin.x = block.leftTopBack.x;
+				for (int ix = 0; ix < dim; ix++, origin.x += delta) {
+					rglv::Cell cell;
+					cell.value[0] = buf[bot][ iz   *stride + ix];
+					cell.pos[0] = origin;
+
+					cell.value[1] = buf[bot][ iz   *stride + ix + 1];
+					cell.pos[1] = vec3{ origin.x + delta, origin.y, origin.z };
+
+					cell.value[2] = buf[top][ iz   *stride + ix + 1];
+					cell.pos[2] = vec3{ origin.x + delta, origin.y + delta, origin.z };
+
+					cell.value[3] = buf[top][ iz   *stride + ix];
+					cell.pos[3] = vec3{ origin.x,         origin.y + delta, origin.z };
+
+					cell.value[4] = buf[bot][(iz+1)*stride + ix];
+					cell.pos[4] = vec3{ origin.x,         origin.y, origin.z + delta };
+
+					cell.value[5] = buf[bot][(iz+1)*stride + ix + 1];
+					cell.pos[5] = vec3{ origin.x + delta, origin.y, origin.z + delta };
+
+					cell.value[6] = buf[top][(iz+1)*stride + ix + 1];
+					cell.pos[6] = vec3{ origin.x + delta, origin.y + delta, origin.z + delta };
+
+					cell.value[7] = buf[top][(iz+1)*stride + ix];
+					cell.pos[7] = vec3{ origin.x,         origin.y + delta, origin.z + delta };
+					rglv::march_sdf_vao(vao, origin, delta, cell, field_); }}}}
 
 private:
 	Surface field_;
@@ -153,177 +305,16 @@ private:
 	float range_;
 
 	// connections
-	MaterialNode* materialNode_{nullptr};
-	ValuesBase* frobNode_{nullptr};
+	IMaterial* materialNode_{nullptr};
+	IValue* frobNode_{nullptr};
 	std::string frobSlot_; };
-
-
-void FxMC::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
-	if (attr == "material") {
-		materialNode_ = static_cast<MaterialNode*>(other); }
-	else if (attr == "frob") {
-		frobNode_ = static_cast<ValuesBase*>(other);
-		frobSlot_ = slot; }
-	else {
-		GlNode::Connect(attr, other, slot); }}
-
-
-void FxMC::Main() {
-	using rmlv::vec3;
-	namespace jobsys = rclmt::jobsys;
-
-	SwapBuffers();
-
-	float frobValue = 0.0F;
-	if (frobNode_ != nullptr) {
-		frobValue = frobNode_->Get(frobSlot_).as_float(); }
-	field_.Update(frobValue);
-
-	AABB rootBlock = {
-		vec3{-range_, range_,-range_},
-		vec3{ range_,-range_, range_} };
-
-	const int subDim = precision_ >> forkDepth_;
-
-	blockDivider_.Clear();
-	blockDivider_.Compute(rootBlock, forkDepth_);
-
-	auto finalizeJob = Finalize();
-	std::array<jobsys::Job*, 4096> subJobs;  // enough for forkDepth==4
-	int subJobEnd = 0;
-
-	for (const auto& subBlock : blockDivider_.results_) {
-		subJobs[subJobEnd++] = Resolve(subBlock, subDim, finalizeJob); }
-	for (int sji = 0; sji < subJobEnd; sji++) {
-		jobsys::run(subJobs[sji]); }
-	jobsys::run(finalizeJob); }
-
-
-void FxMC::ResolveImpl(const AABB block, const int dim, const int threadId) {
-	using rmlv::vec3, rmlv::mvec4f, rmlv::qfloat, rmlv::qfloat3;
-	const int stride = 64;
-	std::array<std::array<float, stride*stride>, 2> buf;
-	int top = 1;
-	int bot = 0;
-
-	float sy = block.leftTopBack.y;
-	float delta = (block.rightBottomFront.x - block.leftTopBack.x) / float(dim);
-	const qfloat vdelta{ delta * 4 };
-
-	const auto mid = midpoint(block);
-	const auto R = length(block.leftTopBack - mid);
-	float D = field_.sample(mid);
-	if (abs(D)*0.5F > R) {
-		return; }
-
-/*	auto fillSlice = [&](){
-		float sz = block.leftTopBack.z;
-		for (int iz=0; iz<dim+1; iz++, sz += delta) {
-			qfloat3 vpos{ block.leftTopBack.x, sy, sz };
-			vpos.x += mvec4f{ 0, delta, delta * 2, delta * 3 };
-			for (int ix = 0; ix<dim+1; ix+=4, vpos += vdelta) {
-				auto distance = field_.sample(vpos);
-				_mm_storeu_ps(&(buf[bot][iz*stride + ix]), distance.v); }}};*/
-
-	auto fillSlice = [&](){
-		float sz = block.leftTopBack.z;
-		for (int iz=0; iz<dim+1; iz++, sz += delta) {
-			vec3 pos{ block.leftTopBack.x, sy, sz };
-			for (int ix = 0; ix<dim+1; ix+=1, pos.x += delta) {
-				auto distance = field_.sample(pos);
-				buf[bot][iz*stride + ix] = distance; }}};
-
-	fillSlice(); // load the first slice
-	sy -= delta;
-	auto& vao = AllocVAO();
-
-	vec3 origin = block.leftTopBack;
-	for (int iy=0; iy<dim; iy++, sy -= delta) {
-		origin.y -= delta;
-		std::swap(top, bot);
-		fillSlice();
-
-		origin.z = block.leftTopBack.z;
-		for (int iz = 0; iz < dim; iz++, origin.z += delta) {
-			origin.x = block.leftTopBack.x;
-			for (int ix = 0; ix < dim; ix++, origin.x += delta) {
-				rglv::Cell cell;
-				cell.value[0] = buf[bot][ iz   *stride + ix];
-				cell.pos[0] = origin;
-
-				cell.value[1] = buf[bot][ iz   *stride + ix + 1];
-				cell.pos[1] = vec3{ origin.x + delta, origin.y, origin.z };
-
-				cell.value[2] = buf[top][ iz   *stride + ix + 1];
-				cell.pos[2] = vec3{ origin.x + delta, origin.y + delta, origin.z };
-
-				cell.value[3] = buf[top][ iz   *stride + ix];
-				cell.pos[3] = vec3{ origin.x,         origin.y + delta, origin.z };
-
-				cell.value[4] = buf[bot][(iz+1)*stride + ix];
-				cell.pos[4] = vec3{ origin.x,         origin.y, origin.z + delta };
-
-				cell.value[5] = buf[bot][(iz+1)*stride + ix + 1];
-				cell.pos[5] = vec3{ origin.x + delta, origin.y, origin.z + delta };
-
-				cell.value[6] = buf[top][(iz+1)*stride + ix + 1];
-				cell.pos[6] = vec3{ origin.x + delta, origin.y + delta, origin.z + delta };
-
-				cell.value[7] = buf[top][(iz+1)*stride + ix];
-				cell.pos[7] = vec3{ origin.x,         origin.y + delta, origin.z + delta };
-				rglv::march_sdf_vao(vao, origin, delta, cell, field_); }}}}
-
-
-void FxMC::Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) {
-	auto& dc = *_dc;
-	using rglv::GL_UNSIGNED_SHORT;
-	using rglv::GL_CULL_FACE;
-	using rglv::GL_PROJECTION;
-	using rglv::GL_MODELVIEW;
-	using rglv::GL_TRIANGLES;
-	std::lock_guard<std::mutex> lock(dc.mutex);
-	if (materialNode_ != nullptr) {
-		materialNode_->Apply(_dc); }
-	dc.glMatrixMode(GL_PROJECTION);
-	dc.glLoadMatrix(*pmat);
-	dc.glMatrixMode(GL_MODELVIEW);
-	dc.glLoadMatrix(*mvmat);
-	auto& buffer = buffers_[activeBuffer_];
-	for (int ai=0; ai<bufferEnd_[activeBuffer_]; ai++) {
-		auto& vao = buffer[ai];
-		if (vao.size() != 0) {
-			const int elements = vao.size();
-			vao.pad();
-			dc.glUseArray(vao);
-			dc.glDrawArrays(GL_TRIANGLES, 0, elements); }}
-	if (link != nullptr) {
-		rclmt::jobsys::run(link); } }
-
-
-void FxMC::SwapBuffers() {
-	activeBuffer_ = (activeBuffer_+1) % 3;
-	bufferEnd_[activeBuffer_] = 0; }
-
-
-rglv::VertexArray_F3F3F3& FxMC::AllocVAO() {
-	std::scoped_lock lock(bufferMutex_);
-	auto& buffer = buffers_[activeBuffer_];
-	auto& end = bufferEnd_[activeBuffer_];
-	if (end == buffer.size()) {
-		if (buffer.capacity() == buffer.size()) {
-			std::cerr << "buffer is full @ " << buffer.size() << std::endl;
-			throw std::runtime_error("buffer full"); }
-		buffer.push_back({}); }
-	auto& vao = buffer[end++];
-	vao.clear();
-	return vao; }
 
 
 class Compiler final : public NodeCompiler {
 	void Build() override {
 		using rclx::jv_find;
-		if (!Input("MaterialNode", "material", /*required=*/true)) { return; }
-		if (!Input("ValuesBase", "frob", /*required=*/true)) { return; }
+		if (!Input("material", /*required=*/true)) { return; }
+		if (!Input("frob", /*required=*/true)) { return; }
 
 		int precision{32};
 		if (auto jv = jv_find(data_, "precision", JSON_NUMBER)) {
@@ -353,16 +344,12 @@ class Compiler final : public NodeCompiler {
 			std::cerr << "FxMC: range " << range << " is too small (n<0.0001)!  range will be +/- 5.0\n";
 			range = 5.0F; }
 
-		out_ = std::make_shared<FxMC>(id_, std::move(inputs_), precision, forkDepth, range); }};
+		out_ = std::make_shared<Impl>(id_, std::move(inputs_), precision, forkDepth, range); }};
 
 Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register(NodeInfo{
-		"$fxMC",
-		"FxMC",
-		[](NodeBase* node) { return dynamic_cast<FxMC*>(node) != nullptr; },
-		&compiler });
+	NodeRegistry::GetInstance().Register("$fxMC", &compiler);
 }} init{};
 
 }  // namespace

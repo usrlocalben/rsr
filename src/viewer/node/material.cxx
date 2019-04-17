@@ -1,76 +1,121 @@
-#include "material.hxx"
-
 #include <memory>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglr/rglr_texture.hxx"
-#include "src/rgl/rglr/rglr_texture_load.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
 #include "src/viewer/compile.hxx"
 #include "src/viewer/node/base.hxx"
+#include "src/viewer/node/i_material.hxx"
+#include "src/viewer/node/i_texture.hxx"
+#include "src/viewer/node/i_value.hxx"
 #include "src/viewer/shaders.hxx"
 
-#include "3rdparty/pixeltoaster/PixelToaster.h"
-
 namespace rqdq {
-namespace rqv {
-
-void MaterialNode::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
-	if (attr == "texture0") {
-		textureNode0_ = static_cast<TextureNode*>(other); }
-	else if (attr == "texture1") {
-		textureNode1_ = static_cast<TextureNode*>(other); }
-	else if (attr == "u0") {
-		uNode0_ = static_cast<ValuesBase*>(other);
-		uSlot0_ = slot; }
-	else if (attr == "u1") {
-		uNode1_ = static_cast<ValuesBase*>(other);
-		uSlot1_ = slot; }
-	else {
-		NodeBase::Connect(attr, other, slot); }}
-
-
-void MaterialNode::AddDeps() {
-	NodeBase::AddDeps();
-	AddDep(textureNode0_);
-	AddDep(textureNode1_);
-	AddDep(uNode0_);
-	AddDep(uNode1_); }
-
-
-void MaterialNode::Apply(rglv::GL* _dc) {
-	auto& dc = *_dc;
-	dc.glUseProgram(int(programId_));
-	if (textureNode0_ != nullptr) {
-		auto& texture = textureNode0_->GetTexture();
-		dc.glBindTexture(0, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
-	if (textureNode1_ != nullptr) {
-		auto& texture = textureNode1_->GetTexture();
-		dc.glBindTexture(1, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
-	dc.glEnable(rglv::GL_CULL_FACE);
-	if (uNode0_ != nullptr) {
-		dc.glColor(uNode0_->Get(uSlot0_).as_vec3()); }
-	if (uNode1_ != nullptr) {
-		dc.glNormal(uNode1_->Get(uSlot1_).as_vec3()); }
-	// dc.vertex_input_uniform(VertexInputUniform{ sin(float(gt.elapsed()*3.0f)) * 0.5f + 0.5f });
-		}
-
-
-}  // namespace rqv
-
 namespace {
 
 using namespace rqv;
 
-class MaterialCompiler final : public NodeCompiler {
+namespace jobsys = rclmt::jobsys;
+
+class Impl : public IMaterial {
+public:
+	Impl(std::string_view id, InputList inputs, ShaderProgramId programId, bool filter)
+		:IMaterial(id, std::move(inputs)), programId_(programId), filter_(filter) {}
+
+	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+		if (attr == "texture0") {
+			textureNode0_ = dynamic_cast<ITexture*>(other);
+			if (textureNode0_ == nullptr) {
+				TYPE_ERROR(ITexture);
+				return false; }
+			return true; }
+		if (attr == "texture1") {
+			textureNode1_ = dynamic_cast<ITexture*>(other);
+			if (textureNode1_ == nullptr) {
+				TYPE_ERROR(ITexture);
+				return false; }
+			return true; }
+		if (attr == "u0") {
+			uNode0_ = dynamic_cast<IValue*>(other);
+			uSlot0_ = slot;
+			if (uNode0_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		if (attr == "u1") {
+			uNode1_ = dynamic_cast<IValue*>(other);
+			uSlot1_ = slot;
+			if (uNode1_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		return IMaterial::Connect(attr, other, slot); }
+
+	void AddDeps() override {
+		IMaterial::AddDeps();
+		AddDep(textureNode0_);
+		AddDep(textureNode1_);
+		AddDep(uNode0_);
+		AddDep(uNode1_); }
+
+	void Main() override {
+		jobsys::Job *postSetup = jobsys::make_job(jobsys::noop);
+		AddLinksTo(postSetup);
+		if (textureNode0_ == nullptr && textureNode1_ == nullptr) {
+			run(postSetup); }
+		else {
+			if (textureNode0_ != nullptr) {
+				textureNode0_->AddLink(AfterAll(postSetup));}
+			if (textureNode1_ != nullptr) {
+				textureNode1_->AddLink(AfterAll(postSetup));}
+			if (textureNode0_ != nullptr) {
+				textureNode0_->Run(); }
+			if (textureNode1_ != nullptr) {
+				textureNode1_->Run(); }}}
+
+	void Apply(rglv::GL* _dc) override {
+		auto& dc = *_dc;
+		dc.glUseProgram(int(programId_));
+		if (textureNode0_ != nullptr) {
+			auto& texture = textureNode0_->GetTexture();
+			dc.glBindTexture(0, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
+		if (textureNode1_ != nullptr) {
+			auto& texture = textureNode1_->GetTexture();
+			dc.glBindTexture(1, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
+		dc.glEnable(rglv::GL_CULL_FACE);
+		if (uNode0_ != nullptr) {
+			dc.glColor(uNode0_->Eval(uSlot0_).as_vec3()); }
+		if (uNode1_ != nullptr) {
+			dc.glNormal(uNode1_->Eval(uSlot1_).as_vec3()); }
+		// dc.vertex_input_uniform(VertexInputUniform{ sin(float(gt.elapsed()*3.0f)) * 0.5f + 0.5f });
+		}
+
+private:
+	// config
+	ShaderProgramId programId_;
+	bool filter_;
+
+	// inputs
+	ITexture* textureNode0_{nullptr};
+	ITexture* textureNode1_{nullptr};
+	IValue* uNode0_{nullptr};
+	std::string uSlot0_{};
+	IValue* uNode1_{nullptr};
+	std::string uSlot1_{}; };
+
+
+class Compiler final : public NodeCompiler {
 	void Build() override {
 		using rclx::jv_find;
-		if (!Input("TextureNode", "texture0", /*required=*/false)) { return; }
-		if (!Input("TextureNode", "texture1", /*required=*/false)) { return; }
-		if (!Input("ValuesBase", "u0", /*required=*/false)) { return; }
-		if (!Input("ValuesBase", "u1", /*required=*/false)) { return; }
+		if (!Input("texture0", /*required=*/false)) { return; }
+		if (!Input("texture1", /*required=*/false)) { return; }
+		if (!Input("u0", /*required=*/false)) { return; }
+		if (!Input("u1", /*required=*/false)) { return; }
 
 		ShaderProgramId programId = ShaderProgramId::Default;
 		if (auto jv = jv_find(data_, "program", JSON_STRING)) {
@@ -80,40 +125,15 @@ class MaterialCompiler final : public NodeCompiler {
 		if (auto jv = jv_find(data_, "filter", JSON_TRUE)) {
 			filter = true; }
 
-		out_ = std::make_shared<MaterialNode>(id_, std::move(inputs_), programId, filter); }};
+		out_ = std::make_shared<Impl>(id_, std::move(inputs_), programId, filter); }};
 
-
-class ImageCompiler final : public NodeCompiler {
-	void Build() override {
-		using rclx::jv_find;
-		rglr::Texture tex;
-		if (auto jv = jv_find(data_, "file", JSON_STRING)) {
-			tex = rglr::load_png(jv->toString(), jv->toString(), false);
-			tex.maybe_make_mipmap(); }
-
-		out_ = std::make_shared<ImageNode>(id_, std::move(inputs_), tex); }};
-
-
-MaterialCompiler materialCompiler{};
-ImageCompiler imageCompiler{};
+Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register(NodeInfo{
-		"$material",
-		"MaterialNode",
-		[](NodeBase* node) { return dynamic_cast<MaterialNode*>(node) != nullptr; },
-		&materialCompiler });
-	NodeRegistry::GetInstance().Register(NodeInfo{
-		"ITexture",
-		"TextureNode",
-		[](NodeBase* node) { return dynamic_cast<TextureNode*>(node) != nullptr; },
-		nullptr });
-	NodeRegistry::GetInstance().Register(NodeInfo{
-		"$image",
-		"Image",
-		[](NodeBase* node) { return dynamic_cast<ImageNode*>(node) != nullptr; },
-		&imageCompiler });
+	NodeRegistry::GetInstance().Register("$material", &compiler);
 }} init{};
+
 
 }  // namespace
 }  // namespace rqdq
+

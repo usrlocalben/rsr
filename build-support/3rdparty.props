@@ -6,7 +6,8 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>
-        $(SolutionDir);
+        $(SolutionDir)\3rdparty\fmt\include;
+        $(SolutionDir)\3rdparty\googletest\include;
 	%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>
