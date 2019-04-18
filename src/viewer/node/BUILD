@@ -282,6 +282,16 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
+    name = "noise",
+    srcs = ["noise.cxx"],
+    deps = [
+        "//src/rcl/rclx:gason_util",
+        "//src/rml/rmlg:noise",
+        "//src/viewer:compile",
+        ":i_value", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
     name = "orthographic",
     srcs = ["orthographic.cxx"],
     deps = [
