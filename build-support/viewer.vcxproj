@@ -227,6 +227,7 @@
     <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_xyquad.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\resource.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\shaders.cxx" />
+    <ClCompile Include="..\src\rml\rmlg\rmlg_noise.cxx" />
     <ClCompile Include="..\src\viewer\node\computed.cxx" />
     <ClCompile Include="..\src\viewer\node\gllayer.cxx" />
     <ClCompile Include="..\src\viewer\node\gpu.cxx" />

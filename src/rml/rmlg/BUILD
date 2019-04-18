@@ -28,3 +28,10 @@ cc_library(
     hdrs = ["rmlg_pow2.hxx"],
     copts = RSR_DEFAULT_COPTS,
     )
+
+cc_library(
+    name = "noise",
+    srcs = ["rmlg_noise.cxx"],
+    hdrs = ["rmlg_noise.hxx"],
+    copts = RSR_DEFAULT_COPTS,
+    )

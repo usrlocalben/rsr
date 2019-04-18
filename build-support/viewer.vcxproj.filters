@@ -227,6 +227,9 @@
     <ClCompile Include="..\src\viewer\node\i_output.cxx">
       <Filter>node</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\rml\rmlg\rmlg_noise.cxx">
+      <Filter>rml</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="node">
