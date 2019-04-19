@@ -431,6 +431,9 @@ void Application::impl::onKeyPressed(DisplayInterface& display, Key key) {
 
 void Application::impl::onKeyDown(DisplayInterface& display, Key key) {
 	switch (key) {
+	case Key::Escape:
+		shouldQuit_ = true;
+		break;
 	case Key::M:
 		show_mode_list = true;
 		break;
