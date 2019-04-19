@@ -39,10 +39,8 @@ class Compiler final : public NodeCompiler {
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), tex); }};
 
 
-Compiler compiler{};
-
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$image", &compiler);
+	NodeRegistry::GetInstance().Register("$image", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

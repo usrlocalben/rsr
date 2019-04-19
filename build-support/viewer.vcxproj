@@ -244,6 +244,7 @@
     <ClCompile Include="..\src\viewer\node\layer_select.cxx" />
     <ClCompile Include="..\src\viewer\node\material.cxx" />
     <ClCompile Include="..\src\viewer\node\multivalue.cxx" />
+    <ClCompile Include="..\src\viewer\node\noise.cxx" />
     <ClCompile Include="..\src\viewer\node\orthographic.cxx" />
     <ClCompile Include="..\src\viewer\node\perspective.cxx" />
     <ClCompile Include="..\src\viewer\node\render.cxx" />

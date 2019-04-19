@@ -154,8 +154,8 @@ class FloatCompiler final : public NodeCompiler {
 
 		if (auto jv = jv_find(data_, "x", JSON_NUMBER)) {
 			x = static_cast<float>(jv->toNumber()); }
-		else if (auto jv = jv_find(data_, "x", JSON_STRING)) {
-			inputs_.emplace_back("x", jv->toString()); }
+		else {
+			Input("x", /*required=*/false); }
 
 		out_ = std::make_shared<FloatNode>(id_, std::move(inputs_), x); }};
 
@@ -168,13 +168,13 @@ class Vec2Compiler final : public NodeCompiler {
 
 		if (auto jv = jv_find(data_, "x", JSON_NUMBER)) {
 			x = static_cast<float>(jv->toNumber()); }
-		else if (auto jv = jv_find(data_, "x", JSON_STRING)) {
-			inputs_.emplace_back("x", jv->toString()); }
+		else {
+			Input("x", /*required=*/false); }
 
 		if (auto jv = jv_find(data_, "y", JSON_NUMBER)) {
 			y = static_cast<float>(jv->toNumber()); }
-		else if (auto jv = jv_find(data_, "y", JSON_STRING)) {
-			inputs_.emplace_back("y", jv->toString()); }
+		else {
+			Input("y", /*required=*/false); }
 
 		out_ = std::make_shared<Vec2Node>(id_, std::move(inputs_), rmlv::vec2{x, y}); }};
 
@@ -186,29 +186,26 @@ class Vec3Compiler final : public NodeCompiler {
 
 		if (auto jv = jv_find(data_, "x", JSON_NUMBER)) {
 			x = static_cast<float>(jv->toNumber()); }
-		else if (auto jv = jv_find(data_, "x", JSON_STRING)) {
-			inputs_.emplace_back("x", jv->toString()); }
+		else {
+			Input("x", /*required=*/false); }
 
 		if (auto jv = jv_find(data_, "y", JSON_NUMBER)) {
 			y = static_cast<float>(jv->toNumber()); }
-		else if (auto jv = jv_find(data_, "y", JSON_STRING)) {
-			inputs_.emplace_back("y", jv->toString()); }
+		else {
+			Input("y", /*required=*/false); }
 
 		if (auto jv = jv_find(data_, "z", JSON_NUMBER)) {
 			z = static_cast<float>(jv->toNumber()); }
-		else if (auto jv = jv_find(data_, "z", JSON_STRING)) {
-			inputs_.emplace_back("z", jv->toString()); }
+		else {
+			Input("z", /*required=*/false); }
 
 		out_ = std::make_shared<Vec3Node>(id_, std::move(inputs_), rmlv::vec3{x, y, z}); }};
 
-FloatCompiler floatCompiler{};
-Vec2Compiler vec2Compiler{};
-Vec3Compiler vec3Compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$float", &floatCompiler);
-	NodeRegistry::GetInstance().Register("$vec2", &vec2Compiler);
-	NodeRegistry::GetInstance().Register("$vec3", &vec3Compiler);
+	NodeRegistry::GetInstance().Register("$float", []() { return std::make_unique<FloatCompiler>(); });
+	NodeRegistry::GetInstance().Register("$vec2", []() { return std::make_unique<Vec2Compiler>(); });
+	NodeRegistry::GetInstance().Register("$vec3", []() { return std::make_unique<Vec3Compiler>(); });
 }} init{};
 
 

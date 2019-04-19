@@ -48,13 +48,15 @@ class NodeRegistry {
 private:
 	NodeRegistry();
 public:
+	using FactoryFunc = std::function<std::unique_ptr<NodeCompiler>()>;
+
 	static NodeRegistry& GetInstance();
-	void Register(std::string_view jsonName, NodeCompiler* compiler);
-	NodeCompiler* Get(std::string_view jsonName);
-	NodeCompiler* Get(const std::string& jsonName);
+	void Register(std::string_view jsonName, FactoryFunc factoryFunc);
+	FactoryFunc Get(std::string_view jsonName);
+	FactoryFunc Get(const std::string& jsonName);
 
 private:
-	std::unordered_map<std::string, NodeCompiler*> db_; };
+	std::unordered_map<std::string, FactoryFunc> db_; };
 
 
 bool Link(NodeList& nodes);

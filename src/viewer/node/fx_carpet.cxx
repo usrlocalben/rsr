@@ -143,10 +143,9 @@ class Compiler final : public NodeCompiler {
 		if (!Input("phase", /*required=*/true)) { return; }
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_)); }};
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$fxCarpet", &compiler);
+	NodeRegistry::GetInstance().Register("$fxCarpet", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

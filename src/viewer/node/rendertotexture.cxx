@@ -143,10 +143,8 @@ class Compiler final : public NodeCompiler {
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), width, height, pa, aa); }};
 
 
-Compiler compiler{};
-
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$renderToTexture", &compiler);
+	NodeRegistry::GetInstance().Register("$renderToTexture", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

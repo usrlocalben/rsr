@@ -77,10 +77,9 @@ class Compiler final : public NodeCompiler {
 					inputs_.emplace_back("gl", item->value.toString()); } } }
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_)); }};
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$group", &compiler);
+	NodeRegistry::GetInstance().Register("$group", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

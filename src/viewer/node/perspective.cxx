@@ -84,10 +84,9 @@ class Compiler final : public NodeCompiler {
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), ha, va, fov, origin); }};
 
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$perspective", &compiler);
+	NodeRegistry::GetInstance().Register("$perspective", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

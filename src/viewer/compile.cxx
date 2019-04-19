@@ -41,26 +41,26 @@ NodeRegistry& NodeRegistry::GetInstance() {
 	return reg; }
 
 
-void NodeRegistry::Register(std::string_view jsonName, NodeCompiler* compiler) {
+void NodeRegistry::Register(std::string_view jsonName, FactoryFunc factoryFunc) {
 	if (Get(jsonName) != nullptr) {
 		auto msg = fmt::sprintf("attempted to register json object "
 								"\"%s\" twice", jsonName);
 		throw std::runtime_error(msg); }
-	db_.emplace(jsonName, compiler); }
+	db_.emplace(jsonName, factoryFunc); }
 
 
-NodeCompiler* NodeRegistry::Get(std::string_view jsonName) {
+auto NodeRegistry::Get(std::string_view jsonName) -> FactoryFunc {
 	static std::string key;
 	key.assign(jsonName);  // XXX yuck!
 	if (auto found = db_.find(key); found != end(db_)) {
 		return found->second; }
-	return nullptr; }
+	return {}; }
 
 
-NodeCompiler* NodeRegistry::Get(const std::string& jsonName) {
+auto NodeRegistry::Get(const std::string& jsonName) -> FactoryFunc {
 	if (auto found = db_.find(jsonName); found != end(db_)) {
 		return found->second; }
-	return nullptr; }
+	return {}; }
 
 
 CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore);
@@ -114,13 +114,13 @@ bool NodeCompiler::Input(std::string_view attrName, bool required) {
 			return true; }}}
 
 
-optional<tuple<NodeCompiler*, JsonValue, std::string>> IdentifyNode(JsonValue data) {
+optional<tuple<NodeRegistry::FactoryFunc, JsonValue, std::string>> IdentifyNode(JsonValue data) {
 	auto& registry = NodeRegistry::GetInstance();
 	if (data.getTag() == JSON_OBJECT) {
 		// it's an object
 		if (auto node = data.toNode(); node) {
 			// with at least one node
-			if (auto nodeCompiler = registry.Get(string_view{node->key}); nodeCompiler != nullptr) {
+			if (auto compilerFactory = registry.Get(string_view{node->key}); compilerFactory) {
 				// the first node has a key with a valid node type
 				if (node->value.getTag() == JSON_OBJECT) {
 					// with an object as its value
@@ -130,7 +130,8 @@ optional<tuple<NodeCompiler*, JsonValue, std::string>> IdentifyNode(JsonValue da
 						guid.assign(jv->toString()); }
 					else {
 						guid = fmt::sprintf("__auto%d__", idGen++); }
-					return std::tuple{ nodeCompiler, node->value, guid }; }}
+					// std::cerr << "IdentifyNode id=\"" << guid << "\"\n";
+					return std::tuple{ compilerFactory, node->value, guid }; }}
 			else {
 				std::cerr << "not registered: " << node->key << "\n"; }}}
 	return {};}
@@ -138,13 +139,13 @@ optional<tuple<NodeCompiler*, JsonValue, std::string>> IdentifyNode(JsonValue da
 
 CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore) {
 	if (auto info = IdentifyNode(data)) {
-		const auto[nodeCompiler, data, guid] = *info;
+		const auto[compilerFactory, data, guid] = *info;
+		auto nodeCompiler = compilerFactory();
 		return nodeCompiler->Compile(guid, data, meshStore); }
 	return {}; }
 
 
 tuple<bool, NodeList> CompileDocument(const JsonValue root, const rglv::MeshStore& meshStore) {
-	using std::cerr;
 	NodeList nodes;
 
 	// add the json nodes
@@ -157,14 +158,13 @@ tuple<bool, NodeList> CompileDocument(const JsonValue root, const rglv::MeshStor
 			nodes.push_back(node);
 			std::copy(begin(deps), end(deps), std::back_inserter(nodes)); }
 		else {
-			cerr << "error deserializing json item\n";
+			std::cerr << "error deserializing json item\n";
 			success = false; }}
 
 	return tuple{success, nodes}; }
 
 
 bool Link(NodeList& nodes) {
-	using std::cerr;
 	unordered_map<string, int> byId;
 
 	// index by id, check for duplicates
@@ -173,7 +173,7 @@ bool Link(NodeList& nodes) {
 		// std::cerr << "  " << nodes[idx]->get_id() << "\n";
 		nodeId.assign(nodes[idx]->get_id());  // xxx yuck
 		if (auto existing = byId.find(nodeId); existing != end(byId)) {
-			cerr << "error: node id \"" << nodeId << "\" not unique\n";
+			std::cerr << "error: node id \"" << nodeId << "\" not unique\n";
 			return false; }
 		byId[nodeId] = idx; }
 

@@ -346,10 +346,9 @@ class Compiler final : public NodeCompiler {
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), precision, forkDepth, range); }};
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$fxMC", &compiler);
+	NodeRegistry::GetInstance().Register("$fxMC", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 }  // namespace

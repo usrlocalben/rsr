@@ -230,6 +230,9 @@
     <ClCompile Include="..\src\rml\rmlg\rmlg_noise.cxx">
       <Filter>rml</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\viewer\node\noise.cxx">
+      <Filter>node</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="node">

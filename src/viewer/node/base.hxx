@@ -50,7 +50,6 @@ protected:
 	virtual void AddDep(NodeBase* node);
 	virtual void AddDeps();
 
-
 private:
 	std::vector<NodeBase*> deps_;
 	std::string id_;

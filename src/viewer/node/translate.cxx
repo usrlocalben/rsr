@@ -285,12 +285,10 @@ class RepeatCompiler final : public NodeCompiler {
 		                                  slotValues["rotate"],
 		                                  slotValues["scale"]); }};
 
-TranslateCompiler translateCompiler{};
-RepeatCompiler repeatCompiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$repeat", &repeatCompiler);
-	NodeRegistry::GetInstance().Register("$translate", &translateCompiler);
+	NodeRegistry::GetInstance().Register("$repeat", [](){ return std::make_unique<RepeatCompiler>(); });
+	NodeRegistry::GetInstance().Register("$translate", [](){ return std::make_unique<TranslateCompiler>(); });
 }} init{};
 
 

@@ -95,10 +95,9 @@ class Compiler final : public NodeCompiler {
 					inputs_.emplace_back("layer", item->value.toString()); } } }
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_)); }};
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$layerSelect", &compiler);
+	NodeRegistry::GetInstance().Register("$layerSelect", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

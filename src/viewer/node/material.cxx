@@ -127,10 +127,9 @@ class Compiler final : public NodeCompiler {
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), programId, filter); }};
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$material", &compiler);
+	NodeRegistry::GetInstance().Register("$material", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

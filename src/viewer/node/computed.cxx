@@ -96,8 +96,6 @@ public:
 			parser.compile(code, expression);
 			state_.push_back(move(td)); }}
 
-	~ComputedVec3Node() = default;
-
 	// NodeBase
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		bool connected = false;
@@ -214,10 +212,9 @@ class Compiler final : public NodeCompiler {
 
 		out_ = std::make_shared<ComputedVec3Node>(id_, std::move(inputs_), std::move(code), std::move(svars)); }};
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$computedVec3", &compiler);
+	NodeRegistry::GetInstance().Register("$computedVec3", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

@@ -149,10 +149,9 @@ class Compiler final : public NodeCompiler {
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_)); }};
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$fxXYQuad", &compiler);
+	NodeRegistry::GetInstance().Register("$fxXYQuad", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

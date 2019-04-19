@@ -71,10 +71,9 @@ class Compiler final : public NodeCompiler {
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), mesh); }};
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$fxFoo", &compiler);
+	NodeRegistry::GetInstance().Register("$fxFoo", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

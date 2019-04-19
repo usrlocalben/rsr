@@ -158,10 +158,9 @@ class Compiler final : public NodeCompiler {
 
 		out_ = std::make_shared<GPUNode>(id_, std::move(inputs_)); }};
 
-Compiler compiler{};
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$gpu", &compiler);
+	NodeRegistry::GetInstance().Register("$gpu", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 
