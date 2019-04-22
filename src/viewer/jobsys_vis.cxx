@@ -27,7 +27,7 @@ void render_jobsys(const int left, const int top, const float xscale, rglr::True
 	const auto scale = xscale * canvas.width();
 
 	// some colors from I want hue, and a function to cycle over them
-	int color_idx = 0;
+	// int color_idx = 0;
 	constexpr int color_count = 16;
 	constexpr int color_mask = color_count - 1;
 	static const std::array<PixelToaster::TrueColorPixel, color_count> task_colors{ {

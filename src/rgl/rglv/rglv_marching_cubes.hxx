@@ -1,7 +1,8 @@
 #pragma once
 #include <array>
-#include <mutex>
+#include <cstdint>
 #include <functional>
+#include <mutex>
 
 #include "src/rgl/rglv/rglv_gpu.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
@@ -12,8 +13,8 @@ namespace rglv {
 
 extern const std::array<rmlv::vec3, 8> vertex_offset;
 extern const std::array<rmlv::vec3, 12> edge_direction;
-extern const std::array<short, 256> cube_edge_flags;
-extern const std::array<std::array<char, 2>, 12> edge_connection;
+extern const std::array<int16_t, 256> cube_edge_flags;
+extern const std::array<std::array<uint8_t, 2>, 12> edge_connection;
 extern const std::array<std::array<char, 16>, 256> tritable;
 
 /*
@@ -105,7 +106,7 @@ void march_sdf_vao(
 		if (tritable[flag_index][3 * tri] < 0) {
 			break; } // end of the list
 		for (int corner = 2; corner >= 0; corner--) {
-			auto vertex = tritable[flag_index][3 * tri + corner];
+			auto vertex = static_cast<uint8_t>(tritable[flag_index][3 * tri + corner]);
 			vao.append(edge_vertex[vertex], edge_normal[vertex], vec3{0}); }}}
 
 

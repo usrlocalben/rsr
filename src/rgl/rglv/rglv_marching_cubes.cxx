@@ -5,6 +5,7 @@
 #include "src/rgl/rglv/rglv_marching_cubes.hxx"
 
 #include <array>
+#include <cstdint>
 
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
@@ -24,7 +25,7 @@ const std::array<rmlv::vec3, 12> edge_direction = { {
 } };
 
 
-const std::array<std::array<char, 2>, 12> edge_connection{ {
+const std::array<std::array<uint8_t, 2>, 12> edge_connection{ {
 	{{0,1}},{{1,2}},{{2,3}},{{3,0}},
 	{{4,5}},{{5,6}},{{6,7}},{{7,4}},
 	{{0,4}},{{1,5}},{{2,6}},{{3,7}}
@@ -38,7 +39,7 @@ const std::array<std::array<char, 2>, 12> edge_connection{ {
 // This table lists the edges intersected by the surface for all 256 possible vertex states
 // There are 12 edges.  For each entry in the table, if edge #n is intersected, then bit #n is set to 1
 
-const std::array<short, 256> cube_edge_flags = {{
+const std::array<int16_t, 256> cube_edge_flags = {{
 	0x000, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
 	0x190, 0x099, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c, 0x99c, 0x895, 0xb9f, 0xa96, 0xd9a, 0xc93, 0xf99, 0xe90,
 	0x230, 0x339, 0x033, 0x13a, 0x636, 0x73f, 0x435, 0x53c, 0xa3c, 0xb35, 0x83f, 0x936, 0xe3a, 0xf33, 0xc39, 0xd30,

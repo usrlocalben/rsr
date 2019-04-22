@@ -7,16 +7,10 @@
 namespace rqdq {
 namespace {
 
-thread_local int thread_id;
-int generation;
-int total_jobs;
-thread_local uint32_t pool_idx;
-int thread_count;
-
 std::vector<char*> pools;
+
 int sps[128];
 
-thread_local double mark_start_time;
 
 int Ceil16(const int x) {
 	int rag = x & 0xf;

@@ -256,7 +256,13 @@ namespace PixelToaster
 		
 		/// This convenience constructor lets you specify color and alpha values at creation
 
-		TrueColorPixel( integer8 r, integer8 g, integer8 b, integer8 a = 0 ) : r(r), g(g), b(b), a(a) {}
+		TrueColorPixel( integer8 r, integer8 g, integer8 b, integer8 a = 0 )
+			#ifdef PIXELTOASTER_LITTLE_ENDIAN
+				: b(b), g(g), r(r), a(a)
+			#else
+				: r(r), g(g), b(b), a(a)
+			#endif
+		{}
 
 		/// Construct from an integer
 		

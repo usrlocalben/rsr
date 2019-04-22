@@ -175,21 +175,21 @@ struct DefaultTargetProgram {
 		const VertexOutputx1 computed0,
 		const VertexOutputx1 computed1,
 		const VertexOutputx1 computed2
-		)
-		:width(cc.width()),
-		height(cc.height()),
-		target_dimensions(rmlv::qfloat2{float(cc.width()), float(cc.height())}),
-		tu0(tu0),
-		tu1(tu1),
+		) :
 		cb(cc.data()),
 		db(dc.data()),
-		uniforms(uniforms),
+		tu0(tu0),
+		tu1(tu1),
+		width(cc.width()),
+		height(cc.height()),
+		target_dimensions(rmlv::qfloat2{float(cc.width()), float(cc.height())}),
 		vertexInvW(rglv::tri_qfloat{v1.w, v2.w,v3.w}),
 		vertexDepth(rglv::tri_qfloat{v1.z, v2.z, v3.z}),
 		vo0({ computed0.r0, computed1.r0, computed2.r0 }),
 		vo1({ computed0.r1, computed1.r1, computed2.r1 }),
 		vo2({ computed0.r2, computed1.r2, computed2.r2 }),
-		vo3({ computed0.r3, computed1.r3, computed2.r3 })
+		vo3({ computed0.r3, computed1.r3, computed2.r3 }),
+		uniforms(uniforms)
 	{}
 
 	inline void goto_xy(const int x, const int y) {
@@ -598,7 +598,7 @@ private:
 		const qmat4 qm_dm{ d_deviceMatrix };
 
 		const auto siz = int(vao.size());
-		const int rag = siz % 4;
+		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
 		int vi = 0;
 		int ti = 0;
 
@@ -716,7 +716,7 @@ private:
 		const qmat4 qm_dm{ d_deviceMatrix };
 
 		const auto siz = int(vao.size());
-		const int rag = siz % 4;
+		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
 		int vi = 0;
 		int ti = 0;
 
@@ -900,8 +900,6 @@ private:
 
 		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 		const auto clipper = Clipper{};
-
-		const rmlm::qmat4 qm_dm{ d_deviceMatrix };
 
 		const ShaderUniforms ui = generateUniforms(state);
 

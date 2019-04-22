@@ -14,10 +14,8 @@ MSVC_FLAGS = [
     # for clang-cl
     #"-Wno-builtin-macro-redefined",
     #"-Wno-unused-local-typedef",
-    #"-Wno-reorder",
-    #"-Wno-new-returns-null",
-    #"-Wno-comment",
-    #"-Wno-char-subscripts",
+    #"-Wno-new-returns-null",  # found in DirectX headers
+    #"-Wno-comment",           # found in DirectX headers
     #"-Wno-unused-command-line-argument",
     #"-Wno-unused-variable",
 

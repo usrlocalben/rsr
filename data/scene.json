@@ -137,13 +137,16 @@
 			"mesh": "p5.obj"}},
 		"translate": {"$computedVec3": {
 			"inputs": [
+				{"name": "amp", "type": "real", "source": "auraamp"},
 				{"name": "nx", "type": "real", "source": "noiser1"},
 				{"name": "ny", "type": "real", "source": "noiser2"},
 				{"name": "nz", "type": "real", "source": "noiser3"} ],
-			"code": "{nx*10, ny*10, nz*10}"}},
+			"code": "{nx*amp, ny*amp, nz*amp}"}},
 		"scale": {"$float": {"x": 0.4}},
 		"rotate": "aurarotator"}},
-	
+
+	{"$float": {"id": "auraamp", "x": 10}},
+
 	{"$noise": {"id": "noiser1", "coord": {"$vec3": {
 			"x": 0,
 			"y": "globals:wallclock",
