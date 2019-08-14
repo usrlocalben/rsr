@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+#include <string>
 #include <vector>
 
 extern void loadFile(std::vector<uint8_t>& buffer, const std::string& filename);

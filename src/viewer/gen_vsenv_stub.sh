@@ -29,9 +29,10 @@ if ! which which >&/dev/null ; then
       || fail "System PATH is not set up correctly, cannot run GNU bintools"
 fi
 
-# Check if Visual Studio 2017 is installed. Look for it at the default
+# Check if Visual Studio is installed. Look for it at the default
 # locations.
-VSVARS="C:/Program Files (x86)/Microsoft Visual Studio/2017/"
+#VSVARS="C:/Program Files (x86)/Microsoft Visual Studio/2017/"
+VSVARS="C:/Program Files (x86)/Microsoft Visual Studio/2019/"
 VSEDITION="BuildTools"
 if [ -d "${VSVARS}Enterprise" ]; then
   VSEDITION="Enterprise"
