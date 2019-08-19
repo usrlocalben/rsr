@@ -7,7 +7,7 @@ VCVARS_SETTER=$4
 
 export TMP="$(mktemp -d)"
 OWD=$(pwd)
-trap "cd \"$OWD\" && rm -fr \"$TMP\"" EXIT
+# trap "cd \"$OWD\" && rm -fr \"$TMP\"" EXIT
 
 
 #mkdir -p "$TMP"/$(dirname "$RC_FILE")"
