@@ -575,7 +575,8 @@ private:
 			bin_drawArray<ENABLE_CLIPPING, PGMs...>(state, count);
 			return; }
 		using std::min, std::max;
-		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
+		using rmlv::ivec2, rmlv::vec4, rmlv::mvec4i;
+		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		assert(state.arrayFormat == AF_VAO_F3F3F3);
 		assert(state.array != nullptr);
 
@@ -583,40 +584,49 @@ private:
 
 		const auto clipper = Clipper{};
 
-		d_clipFlagBuffer.clear();
-		d_devCoordBuffer.clear();
 		d_clipQueue.clear();
 
 		for (auto& tile : d_bins) {
 			tile.d_binStream.appendByte(CMD_DRAW_INLINE);
 			tile.d_binStream.mark(); }
 
-		VertexInput vi_;
-
 		const ShaderUniforms ui = generateUniforms(state);
-
 		const qmat4 qm_dm{ d_deviceMatrix };
+		VertexInput vi_[3];
+		mvec4i clipFlags[3];
+		qfloat2 devCoord[3];
 
-		const auto siz = int(vao.size());
-		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
-		int vi = 0;
-		int ti = 0;
-
-		auto processAsManyFacesAsPossible = [&]() {
-			for (; ti < count; ti += 3) {
-				int i0 = ti;
-				int i1 = ti + 1;
-				int i2 = ti + 2;
-				if (i0 >= vi || i1 >= vi || i2 >= vi) {
-					break; }
-
+		bool eof{false};
+		int vidx{0};
+		int tidx{0};
+		int li{0};
+		while (!eof) {
+			if (vidx >= count) {
+				eof = true; }
+			if (!eof) {
+				for (int cnt=0; cnt<3; cnt++, vidx++) {
+					vi_[cnt].a0.setLane(li, vec4{ vao.a0.at(vidx), 1 });
+					vi_[cnt].a1.setLane(li, vec4{ vao.a1.at(vidx), 0 });
+					vi_[cnt].a2.setLane(li, vec4{ vao.a2.at(vidx), 0 }); }
+				li += 1; }
+			if (!eof && (li<4)) {
+				continue; }
+			for (int i=0; i<3; ++i) {
+				qfloat4 gl_Position;
+				VertexOutput unused;
+				PGM::shadeVertex(vi_[i], ui, gl_Position, unused);
+				if (ENABLE_CLIPPING) {
+					clipFlags[i] = clipper.clip_point(gl_Position); }
+				devCoord[i] = pdiv(devmatmul(qm_dm, gl_Position)).xy(); }
+			for (int ti=0; ti<li; ti++) {
 				d_stats0.totalTrianglesSubmitted++;
+				int i0 = tidx++, i1 = tidx++, i2 = tidx++;
 
 				if (ENABLE_CLIPPING) {
 					// check for triangles that need clipping
-					const auto cf0 = d_clipFlagBuffer.at(i0);
-					const auto cf1 = d_clipFlagBuffer.at(i1);
-					const auto cf2 = d_clipFlagBuffer.at(i2);
+					const uint8_t cf0 = clipFlags[0].ui[ti];
+					const uint8_t cf1 = clipFlags[1].ui[ti];
+					const uint8_t cf2 = clipFlags[2].ui[ti];
 					if (cf0 | cf1 | cf2) {
 						if (cf0 & cf1 & cf2) {
 							// all points outside of at least one plane
@@ -626,9 +636,9 @@ private:
 						//d_clipQueue.push_back({ i0, i1, i2 });
 						continue; }}
 
-				auto devCoord0 = d_devCoordBuffer.at(i0);
-				auto devCoord1 = d_devCoordBuffer.at(i1);
-				auto devCoord2 = d_devCoordBuffer.at(i2);
+				auto devCoord0 = devCoord[0].lane(ti);
+				auto devCoord1 = devCoord[1].lane(ti);
+				auto devCoord2 = devCoord[2].lane(ti);
 
 				// handle backfacing tris and culling
 				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
@@ -647,30 +657,8 @@ private:
 				forEachCoveredBin(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& bin) {
 					bin.d_binStream.appendUShort(i0);  // also includes backfacing flag
 					bin.d_binStream.appendUShort(i1);
-					bin.d_binStream.appendUShort(i2); });}};
-
-		for (; vi < siz && ti < count; vi += 4) {
-			if ((vi & 0x1ff) == 0) {
-				processAsManyFacesAsPossible(); }
-
-			//----- begin vao specialization -----
-			vi_.a0 = vao.a0.loadxyz1(vi);
-			vi_.a1 = vao.a1.loadxyz0(vi);
-			vi_.a2 = vao.a2.loadxyz0(vi);
-			//------ end vao specialization ------
-
-			qfloat4 coord;
-			VertexOutput unused;
-			PGM::shadeVertex(vi_, ui, coord, unused);
-
-			if (ENABLE_CLIPPING) {
-				auto flags = clipper.clip_point(coord);
-				store_bytes(d_clipFlagBuffer.alloc<4>(), flags); }
-
-			auto devCoord = pdiv(devmatmul(qm_dm, coord)).xy();
-			devCoord.copyTo(d_devCoordBuffer.alloc<4>()); }
-
-		processAsManyFacesAsPossible();
+					bin.d_binStream.appendUShort(i2); });}
+			li = 0; }
 
 		for (auto & tile : d_bins) {
 			if (tile.d_binStream.touched()) {
