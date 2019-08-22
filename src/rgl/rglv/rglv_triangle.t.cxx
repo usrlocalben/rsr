@@ -9,6 +9,7 @@
 #include "src/rgl/rglr/rglr_canvas_util.hxx"
 #include "src/rgl/rglr/rglr_texture.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_triangle.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
@@ -21,7 +22,7 @@ using vec3 = rmlv::vec3;
 using vec4 = rmlv::vec4;
 using qfloat4 = rmlv::qfloat4;
 using qfloat2 = rmlv::qfloat2;
-using tri_qfloat2 = rglv::tri_qfloat2;
+using VertexFloat2 = rglv::VertexFloat2;
 
 const int TARGET_WIDTH = 8;
 const int TARGET_HEIGHT = 8;
@@ -39,7 +40,7 @@ struct DebugWithFragCoord final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
+		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
 		// texture units
 		const TU& tu0, const TU& tu1,
 		// outputs
@@ -58,13 +59,13 @@ struct DebugWithBary final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
+		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
 		// texture units
 		const TU& tu0, const TU& tu1,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
-		gl_FragColor = qfloat4{ _BS.v0, _BS.v1, _BS.v2, 0 }; } };
+		gl_FragColor = qfloat4{ _BS.x, _BS.y, _BS.z, 0 }; } };
 
 
 struct DebugWithUV : public rglv::BaseProgram {
@@ -77,7 +78,7 @@ struct DebugWithUV : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
+		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
 		// texture units
 		const TU& tu0,
 		const TU& tu1,
@@ -155,18 +156,14 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 	using sampler = rglr::ts_pow2_mipmap;
 	const sampler nullTexture1(nullptr, 256, 256, 256, 0);
 	const sampler nullTexture2(nullptr, 256, 256, 256, 0);
-	rglv::ShaderUniforms nullUniforms;
+	rglv::ShaderUniforms nullUniforms{};
 	rglv::DefaultTargetProgram<sampler, DebugWithBary, rglr::BlendProgram::Set> target_program(
 		nullTexture1, nullTexture2, cbc, dbc,
 		nullUniforms,
 		points[0], points[1], points[2],
 		rglv::VertexOutputx1{}, rglv::VertexOutputx1{}, rglv::VertexOutputx1{});
-	draw_triangle(
-		cbc.height(),
-		cbc.rect(),
-		points[0], points[1], points[2],
-		frontfacing,
-		target_program);
+	rglv::TriangleRasterizer tr(target_program, cbc.rect(), cbc.height());
+	tr.Draw(points[0], points[1], points[2], frontfacing);
 
 	// compare
 	for (int yy = 0; yy < 8; yy++) {
@@ -217,7 +214,7 @@ bool check_triangle_uv() {
 	using sampler = rglr::ts_pow2_mipmap;
 	const sampler nullTexture1(nullptr, 256, 256, 256, 0);
 	const sampler nullTexture2(nullptr, 256, 256, 256, 0);
-	rglv::ShaderUniforms nullUniforms;
+	rglv::ShaderUniforms nullUniforms{};
 
 	{
 		auto& points = points_upper_left;
@@ -230,12 +227,8 @@ bool check_triangle_uv() {
 			nullUniforms,
 			points[0], points[1], points[2],
 			computed1, computed2, computed3);
-		draw_triangle(
-			cbc.height(),
-			cbc.rect(),
-			points[0], points[1], points[2],
-			frontfacing,
-			target_program); }
+		rglv::TriangleRasterizer tr(target_program, cbc.rect(), cbc.height());
+		tr.Draw(points[0], points[1], points[2], frontfacing); }
 	{
 		auto& points = points_lower_right;
 		auto& uvs = uv_lower_right;
@@ -247,12 +240,8 @@ bool check_triangle_uv() {
 			nullUniforms,
 			points[0], points[1], points[2],
 			computed1, computed2, computed3);
-		draw_triangle(
-			cbc.height(),
-			cbc.rect(),
-			points[0], points[1], points[2],
-			frontfacing,
-			target_program); }
+		rglv::TriangleRasterizer tr(target_program, cbc.rect(), cbc.height());
+		tr.Draw(points[0], points[1], points[2], frontfacing); }
 
 
 	// cout << "=========== data ============\n";

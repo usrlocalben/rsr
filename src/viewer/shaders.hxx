@@ -3,6 +3,7 @@
 
 #include "src/rgl/rglv/rglv_fragment.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rgl/rglv/rglv_triangle.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
@@ -41,7 +42,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& v,
 		// special
-		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
+		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -60,7 +61,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 			mix(grey, face_color.v[2], e) *  qfloat(4.0f),
 			0.0f }; }
 
-	inline static rmlv::qfloat edgefactor(const rglv::tri_qfloat& _BP) {
+	inline static rmlv::qfloat edgefactor(const rmlv::qfloat3& _BP) {
 		static const rmlv::qfloat thickfactor(1.5F);
 		rmlv::qfloat3 d = rglv::fwidth(_BP);
 		rmlv::qfloat3 a3 = rglv::smoothstep(0, d*thickfactor, _BP);
@@ -115,7 +116,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
+		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -157,7 +158,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
+		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -211,7 +212,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::tri_qfloat& _BS, const rglv::tri_qfloat& _BP,
+		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
