@@ -134,8 +134,8 @@ struct alignas(16) vec4 {
 	vec4& operator*=(float rhs) { x *= rhs; y *= rhs; z *= rhs; w *= rhs; return *this; }
 	vec4& operator/=(float rhs) { x /= rhs; y /= rhs; z /= rhs; w /= rhs; return *this; }
 
-	vec2 xy() { return { x, y }; }
-	vec3 xyz() { return { x, y, z }; }
+	vec2 xy() const { return { x, y }; }
+	vec3 xyz() const { return { x, y, z }; }
 
 	union {
 		struct { float x, y, z, w; };
