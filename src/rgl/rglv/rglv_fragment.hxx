@@ -1,7 +1,7 @@
 #pragma once
 #include <xmmintrin.h>
 
-#include "src/rgl/rglv/rglv_triangle.hxx"
+#include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rml/rmlv/rmlv_mvec4.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 
@@ -39,26 +39,17 @@ inline rmlv::qfloat3 fwidth(const rmlv::qfloat3& a) {
 		}; }
 
 
-inline rmlv::qfloat3 fwidth(const tri_qfloat& a) {
-	return rmlv::qfloat3{
-		fwidth(a.v0),
-		fwidth(a.v1),
-		fwidth(a.v2)
-		}; }
-
-
 inline rmlv::qfloat3 hash3(const rmlv::qfloat& n) {
 	/*utility from iq's shadertoy entry "Repelling"*/
 	return fract(sin(rmlv::qfloat3{n, n + 1.0F, n + 2.0F}) * 43758.5453123F); }
 
 
-inline rmlv::qfloat3 smoothstep(const float a, const rmlv::qfloat3& b, const tri_qfloat& x) {
+inline rmlv::qfloat3 smoothstep(const float a, const rmlv::qfloat3& b, const rmlv::qfloat3& x) {
 	const rmlv::mvec4f _a{ a };
 	return rmlv::qfloat3{
-		smoothstep(_a, b.x, x.v0),
-		smoothstep(_a, b.y, x.v1),
-		smoothstep(_a, b.z, x.v2)
-		}; }
+		smoothstep(_a, b.x, x.x),
+		smoothstep(_a, b.y, x.y),
+		smoothstep(_a, b.z, x.z) }; }
 
 
 inline rmlv::mvec4f ddx(const rmlv::mvec4f& a) {

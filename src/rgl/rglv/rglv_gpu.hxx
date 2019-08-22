@@ -18,6 +18,7 @@
 #include "src/rgl/rglv/rglv_fragment.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
 #include "src/rgl/rglv/rglv_gpu_protocol.hxx"
+#include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rgl/rglv/rglv_packed_stream.hxx"
 #include "src/rgl/rglv/rglv_triangle.hxx"
@@ -105,7 +106,7 @@ struct BaseProgram {
 		// vertex shader output
 		const VertexOutput& v,
 		// special
-		const rglv::tri_qfloat& BS, const rglv::tri_qfloat& BP,
+		const rglv::BaryCoord& BS, const rglv::BaryCoord& BP,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -151,15 +152,15 @@ struct DefaultTargetProgram {
 	const int width;
 	const int height;
 	const rmlv::qfloat2 target_dimensions;
-	int offs, offs_left_start, offs_inc;
+	int offs, offsLeft;
 
-	const rglv::tri_qfloat vertexInvW;
-	const rglv::tri_qfloat vertexDepth;
+	const rglv::VertexFloat1 vertexInvW;
+	const rglv::VertexFloat1 vertexDepth;
 
-	const rglv::tri_qfloat3 vo0;
-	const rglv::tri_qfloat3 vo1;
-	const rglv::tri_qfloat3 vo2;
-	const rglv::tri_qfloat3 vo3;
+	const rglv::VertexFloat3 vo0;
+	const rglv::VertexFloat3 vo1;
+	const rglv::VertexFloat3 vo2;
+	const rglv::VertexFloat3 vo3;
 
 	const ShaderUniforms uniforms;
 
@@ -183,8 +184,8 @@ struct DefaultTargetProgram {
 		width(cc.width()),
 		height(cc.height()),
 		target_dimensions(rmlv::qfloat2{float(cc.width()), float(cc.height())}),
-		vertexInvW(rglv::tri_qfloat{v1.w, v2.w,v3.w}),
-		vertexDepth(rglv::tri_qfloat{v1.z, v2.z, v3.z}),
+		vertexInvW(rglv::VertexFloat1{v1.w, v2.w,v3.w}),
+		vertexDepth(rglv::VertexFloat1{v1.z, v2.z, v3.z}),
 		vo0({ computed0.r0, computed1.r0, computed2.r0 }),
 		vo1({ computed0.r1, computed1.r1, computed2.r1 }),
 		vo2({ computed0.r2, computed1.r2, computed2.r2 }),
@@ -192,14 +193,14 @@ struct DefaultTargetProgram {
 		uniforms(uniforms)
 	{}
 
-	inline void goto_xy(const int x, const int y) {
-		offs = offs_left_start = (y >> 1) * (width >> 1) + (x >> 1); }
+	inline void Begin(int x, int y) {
+		offs = offsLeft = (y >> 1) * (width >> 1) + (x >> 1); }
 
-	inline void inc_y() {
-		offs_left_start += width >> 1;
-		offs = offs_left_start; }
+	inline void CR() {
+		offsLeft += width >> 1;
+		offs = offsLeft; }
 
-	inline void inc_x() {
+	inline void Right2() {
 		offs++; }
 
 	inline void loadDepth(rmlv::qfloat& destDepth) {
@@ -229,10 +230,10 @@ struct DefaultTargetProgram {
 		_mm_store_ps(reinterpret_cast<float*>(&(cb[offs].g)), selectbits(destColor.g, sourceColor.g, fragMask).v);
 		_mm_store_ps(reinterpret_cast<float*>(&(cb[offs].b)), selectbits(destColor.b, sourceColor.b, fragMask).v); }
 
-	inline void render(const rmlv::qfloat2& fragCoord, const rmlv::mvec4i& triMask, const rglv::tri_qfloat& BS, const bool frontfacing) {
-		using rmlv::qfloat, rmlv::qfloat4;
+	inline void render(const rmlv::qfloat2& fragCoord, const rmlv::mvec4i& triMask, const rmlv::qfloat3& BS, const bool frontfacing) {
+		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
 
-		const auto fragDepth = rglv::interpolate(BS, vertexDepth);
+		const auto fragDepth = rglv::Interpolate(BS, vertexDepth);
 
 		// read depth buffer
 		qfloat destDepth;
@@ -245,17 +246,17 @@ struct DefaultTargetProgram {
 			return; }  // early out if whole quad fails depth test
 
 		// restore perspective
-		const auto fragW = rmlv::oneover(rglv::interpolate(BS, vertexInvW));
-		rglv::tri_qfloat BP;
-		BP.v0 = vertexInvW.v0 * BS.v0 * fragW;
-		BP.v1 = vertexInvW.v1 * BS.v1 * fragW;
-		BP.v2 = qfloat{ 1.0f } - (BP.v0 + BP.v1);
+		const auto fragW = rmlv::oneover(rglv::Interpolate(BS, vertexInvW));
+		rglv::BaryCoord BP;
+		BP.x = vertexInvW.v0 * BS.x * fragW;
+		BP.y = vertexInvW.v1 * BS.y * fragW;
+		BP.z = qfloat{ 1.0f } - (BP.x + BP.y);
 
 		VertexOutput interpolatedVertexData{
-			interpolate(BP, vo0),
-			interpolate(BP, vo1),
-			interpolate(BP, vo2),
-			interpolate(BP, vo3) };
+			Interpolate(BP, vo0),
+			Interpolate(BP, vo1),
+			Interpolate(BP, vo2),
+			Interpolate(BP, vo3) };
 
 		qfloat4 fragColor;
 		FRAGMENT_PROGRAM::shadeFragment(fragCoord,
@@ -864,7 +865,8 @@ private:
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
 				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu0, tu1, cbc, dbc, ui, devCoord[0].lane(ti), devCoord[1].lane(ti), devCoord[2].lane(ti), computed[0].lane(ti), computed[1].lane(ti), computed[2].lane(ti));
-				draw_triangle(target_height, rect, fx[0].si[ti], fx[1].si[ti], fx[2].si[ti], fy[0].si[ti], fy[1].si[ti], fy[2].si[ti], !backfacing, target_program); }
+				TriangleRasterizer tr(target_program, rect, target_height);
+				tr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti], fy[0].si[ti], fy[1].si[ti], fy[2].si[ti], !backfacing); }
 
 			// reset the SIMD lane counter
 			li = 0; }}
@@ -1030,7 +1032,8 @@ private:
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
 		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu0, tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
-		draw_triangle(target_height, rect, dev[0], dev[1], dev[2], !backfacing, target_program); }
+		TriangleRasterizer tr(target_program, rect, target_height);
+		tr.Draw(dev[0], dev[1], dev[2], !backfacing); }
 
 	auto generateUniforms(const GLState& state) {
 		ShaderUniforms ui;

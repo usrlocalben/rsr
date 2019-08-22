@@ -164,6 +164,7 @@ cc_library(
     deps = [
         "//src/rgl/rglv:fragment",
         "//src/rgl/rglv:gpu",
+        "//src/rgl/rglv:interpolate",
         "//src/rgl/rglv:math",
         "//src/rgl/rglv:triangle",
         "//src/rml/rmlm:mat4",

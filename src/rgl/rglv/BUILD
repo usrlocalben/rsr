@@ -46,6 +46,7 @@ cc_library(
         ":fragment",
         ":gl",
         ":gpu_protocol",
+        ":interpolate",
         ":math",
         ":packed_stream",
         ":triangle",
@@ -211,7 +212,17 @@ cc_library(
         "//src/rml/rmlv:mvec4",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
-        ":triangle",
+        ":interpolate",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "interpolate",
+    srcs = ["rglv_interpolate.cxx"],
+    hdrs = ["rglv_interpolate.hxx"],
+    deps = [
+        "//src/rml/rmlv:soa"
         ],
     copts = RSR_DEFAULT_COPTS,
     )
@@ -225,6 +236,7 @@ cc_library(
         "//src/rml/rmlv:mvec4",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
+        ":interpolate",
         ],
     copts = RSR_DEFAULT_COPTS,
     )
@@ -237,11 +249,13 @@ cc_test(
         "//src/rgl/rglr:blend",
         "//src/rgl/rglr:canvas",
         "//src/rgl/rglr:canvas_util",
+        "//src/rgl/rglr:texture",
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
         ":fragment",
         ":gpu",  # DefaultTarget
+        ":interpolate",
         ":triangle",
         ],
     copts = RSR_DEFAULT_COPTS,
