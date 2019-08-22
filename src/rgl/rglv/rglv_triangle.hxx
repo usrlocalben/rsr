@@ -84,7 +84,7 @@ public:
 				rglv::BaryCoord bary;
 				bary.x = itof(cx2) * scale;
 				bary.z = itof(cx1) * scale;
-				bary.y = mvec4f{1.0F} - bary.x - bary.z;
+				bary.y = 1.0F - bary.x - bary.z;
 
 				program_.render(frag_coord, trimask, bary, frontfacing); }}}
 
