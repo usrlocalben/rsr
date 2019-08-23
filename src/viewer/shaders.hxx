@@ -42,7 +42,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& v,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
+		const rglv::BaryCoord& _bary,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -52,7 +52,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		using namespace rmlv;
 		static const qfloat grey(0.1f);
 		static const qfloat3 face_color{ 0.5f, 0.6f, 0.7f };
-		const qfloat e = edgefactor(_BP);
+		const qfloat e = edgefactor(_bary);
 
 		//auto fd = (-gl_FragDepth + qfloat(1));
 		gl_FragColor = qfloat4{
@@ -61,10 +61,10 @@ struct WireframeProgram final : public rglv::BaseProgram {
 			mix(grey, face_color.v[2], e) *  qfloat(4.0f),
 			0.0f }; }
 
-	inline static rmlv::qfloat edgefactor(const rmlv::qfloat3& _BP) {
+	inline static rmlv::qfloat edgefactor(const rmlv::qfloat3& _bary) {
 		static const rmlv::qfloat thickfactor(1.5F);
-		rmlv::qfloat3 d = rglv::fwidth(_BP);
-		rmlv::qfloat3 a3 = rglv::smoothstep(0, d*thickfactor, _BP);
+		rmlv::qfloat3 d = rglv::fwidth(_bary);
+		rmlv::qfloat3 a3 = rglv::smoothstep(0, d*thickfactor, _bary);
 		return vmin(a3.v[0], vmin(a3.v[1], a3.v[2])); } };
 
 
@@ -116,7 +116,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
+		const rglv::BaryCoord& _bary,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -158,7 +158,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
+		const rglv::BaryCoord& _bary,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -212,7 +212,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
+		const rglv::BaryCoord& _bary,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,

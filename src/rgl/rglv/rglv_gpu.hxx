@@ -106,7 +106,7 @@ struct BaseProgram {
 		// vertex shader output
 		const VertexOutput& v,
 		// special
-		const rglv::BaryCoord& BS, const rglv::BaryCoord& BP,
+		const rglv::BaryCoord& bary,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -142,102 +142,98 @@ struct DefaultTargetProgram {
 	// const FRAGMENT_PROGRAM& fp;
 	// const BLEND_PROGRAM& bp;
 
-	rmlv::qfloat4* cb;
-	rmlv::qfloat4* cbx;
-	rmlv::qfloat* db;
-	rmlv::qfloat* dbx;
+	rmlv::qfloat4* cb_;
+	rmlv::qfloat4* cbx_;
+	rmlv::qfloat* db_;
+	rmlv::qfloat* dbx_;
 
-	const TEXTURE_UNIT& tu0, tu1;
+	const TEXTURE_UNIT& tu0_, tu1_;
 
-	const int width;
-	const int height;
-	const rmlv::qfloat2 target_dimensions;
-	int offs, offsLeft;
+	const int width_;
+	const int height_;
+	const rmlv::qfloat2 targetDimensions_;
+	int offs_, offsLeft_;
 
-	const rglv::VertexFloat1 vertexInvW;
-	const rglv::VertexFloat1 vertexDepth;
+	const rglv::VertexFloat1 oneOverW_;
+	const rglv::VertexFloat1 zOverW_;
 
-	const rglv::VertexFloat3 vo0;
-	const rglv::VertexFloat3 vo1;
-	const rglv::VertexFloat3 vo2;
-	const rglv::VertexFloat3 vo3;
+	const rglv::VertexFloat3 vo0_;
+	const rglv::VertexFloat3 vo1_;
+	const rglv::VertexFloat3 vo2_;
+	const rglv::VertexFloat3 vo3_;
 
-	const ShaderUniforms uniforms;
+	const ShaderUniforms uniforms_;
 
 	DefaultTargetProgram(
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
 		rglr::QFloat4Canvas& cc,
 		rglr::QFloatCanvas& dc,
-		const ShaderUniforms uniforms,
-		const rmlv::vec4 v1,
-		const rmlv::vec4 v2,
-		const rmlv::vec4 v3,
-		const VertexOutputx1 computed0,
-		const VertexOutputx1 computed1,
-		const VertexOutputx1 computed2
-		) :
-		cb(cc.data()),
-		db(dc.data()),
-		tu0(tu0),
-		tu1(tu1),
-		width(cc.width()),
-		height(cc.height()),
-		target_dimensions(rmlv::qfloat2{float(cc.width()), float(cc.height())}),
-		vertexInvW(rglv::VertexFloat1{v1.w, v2.w,v3.w}),
-		vertexDepth(rglv::VertexFloat1{v1.z, v2.z, v3.z}),
-		vo0({ computed0.r0, computed1.r0, computed2.r0 }),
-		vo1({ computed0.r1, computed1.r1, computed2.r1 }),
-		vo2({ computed0.r2, computed1.r2, computed2.r2 }),
-		vo3({ computed0.r3, computed1.r3, computed2.r3 }),
-		uniforms(uniforms)
-	{}
+		ShaderUniforms uniforms,
+		VertexFloat1 oneOverW,
+		VertexFloat1 zOverW,
+		VertexOutputx1 computed0,
+		VertexOutputx1 computed1,
+		VertexOutputx1 computed2) :
+		cb_(cc.data()),
+		db_(dc.data()),
+		tu0_(tu0),
+		tu1_(tu1),
+		width_(cc.width()),
+		height_(cc.height()),
+		targetDimensions_({ float(cc.width()), float(cc.height()) }),
+		oneOverW_(oneOverW),
+		zOverW_(zOverW),
+		vo0_({ computed0.r0, computed1.r0, computed2.r0 }),
+		vo1_({ computed0.r1, computed1.r1, computed2.r1 }),
+		vo2_({ computed0.r2, computed1.r2, computed2.r2 }),
+		vo3_({ computed0.r3, computed1.r3, computed2.r3 }),
+		uniforms_(uniforms) {}
 
 	inline void Begin(int x, int y) {
-		offs = offsLeft = (y >> 1) * (width >> 1) + (x >> 1); }
+		offs_ = offsLeft_ = (y >> 1) * (width_ >> 1) + (x >> 1); }
 
 	inline void CR() {
-		offsLeft += width >> 1;
-		offs = offsLeft; }
+		offsLeft_ += width_ >> 1;
+		offs_ = offsLeft_; }
 
 	inline void Right2() {
-		offs++; }
+		offs_++; }
 
-	inline void loadDepth(rmlv::qfloat& destDepth) {
+	inline void LoadDepth(rmlv::qfloat& destDepth) {
 		// from depthbuffer
 		// destDepth = _mm_load_ps(reinterpret_cast<float*>(&db[offs]));
 
 		// from alpha
-		destDepth = _mm_load_ps(reinterpret_cast<float*>(&(cb[offs].a))); }
+		destDepth = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].a))); }
 
-	inline void storeDepth(rmlv::qfloat destDepth,
-	                rmlv::qfloat sourceDepth,
-	                rmlv::mvec4i fragMask) {
-		// auto addr = &db[offs];   // depthbuffer
-		auto addr = &(cb[offs].a);  // alpha-channel
+	inline void StoreDepth(rmlv::qfloat destDepth,
+	                       rmlv::qfloat sourceDepth,
+	                       rmlv::mvec4i fragMask) {
+		// auto addr = &db_[offs_];   // depthbuffer
+		auto addr = &(cb_[offs_].a);  // alpha-channel
 		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
 
-	inline void loadColor(rmlv::qfloat4& destColor) {
-		destColor.r = _mm_load_ps(reinterpret_cast<float*>(&(cb[offs].r)));
-		destColor.g = _mm_load_ps(reinterpret_cast<float*>(&(cb[offs].g)));
-		destColor.b = _mm_load_ps(reinterpret_cast<float*>(&(cb[offs].b))); }
+	inline void LoadColor(rmlv::qfloat4& destColor) {
+		destColor.r = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].r)));
+		destColor.g = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].g)));
+		destColor.b = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].b))); }
 
-	inline void storeColor(rmlv::qfloat4 destColor,
-	                rmlv::qfloat4 sourceColor,
-	                rmlv::mvec4i fragMask) {
-		_mm_store_ps(reinterpret_cast<float*>(&(cb[offs].r)), selectbits(destColor.r, sourceColor.r, fragMask).v);
-		_mm_store_ps(reinterpret_cast<float*>(&(cb[offs].g)), selectbits(destColor.g, sourceColor.g, fragMask).v);
-		_mm_store_ps(reinterpret_cast<float*>(&(cb[offs].b)), selectbits(destColor.b, sourceColor.b, fragMask).v); }
+	inline void StoreColor(rmlv::qfloat4 destColor,
+	                       rmlv::qfloat4 sourceColor,
+	                       rmlv::mvec4i fragMask) {
+		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].r)), selectbits(destColor.r, sourceColor.r, fragMask).v);
+		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].g)), selectbits(destColor.g, sourceColor.g, fragMask).v);
+		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].b)), selectbits(destColor.b, sourceColor.b, fragMask).v); }
 
-	inline void render(const rmlv::qfloat2& fragCoord, const rmlv::mvec4i& triMask, const rmlv::qfloat3& BS, const bool frontfacing) {
+	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord bary, const bool frontfacing) {
 		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
 
-		const auto fragDepth = rglv::Interpolate(BS, vertexDepth);
+		const auto fragDepth = rglv::Interpolate(bary, zOverW_);
 
 		// read depth buffer
-		qfloat destDepth;
-		loadDepth(destDepth);
+		qfloat destDepth; LoadDepth(destDepth);
 
 		const auto depthMask = float2bits(cmple(fragDepth, destDepth));
 		const auto fragMask = andnot(triMask, depthMask);
@@ -246,32 +242,31 @@ struct DefaultTargetProgram {
 			return; }  // early out if whole quad fails depth test
 
 		// restore perspective
-		const auto fragW = rmlv::oneover(rglv::Interpolate(BS, vertexInvW));
-		rglv::BaryCoord BP;
-		BP.x = vertexInvW.v0 * BS.x * fragW;
-		BP.y = vertexInvW.v1 * BS.y * fragW;
-		BP.z = qfloat{ 1.0f } - (BP.x + BP.y);
+		const auto fragW = rmlv::oneover(Interpolate(bary, oneOverW_));
+		bary.x = oneOverW_.v0 * bary.x * fragW;
+		bary.z = oneOverW_.v2 * bary.z * fragW;
+		bary.y = 1.0f - bary.x - bary.z;
 
-		VertexOutput interpolatedVertexData{
-			Interpolate(BP, vo0),
-			Interpolate(BP, vo1),
-			Interpolate(BP, vo2),
-			Interpolate(BP, vo3) };
+		VertexOutput vertexInterpolants{
+			Interpolate(bary, vo0_),
+			Interpolate(bary, vo1_),
+			Interpolate(bary, vo2_),
+			Interpolate(bary, vo3_) };
 
 		qfloat4 fragColor;
 		FRAGMENT_PROGRAM::shadeFragment(fragCoord,
 		                                fragDepth,
-										uniforms,
-		                                interpolatedVertexData,
-		                                BS, BP, tu0, tu1, fragColor);
+										uniforms_,
+		                                vertexInterpolants,
+		                                bary, tu0_, tu1_, fragColor);
 
 		qfloat4 destColor;
-		loadColor(destColor);
+		LoadColor(destColor);
 
 		// qfloat4 blendedColor = fragColor; // no blending
 
-		storeColor(destColor, fragColor, fragMask);
-		storeDepth(destDepth, fragDepth, fragMask); } };
+		StoreColor(destColor, fragColor, fragMask);
+		StoreDepth(destDepth, fragDepth, fragMask); } };
 
 
 struct BinStat {
@@ -342,9 +337,6 @@ public:
 	void setSize(const rmlv::ivec2& newBufferDimensionsInPixels, const rmlv::ivec2& newTileDimensionsInBlocks) {
 		if (newBufferDimensionsInPixels != d_bufferDimensionsInPixels ||
 		    newTileDimensionsInBlocks != d_tileDimensionsInBlocks) {
-
-			d_deviceMatrix = rglv::make_device_matrix(newBufferDimensionsInPixels.x,
-			                                          newBufferDimensionsInPixels.y);
 			d_bufferDimensionsInPixels = newBufferDimensionsInPixels;
 			d_tileDimensionsInBlocks = newTileDimensionsInBlocks;
 			retile(); }}
@@ -596,7 +588,10 @@ private:
 
 		const ShaderUniforms ui = generateUniforms(state);
 
-		const qmat4 qm_dm{ d_deviceMatrix };
+		const qfloat2 deviceScale{ float(d_bufferDimensionsInPixels.x/2),
+		                          -float(d_bufferDimensionsInPixels.y/2) };
+		const qfloat2 deviceOffset{ float(d_bufferDimensionsInPixels.x/2),
+		                            float(d_bufferDimensionsInPixels.y/2) };
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -668,7 +663,7 @@ private:
 				auto flags = clipper.clip_point(coord);
 				store_bytes(d_clipFlagBuffer.alloc<4>(), flags); }
 
-			auto devCoord = pdiv(devmatmul(qm_dm, coord)).xy();
+			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
 			devCoord.copyTo(d_devCoordBuffer.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -714,7 +709,10 @@ private:
 
 		const ShaderUniforms ui = generateUniforms(state);
 
-		const qmat4 qm_dm{ d_deviceMatrix };
+		const qfloat2 deviceScale{ float(d_bufferDimensionsInPixels.x/2),
+		                          -float(d_bufferDimensionsInPixels.y/2) };
+		const qfloat2 deviceOffset{ float(d_bufferDimensionsInPixels.x/2),
+		                            float(d_bufferDimensionsInPixels.y/2) };
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -786,7 +784,7 @@ private:
 				auto flags = clipper.clip_point(coord);
 				store_bytes(d_clipFlagBuffer.alloc<4>(), flags); }
 
-			auto devCoord = pdiv(devmatmul(qm_dm, coord)).xy();
+			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
 			devCoord.copyTo(d_devCoordBuffer.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -813,14 +811,10 @@ private:
 			return; }
 
 		using rmlm::mat4;
-		using rmlv::vec2;
-		using rmlv::vec3;
-		using rmlv::vec4;
+		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 		using rmlv::mvec4i;
-		using rmlv::qfloat;
-		using rmlv::qfloat4;
-		using std::array;
-		using std::swap;
+		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat4;
+		using std::array, std::swap;
 
 		//---- begin vao specialization ----
 		assert(state.array != nullptr);
@@ -834,7 +828,10 @@ private:
 
 		const ShaderUniforms ui = generateUniforms(state);
 
-		const rmlm::qmat4 qm_dm{ d_deviceMatrix };
+		const qfloat2 deviceScale{ float(d_bufferDimensionsInPixels.x/2),
+		                          -float(d_bufferDimensionsInPixels.y/2) };
+		const qfloat2 deviceOffset{ float(d_bufferDimensionsInPixels.x/2),
+		                            float(d_bufferDimensionsInPixels.y/2) };
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
@@ -878,15 +875,25 @@ private:
 			for (int i=0; i<3; ++i) {
 				qfloat4 gl_Position;
 				PGM::shadeVertex(vi_[i], ui, gl_Position, computed[i]);
-				devCoord[i] = pdiv(devmatmul(qm_dm, gl_Position));
-				fx[i] = ftoi(qfloat{ 16.0f } * (devCoord[i].x - qfloat{ 0.5f }));
-				fy[i] = ftoi(qfloat{ 16.0f } * (devCoord[i].y - qfloat{ 0.5f })); }
+				devCoord[i] = pdiv(gl_Position);
+				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale.x + deviceOffset.x));
+				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale.y + deviceOffset.y)); }
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu0, tu1, cbc, dbc, ui, devCoord[0].lane(ti), devCoord[1].lane(ti), devCoord[2].lane(ti), computed[0].lane(ti), computed[1].lane(ti), computed[2].lane(ti));
-				TriangleRasterizer tr(target_program, rect, target_height);
-				tr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti], fy[0].si[ti], fy[1].si[ti], fy[2].si[ti], !backfacing); }
+				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
+					tu0, tu1,
+					cbc, dbc,
+					ui,
+					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
+					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
+					computed[0].lane(ti),
+					computed[1].lane(ti),
+					computed[2].lane(ti) };
+				TriangleRasterizer tr(targetProgram, rect, target_height);
+				tr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
+				        fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
+				        !backfacing); }
 
 			// reset the SIMD lane counter
 			li = 0; }}
@@ -903,6 +910,10 @@ private:
 		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 		const auto clipper = Clipper{};
 
+		vec2 deviceScale{ float(d_bufferDimensionsInPixels.x/2),
+		                 -float(d_bufferDimensionsInPixels.y/2) };
+		vec2 deviceOffset{ float(d_bufferDimensionsInPixels.x/2),
+		                   float(d_bufferDimensionsInPixels.y/2) };
 		const ShaderUniforms ui = generateUniforms(state);
 
 		for (const auto& faceIndices : d_clipQueue) {
@@ -958,7 +969,9 @@ private:
 
 			for (auto& vertex : poly) {
 				// convert clip-coord to device-coord
-				vertex.coord = pdiv(devmatmul(d_deviceMatrix, vertex.coord)); }
+				vertex.coord = pdiv(vertex.coord);
+				vertex.coord.x = vertex.coord.x * deviceScale.x + deviceOffset.x;
+				vertex.coord.y = vertex.coord.y * deviceScale.y + deviceOffset.y; }
 			// end of phase 2: poly contains a clipped N-gon
 
 			// phase 3: project, convert to triangles and add to bins
@@ -1087,7 +1100,6 @@ private:
 	rmlv::ivec2 d_bufferDimensionsInTiles;
 	rmlv::ivec2 d_tileDimensionsInBlocks;
 	rmlv::ivec2 d_tileDimensionsInPixels;
-	rmlm::mat4 d_deviceMatrix;
 
 	// binning buffers and sizes
 	SubStack<uint8_t, maxVAOSizeInVertices> d_clipFlagBuffer;

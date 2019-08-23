@@ -86,7 +86,7 @@ public:
 				bary.z = itof(cx1) * scale;
 				bary.y = 1.0F - bary.x - bary.z;
 
-				program_.render(frag_coord, trimask, bary, frontfacing); }}}
+				program_.Render(frag_coord, trimask, bary, frontfacing); }}}
 
 private:
 	FRAGMENT_PROCESSOR& program_;
