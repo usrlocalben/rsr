@@ -550,8 +550,7 @@ private:
 	template <typename PGM, typename ...PGMs>
 	void tile_storeTrueColor(const GLState& state, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
 		if (state.programId != PGM::id) {
-			tile_storeTrueColor<PGMs...>(state, rect, enableGamma, outcanvas);
-			return; }
+			return tile_storeTrueColor<PGMs...>(state, rect, enableGamma, outcanvas); }
 
 		auto& cc = *d_cc;
 		if (enableGamma) {
@@ -565,8 +564,7 @@ private:
 	template <bool ENABLE_CLIPPING, typename PGM, typename ...PGMs>
 	void bin_drawArray(const GLState& state, const int count) {
 		if (state.programId != PGM::id) {
-			bin_drawArray<ENABLE_CLIPPING, PGMs...>(state, count);
-			return; }
+			return bin_drawArray<ENABLE_CLIPPING, PGMs...>(state, count); }
 		using std::min, std::max;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		assert(state.arrayFormat == AF_VAO_F3F3F3);
@@ -686,8 +684,7 @@ private:
 	template <bool ENABLE_CLIPPING, typename PGM, typename ...PGMs>
 	void bin_drawElements(const GLState& state, const int count, const uint16_t * const indices) {
 		if (PGM::id != state.programId) {
-			bin_drawElements<ENABLE_CLIPPING, PGMs...>(state, count, indices);
-			return; }
+			return bin_drawElements<ENABLE_CLIPPING, PGMs...>(state, count, indices); }
 		using std::min, std::max;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		assert(state.arrayFormat == AF_VAO_F3F3F3);
@@ -807,8 +804,7 @@ private:
 	template<typename PGM, typename ...PGMs>
 	void tile_drawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {
 		if (state.programId != PGM::id) {
-			tile_drawElements<PGMs...>(state, rect, cs);
-			return; }
+			return tile_drawElements<PGMs...>(state, rect, cs); }
 
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
@@ -1030,8 +1026,7 @@ private:
 	template <typename PGM, typename ...PGMs>
 	void tile_drawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {
 		if (state.programId != PGM::id) {
-			tile_drawClipped<PGMs...>(state, rect, cs);
-			return; }
+			return tile_drawClipped<PGMs...>(state, rect, cs); }
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 
