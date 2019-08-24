@@ -4,7 +4,6 @@
 #include <functional>
 #include <mutex>
 
-#include "src/rgl/rglv/rglv_gpu.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 

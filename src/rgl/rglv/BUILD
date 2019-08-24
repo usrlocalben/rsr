@@ -198,8 +198,8 @@ cc_library(
     srcs = ["rglv_marching_cubes.cxx"],
     hdrs = ["rglv_marching_cubes.hxx"],
     deps = [
-        "//src/rgl/rglv:gpu",
         "//src/rml/rmlv:vec",
+        ":vao",
         ],
     copts = RSR_DEFAULT_COPTS,
     )
