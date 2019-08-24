@@ -540,7 +540,7 @@ private:
 				// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
 				}
 			else if (cmd == CMD_CLIPPED_TRI) {
-				tile_drawClipped(*stateptr, rect, cs); }
+				tile_drawClipped<SHADERS...>(*stateptr, rect, cs); }
 			else if (cmd == CMD_DRAW_INLINE) {
 				tile_drawElements<SHADERS...>(*stateptr, rect, cs); }}}
 
@@ -572,7 +572,7 @@ private:
 
 		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 
-		const auto clipper = Clipper{};
+		const auto frustum = Clipper{ d_bufferDimensionsInPixels };
 
 		d_clipFlagBuffer.clear();
 		d_devCoordBuffer.clear();
@@ -617,7 +617,7 @@ private:
 							d_stats0.totalTrianglesCulled++;
 							continue; }
 						// queue for clipping
-						//d_clipQueue.push_back({ i0, i1, i2 });
+						d_clipQueue.push_back({ i0, i1, i2 });
 						continue; }}
 
 				auto devCoord0 = d_devCoordBuffer.at(i0);
@@ -658,7 +658,7 @@ private:
 			PGM::shadeVertex(vi_, ui, coord, unused);
 
 			if (ENABLE_CLIPPING) {
-				auto flags = clipper.clip_point(coord);
+				auto flags = frustum.Test(coord);
 				store_bytes(d_clipFlagBuffer.alloc<4>(), flags); }
 
 			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
@@ -675,7 +675,7 @@ private:
 				tile.d_binStream.unappend(1); }}
 
 		d_stats0.totalTrianglesClipped = d_clipQueue.size();
-		if (ENABLE_CLIPPING && d_clipQueue.size()) {
+		if (ENABLE_CLIPPING && !d_clipQueue.empty()) {
 			bin_drawElementsClipped<PGM>(state); }}
 
 	template <bool ENABLE_CLIPPING, typename ...PGMs>
@@ -692,7 +692,7 @@ private:
 
 		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 
-		const auto clipper = Clipper{};
+		const auto frustum = Clipper{ d_bufferDimensionsInPixels.x };
 
 		d_clipFlagBuffer.clear();
 		d_devCoordBuffer.clear();
@@ -778,7 +778,7 @@ private:
 			PGM::shadeVertex(vi_, ui, coord, unused);
 
 			if (ENABLE_CLIPPING) {
-				auto flags = clipper.clip_point(coord);
+				auto flags = frustum.Test(coord);
 				store_bytes(d_clipFlagBuffer.alloc<4>(), flags); }
 
 			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
@@ -795,7 +795,7 @@ private:
 				tile.d_binStream.unappend(1); }}
 
 		d_stats0.totalTrianglesClipped = d_clipQueue.size();
-		if (ENABLE_CLIPPING && d_clipQueue.size()) {
+		if (ENABLE_CLIPPING && !d_clipQueue.empty()) {
 			bin_drawElementsClipped<PGM>(state); }}
 
 	template <typename ...PGMs>
@@ -904,7 +904,7 @@ private:
 		static rcls::vector<ClippedVertex> tmp;
 
 		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
-		const auto clipper = Clipper{};
+		const auto frustum = Clipper{ d_bufferDimensionsInPixels.x };
 
 		vec2 deviceScale{ float(d_bufferDimensionsInPixels.x/2),
 		                 -float(d_bufferDimensionsInPixels.y/2) };
@@ -933,7 +933,7 @@ private:
 			// phase 2: sutherland-hodgman clipping
 			for (const auto plane : rglv::clipping_panes) {
 
-				bool weAreInside = clipper.is_inside(plane, poly[0].coord);
+				bool weAreInside = frustum.IsInside(plane, poly[0].coord);
 
 				tmp.clear();
 				for (int this_vi = 0; this_vi < poly.size(); ++this_vi) {
@@ -942,7 +942,7 @@ private:
 					const auto& here = poly[this_vi];
 					const auto& next = poly[next_vi];
 
-					const bool nextIsInside = clipper.is_inside(plane, next.coord);
+					const bool nextIsInside = frustum.IsInside(plane, next.coord);
 
 					if (weAreInside) {
 						tmp.push_back(here); }
@@ -950,12 +950,12 @@ private:
 					if (weAreInside != nextIsInside) {
 						weAreInside = !weAreInside;
 
-						const float t = clipper.clip_line(plane, here.coord, next.coord);
-						auto newCoord = mix(here.coord, next.coord, t);
-						auto newData = mix(here.data, next.data, t);
+						const float dist = frustum.Clip(plane, here.coord, next.coord);
+						auto newCoord = mix(here.coord, next.coord, dist);
+						auto newData = mix(here.data, next.data, dist);
 						tmp.push_back({ newCoord, newData }); }}
 
-				std::swap(poly, tmp);
+				swap(poly, tmp);
 				if (poly.size() == 0) {
 					break; }
 				assert(poly.size() >= 3); }
@@ -989,9 +989,12 @@ private:
 
 				forEachCoveredBin(poly[i0].coord.xy(), poly[i1].coord.xy(), poly[i2].coord.xy(), [&](auto& bin) {
 					if (d_clippedVertexBuffer0.size() == bi) {
-						std::copy(poly.begin(), poly.end(), back_inserter(d_clippedVertexBuffer0)); }
+						std::copy(begin(poly), end(poly), back_inserter(d_clippedVertexBuffer0)); }
 					bin.d_binStream.appendByte(CMD_CLIPPED_TRI);
-					bin.d_binStream.appendUShort(bi + i0);
+					auto foo = bi + i0;
+					if (backfacing) {
+						foo |= 0x8000; }
+					bin.d_binStream.appendUShort(foo);
 					bin.d_binStream.appendUShort(bi + i1);
 					bin.d_binStream.appendUShort(bi + i2); });}}}
 
@@ -1036,32 +1039,41 @@ private:
 
 		const ShaderUniforms ui = generateUniforms(state);
 
-		const auto i0 = cs.consumeUShort();
+		auto i0 = cs.consumeUShort();
+		const bool backfacing = (i0 & 0x8000) != 0;
+		i0 = i0 & 0x7fff;
 		const auto i1 = cs.consumeUShort();
 		const auto i2 = cs.consumeUShort();
 
-		std::array<vec4, 3> dev = {
-			d_clippedVertexBuffer1[i0].coord,
-			d_clippedVertexBuffer1[i1].coord,
-			d_clippedVertexBuffer1[i2].coord };
-		std::array<VertexOutputx1, 3> computed = {
-			d_clippedVertexBuffer1[i0].data,
-			d_clippedVertexBuffer1[i1].data,
-			d_clippedVertexBuffer1[i2].data };
+		vec4 dev0 = d_clippedVertexBuffer1[i0].coord;
+		vec4 dev1 = d_clippedVertexBuffer1[i1].coord;
+		vec4 dev2 = d_clippedVertexBuffer1[i2].coord;
+		VertexOutputx1 data0 = d_clippedVertexBuffer1[i0].data;
+		VertexOutputx1 data1 = d_clippedVertexBuffer1[i1].data;
+		VertexOutputx1 data2 = d_clippedVertexBuffer1[i2].data;
 
-		const bool backfacing = rmlg::triangle2Area(dev[0], dev[1], dev[2]) < 0;
-
+		/*const bool backfacing = rmlg::triangle2Area(dev[0], dev[1], dev[2]) < 0;
 		if (backfacing) {
 			std::swap(computed[0], computed[2]);
-			std::swap(dev[0], dev[2]); }
+			std::swap(dev[0], dev[2]); }*/
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> target_program(tu0, tu1, cbc, dbc, ui, dev[0], dev[1], dev[2], computed[0], computed[1], computed[2]);
-		TriangleRasterizer tr(target_program, rect, target_height);
-		tr.Draw(dev[0], dev[1], dev[2], !backfacing); }
+		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
+			tu0, tu1,
+			cbc, dbc,
+			ui,
+			VertexFloat1{ dev0.w, dev1.w, dev2.w },
+			VertexFloat1{ dev0.z, dev1.z, dev2.z },
+			data0,
+			data1,
+			data2 };
+		TriangleRasterizer tr(targetProgram, rect, target_height);
+		tr.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
+		        int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
+		        !backfacing); }
 
 	auto generateUniforms(const GLState& state) {
 		ShaderUniforms ui;

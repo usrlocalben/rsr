@@ -31,28 +31,37 @@ constexpr std::array<Plane, 5> clipping_panes = {
 std::string plane_name(Plane plane);
 
 
+inline float CalcGuardBandFactor(rmlv::ivec2 dim) {
+	auto longSide = std::max(dim.x, dim.y);
+	auto half = longSide / 2;
+	return (2048.0F - half) / half; }
+
+
 class Clipper {
 public:
-	Clipper() = default;
+	Clipper(rmlv::ivec2 targetDimensionsInPixels) :
+		factor_(CalcGuardBandFactor(targetDimensionsInPixels)),
+		vFactor_(factor_) {}
 
-	inline unsigned clip_point(const rmlv::vec4& p) const {
-		const int left = static_cast<int>(p.w + p.x < 0) << 0;
-		const int bottom = static_cast<int>(p.w + p.y < 0) << 1;
-		const int near = static_cast<int>(p.w + p.z < 0) << 2;
+	inline unsigned Test(const rmlv::vec4& p) const {
+		const auto w = p.w * factor_;
+		const int left   = static_cast<int>(  w + p.x < 0) << 0;
+		const int bottom = static_cast<int>(  w + p.y < 0) << 1;
+		const int near   = static_cast<int>(p.w + p.z < 0) << 2;
 
-		const int right = static_cast<int>(p.w - p.x < 0) << 3;
-		const int top = static_cast<int>(p.w - p.y < 0) << 4;
+		const int right  = static_cast<int>(  w - p.x < 0) << 3;
+		const int top    = static_cast<int>(  w - p.y < 0) << 4;
 		//auto far = (p.w - p.z < 0) << 5;
 		const unsigned flags = left | bottom | near | right | top;  //| far
 		return flags; }
 
-	inline rmlv::mvec4i clip_point(const rmlv::qfloat4 p) const {
+	inline rmlv::mvec4i Test(const rmlv::qfloat4 p) const {
 		const auto zero = rmlv::mvec4f::zero();
-		const auto w = p.w * factor;
+		const auto w = p.w * vFactor_;
 
 		auto left   =              rmlv::shr<31>(rmlv::float2bits(cmple(w + p.x, zero)));
 		auto bottom = rmlv::shl<1>(rmlv::shr<31>(rmlv::float2bits(cmple(w + p.y, zero))));
-		auto near   = rmlv::shl<2>(rmlv::shr<31>(rmlv::float2bits(cmple(w + p.z, zero))));
+		auto near   = rmlv::shl<2>(rmlv::shr<31>(rmlv::float2bits(cmple(p.w + p.z, zero))));
 
 		auto right  = rmlv::shl<3>(rmlv::shr<31>(rmlv::float2bits(cmple(w - p.x, zero))));
 		auto top    = rmlv::shl<4>(rmlv::shr<31>(rmlv::float2bits(cmple(w - p.y, zero))));
@@ -61,25 +70,23 @@ public:
 		auto flags = left | bottom | near | right | top;  // | far
 		return flags; }
 
-	inline bool is_inside(const Plane plane, const rmlv::vec4& p) const {
-		const float wscaled = p.w * factor;
+	inline bool IsInside(const Plane plane, const rmlv::vec4& p) const {
+		// const float wscaled = p.w * factor;
 		switch (plane) {
-		case Plane::Left:   return wscaled + p.x >= 0;
-		case Plane::Right:  return wscaled - p.x >= 0;
-		case Plane::Bottom: return wscaled + p.y >= 0;
-		case Plane::Top:    return wscaled - p.y >= 0;
+		case Plane::Left:   return p.w + p.x >= 0;
+		case Plane::Right:  return p.w - p.x >= 0;
+		case Plane::Bottom: return p.w + p.y >= 0;
+		case Plane::Top:    return p.w - p.y >= 0;
 		case Plane::Near:   return p.w + p.z >= 0;
 		case Plane::Far:    return p.w - p.z >= 0;
 		default: assert(false); return true; } }
 
-	inline float clip_line(const Plane plane, const rmlv::vec4& a, const rmlv::vec4& b) const {
-		const float aws = a.w * factor;
-		const float bws = b.w * factor;
+	inline float Clip(const Plane plane, const rmlv::vec4& a, const rmlv::vec4& b) const {
 		switch (plane) {
-		case Plane::Left:   return (aws + a.x) / ((aws + a.x) - (bws + b.x));
-		case Plane::Right:  return (aws - a.x) / ((aws - a.x) - (bws - b.x));
-		case Plane::Bottom: return (aws + a.y) / ((aws + a.y) - (bws + b.y));
-		case Plane::Top:    return (aws - a.y) / ((aws - a.y) - (bws - b.y));
+		case Plane::Left:   return (a.w + a.x) / ((a.w + a.x) - (b.w + b.x));
+		case Plane::Right:  return (a.w - a.x) / ((a.w - a.x) - (b.w - b.x));
+		case Plane::Bottom: return (a.w + a.y) / ((a.w + a.y) - (b.w + b.y));
+		case Plane::Top:    return (a.w - a.y) / ((a.w - a.y) - (b.w - b.y));
 		case Plane::Near:   return (a.w + a.z) / ((a.w + a.z) - (b.w + b.z));
 		case Plane::Far:    return (a.w - a.z) / ((a.w - a.z) - (b.w - b.z));
 		default: assert(false); return 0.0F; } }
@@ -94,7 +101,8 @@ public:
 	*/
 
 private:
-	const float factor{ 4.0F };
+	const float factor_;
+	const rmlv::mvec4f vFactor_;
 	// const rmlv::mvec4f GUARDBAND_WWWW{GUARDBAND_FACTOR, GUARDBAND_FACTOR, 1.0f, 0.0f};
 	};
 
