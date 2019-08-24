@@ -46,6 +46,7 @@ cc_library(
         ":fragment",
         ":gl",
         ":gpu_protocol",
+        ":gpu_shaders",
         ":interpolate",
         ":math",
         ":packed_stream",
@@ -257,6 +258,19 @@ cc_test(
         ":gpu",  # DefaultTarget
         ":interpolate",
         ":triangle",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "gpu_shaders",
+    srcs = ["rglv_gpu_shaders.cxx"],
+    hdrs = ["rglv_gpu_shaders.hxx"],
+    deps = [
+        "//src/rml/rmlm:mat4",
+        "//src/rml/rmlv:soa",
+        "//src/rml/rmlv:vec",
+        ":interpolate",
         ],
     copts = RSR_DEFAULT_COPTS,
     )

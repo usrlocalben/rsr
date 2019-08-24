@@ -2,7 +2,7 @@
 #include <string_view>
 
 #include "src/rgl/rglv/rglv_fragment.hxx"
-#include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_gpu_shaders.hxx"
 #include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rgl/rglv/rglv_triangle.hxx"
