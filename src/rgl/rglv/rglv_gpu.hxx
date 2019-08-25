@@ -79,13 +79,12 @@ struct DefaultTargetProgram {
 	const rmlv::qfloat2 targetDimensions_;
 
 	int offs_, offsLeft_;
-	rglv::VertexFloat1 oneOverW_;
 	rglv::VertexFloat1 zOverW_;
+	rglv::VertexFloat1 oneOverW_;
 	rglv::VertexFloat3 vo0_;
 	rglv::VertexFloat3 vo1_;
 	rglv::VertexFloat3 vo2_;
 	rglv::VertexFloat3 vo3_;
-
 
 	DefaultTargetProgram(
 		const TEXTURE_UNIT& tu0,
@@ -103,8 +102,8 @@ struct DefaultTargetProgram {
 		targetDimensions_({ float(cc.width()), float(cc.height()) }) {}
 
 	inline void Begin(int x, int y,
-	                  rmlv::qfloat4 v0, rmlv::qfloat4 v1, rmlv::qfloat4 v2,
-	                  VertexOutput d0, VertexOutput d1, VertexOutput d2,
+	                  const rmlv::qfloat4& v0, const rmlv::qfloat4& v1, const rmlv::qfloat4& v2,
+	                  const VertexOutput& d0, const VertexOutput& d1, const VertexOutput& d2,
 	                  int li) {
 		offs_ = offsLeft_ = (y >> 1) * (width_ >> 1) + (x >> 1);
 		zOverW_ = rglv::VertexFloat1{
@@ -807,9 +806,8 @@ private:
 
 			// shade up to 4x3 verts
 			for (int i=0; i<3; ++i) {
-				qfloat4 gl_Position;
-				PGM::ShadeVertex(vi_[i], ui, gl_Position, computed[i]);
-				devCoord[i] = pdiv(gl_Position);
+				PGM::ShadeVertex(vi_[i], ui, devCoord[i], computed[i]);
+				devCoord[i] = pdiv(devCoord[i]);
 				devCoord[i].x = devCoord[i].x * deviceScale.x + deviceOffset.x;
 				devCoord[i].y = devCoord[i].y * deviceScale.y + deviceOffset.y; }
 

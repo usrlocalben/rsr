@@ -39,22 +39,23 @@ public:
 			  const bool backfacing[4], int laneCnt) {
 		using std::max, std::min;
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3;
-		using rmlv::mvec4f, rmlv::mvec4i, rmlv::shr, rmlv::shl, rmlv::vmin, rmlv::vmax;
+		using rmlv::mvec4f, rmlv::mvec4i, rmlv::sar, rmlv::shl, rmlv::vmin, rmlv::vmax;
 
 		const int last_row = targetHeightInPx_ - 1;
 		const int q = 2; // block size is 2x2
 
-		auto x1 = ftoi_round(dc1.x * 16.0F);
-		auto x2 = ftoi_round(dc2.x * 16.0F);
-		auto x3 = ftoi_round(dc3.x * 16.0F);
-		auto y1 = ftoi_round(dc1.y * 16.0F);
-		auto y2 = ftoi_round(dc2.y * 16.0F);
-		auto y3 = ftoi_round(dc3.y * 16.0F);
+		const mvec4f fixScale{ 16.0F };
+		auto x1 = ftoi_round(dc1.x * fixScale);
+		auto x2 = ftoi_round(dc2.x * fixScale);
+		auto x3 = ftoi_round(dc3.x * fixScale);
+		auto y1 = ftoi_round(dc1.y * fixScale);
+		auto y2 = ftoi_round(dc2.y * fixScale);
+		auto y3 = ftoi_round(dc3.y * fixScale);
 
-		mvec4i Vminx = vmax(rmlv::shr<4>(vmin(vmin(x1,x2),x3) + 0xf), rect_.left.x) & mvec4i{~q-1};
-		mvec4i Vendx = vmin(rmlv::shr<4>(vmax(vmax(x1,x2),x3) + 0xf), rect_.right.x);
-		mvec4i Vminy = vmax(rmlv::shr<4>(vmin(vmin(y1,y2),y3) + 0xf), rect_.top.y) & mvec4i{~q-1};
-		mvec4i Vendy = vmin(rmlv::shr<4>(vmax(vmax(y1,y2),y3) + 0xf), rect_.bottom.y);
+		mvec4i Vminx = vmax(rmlv::sar<4>(vmin(vmin(x1,x2),x3) + 0xf), rect_.left.x) & mvec4i{~q-1};
+		mvec4i Vendx = vmin(rmlv::sar<4>(vmax(vmax(x1,x2),x3) + 0xf), rect_.right.x);
+		mvec4i Vminy = vmax(rmlv::sar<4>(vmin(vmin(y1,y2),y3) + 0xf), rect_.top.y) & mvec4i{~q-1};
+		mvec4i Vendy = vmin(rmlv::sar<4>(vmax(vmax(y1,y2),y3) + 0xf), rect_.bottom.y);
 
 		auto Vdx12 = x1 - x2, Vdy12 = y2 - y1;
 		auto Vdx23 = x2 - x3, Vdy23 = y3 - y2;
@@ -69,26 +70,26 @@ public:
 		Vc1 += mvec4i{1} & (cmpgt(Vdy12, 0) | (cmpeq(Vdy12,0) & cmpgt(Vdx12, 0)));
 		Vc2 += mvec4i{1} & (cmpgt(Vdy23, 0) | (cmpeq(Vdy23,0) & cmpgt(Vdx23, 0)));
 		Vc3 += mvec4i{1} & (cmpgt(Vdy31, 0) | (cmpeq(Vdy31,0) & cmpgt(Vdx31, 0)));
-		Vc1 = shr<4>(Vc1 - 1);
-		Vc2 = shr<4>(Vc2 - 1);
-		Vc3 = shr<4>(Vc3 - 1);
+		Vc1 = sar<4>(Vc1 - 1);
+		Vc2 = sar<4>(Vc2 - 1);
+		Vc3 = sar<4>(Vc3 - 1);
 
 		mvec4f Vscale{mvec4f{1.0f} / (itof(Vc1) + itof(Vc2) + itof(Vc3))};
 
 		for (int li=0; li<laneCnt; li++) {
-			auto dx12 = Vdx12.si[li];
-			auto dx23 = Vdx23.si[li];
-			auto dx31 = Vdx31.si[li];
-			auto dy12 = Vdy12.si[li];
-			auto dy23 = Vdy23.si[li];
-			auto dy31 = Vdy31.si[li];
-			auto c1 = Vc1.si[li];
-			auto c2 = Vc2.si[li];
-			auto c3 = Vc3.si[li];
-			auto miny = Vminy.si[li];
-			auto endy = Vendy.si[li];
-			auto minx = Vminx.si[li];
-			auto endx = Vendx.si[li];
+			int dx12 = Vdx12.si[li];
+			int dx23 = Vdx23.si[li];
+			int dx31 = Vdx31.si[li];
+			int dy12 = Vdy12.si[li];
+			int dy23 = Vdy23.si[li];
+			int dy31 = Vdy31.si[li];
+			int c1 = Vc1.si[li];
+			int c2 = Vc2.si[li];
+			int c3 = Vc3.si[li];
+			int miny = Vminy.si[li];
+			int endy = Vendy.si[li];
+			int minx = Vminx.si[li];
+			int endx = Vendx.si[li];
 			mvec4f scale{Vscale.lane[li]};
 			bool frontfacing = !backfacing[li];
 
@@ -96,9 +97,9 @@ public:
 			auto cb2 = mvec4i{0,dy23,0,dy23} + mvec4i{0,0,dx23,dx23} + c2;
 			auto cb3 = mvec4i{0,dy31,0,dy31} + mvec4i{0,0,dx31,dx31} + c3;
 
-			auto cb1dydx = mvec4i{dy12*2}; auto cb1dxdy = mvec4i{dx12*2};
-			auto cb2dydx = mvec4i{dy23*2}; auto cb2dxdy = mvec4i{dx23*2};
-			auto cb3dydx = mvec4i{dy31*2}; auto cb3dxdy = mvec4i{dx31*2};
+			mvec4i cb1dydx{dy12*2}; mvec4i cb1dxdy{dx12*2};
+			mvec4i cb2dydx{dy23*2}; mvec4i cb2dxdy{dx23*2};
+			mvec4i cb3dydx{dy31*2}; mvec4i cb3dxdy{dx31*2};
 
 			program_.Begin(minx, miny, dc1, dc2, dc3, data1, data2, data3, li);
 			for (int y=miny; y<endy; y+=2, cb1+=cb1dxdy, cb2+=cb2dxdy, cb3+=cb3dxdy, program_.CR()) {
