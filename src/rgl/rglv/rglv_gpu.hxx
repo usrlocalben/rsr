@@ -102,8 +102,8 @@ struct DefaultTargetProgram {
 		targetDimensions_({ float(cc.width()), float(cc.height()) }) {}
 
 	inline void Begin(int x, int y,
-	                  const rmlv::qfloat4& v0, const rmlv::qfloat4& v1, const rmlv::qfloat4& v2,
-	                  const VertexOutput& d0, const VertexOutput& d1, const VertexOutput& d2,
+	                  rmlv::qfloat4 v0, rmlv::qfloat4 v1, rmlv::qfloat4 v2,
+	                  VertexOutput d0, VertexOutput d1, VertexOutput d2,
 	                  int li) {
 		offs_ = offsLeft_ = (y >> 1) * (width_ >> 1) + (x >> 1);
 		zOverW_ = rglv::VertexFloat1{

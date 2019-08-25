@@ -18,9 +18,16 @@ namespace rglv {
  */
 using BaryCoord = rmlv::qfloat3;
 
+
+#if 1
 struct VertexFloat1 { rmlv::qfloat  v0, v1, v2; };
 struct VertexFloat2 { rmlv::qfloat2 v0, v1, v2; };
 struct VertexFloat3 { rmlv::qfloat3 v0, v1, v2; };
+#else
+struct VertexFloat1 { float  v0, v1, v2; };
+struct VertexFloat2 { rmlv::vec2 v0, v1, v2; };
+struct VertexFloat3 { rmlv::vec3 v0, v1, v2; };
+#endif
 
 
 inline auto Interpolate(BaryCoord bc, VertexFloat1 uniform) {
