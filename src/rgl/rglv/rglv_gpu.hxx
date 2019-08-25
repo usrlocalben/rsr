@@ -761,10 +761,10 @@ private:
 
 		const ShaderUniforms ui = MakeUniforms(state);
 
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
+		const qfloat2 deviceScale{ 16.0F * float(bufferDimensionsInPixels_.x/2),
+		                          -16.0F * float(bufferDimensionsInPixels_.y/2) };
+		const qfloat2 deviceOffset{ 16.0F * float(bufferDimensionsInPixels_.x/2),
+		                            16.0F * float(bufferDimensionsInPixels_.y/2) };
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);

@@ -39,22 +39,21 @@ public:
 			  const bool backfacing[4], int laneCnt) {
 		using std::max, std::min;
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3;
-		using rmlv::mvec4f, rmlv::mvec4i, rmlv::sar, rmlv::shl, rmlv::vmin, rmlv::vmax;
+		using rmlv::mvec4f, rmlv::mvec4i, rmlv::sar, rmlv::shr, rmlv::shl, rmlv::vmin, rmlv::vmax;
 
-		const int last_row = targetHeightInPx_ - 1;
 		const int q = 2; // block size is 2x2
 
-		const mvec4f fixScale{ 16.0F };
-		auto x1 = ftoi_round(dc1.x * fixScale);
-		auto x2 = ftoi_round(dc2.x * fixScale);
-		auto x3 = ftoi_round(dc3.x * fixScale);
-		auto y1 = ftoi_round(dc1.y * fixScale);
-		auto y2 = ftoi_round(dc2.y * fixScale);
-		auto y3 = ftoi_round(dc3.y * fixScale);
+		//const mvec4f fixScale{ 16.0F };
+		auto x1 = ftoi_round(dc1.x);
+		auto x2 = ftoi_round(dc2.x);
+		auto x3 = ftoi_round(dc3.x);
+		auto y1 = ftoi_round(dc1.y);
+		auto y2 = ftoi_round(dc2.y);
+		auto y3 = ftoi_round(dc3.y);
 
 		mvec4i Vminx = vmax(rmlv::sar<4>(vmin(vmin(x1,x2),x3) + 0xf), rect_.left.x) & mvec4i{~q-1};
 		mvec4i Vendx = vmin(rmlv::sar<4>(vmax(vmax(x1,x2),x3) + 0xf), rect_.right.x);
-		mvec4i Vminy = vmax(rmlv::sar<4>(vmin(vmin(y1,y2),y3) + 0xf), rect_.top.y) & mvec4i{~q-1};
+		mvec4i Vminy = vmax(rmlv::sar<4>(vmin(vmin(y1,y2),y3) + 0xf), rect_.top.y)  & mvec4i{~q-1};
 		mvec4i Vendy = vmin(rmlv::sar<4>(vmax(vmax(y1,y2),y3) + 0xf), rect_.bottom.y);
 
 		auto Vdx12 = x1 - x2, Vdy12 = y2 - y1;
@@ -63,18 +62,16 @@ public:
 		auto Vc1 = Vdy12*(shl<4>(Vminx) - x1) + Vdx12*(shl<4>(Vminy)-y1);
 		auto Vc2 = Vdy23*(shl<4>(Vminx) - x2) + Vdx23*(shl<4>(Vminy)-y2);
 		auto Vc3 = Vdy31*(shl<4>(Vminx) - x3) + Vdx31*(shl<4>(Vminy)-y3);
+		const auto zero = _mm_setzero_si128();
+		const auto one = _mm_set1_epi32(1);
+		Vc1 += shr<31>(cmpgt(Vdy12, zero) | (cmpeq(Vdy12,zero) & cmpgt(Vdx12, zero)));
+		Vc2 += shr<31>(cmpgt(Vdy23, zero) | (cmpeq(Vdy23,zero) & cmpgt(Vdx23, zero)));
+		Vc3 += shr<31>(cmpgt(Vdy31, zero) | (cmpeq(Vdy31,zero) & cmpgt(Vdx31, zero)));
+		Vc1 = sar<4>(Vc1 - one);
+		Vc2 = sar<4>(Vc2 - one);
+		Vc3 = sar<4>(Vc3 - one);
 
-		/*if (dy12 > 0 || (dy12==0 && dx12>0)) c1++;
-		if (dy23 > 0 || (dy23==0 && dx23>0)) c2++;
-		if (dy31 > 0 || (dy31==0 && dx31>0)) c3++;*/
-		Vc1 += mvec4i{1} & (cmpgt(Vdy12, 0) | (cmpeq(Vdy12,0) & cmpgt(Vdx12, 0)));
-		Vc2 += mvec4i{1} & (cmpgt(Vdy23, 0) | (cmpeq(Vdy23,0) & cmpgt(Vdx23, 0)));
-		Vc3 += mvec4i{1} & (cmpgt(Vdy31, 0) | (cmpeq(Vdy31,0) & cmpgt(Vdx31, 0)));
-		Vc1 = sar<4>(Vc1 - 1);
-		Vc2 = sar<4>(Vc2 - 1);
-		Vc3 = sar<4>(Vc3 - 1);
-
-		mvec4f Vscale{mvec4f{1.0f} / (itof(Vc1) + itof(Vc2) + itof(Vc3))};
+		const auto Vscale = rmlv::oneover(itof(Vc1) + itof(Vc2) + itof(Vc3));
 
 		for (int li=0; li<laneCnt; li++) {
 			int dx12 = Vdx12.si[li];
@@ -107,10 +104,10 @@ public:
 				for (int x=minx; x<endx; x+=2, cx1+=cb1dydx, cx2+=cb2dydx, cx3+=cb3dydx, program_.Right2()) {
 					mvec4i edges{cx1|cx2|cx3};
 					if (movemask(bits2float(edges)) == 0xf) continue;
-					const mvec4i trimask(rmlv::sar<31>(edges));
+					const mvec4i trimask(sar<31>(edges));
 
 					// lower-left-origin opengl screen coords
-					const qfloat2 frag_coord = { mvec4f(x+0.5f)+rglv::FQX, mvec4f(last_row-y+0.5f)+rglv::FQYR };
+					const qfloat2 frag_coord = { mvec4f(x+0.5F)+rglv::FQX, mvec4f(targetHeightInPx_-y-0.5F)+rglv::FQYR };
 
 					rglv::BaryCoord bary;
 					bary.x = itof(cx2) * scale;
