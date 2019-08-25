@@ -34,7 +34,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 	static int id;
 
 	template <typename TEXTURE_UNIT>
-	inline static void shadeFragment(
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
@@ -70,7 +70,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 
 struct IQPostProgram final : public rglv::BaseProgram {
 	static int id;
-	inline static rmlv::qfloat3 shadeCanvas(const rmlv::qfloat2 q, const rmlv::qfloat3 source) {
+	inline static rmlv::qfloat3 ShadeCanvas(const rmlv::qfloat2 q, const rmlv::qfloat3 source) {
 		//const auto q = gl_FragCoord / targetSize;
 		auto col = source;
 		col = pow(col, rmlv::qfloat3(0.45F, 0.5F, 0.55F));
@@ -88,7 +88,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 #define gl_ModelViewMatrix u.mvm
 #define gl_ModelViewProjectionMatrix u.mvpm
 #define gl_NormalMatrix u.nm
-	inline static void shadeVertex(
+	inline static void ShadeVertex(
 		const rglv::VertexInput& v,
 		const rglv::ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
@@ -108,7 +108,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
 	template <typename TEXTURE_UNIT>
-	inline static void shadeFragment(
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
@@ -140,7 +140,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 #define IN_TEXCOORD v.a2
 #define OUT_TEXCOORD outs.r0
 #define gl_ModelViewProjectionMatrix u.mvpm
-	static void shadeVertex(
+	static void ShadeVertex(
 		const rglv::VertexInput& v,
 		const rglv::ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
@@ -150,7 +150,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
 	template <typename TEXTURE_UNIT>
-	inline static void shadeFragment(
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
@@ -184,7 +184,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 #define gl_ModelViewMatrix u.mvm
 #define gl_ModelViewProjectionMatrix u.mvpm
 #define gl_NormalMatrix u.nm
-	inline static void shadeVertex(
+	inline static void ShadeVertex(
 		const rglv::VertexInput& v,
 		const rglv::ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
@@ -204,7 +204,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
 	template <typename TEXTURE_UNIT>
-	inline static void shadeFragment(
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms

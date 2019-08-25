@@ -59,9 +59,9 @@ public:
 		rclmt::jobsys::Job *renderJob = Render();
 		internalDepthCanvas_.resize(width_, height_);
 		internalColorCanvas_.resize(width_, height_);
-		gpuNode_->SetDimensions(width_, height_);
-		gpuNode_->SetTileDimensions(tileDim_);
-		gpuNode_->SetAspect(float(width_) / float(height_));
+		gpuNode_->Dimensions(width_, height_);
+		gpuNode_->TileDimensions(tileDim_);
+		gpuNode_->Aspect(float(width_) / float(height_));
 		gpuNode_->AddLink(AfterAll(renderJob));
 		gpuNode_->Run(); }
 
@@ -71,10 +71,10 @@ public:
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
-		gpuNode_->SetDoubleBuffer(doubleBuffer_);
-		gpuNode_->SetColorCanvas(GetColorCanvas());
-		gpuNode_->SetDepthCanvas(GetDepthCanvas());
-		auto& ic = gpuNode_->GetIC();
+		gpuNode_->DoubleBuffer(doubleBuffer_);
+		gpuNode_->ColorCanvas(GetColorCanvas());
+		gpuNode_->DepthCanvas(GetDepthCanvas());
+		auto& ic = gpuNode_->IC();
 		if (smallCanvas_ != nullptr) {
 			ic.storeHalfsize(smallCanvas_); }
 		if (outCanvas_ != nullptr) {

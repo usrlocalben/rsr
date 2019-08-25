@@ -118,7 +118,7 @@ void copyRect(
 				qfloat3 source1Color{ scr, scg, scb };
 
 				// shade
-				qfloat3 fragColor = PGM::shadeCanvas(q, source1Color);
+				qfloat3 fragColor = PGM::ShadeCanvas(q, source1Color);
 
 				// convert
 				packed[sub] = CONVERTER::to_tc(fragColor); }

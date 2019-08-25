@@ -37,9 +37,9 @@ inline float CalcGuardBandFactor(rmlv::ivec2 dim) {
 	return (2048.0F - half) / half; }
 
 
-class Clipper {
+class ViewFrustum {
 public:
-	Clipper(rmlv::ivec2 targetDimensionsInPixels) :
+	ViewFrustum(rmlv::ivec2 targetDimensionsInPixels) :
 		factor_(CalcGuardBandFactor(targetDimensionsInPixels)),
 		vFactor_(factor_) {}
 
@@ -81,7 +81,7 @@ public:
 		case Plane::Far:    return p.w - p.z >= 0;
 		default: assert(false); return true; } }
 
-	inline float Clip(const Plane plane, const rmlv::vec4& a, const rmlv::vec4& b) const {
+	inline float Distance(const Plane plane, const rmlv::vec4& a, const rmlv::vec4& b) const {
 		switch (plane) {
 		case Plane::Left:   return (a.w + a.x) / ((a.w + a.x) - (b.w + b.x));
 		case Plane::Right:  return (a.w - a.x) / ((a.w - a.x) - (b.w - b.x));

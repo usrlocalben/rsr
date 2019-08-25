@@ -54,7 +54,7 @@ struct VertexOutput {
 struct BaseProgram {
 	static int id;
 
-	inline static void shadeVertex(
+	inline static void ShadeVertex(
 		const VertexInput& v,
 		const ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
@@ -63,7 +63,7 @@ struct BaseProgram {
 		gl_Position = rmlm::mul(u.mvpm, v.a0); }
 
 	template <typename TEXTURE_UNIT>
-	inline static void shadeFragment(
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// uniforms
@@ -80,7 +80,7 @@ struct BaseProgram {
 		) {
 		gl_FragColor = rmlv::mvec4f::one(); }
 
-	inline static rmlv::qfloat3 shadeCanvas(
+	inline static rmlv::qfloat3 ShadeCanvas(
 		rmlv::qfloat2 gl_FragCoord,
 		rmlv::qfloat3 source
 		) {

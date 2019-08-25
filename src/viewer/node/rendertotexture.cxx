@@ -46,14 +46,14 @@ public:
 		if (enableAA_) {
 			// internalDepthCanvas_.resize(dim_*2, dim_*2);
 			// internalColorCanvas_.resize(dim_*2, dim_*2);
-			gpuNode_->SetDimensions(width_*2, height_*2); }
+			gpuNode_->Dimensions(width_*2, height_*2); }
 		else {
 			// internalDepthCanvas_.resize(dim_, dim_);
 			// internalColorCanvas_.resize(dim_, dim_);
-			gpuNode_->SetDimensions(width_, height_); }
+			gpuNode_->Dimensions(width_, height_); }
 		outputTexture_.resize(width_, height_);
-		gpuNode_->SetTileDimensions(rmlv::ivec2{ 8, 8 });
-		gpuNode_->SetAspect(aspect_);
+		gpuNode_->TileDimensions(rmlv::ivec2{ 8, 8 });
+		gpuNode_->Aspect(aspect_);
 		gpuNode_->AddLink(AfterAll(renderJob));
 		gpuNode_->Run(); }
 
@@ -63,10 +63,10 @@ public:
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
-		gpuNode_->SetDoubleBuffer(true);  // this->double_buffer;
-		gpuNode_->SetColorCanvas(&GetColorCanvas());
-		gpuNode_->SetDepthCanvas(&GetDepthCanvas());
-		auto& ic = gpuNode_->GetIC();
+		gpuNode_->DoubleBuffer(true);  // this->double_buffer;
+		gpuNode_->ColorCanvas(&GetColorCanvas());
+		gpuNode_->DepthCanvas(&GetDepthCanvas());
+		auto& ic = gpuNode_->IC();
 		outCanvas_ = rglr::FloatingPointCanvas(outputTexture_.buf.data(), width_, height_, width_);
 		if (enableAA_) {
 			ic.storeHalfsize(&outCanvas_); }

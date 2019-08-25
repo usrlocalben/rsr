@@ -42,7 +42,6 @@ cc_library(
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
-        ":clipper",
         ":fragment",
         ":gl",
         ":gpu_protocol",
@@ -52,6 +51,7 @@ cc_library(
         ":packed_stream",
         ":triangle",
         ":vao",
+        ":view_frustum",
         ],
     copts = RSR_DEFAULT_COPTS,
     )
@@ -153,9 +153,9 @@ cc_test(
     )
 
 cc_library(
-    name = "clipper",
-    srcs = ["rglv_clipper.cxx"],
-    hdrs = ["rglv_clipper.hxx"],
+    name = "view_frustum",
+    srcs = ["rglv_view_frustum.cxx"],
+    hdrs = ["rglv_view_frustum.hxx"],
     deps = [
         "//src/rcl/rcls:aligned_containers",
         "//src/rml/rmlv:soa",
