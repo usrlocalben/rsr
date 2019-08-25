@@ -66,60 +66,71 @@ struct GPUStats {
 
 template <typename TEXTURE_UNIT, typename FRAGMENT_PROGRAM, typename BLEND_PROGRAM>
 struct DefaultTargetProgram {
-
-	// const FRAGMENT_PROGRAM& fp;
-	// const BLEND_PROGRAM& bp;
+	const TEXTURE_UNIT& tu0_;
+	const TEXTURE_UNIT& tu1_;
 
 	rmlv::qfloat4* cb_;
-	rmlv::qfloat4* cbx_;
 	rmlv::qfloat* db_;
-	rmlv::qfloat* dbx_;
 
-	const TEXTURE_UNIT& tu0_, tu1_;
+	const ShaderUniforms uniforms_;
 
 	const int width_;
 	const int height_;
 	const rmlv::qfloat2 targetDimensions_;
+
 	int offs_, offsLeft_;
+	rglv::VertexFloat1 oneOverW_;
+	rglv::VertexFloat1 zOverW_;
+	rglv::VertexFloat3 vo0_;
+	rglv::VertexFloat3 vo1_;
+	rglv::VertexFloat3 vo2_;
+	rglv::VertexFloat3 vo3_;
 
-	const rglv::VertexFloat1 oneOverW_;
-	const rglv::VertexFloat1 zOverW_;
-
-	const rglv::VertexFloat3 vo0_;
-	const rglv::VertexFloat3 vo1_;
-	const rglv::VertexFloat3 vo2_;
-	const rglv::VertexFloat3 vo3_;
-
-	const ShaderUniforms uniforms_;
 
 	DefaultTargetProgram(
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
 		rglr::QFloat4Canvas& cc,
 		rglr::QFloatCanvas& dc,
-		ShaderUniforms uniforms,
-		VertexFloat1 oneOverW,
-		VertexFloat1 zOverW,
-		VertexOutputx1 computed0,
-		VertexOutputx1 computed1,
-		VertexOutputx1 computed2) :
-		cb_(cc.data()),
-		db_(dc.data()),
+		ShaderUniforms uniforms) :
 		tu0_(tu0),
 		tu1_(tu1),
+		cb_(cc.data()),
+		db_(dc.data()),
+		uniforms_(uniforms),
 		width_(cc.width()),
 		height_(cc.height()),
-		targetDimensions_({ float(cc.width()), float(cc.height()) }),
-		oneOverW_(oneOverW),
-		zOverW_(zOverW),
-		vo0_({ computed0.r0, computed1.r0, computed2.r0 }),
-		vo1_({ computed0.r1, computed1.r1, computed2.r1 }),
-		vo2_({ computed0.r2, computed1.r2, computed2.r2 }),
-		vo3_({ computed0.r3, computed1.r3, computed2.r3 }),
-		uniforms_(uniforms) {}
+		targetDimensions_({ float(cc.width()), float(cc.height()) }) {}
 
-	inline void Begin(int x, int y) {
-		offs_ = offsLeft_ = (y >> 1) * (width_ >> 1) + (x >> 1); }
+	inline void Begin(int x, int y,
+	                  rmlv::qfloat4 v0, rmlv::qfloat4 v1, rmlv::qfloat4 v2,
+	                  VertexOutput d0, VertexOutput d1, VertexOutput d2,
+	                  int li) {
+		offs_ = offsLeft_ = (y >> 1) * (width_ >> 1) + (x >> 1);
+		zOverW_ = rglv::VertexFloat1{
+			v0.z.lane[li],
+			v1.z.lane[li],
+			v2.z.lane[li] };
+		oneOverW_ = rglv::VertexFloat1{
+			v0.w.lane[li],
+			v1.w.lane[li],
+			v2.w.lane[li] };
+		vo0_ = rglv::VertexFloat3{
+			{ d0.r0.x.lane[li], d0.r0.y.lane[li], d0.r0.z.lane[li] },
+			{ d1.r0.x.lane[li], d1.r0.y.lane[li], d1.r0.z.lane[li] },
+			{ d2.r0.x.lane[li], d2.r0.y.lane[li], d2.r0.z.lane[li] } };
+		vo1_ = rglv::VertexFloat3{
+			{ d0.r1.x.lane[li], d0.r1.y.lane[li], d0.r1.z.lane[li] },
+			{ d1.r1.x.lane[li], d1.r1.y.lane[li], d1.r1.z.lane[li] },
+			{ d2.r1.x.lane[li], d2.r1.y.lane[li], d2.r1.z.lane[li] } };
+		vo2_ = rglv::VertexFloat3{
+			{ d0.r2.x.lane[li], d0.r2.y.lane[li], d0.r2.z.lane[li] },
+			{ d1.r2.x.lane[li], d1.r2.y.lane[li], d1.r2.z.lane[li] },
+			{ d2.r2.x.lane[li], d2.r2.y.lane[li], d2.r2.z.lane[li] } };
+		vo3_ = rglv::VertexFloat3{
+			{ d0.r3.x.lane[li], d0.r3.y.lane[li], d0.r3.z.lane[li] },
+			{ d1.r3.x.lane[li], d1.r3.y.lane[li], d1.r3.z.lane[li] },
+			{ d2.r3.x.lane[li], d2.r3.y.lane[li], d2.r3.z.lane[li] } }; }
 
 	inline void CR() {
 		offsLeft_ += width_ >> 1;
@@ -763,12 +774,12 @@ private:
 		array<VertexInput, 3> vi_;
 		array<VertexOutput, 3> computed;
 		array<qfloat4, 3> devCoord;
-		array<mvec4i, 3>  fx;
-		array<mvec4i, 3>  fy;
+		// XXX array<mvec4i, 3>  fx;
+		// XXX array<mvec4i, 3>  fy;
 
 		int li = 0;  // sse lane being loaded
 		bool eof = false;
-		bool backfacing;
+		bool backfacing[4];
 		while (!eof) {
 
 			const uint16_t i0 = cs.consumeUShort();
@@ -779,7 +790,7 @@ private:
 				// load vertex data from the VAO into the current SIMD lane
 				const uint16_t i1 = cs.consumeUShort();
 				const uint16_t i2 = cs.consumeUShort();
-				backfacing = i0 & 0x8000;
+				backfacing[li] = i0 & 0x8000;
 				array<uint16_t, 3> faceIndices = {uint16_t(i0 & 0x7fff), i1, i2};
 
 				for (int i=0; i<3; ++i) {
@@ -799,24 +810,15 @@ private:
 				qfloat4 gl_Position;
 				PGM::ShadeVertex(vi_[i], ui, gl_Position, computed[i]);
 				devCoord[i] = pdiv(gl_Position);
-				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale.x + deviceOffset.x));
-				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale.y + deviceOffset.y)); }
+				devCoord[i].x = devCoord[i].x * deviceScale.x + deviceOffset.x;
+				devCoord[i].y = devCoord[i].y * deviceScale.y + deviceOffset.y; }
 
 			// draw up to 4 triangles
-			for (int ti=0; ti<li; ti++) {
-				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
-					tu0, tu1,
-					cbc, dbc,
-					ui,
-					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
-					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
-					computed[0].lane(ti),
-					computed[1].lane(ti),
-					computed[2].lane(ti) };
-				TriangleRasterizer tr(targetProgram, rect, target_height);
-				tr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
-				        fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
-				        !backfacing); }
+			DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{ tu0, tu1, cbc, dbc, ui };
+			TriangleRasterizer tr(targetProgram, rect, target_height);
+			tr.Draw(devCoord[0], devCoord[1], devCoord[2],
+					computed[0], computed[1], computed[2],
+					backfacing, li);
 
 			// reset the SIMD lane counter
 			li = 0; }}
@@ -974,19 +976,19 @@ private:
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
+		/*DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
 			tu0, tu1,
 			cbc, dbc,
 			ui,
-			VertexFloat1{ dev0.w, dev1.w, dev2.w },
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
+			VertexFloat1{ dev0.w, dev1.w, dev2.w },
 			data0,
 			data1,
 			data2 };
 		TriangleRasterizer tr(targetProgram, rect, target_height);
 		tr.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
 		        int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
-		        !backfacing); }
+		        !backfacing);*/ }
 
 	auto MakeUniforms(const GLState& state) {
 		ShaderUniforms ui;

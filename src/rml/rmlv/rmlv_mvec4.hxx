@@ -209,6 +209,19 @@ inline mvec4f operator+(const float& lhs, const mvec4f& rhs) { return mvec4f{ lh
 inline mvec4f vmin(const mvec4f& a, const mvec4f& b) { return _mm_min_ps(a.v, b.v); }
 inline mvec4f vmax(const mvec4f& a, const mvec4f& b) { return _mm_max_ps(a.v, b.v); }
 
+inline mvec4i vmin(const mvec4i& a, const mvec4i& b) {
+	return _mm_min_epi32(a.v, b.v); }
+	/*__m128i cmp = _mm_cmpgt_epi32(a.v, b.v);
+	__m128i asel = _mm_andnot_si128(a.v, cmp);
+	__m128i bsel = _mm_and_si128(b.v, cmp);
+	return _mm_or_si128(asel, bsel); }*/
+inline mvec4i vmax(const mvec4i& a, const mvec4i& b) {
+	return _mm_max_epi32(a.v, b.v); }
+	/*__m128i cmp = _mm_cmplt_epi32(a.v, b.v);
+	__m128i asel = _mm_andnot_si128(a.v, cmp);
+	__m128i bsel = _mm_and_si128(b.v, cmp);
+	return _mm_or_si128(asel, bsel); }*/
+
 inline mvec4i operator+(const mvec4i& a, const mvec4i& b) { return mvec4i(_mm_add_epi32(a.v, b.v)); }
 inline mvec4i operator-(const mvec4i& a, const mvec4i& b) { return mvec4i(_mm_sub_epi32(a.v, b.v)); }
 inline mvec4i operator*(const mvec4i& a, const mvec4i& b) { return mvec4i(sse2_mul32(a.v, b.v)); }
