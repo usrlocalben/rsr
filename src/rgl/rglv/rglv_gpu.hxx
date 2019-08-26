@@ -66,14 +66,8 @@ struct GPUStats {
 
 template <typename TEXTURE_UNIT, typename FRAGMENT_PROGRAM, typename BLEND_PROGRAM>
 struct DefaultTargetProgram {
-
-	// const FRAGMENT_PROGRAM& fp;
-	// const BLEND_PROGRAM& bp;
-
-	rmlv::qfloat4* cb_;
-	rmlv::qfloat4* cbx_;
+	rglr::Int16QPixel* cb_;
 	rmlv::qfloat* db_;
-	rmlv::qfloat* dbx_;
 
 	const TEXTURE_UNIT& tu0_, tu1_;
 
@@ -95,7 +89,7 @@ struct DefaultTargetProgram {
 	DefaultTargetProgram(
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
-		rglr::QFloat4Canvas& cc,
+		rglr::Int16Canvas& cc,
 		rglr::QFloatCanvas& dc,
 		ShaderUniforms uniforms,
 		VertexFloat1 oneOverW,
@@ -130,30 +124,30 @@ struct DefaultTargetProgram {
 
 	inline void LoadDepth(rmlv::qfloat& destDepth) {
 		// from depthbuffer
-		// destDepth = _mm_load_ps(reinterpret_cast<float*>(&db[offs]));
-
+		destDepth = _mm_load_ps(reinterpret_cast<float*>(&db_[offs_]));
 		// from alpha
-		destDepth = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].a))); }
+		// destDepth = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].a)));
+		}
 
 	inline void StoreDepth(rmlv::qfloat destDepth,
 	                       rmlv::qfloat sourceDepth,
 	                       rmlv::mvec4i fragMask) {
-		// auto addr = &db_[offs_];   // depthbuffer
-		auto addr = &(cb_[offs_].a);  // alpha-channel
+		auto addr = &db_[offs_];   // depthbuffer
+		// auto addr = &(cb_[offs_].a);  // alpha-channel
 		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
 
 	inline void LoadColor(rmlv::qfloat4& destColor) {
-		destColor.r = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].r)));
-		destColor.g = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].g)));
-		destColor.b = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].b))); }
+		auto& cell = cb_[offs_];
+		rglr::Int16QPixel::Load(cb_+offs_, destColor.x.v, destColor.y.v, destColor.z.v); }
 
 	inline void StoreColor(rmlv::qfloat4 destColor,
 	                       rmlv::qfloat4 sourceColor,
 	                       rmlv::mvec4i fragMask) {
-		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].r)), selectbits(destColor.r, sourceColor.r, fragMask).v);
-		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].g)), selectbits(destColor.g, sourceColor.g, fragMask).v);
-		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].b)), selectbits(destColor.b, sourceColor.b, fragMask).v); }
+		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
+		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
+		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
+		rglr::Int16QPixel::Store(sr, sg, sb, cb_+offs_); }
 
 	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord bary, const bool frontfacing) {
 		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
@@ -443,6 +437,7 @@ private:
 		tiles_[tileIdx].threadId = tid;
 
 		auto& cc = *colorCanvasPtr_;
+		auto& dc = *depthCanvasPtr_;
 
 		const GLState* stateptr = nullptr;
 		while (!cs.eof()) {
@@ -453,6 +448,7 @@ private:
 			else if (cmd == CMD_CLEAR) {
 				auto color = cs.consumeVec4();
 				// std::cout << "clearing to " << color << std::endl;
+				fillRect(rect, 1.0, dc);
 				fillRect(rect, color, cc); }
 			else if (cmd == CMD_STORE_FP32_HALF) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
@@ -1005,7 +1001,7 @@ public:
 		return doubleBuffer_; }
 	void DoubleBuffer(bool value) {
 		doubleBuffer_ = value; }
-	void ColorCanvas(rglr::QFloat4Canvas* ptr) {
+	void ColorCanvas(rglr::Int16Canvas* ptr) {
 		colorCanvasPtr_ = ptr; }
 	void DepthCanvas(rglr::QFloatCanvas* ptr) {
 		depthCanvasPtr_ = ptr; }
@@ -1013,7 +1009,7 @@ public:
 private:
 	// configuration
 	bool doubleBuffer_{true};
-	rglr::QFloat4Canvas* colorCanvasPtr_{nullptr};
+	rglr::Int16Canvas* colorCanvasPtr_{nullptr};
 	rglr::QFloatCanvas* depthCanvasPtr_{nullptr};
 
 	// tile/bin collection

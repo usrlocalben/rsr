@@ -96,7 +96,7 @@ public:
 	void SetTileDim(rmlv::ivec2 value) override {
 		tileDim_ = value; }
 
-	void SetColorCanvas(rglr::QFloat4Canvas* canvas) {
+	void SetColorCanvas(rglr::Int16Canvas* canvas) {
 		colorCanvas_ = canvas;
 		width_ = canvas->width();
 		height_ = canvas->height(); }
@@ -110,7 +110,7 @@ public:
 		internalDepthCanvas_.resize(width_, height_);
 		return &internalDepthCanvas_; }
 
-	rglr::QFloat4Canvas* GetColorCanvas() {
+	rglr::Int16Canvas* GetColorCanvas() {
 		if (colorCanvas_ != nullptr) {
 			// std::cout << "renderer will use a provided colorcanvas" << std::endl;
 			return colorCanvas_; }
@@ -119,7 +119,7 @@ public:
 		return &internalColorCanvas_; }
 
 	// internal
-	rglr::QFloat4Canvas internalColorCanvas_;
+	rglr::Int16Canvas internalColorCanvas_;
 	rglr::QFloatCanvas internalDepthCanvas_;
 
 	// static config
@@ -137,7 +137,7 @@ public:
 	IGPU* gpuNode_{nullptr};
 
 	// received
-	rglr::QFloat4Canvas* colorCanvas_;
+	rglr::Int16Canvas* colorCanvas_;
 	rglr::FloatingPointCanvas* smallCanvas_; };
 
 

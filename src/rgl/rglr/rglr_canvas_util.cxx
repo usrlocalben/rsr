@@ -63,6 +63,27 @@ void fillRect(const rmlg::irect rect, const rmlv::vec4 value, QFloat4Canvas& dst
 		row_dst += dst.stride2(); }}
 
 
+void fillRect(const rmlg::irect rect, const rmlv::vec4 value, Int16Canvas& dst) {
+	const int rect_height_in_quads = (rect.height()) / 2;
+	const int rect_width_in_quads = (rect.width()) / 2;
+
+	int row_offset = (rect.top.y / 2) * dst.stride2();
+	int col_offset = rect.left.x / 2;
+
+	Int16QPixel foo;
+	for (int i=0; i<4; i++) {
+		foo.r[i] = value.x * 255.0F;
+		foo.g[i] = value.y * 255.0F;
+		foo.b[i] = value.z * 255.0F; }
+
+	auto yPtr = &dst.data()[row_offset + col_offset];
+	for (int yy = 0; yy < rect_height_in_quads; yy++) {
+		auto xPtr = yPtr;
+		for (int xx = 0; xx < rect_width_in_quads; xx++) {
+			*xPtr++ = foo; }
+		yPtr += dst.stride2(); }}
+
+
 void strokeRect(const rmlg::irect rect, PixelToaster::TrueColorPixel color, rglr::TrueColorCanvas& dst) {
 	// top row
 	int yy = rect.top.y;
@@ -101,6 +122,10 @@ void downsampleRect(const rmlg::irect rect, QFloat4Canvas& src, FloatingPointCan
 			dstpx++; }}}
 
 
+void downsampleRect(const rmlg::irect rect, Int16Canvas& src, FloatingPointCanvas& dst) {
+	return; }
+
+
 void copyRect(const rmlg::irect rect, QFloat4Canvas& src, FloatingPointCanvas& dst) {
 	auto dstRowAddr = &dst.data()[rect.top.y*dst.stride()];
 	auto srcRowAddr = &src.data()[(rect.top.y >> 1) * (src.width() >> 1)];
@@ -123,6 +148,47 @@ void copyRect(const rmlg::irect rect, QFloat4Canvas& src, FloatingPointCanvas& d
 			__m128 r1 = _mm_load_ps(reinterpret_cast<const float*>(&srcAddr[1].g));
 			__m128 r2 = _mm_load_ps(reinterpret_cast<const float*>(&srcAddr[1].b));
 			__m128 r3 = _mm_setzero_ps();
+			_MM_TRANSPOSE4_PS(r0, r1, r2, r3);
+
+			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR1[0]), l0);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR1[1]), l1);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR1[2]), r0);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR1[3]), r1);
+
+			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR2[0]), l2);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR2[1]), l3);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR2[2]), r2);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR2[3]), r3);
+			//  END  process 4x2 pixels (2 quads)
+
+			dstAddrR1 += 4;
+			dstAddrR2 += 4;
+			srcAddr += 2; }
+
+		dstRowAddr += dst.stride() * 2;
+		srcRowAddr += src.width() / 2; }}
+
+
+void copyRect(const rmlg::irect rect, Int16Canvas& src, FloatingPointCanvas& dst) {
+	auto dstRowAddr = &dst.data()[rect.top.y*dst.stride()];
+	auto srcRowAddr = &src.data()[(rect.top.y >> 1) * (src.width() >> 1)];
+
+	for (int y = rect.top.y; y < rect.bottom.y; y += 2) {
+
+		auto dstAddrR1 = &dstRowAddr[rect.left.x];
+		auto dstAddrR2 = dstAddrR1 + dst.stride();
+		auto srcAddr = &srcRowAddr[rect.left.x / 2];
+
+		for (int x = rect.left.x; x < rect.right.x; x += 4) {
+			// BEGIN process 4x2 pixels (2 quads)
+			__m128 l0, l1, l2;
+			__m128 l3 = _mm_setzero_ps();
+			rglr::Int16QPixel::Load(&srcAddr[0], l0, l1, l2);
+			_MM_TRANSPOSE4_PS(l0, l1, l2, l3);
+
+			__m128 r0, r1, r2;
+			__m128 r3 = _mm_setzero_ps();
+			rglr::Int16QPixel::Load(&srcAddr[1], r0, r1, r2);
 			_MM_TRANSPOSE4_PS(r0, r1, r2, r3);
 
 			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR1[0]), l0);

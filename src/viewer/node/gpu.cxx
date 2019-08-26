@@ -121,7 +121,7 @@ public:
 	void DoubleBuffer(bool value) override {
 		gpu_.DoubleBuffer(value); }
 
-	void ColorCanvas(rglr::QFloat4Canvas* ptr) override {
+	void ColorCanvas(rglr::Int16Canvas* ptr) override {
 		gpu_.ColorCanvas(ptr); }
 
 	void DepthCanvas(rglr::QFloatCanvas* ptr) override {

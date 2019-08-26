@@ -92,7 +92,7 @@ public:
 		internalDepthCanvas_.resize(renderWidth, renderHeight);
 		return internalDepthCanvas_; }
 
-	rglr::QFloat4Canvas& GetColorCanvas() {
+	rglr::Int16Canvas& GetColorCanvas() {
 		const int renderWidth = enableAA_ ? width_*2 : width_;
 		const int renderHeight = enableAA_ ? height_*2 : height_;
 		internalColorCanvas_.resize(renderWidth, renderHeight);
@@ -102,7 +102,7 @@ public:
 		return outputTexture_; }
 
 private:
-	rglr::QFloat4Canvas internalColorCanvas_;
+	rglr::Int16Canvas internalColorCanvas_;
 	rglr::QFloatCanvas internalDepthCanvas_;
 
 	rglr::Texture outputTexture_;
