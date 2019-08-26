@@ -114,21 +114,29 @@ private:
 	int _stride2{0};
 	};
 
+//#define FOO_ALPHA_ALIGN
 
 struct Int16QPixel {
 	uint16_t r[4];
 	uint16_t g[4];
 	uint16_t b[4];
+#ifdef FOO_ALPHA_ALIGN
+	uint16_t a[4];
+#endif
 
 	static inline void Load(const Int16QPixel* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
 		const __m128 scale = _mm_set1_ps(1.0F / 255.0F);
+#ifndef FOO_ALPHA_ALIGN
 		__m128i irig = _mm_loadu_si128((__m128i*)&src->r);
-		// __m128i ig = _mm_loadu_si128((__m128i*)&src->g);
-		__m128i ib = _mm_loadu_si128((__m128i*)&src->b);
+		__m128i ibia = _mm_loadu_si128((__m128i*)&src->b);
+#else
+		__m128i irig = _mm_load_si128((__m128i*)&src->r);
+		__m128i ibia = _mm_load_si128((__m128i*)&src->b);
+#endif
 		__m128i zero = _mm_setzero_si128();
 		__m128i ir = _mm_unpacklo_epi16(irig, zero);
 		__m128i ig = _mm_unpackhi_epi16(irig, zero);
-		ib = _mm_unpacklo_epi16(ib, zero);
+		__m128i ib = _mm_unpacklo_epi16(ibia, zero);
 		rrrr = _mm_mul_ps(_mm_cvtepi32_ps(ir), scale);
 		gggg = _mm_mul_ps(_mm_cvtepi32_ps(ig), scale);
 		bbbb = _mm_mul_ps(_mm_cvtepi32_ps(ib), scale); }
@@ -140,8 +148,14 @@ struct Int16QPixel {
 		__m128i ib = _mm_cvtps_epi32(_mm_mul_ps(bbbb, scale));
 		__m128i irig = _mm_packs_epi32(ir, ig);
 		__m128i ibxx = _mm_packs_epi32(ib, ib);
+#ifndef FOO_ALPHA_ALIGN
 		_mm_storeu_si128((__m128i*)&dst->r, irig);
-		_mm_storeu_si64((__m128i*)&dst->b, ibxx); }};
+		_mm_storeu_si64((__m128i*)&dst->b, ibxx);
+#else
+		_mm_store_si128((__m128i*)&dst->r, irig);
+		_mm_store_si128((__m128i*)&dst->b, ibxx);
+#endif
+	}};
 
 
 struct Int16Canvas {
