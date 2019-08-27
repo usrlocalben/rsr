@@ -520,10 +520,8 @@ private:
 
 		const ShaderUniforms ui = MakeUniforms(state);
 
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
+		qfloat2 deviceScale, deviceOffset;
+		MakeDeviceValues(state, deviceScale, deviceOffset);
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -595,7 +593,7 @@ private:
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.alloc<4>(), flags); }
 
-			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
+			auto devCoord = (pdiv(coord).xy() + 1.0F) * deviceScale + deviceOffset;
 			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -640,10 +638,8 @@ private:
 
 		const ShaderUniforms ui = MakeUniforms(state);
 
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
+		qfloat2 deviceScale, deviceOffset;
+		MakeDeviceValues(state, deviceScale, deviceOffset);
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -715,7 +711,7 @@ private:
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.alloc<4>(), flags); }
 
-			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
+			auto devCoord = (pdiv(coord).xy() + 1.0F) * deviceScale + deviceOffset;
 			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -758,20 +754,14 @@ private:
 
 		const ShaderUniforms ui = MakeUniforms(state);
 
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
+		qfloat2 deviceScale, deviceOffset;
+		MakeDeviceValues(state, deviceScale, deviceOffset);
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
 		array<VertexInput, 3> vi_;
-		array<VertexOutput, 3> computed;
-		array<qfloat4, 3> devCoord;
-		array<mvec4i, 3>  fx;
-		array<mvec4i, 3>  fy;
 
 		int li = 0;  // sse lane being loaded
 		bool eof = false;
@@ -802,12 +792,33 @@ private:
 				continue; }
 
 			// shade up to 4x3 verts
-			for (int i=0; i<3; ++i) {
-				qfloat4 gl_Position;
-				PGM::ShadeVertex(vi_[i], ui, gl_Position, computed[i]);
-				devCoord[i] = pdiv(gl_Position);
-				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale.x + deviceOffset.x));
-				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale.y + deviceOffset.y)); }
+			qfloat zOverW0, zOverW1, zOverW2;
+			qfloat oneOverW0, oneOverW1, oneOverW2;
+			mvec4i fx0, fx1, fx2;
+			mvec4i fy0, fy1, fy2;
+			VertexOutput computed0, computed1, computed2;
+			qfloat4 tmp;
+
+			PGM::ShadeVertex(vi_[0], ui, tmp, computed0);
+			tmp = pdiv(tmp);
+			zOverW0 = tmp.z;
+			oneOverW0 = tmp.w;
+			fx0 = ftoi(16.0F * ((tmp.x + 1.0F) * deviceScale.x + deviceOffset.x));
+			fy0 = ftoi(16.0F * ((tmp.y + 1.0F) * deviceScale.y + deviceOffset.y));
+
+			PGM::ShadeVertex(vi_[1], ui, tmp, computed1);
+			tmp = pdiv(tmp);
+			zOverW1 = tmp.z;
+			oneOverW1 = tmp.w;
+			fx1 = ftoi(16.0F * ((tmp.x + 1.0F) * deviceScale.x + deviceOffset.x));
+			fy1 = ftoi(16.0F * ((tmp.y + 1.0F) * deviceScale.y + deviceOffset.y));
+
+			PGM::ShadeVertex(vi_[2], ui, tmp, computed2);
+			tmp = pdiv(tmp);
+			zOverW2 = tmp.z;
+			oneOverW2 = tmp.w;
+			fx2 = ftoi(16.0F * ((tmp.x + 1.0F) * deviceScale.x + deviceOffset.x));
+			fy2 = ftoi(16.0F * ((tmp.y + 1.0F) * deviceScale.y + deviceOffset.y));
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
@@ -815,14 +826,14 @@ private:
 					tu0, tu1,
 					cbc, dbc,
 					ui,
-					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
-					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
-					computed[0].lane(ti),
-					computed[1].lane(ti),
-					computed[2].lane(ti) };
+					VertexFloat1{ oneOverW0.lane[ti], oneOverW1.lane[ti], oneOverW2.lane[ti] },
+					VertexFloat1{ zOverW0.lane[ti], zOverW1.lane[ti], zOverW2.lane[ti] },
+					computed0.lane(ti),
+					computed1.lane(ti),
+					computed2.lane(ti) };
 				TriangleRasterizer tr(targetProgram, rect, target_height);
-				tr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
-				        fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
+				tr.Draw(fx0.si[ti], fx1.si[ti], fx2.si[ti],
+				        fy0.si[ti], fy1.si[ti], fy2.si[ti],
 				        !backfacing); }
 
 			// reset the SIMD lane counter
@@ -837,11 +848,10 @@ private:
 		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
-		vec2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                 -float(bufferDimensionsInPixels_.y/2) };
-		vec2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                   float(bufferDimensionsInPixels_.y/2) };
 		const ShaderUniforms ui = MakeUniforms(state);
+
+		vec2 deviceScale, deviceOffset;
+		MakeDeviceValues(state, deviceScale, deviceOffset);
 
 		for (const auto& faceIndices : clipQueue_) {
 			// phase 1: load _poly_ with the shaded vertex data
@@ -895,8 +905,8 @@ private:
 			for (auto& vertex : clipA_) {
 				// convert clip-coord to device-coord
 				vertex.coord = pdiv(vertex.coord);
-				vertex.coord.x = vertex.coord.x * deviceScale.x + deviceOffset.x;
-				vertex.coord.y = vertex.coord.y * deviceScale.y + deviceOffset.y; }
+				vertex.coord.x = (vertex.coord.x + 1.0F) * deviceScale.x + deviceOffset.x;
+				vertex.coord.y = (vertex.coord.y + 1.0F) * deviceScale.y + deviceOffset.y; }
 			// end of phase 2: poly contains a clipped N-gon
 
 			// check direction, maybe cull, maybe reorder
@@ -1006,6 +1016,18 @@ private:
 		ui.nm = transpose(inverse(state.modelViewMatrix));
 		ui.mvpm = state.projectionMatrix * state.modelViewMatrix;
 		return ui; }
+
+	void MakeDeviceValues(const GLState& state, rmlv::qfloat2& scale, rmlv::qfloat2& offset) {
+		scale = rmlv::qfloat2{ float(bufferDimensionsInPixels_.x/2),
+		                      -float(bufferDimensionsInPixels_.y/2) };
+		offset = rmlv::qfloat2{ float(0),
+		                        float(bufferDimensionsInPixels_.y-0) }; }
+
+	void MakeDeviceValues(const GLState& state, rmlv::vec2& scale, rmlv::vec2& offset) {
+		scale = rmlv::vec2{ float(bufferDimensionsInPixels_.x/2),
+		                   -float(bufferDimensionsInPixels_.y/2) };
+		offset = rmlv::vec2{ float(0),
+		                     float(bufferDimensionsInPixels_.y-0) }; }
 
 public:
 	bool DoubleBuffer() const {

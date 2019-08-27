@@ -66,6 +66,8 @@ struct GLState {
 	rmlv::vec4 clearColor;
 	float clearDepth;
 	int clearStencil;
+	rmlv::ivec2 viewportOrigin;
+	rmlv::ivec2 viewportSize;
 	bool cullingEnabled;		// default for GL_CULL_FACE is false
 	int cullFace;			// default GL_BACK
 	rmlv::vec4 color;		// default 1,1,1,1
@@ -215,6 +217,11 @@ public:
 	void glClearDepth(float value) {
 		d_dirty = true;
 		d_cs.clearDepth = value; }
+
+	void glViewport(int x, int y, int width, int height) {
+		d_dirty = true;
+		d_cs.viewportOrigin = rmlv::ivec2{ x, y };
+		d_cs.viewportSize = rmlv::ivec2{ width, height }; }
 
 	//inline void glUniform(const VertexInputUniform& viu) {
 	//	state.vertex_input_uniform = viu; }
