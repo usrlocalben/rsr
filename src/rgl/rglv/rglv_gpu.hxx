@@ -99,7 +99,7 @@ struct DefaultTargetProgram {
 		uniforms_(uniforms),
 		width_(cc.width()),
 		height_(cc.height()),
-		targetDimensions_({ float(cc.width()), float(cc.height()) }) {}
+		targetDimensions_(float(cc.width()), float(cc.height())) {}
 
 	inline void Begin(int x, int y,
 	                  rmlv::qfloat4 v0, rmlv::qfloat4 v1, rmlv::qfloat4 v2,
@@ -377,12 +377,12 @@ private:
 					tile.commands0.appendByte(cmd);
 					tile.commands0.appendPtr(stateptr); }}
 			else if (cmd == CMD_CLEAR) {
-				auto color = cs.consumeVec4();
+				auto arg = cs.consumeByte();
 				// printf(" clear with color ");
 				// std::cout << color << std::endl;
 				for (auto& tile : tiles_) {
 					tile.commands0.appendByte(cmd);
-					tile.commands0.appendVec4(color); }}
+					tile.commands0.appendByte(arg); }}
 			else if (cmd == CMD_STORE_FP32_HALF) {
 				auto ptr = cs.consumePtr();
 				// printf(" store halfsize colorbuffer @ %p\n", ptr);
@@ -452,6 +452,7 @@ private:
 		auto& cs = tiles_[tileIdx].commands1;
 		tiles_[tileIdx].threadId = tid;
 
+		auto& dc = *depthCanvasPtr_;
 		auto& cc = *colorCanvasPtr_;
 
 		const GLState* stateptr = nullptr;
@@ -461,9 +462,15 @@ private:
 			if (cmd == CMD_STATE) {
 				stateptr = static_cast<const GLState*>(cs.consumePtr()); }
 			else if (cmd == CMD_CLEAR) {
-				auto color = cs.consumeVec4();
-				// std::cout << "clearing to " << color << std::endl;
-				fillRect(rect, color, cc); }
+				int bits = cs.consumeByte();
+				if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
+					// std::cout << "clearing to " << color << std::endl;
+					fillRect(rect, stateptr->clearColor, cc); }
+				if ((bits & GL_DEPTH_BUFFER_BIT) != 0) {
+					fillRect(rect, stateptr->clearDepth, dc); }
+				if ((bits & GL_STENCIL_BUFFER_BIT) != 0) {
+					// XXX not implemented
+					assert(false); }}
 			else if (cmd == CMD_STORE_FP32_HALF) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
 				downsampleRect(rect, cc, *smallcanvas); }

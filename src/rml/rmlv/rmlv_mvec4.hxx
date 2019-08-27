@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <tmmintrin.h>
 #include <intrin.h>
+#include <smmintrin.h>  // _mm_min_epi32/_mm_max_epi32
 #include "3rdparty/sse-pow/sse_pow.h"
 
 //#define USE_SSE3
