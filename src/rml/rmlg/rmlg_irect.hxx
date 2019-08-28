@@ -6,6 +6,7 @@ namespace rmlg {
 
 
 struct irect {
+	irect() = default;
 	irect(const rmlv::ivec2& top_left, const rmlv::ivec2& bottom_right)
 		:top_left(top_left), bottom_right(bottom_right) {}
 	const auto height() const {
@@ -22,7 +23,16 @@ struct irect {
 		rmlv::ivec2 bottom;
 		rmlv::ivec2 right;
 		};
-	};
+
+	/**
+	 * find the rectangle formed by the intersection of two
+	 * irects.  if there is no intersection, this function
+	 * returns a degenerate rectangle.
+	 * (i.e. left>right and/or top>bottom)
+	 */
+	irect Intersect(const irect& other) const {
+		return { vmax(top_left,     other.top_left),
+		         vmin(bottom_right, other.bottom_right) }; } };
 
 
 /*

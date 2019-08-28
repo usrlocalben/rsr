@@ -39,6 +39,13 @@ constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
 
 constexpr auto maxVAOSizeInVertices = 500000L;
 
+inline rmlg::irect gl_rect_to_irect(rmlv::ivec2 origin, rmlv::ivec2 dim, int ydim) {
+	int left = origin.x;
+	int bottom = ydim - origin.y - 1;
+	int right = left + dim.x - 1;
+	int top = bottom - dim.y + 1;
+	return { { left, top }, { right, bottom } }; }
+
 
 struct ClippedVertex {
 	rmlv::vec4 coord;  // either clip-coord or device-coord
@@ -438,7 +445,7 @@ private:
 		auto&[self, tileId] = *data;
 		self->DrawImpl(tid, tileId); }
 	void DrawImpl(const unsigned tid, const int tileIdx) {
-		const auto& rect = tiles_[tileIdx].rect;
+		const auto& tileRect = tiles_[tileIdx].rect;
 		auto& cs = tiles_[tileIdx].commands1;
 		tiles_[tileIdx].threadId = tid;
 
@@ -453,30 +460,29 @@ private:
 				stateptr = static_cast<const GLState*>(cs.consumePtr()); }
 			else if (cmd == CMD_CLEAR) {
 				int bits = cs.consumeByte();
+				rmlg::irect rect;
+				MakeDrawRect(*stateptr, tileRect, rect);
 				if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
 					// std::cout << "clearing to " << color << std::endl;
 					fillRect(rect, stateptr->clearColor, cc); }
 				if ((bits & GL_DEPTH_BUFFER_BIT) != 0) {
-					fillRect(rect, stateptr->clearDepth, dc); }
-				if ((bits & GL_STENCIL_BUFFER_BIT) != 0) {
-					// XXX not implemented
-					assert(false); }}
+					fillRect(rect, stateptr->clearDepth, dc); }}
 			else if (cmd == CMD_STORE_FP32_HALF) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				downsampleRect(rect, cc, *smallcanvas); }
+				downsampleRect(tileRect, cc, *smallcanvas); }
 			else if (cmd == CMD_STORE_FP32) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				copyRect(rect, cc, *smallcanvas); }
+				copyRect(tileRect, cc, *smallcanvas); }
 			else if (cmd == CMD_STORE_TRUECOLOR) {
 				auto enableGamma = cs.consumeByte();
 				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
-				tile_StoreTrueColor<SHADERS...>(*stateptr, rect, enableGamma, outcanvas);
-				// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
+				tile_StoreTrueColor<SHADERS...>(*stateptr, tileRect, enableGamma, outcanvas);
+				// XXX draw cpu assignment indicators draw_border(tileRect, cpu_colors[tid], canvas);
 				}
 			else if (cmd == CMD_CLIPPED_TRI) {
-				tile_DrawClipped<SHADERS...>(*stateptr, rect, cs); }
+				tile_DrawClipped<SHADERS...>(*stateptr, tileRect, cs); }
 			else if (cmd == CMD_DRAW_INLINE) {
-				tile_DrawElements<SHADERS...>(*stateptr, rect, cs); }}}
+				tile_DrawElements<SHADERS...>(*stateptr, tileRect, cs); }}}
 
 	template <typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_StoreTrueColor(const GLState& state, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
@@ -515,6 +521,9 @@ private:
 		for (auto& tile : tiles_) {
 			tile.commands0.appendByte(CMD_DRAW_INLINE);
 			tile.commands0.mark(); }
+
+		rmlg::irect rect;
+		MakeBinRect(state, rect);
 
 		VertexInput vi_;
 
@@ -570,7 +579,7 @@ private:
 						stats0_.totalTrianglesCulled++;
 						continue; }}
 
-				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
+				ForEachCoveredTile(rect, devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
 					tile.commands0.appendUShort(i0);  // also includes backfacing flag
 					tile.commands0.appendUShort(i1);
 					tile.commands0.appendUShort(i2); });}};
@@ -634,6 +643,9 @@ private:
 			tile.commands0.appendByte(CMD_DRAW_INLINE);
 			tile.commands0.mark(); }
 
+		rmlg::irect rect;
+		MakeBinRect(state, rect);
+
 		VertexInput vi_;
 
 		const ShaderUniforms ui = MakeUniforms(state);
@@ -688,7 +700,7 @@ private:
 						stats0_.totalTrianglesCulled++;
 						continue; }}
 
-				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
+				ForEachCoveredTile(rect, devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
 					tile.commands0.appendUShort(i0);  // also includes backfacing flag
 					tile.commands0.appendUShort(i1);
 					tile.commands0.appendUShort(i2); });}};
@@ -732,9 +744,9 @@ private:
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
 
 	template<typename PGM, typename ...PGMs>
-	void tile_DrawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {
+	void tile_DrawElements(const GLState& state, const rmlg::irect& tileRect, FastPackedStream& cs) {
 		if (state.programId != PGM::id) {
-			return tile_DrawElements<PGMs...>(state, rect, cs); }
+			return tile_DrawElements<PGMs...>(state, tileRect, cs); }
 
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
@@ -756,6 +768,10 @@ private:
 
 		qfloat2 deviceScale, deviceOffset;
 		MakeDeviceValues(state, deviceScale, deviceOffset);
+
+		rmlg::irect rect;
+		MakeDrawRect(state, tileRect, rect);
+
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
@@ -850,6 +866,9 @@ private:
 
 		const ShaderUniforms ui = MakeUniforms(state);
 
+		rmlg::irect rect;
+		MakeBinRect(state, rect);
+
 		vec2 deviceScale, deviceOffset;
 		MakeDeviceValues(state, deviceScale, deviceOffset);
 
@@ -927,7 +946,7 @@ private:
 			int bi = clippedVertexBuffer0_.size();
 			for (int vi=1; vi<clipA_.size() - 1; ++vi) {
 				int i0{0}, i1{vi}, i2{vi+1};
-				ForEachCoveredTile(clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](auto& tile) {
+				ForEachCoveredTile(rect, clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](auto& tile) {
 					if (clippedVertexBuffer0_.size() == bi) {
 						std::copy(begin(clipA_), end(clipA_), back_inserter(clippedVertexBuffer0_)); }
 					tile.commands0.appendByte(CMD_CLIPPED_TRI);
@@ -936,16 +955,16 @@ private:
 					tile.commands0.appendUShort(bi + i2); });}}}
 
 	template <typename FUNC>
-	void ForEachCoveredTile(const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
+	void ForEachCoveredTile(const rmlg::irect rect, const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
 		using std::min, std::max, rmlv::ivec2;
 		const ivec2 idev0{ dc0 };
 		const ivec2 idev1{ dc1 };
 		const ivec2 idev2{ dc2 };
 
-		const int vminx = max(min(idev0.x, min(idev1.x, idev2.x)), 0);
-		const int vminy = max(min(idev0.y, min(idev1.y, idev2.y)), 0);
-		const int vmaxx = min(max(idev0.x, max(idev1.x, idev2.x)), bufferDimensionsInPixels_.x-1);
-		const int vmaxy = min(max(idev0.y, max(idev1.y, idev2.y)), bufferDimensionsInPixels_.y-1);
+		const int vminx = max(min(idev0.x, min(idev1.x, idev2.x)), rect.left.x);
+		const int vminy = max(min(idev0.y, min(idev1.y, idev2.y)), rect.top.y);
+		const int vmaxx = min(max(idev0.x, max(idev1.x, idev2.x)), rect.right.x);
+		const int vmaxy = min(max(idev0.y, max(idev1.y, idev2.y)), rect.bottom.y);
 
 		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
 		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
@@ -1018,16 +1037,71 @@ private:
 		return ui; }
 
 	void MakeDeviceValues(const GLState& state, rmlv::qfloat2& scale, rmlv::qfloat2& offset) {
-		scale = rmlv::qfloat2{ float(bufferDimensionsInPixels_.x/2),
-		                      -float(bufferDimensionsInPixels_.y/2) };
-		offset = rmlv::qfloat2{ float(0),
-		                        float(bufferDimensionsInPixels_.y-0) }; }
+		int ox, oy, w, h;
+		if (state.viewportDim.x == -1) {
+			ox = 0;
+			oy = 0;
+			w = bufferDimensionsInPixels_.x;
+			h = bufferDimensionsInPixels_.y; }
+		else {
+			ox = state.viewportOrigin.x;
+			oy = state.viewportOrigin.y;
+			w = state.viewportDim.x;
+			h = state.viewportDim.y; }
+		scale = rmlv::qfloat2{ float(w/2), -float(h/2) };
+		offset = rmlv::qfloat2{ float(ox), float(bufferDimensionsInPixels_.y - oy) }; }
 
 	void MakeDeviceValues(const GLState& state, rmlv::vec2& scale, rmlv::vec2& offset) {
-		scale = rmlv::vec2{ float(bufferDimensionsInPixels_.x/2),
-		                   -float(bufferDimensionsInPixels_.y/2) };
-		offset = rmlv::vec2{ float(0),
-		                     float(bufferDimensionsInPixels_.y-0) }; }
+		int ox, oy, w, h;
+		if (state.viewportDim.x == -1) {
+			ox = 0;
+			oy = 0;
+			w = bufferDimensionsInPixels_.x;
+			h = bufferDimensionsInPixels_.y; }
+		else {
+			ox = state.viewportOrigin.x;
+			oy = state.viewportOrigin.y;
+			w = state.viewportDim.x;
+			h = state.viewportDim.y; }
+		scale = rmlv::vec2{ float(w/2), -float(h/2) };
+		offset = rmlv::vec2{ float(ox), float(bufferDimensionsInPixels_.y - oy) }; }
+
+	void MakeBinRect(const GLState& state, rmlg::irect& out) {
+		using std::min, std::max, rmlg::irect;
+
+		// start with the buffer extents
+		out = {
+			{ 0, 0 },
+			{ bufferDimensionsInPixels_.x - 1,
+			  bufferDimensionsInPixels_.y - 1 } };
+
+		if (state.viewportDim.x != -1) {
+			auto viewportRect = gl_rect_to_irect(state.viewportOrigin,
+			                                     state.viewportDim,
+			                                     bufferDimensionsInPixels_.y);
+			out = out.Intersect(viewportRect); }
+
+		if (state.scissorEnabled) {
+			auto scissorRect = gl_rect_to_irect(state.scissorOrigin,
+			                                    state.scissorDim,
+			                                    bufferDimensionsInPixels_.y);
+			out = out.Intersect(scissorRect); }}
+
+	void MakeDrawRect(const GLState& state, rmlg::irect tileRect, rmlg::irect& out) {
+		using std::min, std::max, rmlg::irect;
+		out = tileRect;
+
+		if (state.viewportDim.x != -1) {
+			auto viewportRect = gl_rect_to_irect(state.viewportOrigin,
+			                                     state.viewportDim,
+			                                     bufferDimensionsInPixels_.y);
+			out = out.Intersect(viewportRect); }
+
+		if (state.scissorEnabled) {
+			auto scissorRect = gl_rect_to_irect(state.scissorOrigin,
+			                                    state.scissorDim,
+			                                    bufferDimensionsInPixels_.y);
+			out = out.Intersect(scissorRect); }}
 
 public:
 	bool DoubleBuffer() const {

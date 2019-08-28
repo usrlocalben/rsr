@@ -25,6 +25,7 @@ constexpr int GL_CW = 0;
 constexpr int GL_CCW = 1;
 
 constexpr int GL_CULL_FACE = 1;
+constexpr int GL_SCISSOR = 2;
 
 constexpr int GL_FRONT = 1;
 constexpr int GL_BACK = 2;
@@ -41,7 +42,7 @@ constexpr int GL_LINEAR_MIPMAP_NEAREST = 1;
 
 constexpr int GL_COLOR_BUFFER_BIT = 1;
 constexpr int GL_DEPTH_BUFFER_BIT = 2;
-constexpr int GL_STENCIL_BUFFER_BIT = 4;
+// constexpr int GL_STENCIL_BUFFER_BIT = 4;
 
 struct TextureState {
 	const PixelToaster::FloatingPointPixel *ptr;
@@ -67,7 +68,10 @@ struct GLState {
 	float clearDepth;
 	int clearStencil;
 	rmlv::ivec2 viewportOrigin;
-	rmlv::ivec2 viewportSize;
+	rmlv::ivec2 viewportDim;
+	rmlv::ivec2 scissorOrigin;
+	rmlv::ivec2 scissorDim;
+	bool scissorEnabled;
 	bool cullingEnabled;		// default for GL_CULL_FACE is false
 	int cullFace;			// default GL_BACK
 	rmlv::vec4 color;		// default 1,1,1,1
@@ -88,6 +92,11 @@ struct GLState {
 		clearStencil = 0;
 		clearDepth = 1.0F;
 		clearColor = rmlv::vec4{ 0.0F, 0.0F, 0.0F, 1.0F };
+		viewportOrigin = { 0, 0 };
+		viewportDim = { -1, -1 };
+		scissorOrigin = { 0, 0 };
+		scissorDim = { -1, -1 };
+		scissorEnabled = false;
 		cullingEnabled = false;
 		cullFace = GL_BACK;
 		color = rmlv::vec4{1.0F,1.0F,1.0F,1.0F};
@@ -161,6 +170,8 @@ public:
 		d_dirty = true;
 		if (value == GL_CULL_FACE) {
 			d_cs.cullingEnabled = true; }
+		else if (value == GL_SCISSOR) {
+			d_cs.scissorEnabled = true; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
 
@@ -168,6 +179,8 @@ public:
 		d_dirty = true;
 		if (value == GL_CULL_FACE) {
 			d_cs.cullingEnabled = false; }
+		else if (value == GL_SCISSOR) {
+			d_cs.scissorEnabled = true; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
 
@@ -221,7 +234,13 @@ public:
 	void glViewport(int x, int y, int width, int height) {
 		d_dirty = true;
 		d_cs.viewportOrigin = rmlv::ivec2{ x, y };
-		d_cs.viewportSize = rmlv::ivec2{ width, height }; }
+		d_cs.viewportDim = rmlv::ivec2{ width, height }; }
+
+	void glScissor(int x, int y, int width, int height) {
+		d_dirty = true;
+		d_cs.scissorOrigin = rmlv::ivec2{ x, y };
+		d_cs.scissorDim = rmlv::ivec2{ width, height }; }
+
 
 	//inline void glUniform(const VertexInputUniform& viu) {
 	//	state.vertex_input_uniform = viu; }
