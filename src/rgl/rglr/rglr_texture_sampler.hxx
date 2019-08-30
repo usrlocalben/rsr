@@ -48,8 +48,7 @@ struct ts_pow2_mipmap {
 
 	// only for mipmaps
 	rmlv::qfloat d_baseDimf;
-	int rowlut[16];
-	int d_power;
+	const PixelToaster::FloatingPointPixel* levelData_[16];
 
 	ts_pow2_mipmap(
 		const PixelToaster::FloatingPointPixel* ptr,
@@ -58,18 +57,22 @@ struct ts_pow2_mipmap {
 		d_stride = row_stride;
 		if (rmlg::is_pow2(width) && width == height && row_stride == width) {
 			// power-of-2 texture
-			d_power = rmlg::ilog2(width);
+			int power = rmlg::ilog2(width);
 			d_baseDimf = float(width);
-			assert(d_power >= 2 && d_power <= 12);
+			assert(2 <= power && power <= 12);
 
+			// rowlut[level#] is the row# for the top of level# in the mipmap
+			// e.g. for power=8 (256x256)
+			// 0=0, 1=256, 2=384, ... 8=510, 9=511
 			int x = 0;
-			for (int p = d_power; p >= 0; p--) {
-				int siz = 1 << p;
-			rowlut[d_power - p] = x + siz - 1;
-				x += siz; }
+			for (int p=power; p>=0; p--) {
+				int level = power - p;
+				int levelDim = 1 << p;
+				levelData_[level] = &d_bitmap[x * width];
+				x += levelDim; }
 
 			if (mode == 0) {
-				switch (d_power) {
+				switch (power) {
 				case 12: d_func = &ts_pow2_mipmap::sample_nearest_nearest<12>; break;
 				case 11: d_func = &ts_pow2_mipmap::sample_nearest_nearest<11>; break;
 				case 10: d_func = &ts_pow2_mipmap::sample_nearest_nearest<10>; break;
@@ -83,7 +86,7 @@ struct ts_pow2_mipmap {
 				case 2: d_func = &ts_pow2_mipmap::sample_nearest_nearest<2>; break;
 				default: assert(false); }}
 			else if (mode == 1) {
-				switch (d_power) {
+				switch (power) {
 				case 12: d_func = &ts_pow2_mipmap::sample_nearest_linear<12>; break;
 				case 11: d_func = &ts_pow2_mipmap::sample_nearest_linear<11>; break;
 				case 10: d_func = &ts_pow2_mipmap::sample_nearest_linear<10>; break;
@@ -112,23 +115,23 @@ struct ts_pow2_mipmap {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
 
 		const int level = std::min(levelOfDetail<1 << POWER>(texcoord.s, texcoord.t), POWER);
+		auto levelData = levelData_[level];
 
 		const int levelDim = 1 << (POWER - level);
 		const mvec4f levelDim_vf{ float(levelDim) };
 		const mvec4i wrapMask{ levelDim - 1 };
 
-		mvec4i lastRow{ rowlut[level] };
-
 		auto mmu = ftoi(texcoord.s * levelDim_vf) & wrapMask;
 		auto mmv = ftoi(texcoord.t * levelDim_vf) & wrapMask;
 
-		auto ofs = (lastRow - mmv);
-		ofs = shl<POWER>(ofs);
-		ofs += mmu;
-		ofs = shl<2>(ofs);  // 4 channels
+		// v*width + u
+		auto ofs = shl<POWER>(mmv) + mmu;
+
+		// convert FPP* to float*
+		ofs = shl<2>(ofs);
 
 		qfloat4 color;
-		load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, color);
+		load_interleaved_lut(reinterpret_cast<const float*>(levelData), ofs, color);
 		return color; }
 
 	rmlv::qfloat4 sample_zero_nearest_nonpow2(const rmlv::qfloat2& texcoord) const {
@@ -149,12 +152,11 @@ struct ts_pow2_mipmap {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
 
 		const int level = std::min(levelOfDetail<1 << POWER>(texcoord.s, texcoord.t), POWER);
+		auto levelData = levelData_[level];
 
 		const int levelDim = 1 << (POWER - level);
 		const mvec4f levelDim_vf{ float(levelDim) };
 		const mvec4i wrapMask{ levelDim - 1 };
-
-		mvec4i lastRow{ rowlut[level] };
 
 		auto up = texcoord.s * levelDim_vf;
 		auto vp = texcoord.t * levelDim_vf;
@@ -180,32 +182,20 @@ struct ts_pow2_mipmap {
 		tx0 = tx0 & wrapMask;  ty0 = ty0 & wrapMask;
 		tx1 = tx1 & wrapMask;  ty1 = ty1 & wrapMask;
 		{
-			auto ofs = lastRow - ty0;
-			ofs = shl<POWER>(ofs);
-			ofs += tx0;
-			ofs = shl<2>(ofs);
-			load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, px);
+			auto ofs = shl<2>(shl<POWER>(ty0) + tx0);
+			load_interleaved_lut(reinterpret_cast<const float*>(levelData), ofs, px);
 			out = px * w1; }
 		{
-			auto ofs = lastRow - ty0;
-			ofs = shl<POWER>(ofs);
-			ofs += tx1;
-			ofs = shl<2>(ofs);
-			load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, px);
+			auto ofs = shl<2>(shl<POWER>(ty0) + tx1);
+			load_interleaved_lut(reinterpret_cast<const float*>(levelData), ofs, px);
 			out += px * w2; }
 		{
-			auto ofs = lastRow - ty1;
-			ofs = shl<POWER>(ofs);
-			ofs += tx0;
-			ofs = shl<2>(ofs);
-			load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, px);
+			auto ofs = shl<2>(shl<POWER>(ty1) + tx0);
+			load_interleaved_lut(reinterpret_cast<const float*>(levelData), ofs, px);
 			out += px * w3; }
 		{
-			auto ofs = lastRow - ty1;
-			ofs = shl<POWER>(ofs);
-			ofs += tx1;
-			ofs = shl<2>(ofs);
-			load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, px);
+			auto ofs = shl<2>(shl<POWER>(ty1) + tx1);
+			load_interleaved_lut(reinterpret_cast<const float*>(levelData), ofs, px);
 			out += px * w4; }
 
 		return out; } };

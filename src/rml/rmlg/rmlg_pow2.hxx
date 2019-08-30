@@ -10,6 +10,10 @@ inline bool is_pow2(unsigned x) {
 	return x == 1; }
 
 
+/**
+ * floor of log2(x)
+ * e.g. 255 = 7, 256 = 8, 511 = 8, 512 = 9
+ */
 inline int ilog2(unsigned x) {
 	int pow = 0;
 	while (x != 0U) {
