@@ -103,7 +103,7 @@ struct DefaultTargetProgram {
 		tu1_(tu1),
 		width_(cc.width()),
 		height_(cc.height()),
-		targetDimensions_({ float(cc.width()), float(cc.height()) }),
+		targetDimensions_(float(cc.width()), float(cc.height())),
 		oneOverW_(oneOverW),
 		zOverW_(zOverW),
 		vo0_({ computed0.r0, computed1.r0, computed2.r0 }),
