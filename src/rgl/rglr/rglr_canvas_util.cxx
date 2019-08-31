@@ -123,7 +123,19 @@ void downsampleRect(const rmlg::irect rect, QFloat4Canvas& src, FloatingPointCan
 
 
 void downsampleRect(const rmlg::irect rect, Int16Canvas& src, FloatingPointCanvas& dst) {
-	return; }
+	const __m128 one_quarter = _mm_set1_ps(0.25F);
+	for (int y = rect.top.y; y < rect.bottom.y; y += 2) {
+		auto dstpx = &dst.data()[(y >> 1) * dst.stride() + (rect.left.x >> 1)];
+		auto srcpx = &src.data()[(y >> 1) * (src.width() >> 1) + (rect.left.x >> 1)];
+
+		for (int x = rect.left.x; x < rect.right.x; x += 2, ++srcpx, ++dstpx) {
+			__m128 r0, r1, r2;
+			rglr::Int16QPixel::Load(srcpx, r0, r1, r2);
+			__m128 r3 = _mm_setzero_ps();
+			_MM_TRANSPOSE4_PS(r0, r1, r2, r3);
+			__m128 sum = _mm_add_ps(_mm_add_ps(_mm_add_ps(r0, r1), r2), r3);
+			__m128 final = _mm_mul_ps(sum, one_quarter);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstpx->v), final); }}}
 
 
 void copyRect(const rmlg::irect rect, QFloat4Canvas& src, FloatingPointCanvas& dst) {

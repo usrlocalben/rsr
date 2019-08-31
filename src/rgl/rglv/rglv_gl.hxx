@@ -39,6 +39,9 @@ constexpr int GL_UNSIGNED_SHORT = 1;
 constexpr int GL_NEAREST_MIPMAP_NEAREST = 0;
 constexpr int GL_LINEAR_MIPMAP_NEAREST = 1;
 
+constexpr int GL_COLOR_BUFFER_BIT = 1;
+constexpr int GL_DEPTH_BUFFER_BIT = 2;
+constexpr int GL_STENCIL_BUFFER_BIT = 4;
 
 struct TextureState {
 	const PixelToaster::FloatingPointPixel *ptr;
@@ -60,6 +63,9 @@ struct GLState {
 	rmlm::mat4 modelViewMatrix;	// defaults to identity
 	rmlm::mat4 projectionMatrix;
 	rmlm::mat4 textureMatrix;
+	rmlv::vec4 clearColor;
+	float clearDepth;
+	int clearStencil;
 	bool cullingEnabled;		// default for GL_CULL_FACE is false
 	int cullFace;			// default GL_BACK
 	rmlv::vec4 color;		// default 1,1,1,1
@@ -77,6 +83,9 @@ struct GLState {
 	int texture1MinFilter;
 
 	void reset() {
+		clearStencil = 0;
+		clearDepth = 1.0F;
+		clearColor = rmlv::vec4{ 0.0F, 0.0F, 0.0F, 1.0F };
 		cullingEnabled = false;
 		cullFace = GL_BACK;
 		color = rmlv::vec4{1.0F,1.0F,1.0F,1.0F};
@@ -199,6 +208,14 @@ public:
 		d_cs.array = static_cast<const void*>(&vao);
 		d_cs.arrayFormat = AF_VAO_F3F3F3; }
 
+	void glClearColor(rmlv::vec3 value) {
+		d_dirty = true;
+		d_cs.clearColor = rmlv::vec4{ value, 1.0F }; }
+
+	void glClearDepth(float value) {
+		d_dirty = true;
+		d_cs.clearDepth = value; }
+
 	//inline void glUniform(const VertexInputUniform& viu) {
 	//	state.vertex_input_uniform = viu; }
 
@@ -207,7 +224,7 @@ public:
 	//void drawElements(const VertexArray_F3F3&);
 	void glDrawElements(int mode, int count, int type, const uint16_t* indices, bool enableClipping=true);
 	void glDrawArrays(int mode, int start, int count, bool enableClipping=true);
-	void glClear(rmlv::vec4 color);
+	void glClear(int bits);
 	void storeHalfsize(rglr::FloatingPointCanvas *dst);
 	void storeUnswizzled(rglr::FloatingPointCanvas *dst);
 	void storeTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst);

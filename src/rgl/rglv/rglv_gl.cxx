@@ -30,10 +30,10 @@ void GL::glDrawElements(const int mode, const int count, const int type, const u
 	d_commands.appendPtr(indices); }
 
 
-void GL::glClear(const rmlv::vec4 color) {
+void GL::glClear(const int bits) {
 	maybeUpdateState();
 	d_commands.appendByte(CMD_CLEAR);
-	d_commands.appendVec4(color); }
+	d_commands.appendByte(bits); }
 
 
 void GL::storeHalfsize(rglr::FloatingPointCanvas *dst) {

@@ -65,7 +65,9 @@ public:
 		if (!layers_.empty()) {
 			auto& firstLayer = layers_[0];
 			backgroundColor = firstLayer->GetBackgroundColor(); }
-		ic.glClear(vec4{ backgroundColor, 1.0F });
+		ic.glClearColor(backgroundColor);
+		ic.glClearDepth(1.0F);
+		ic.glClear(rglv::GL_COLOR_BUFFER_BIT|rglv::GL_DEPTH_BUFFER_BIT);
 
 		if (layers_.empty()) {
 			jobsys::Job *postJob = Post();
