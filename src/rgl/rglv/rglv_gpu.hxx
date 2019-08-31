@@ -99,7 +99,7 @@ struct DefaultTargetProgram {
 		uniforms_(uniforms),
 		width_(cc.width()),
 		height_(cc.height()),
-		targetDimensions_({ float(cc.width()), float(cc.height()) }) {}
+		targetDimensions_(float(cc.width()), float(cc.height())) {}
 
 	inline void Begin(int x, int y,
 	                  rmlv::qfloat4 v0, rmlv::qfloat4 v1, rmlv::qfloat4 v2,
