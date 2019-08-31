@@ -76,36 +76,35 @@ struct ts_pow2_mipmap {
 				case 12: d_func = &ts_pow2_mipmap::sample_nearest_nearest<12>; break;
 				case 11: d_func = &ts_pow2_mipmap::sample_nearest_nearest<11>; break;
 				case 10: d_func = &ts_pow2_mipmap::sample_nearest_nearest<10>; break;
-				case 9: d_func = &ts_pow2_mipmap::sample_nearest_nearest<9>; break;
-				case 8: d_func = &ts_pow2_mipmap::sample_nearest_nearest<8>; break;
-				case 7: d_func = &ts_pow2_mipmap::sample_nearest_nearest<7>; break;
-				case 6: d_func = &ts_pow2_mipmap::sample_nearest_nearest<6>; break;
-				case 5: d_func = &ts_pow2_mipmap::sample_nearest_nearest<5>; break;
-				case 4: d_func = &ts_pow2_mipmap::sample_nearest_nearest<4>; break;
-				case 3: d_func = &ts_pow2_mipmap::sample_nearest_nearest<3>; break;
-				case 2: d_func = &ts_pow2_mipmap::sample_nearest_nearest<2>; break;
+				case  9: d_func = &ts_pow2_mipmap::sample_nearest_nearest< 9>; break;
+				case  8: d_func = &ts_pow2_mipmap::sample_nearest_nearest< 8>; break;
+				case  7: d_func = &ts_pow2_mipmap::sample_nearest_nearest< 7>; break;
+				case  6: d_func = &ts_pow2_mipmap::sample_nearest_nearest< 6>; break;
+				case  5: d_func = &ts_pow2_mipmap::sample_nearest_nearest< 5>; break;
+				case  4: d_func = &ts_pow2_mipmap::sample_nearest_nearest< 4>; break;
+				case  3: d_func = &ts_pow2_mipmap::sample_nearest_nearest< 3>; break;
+				case  2: d_func = &ts_pow2_mipmap::sample_nearest_nearest< 2>; break;
 				default: assert(false); }}
 			else if (mode == 1) {
 				switch (power) {
-				case 12: d_func = &ts_pow2_mipmap::sample_nearest_linear<12>; break;
-				case 11: d_func = &ts_pow2_mipmap::sample_nearest_linear<11>; break;
-				case 10: d_func = &ts_pow2_mipmap::sample_nearest_linear<10>; break;
-				case 9: d_func = &ts_pow2_mipmap::sample_nearest_linear<9>; break;
-				case 8: d_func = &ts_pow2_mipmap::sample_nearest_linear<8>; break;
-				case 7: d_func = &ts_pow2_mipmap::sample_nearest_linear<7>; break;
-				case 6: d_func = &ts_pow2_mipmap::sample_nearest_linear<6>; break;
-				case 5: d_func = &ts_pow2_mipmap::sample_nearest_linear<5>; break;
-				case 4: d_func = &ts_pow2_mipmap::sample_nearest_linear<4>; break;
-				case 3: d_func = &ts_pow2_mipmap::sample_nearest_linear<3>; break;
-				case 2: d_func = &ts_pow2_mipmap::sample_nearest_linear<2>; break;
+				case 12: d_func = &ts_pow2_mipmap::sample_nearest_linear <12>; break;
+				case 11: d_func = &ts_pow2_mipmap::sample_nearest_linear <11>; break;
+				case 10: d_func = &ts_pow2_mipmap::sample_nearest_linear <10>; break;
+				case  9: d_func = &ts_pow2_mipmap::sample_nearest_linear < 9>; break;
+				case  8: d_func = &ts_pow2_mipmap::sample_nearest_linear < 8>; break;
+				case  7: d_func = &ts_pow2_mipmap::sample_nearest_linear < 7>; break;
+				case  6: d_func = &ts_pow2_mipmap::sample_nearest_linear < 6>; break;
+				case  5: d_func = &ts_pow2_mipmap::sample_nearest_linear < 5>; break;
+				case  4: d_func = &ts_pow2_mipmap::sample_nearest_linear < 4>; break;
+				case  3: d_func = &ts_pow2_mipmap::sample_nearest_linear < 3>; break;
+				case  2: d_func = &ts_pow2_mipmap::sample_nearest_linear < 2>; break;
 				default: assert(false); }}}
 		else {
 			// non power-of-2 texture
 			d_height = height;
 			d_uLastRow = rmlv::mvec4i{height - 1};
 			d_width = width;
-			d_func = &ts_pow2_mipmap::sample_zero_nearest_nonpow2;
-			}}
+			d_func = &ts_pow2_mipmap::sample_zero_nearest_nonpow2; }}
 
 	inline rmlv::qfloat4 sample(const rmlv::qfloat2& texcoord) const {
 		return ((*this).*d_func)(texcoord); }
@@ -114,21 +113,18 @@ struct ts_pow2_mipmap {
 	rmlv::qfloat4 sample_nearest_nearest(const rmlv::qfloat2& texcoord) const {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
 
-		const int level = std::min(levelOfDetail<1 << POWER>(texcoord.s, texcoord.t), POWER);
+		const int level = 3; //std::min(levelOfDetail<1 << POWER>(texcoord.s, texcoord.t), POWER);
 		auto levelData = levelData_[level];
 
 		const int levelDim = 1 << (POWER - level);
 		const mvec4f levelDim_vf{ float(levelDim) };
 		const mvec4i wrapMask{ levelDim - 1 };
 
-		auto mmu = ftoi(texcoord.s * levelDim_vf) & wrapMask;
-		auto mmv = ftoi(texcoord.t * levelDim_vf) & wrapMask;
+		auto tu = ftoi(texcoord.s * levelDim_vf) & wrapMask;
+		auto tv = ftoi(texcoord.t * levelDim_vf) & wrapMask;
 
-		// v*width + u
-		auto ofs = shl<POWER>(mmv) + mmu;
-
-		// convert FPP* to float*
-		ofs = shl<2>(ofs);
+		// v*width + u,  then FPP* to float*
+		auto ofs = shl<2>(shl<POWER>(tv) + tu);
 
 		qfloat4 color;
 		load_interleaved_lut(reinterpret_cast<const float*>(levelData), ofs, color);
