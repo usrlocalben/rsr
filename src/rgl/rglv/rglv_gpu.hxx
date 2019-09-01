@@ -10,6 +10,7 @@
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclr/rclr_algorithm.hxx"
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rgl/rglr/rglr_algorithm.hxx"
 #include "src/rgl/rglr/rglr_blend.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
 #include "src/rgl/rglr/rglr_canvas_util.hxx"
@@ -465,18 +466,18 @@ private:
 				int bits = cs.consumeByte();
 				if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
 					// std::cout << "clearing to " << color << std::endl;
-					fillRect(rect, stateptr->clearColor, cc); }
+					Fill(cc, stateptr->clearColor, rect); }
 				if ((bits & GL_DEPTH_BUFFER_BIT) != 0) {
-					fillRect(rect, stateptr->clearDepth, dc); }
+					Fill(dc, stateptr->clearDepth, rect); }
 				if ((bits & GL_STENCIL_BUFFER_BIT) != 0) {
 					// XXX not implemented
 					assert(false); }}
 			else if (cmd == CMD_STORE_FP32_HALF) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				downsampleRect(rect, cc, *smallcanvas); }
+				Downsample(cc, *smallcanvas, rect); }
 			else if (cmd == CMD_STORE_FP32) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				copyRect(rect, cc, *smallcanvas); }
+				Copy(cc, *smallcanvas, rect); }
 			else if (cmd == CMD_STORE_TRUECOLOR) {
 				auto enableGamma = cs.consumeByte();
 				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
@@ -498,9 +499,9 @@ private:
 
 		auto& cc = *colorCanvasPtr_;
 		if (enableGamma) {
-			rglr::copyRect<PGM, rglr::sRGB>(rect, cc, outcanvas); }
+			rglr::Filter<PGM, rglr::sRGB>(cc, outcanvas, rect); }
 		else {
-			rglr::copyRect<PGM, rglr::LinearColor>(rect, cc, outcanvas); }}
+			rglr::Filter<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
 	template <bool ENABLE_CLIPPING, typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_DrawArray(const GLState& state, const int count) {}

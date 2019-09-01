@@ -33,6 +33,7 @@ cc_library(
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rclr:algorithm",
         "//src/rcl/rcls:aligned_containers",
+        "//src/rgl/rglr:algorithm",
         "//src/rgl/rglr:blend",
         "//src/rgl/rglr:canvas",
         "//src/rgl/rglr:canvas_util",
@@ -247,9 +248,9 @@ cc_test(
     srcs = ["rglv_triangle.t.cxx"],
     deps = [
         "//src/rcl/rcls:aligned_containers",
+        "//src/rgl/rglr:algorithm",
         "//src/rgl/rglr:blend",
         "//src/rgl/rglr:canvas",
-        "//src/rgl/rglr:canvas_util",
         "//src/rgl/rglr:texture",
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:soa",

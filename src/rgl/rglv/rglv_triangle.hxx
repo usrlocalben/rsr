@@ -107,7 +107,7 @@ public:
 					const mvec4i trimask(sar<31>(edges));
 
 					// lower-left-origin opengl screen coords
-					const qfloat2 frag_coord = { mvec4f(x+0.5F)+rglv::FQX, mvec4f(targetHeightInPx_-y-0.5F)+rglv::FQYR };
+					const qfloat2 frag_coord{ mvec4f(x+0.5F)+mvec4f(0,1,0,1), mvec4f(targetHeightInPx_-y-0.5F)+mvec4f(0,0,-1,-1) };
 
 					rglv::BaryCoord bary;
 					bary.x = itof(cx2) * scale;
