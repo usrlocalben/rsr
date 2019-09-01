@@ -8,14 +8,6 @@
 namespace rqdq {
 namespace rglv {
 
-/*constants used for preparing 2x2 SoA gangs*/
-const rmlv::mvec4f FQX{_mm_setr_ps(0,1,0,1)};
-const rmlv::mvec4f FQY{_mm_setr_ps(0,0,1,1)};
-const rmlv::mvec4i IQX{_mm_setr_epi32(0,1,0,1)};
-const rmlv::mvec4i IQY{_mm_setr_epi32(0,0,1,1)};
-
-const rmlv::mvec4f FQYR{ _mm_setr_ps(1,1,0,0) };
-
 inline rmlv::mvec4f dFdx(const rmlv::mvec4f& a) {
 	return a.yyww() - a.xxzz(); }
 
