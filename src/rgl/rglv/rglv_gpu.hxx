@@ -263,10 +263,10 @@ public:
 		    newTileDimensionsInBlocks != tileDimensionsInBlocks_) {
 			bufferDimensionsInPixels_ = newBufferDimensionsInPixels;
 			tileDimensionsInBlocks_ = newTileDimensionsInBlocks;
-			deviceScale_ = rmlv::qfloat2{ float(bufferDimensionsInPixels_.x/2),
-			                             -float(bufferDimensionsInPixels_.y/2) };
-			deviceOffset_ = rmlv::qfloat2{ float(bufferDimensionsInPixels_.x/2),
-			                               float(bufferDimensionsInPixels_.y/2) };
+			deviceScale_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
+			                             -bufferDimensionsInPixels_.y/2 );
+			deviceOffset_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
+			                               bufferDimensionsInPixels_.y/2 );
 			Retile(); }}
 
 private:
