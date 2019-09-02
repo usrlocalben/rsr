@@ -46,10 +46,10 @@ void Filter(const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::irect r
 
 				// load source1 color
 				qfloat3 sc;
-				QFloat4Canvas::Load(source1Addr, sc.x, sc.y, sc.z);
+				QFloat4Canvas::Load(source1Addr, sc.x.v, sc.y.v, sc.z.v);
 
 				// shade & convert
-				qfloat3 fragColor = SHADER::ShadeCanvas(q, source1Color);
+				qfloat3 fragColor = SHADER::ShadeCanvas(q, sc);
 				packed[sub] = CONVERTER::to_tc(fragColor); }
 
 			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow1Addr), _mm_unpacklo_epi64(packed[0].v, packed[1].v));
