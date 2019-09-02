@@ -269,6 +269,10 @@ public:
 		    newTileDimensionsInBlocks != tileDimensionsInBlocks_) {
 			bufferDimensionsInPixels_ = newBufferDimensionsInPixels;
 			tileDimensionsInBlocks_ = newTileDimensionsInBlocks;
+			deviceScale_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
+			                             -bufferDimensionsInPixels_.y/2 );
+			deviceOffset_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
+			                               bufferDimensionsInPixels_.y/2 );
 			Retile(); }}
 
 private:
@@ -521,10 +525,6 @@ private:
 
 		const ShaderUniforms ui = MakeUniforms(state);
 
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -596,7 +596,7 @@ private:
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.alloc<4>(), flags); }
 
-			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
+			auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
 			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -640,11 +640,6 @@ private:
 		VertexInput vi_;
 
 		const ShaderUniforms ui = MakeUniforms(state);
-
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -716,7 +711,7 @@ private:
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.alloc<4>(), flags); }
 
-			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
+			auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
 			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -758,11 +753,6 @@ private:
 		const int target_height = cbc.height();
 
 		const ShaderUniforms ui = MakeUniforms(state);
-
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
@@ -807,8 +797,8 @@ private:
 				qfloat4 gl_Position;
 				PGM::ShadeVertex(vi_[i], ui, gl_Position, computed[i]);
 				devCoord[i] = pdiv(gl_Position);
-				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale.x + deviceOffset.x));
-				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale.y + deviceOffset.y)); }
+				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale_.x + deviceOffset_.x));
+				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale_.y + deviceOffset_.y)); }
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
@@ -838,10 +828,6 @@ private:
 		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
-		vec2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                 -float(bufferDimensionsInPixels_.y/2) };
-		vec2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                   float(bufferDimensionsInPixels_.y/2) };
 		const ShaderUniforms ui = MakeUniforms(state);
 
 		for (const auto& faceIndices : clipQueue_) {
@@ -896,8 +882,8 @@ private:
 			for (auto& vertex : clipA_) {
 				// convert clip-coord to device-coord
 				vertex.coord = pdiv(vertex.coord);
-				vertex.coord.x = vertex.coord.x * deviceScale.x + deviceOffset.x;
-				vertex.coord.y = vertex.coord.y * deviceScale.y + deviceOffset.y; }
+				vertex.coord.x = (vertex.coord.x * deviceScale_.x + deviceOffset_.x).get_x();
+				vertex.coord.y = (vertex.coord.y * deviceScale_.y + deviceOffset_.y).get_x(); }
 			// end of phase 2: poly contains a clipped N-gon
 
 			// check direction, maybe cull, maybe reorder
@@ -1033,6 +1019,8 @@ private:
 	rmlv::ivec2 bufferDimensionsInTiles_;
 	rmlv::ivec2 tileDimensionsInBlocks_;
 	rmlv::ivec2 tileDimensionsInPixels_;
+	rmlv::qfloat2 deviceScale_;
+	rmlv::qfloat2 deviceOffset_;
 
 	// IC users can write to
 	int userIC_{0};
