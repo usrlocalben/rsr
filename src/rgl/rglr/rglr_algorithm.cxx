@@ -52,9 +52,9 @@ void Fill(Int16Canvas& dst, const rmlv::vec4 value, const rmlg::irect rect) {
 
 	Int16QPixel foo;
 	for (int i=0; i<4; i++) {
-		foo.r[i] = value.x * 255.0F;
-		foo.g[i] = value.y * 255.0F;
-		foo.b[i] = value.z * 255.0F; }
+		foo.r[i] = value.x * rglr::Int16QPixel::scale;
+		foo.g[i] = value.y * rglr::Int16QPixel::scale;
+		foo.b[i] = value.z * rglr::Int16QPixel::scale; }
 
 	auto* p = dst.data() + rect.top.y/2*dst.stride2() + rect.left.x/2;
 	int rowIncr = dst.stride2() - rectWidthInQuads;

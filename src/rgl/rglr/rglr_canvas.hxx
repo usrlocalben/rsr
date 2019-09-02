@@ -117,6 +117,7 @@ private:
 //#define FOO_ALPHA_ALIGN
 
 struct Int16QPixel {
+	static constexpr float scale{255.0F};
 	uint16_t r[4];
 	uint16_t g[4];
 	uint16_t b[4];
@@ -125,7 +126,7 @@ struct Int16QPixel {
 #endif
 
 	static inline void Load(const Int16QPixel* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
-		const __m128 scale = _mm_set1_ps(1.0F / 255.0F);
+		const __m128 factor = _mm_set1_ps(1.0F / scale);
 #ifndef FOO_ALPHA_ALIGN
 		__m128i irig = _mm_loadu_si128((__m128i*)&src->r);
 		__m128i ibia = _mm_loadu_si128((__m128i*)&src->b);
@@ -137,15 +138,15 @@ struct Int16QPixel {
 		__m128i ir = _mm_unpacklo_epi16(irig, zero);
 		__m128i ig = _mm_unpackhi_epi16(irig, zero);
 		__m128i ib = _mm_unpacklo_epi16(ibia, zero);
-		rrrr = _mm_mul_ps(_mm_cvtepi32_ps(ir), scale);
-		gggg = _mm_mul_ps(_mm_cvtepi32_ps(ig), scale);
-		bbbb = _mm_mul_ps(_mm_cvtepi32_ps(ib), scale); }
+		rrrr = _mm_mul_ps(_mm_cvtepi32_ps(ir), factor);
+		gggg = _mm_mul_ps(_mm_cvtepi32_ps(ig), factor);
+		bbbb = _mm_mul_ps(_mm_cvtepi32_ps(ib), factor); }
 
 	static inline void Store(__m128 rrrr, __m128 gggg, __m128 bbbb, Int16QPixel* dst) {
-		const __m128 scale = _mm_set1_ps(255.0F);
-		__m128i ir = _mm_cvtps_epi32(_mm_mul_ps(rrrr, scale));
-		__m128i ig = _mm_cvtps_epi32(_mm_mul_ps(gggg, scale));
-		__m128i ib = _mm_cvtps_epi32(_mm_mul_ps(bbbb, scale));
+		const __m128 factor = _mm_set1_ps(scale);
+		__m128i ir = _mm_cvtps_epi32(_mm_mul_ps(rrrr, factor));
+		__m128i ig = _mm_cvtps_epi32(_mm_mul_ps(gggg, factor));
+		__m128i ib = _mm_cvtps_epi32(_mm_mul_ps(bbbb, factor));
 		__m128i irig = _mm_packs_epi32(ir, ig);
 		__m128i ibxx = _mm_packs_epi32(ib, ib);
 #ifndef FOO_ALPHA_ALIGN
