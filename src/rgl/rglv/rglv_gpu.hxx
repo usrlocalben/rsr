@@ -10,6 +10,7 @@
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclr/rclr_algorithm.hxx"
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rgl/rglr/rglr_algorithm.hxx"
 #include "src/rgl/rglr/rglr_blend.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
 #include "src/rgl/rglr/rglr_canvas_util.hxx"
@@ -464,15 +465,18 @@ private:
 				MakeDrawRect(*stateptr, tileRect, rect);
 				if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
 					// std::cout << "clearing to " << color << std::endl;
-					fillRect(rect, stateptr->clearColor, cc); }
+					Fill(cc, stateptr->clearColor, rect); }
 				if ((bits & GL_DEPTH_BUFFER_BIT) != 0) {
-					fillRect(rect, stateptr->clearDepth, dc); }}
+					Fill(dc, stateptr->clearDepth, rect); }
+				/*if ((bits & GL_STENCIL_BUFFER_BIT) != 0) {
+					// XXX not implemented
+					assert(false); }*/}
 			else if (cmd == CMD_STORE_FP32_HALF) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				downsampleRect(tileRect, cc, *smallcanvas); }
+				Downsample(cc, *smallcanvas, tileRect); }
 			else if (cmd == CMD_STORE_FP32) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				copyRect(tileRect, cc, *smallcanvas); }
+				Copy(cc, *smallcanvas, tileRect); }
 			else if (cmd == CMD_STORE_TRUECOLOR) {
 				auto enableGamma = cs.consumeByte();
 				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
@@ -494,9 +498,9 @@ private:
 
 		auto& cc = *colorCanvasPtr_;
 		if (enableGamma) {
-			rglr::copyRect<PGM, rglr::sRGB>(rect, cc, outcanvas); }
+			rglr::Filter<PGM, rglr::sRGB>(cc, outcanvas, rect); }
 		else {
-			rglr::copyRect<PGM, rglr::LinearColor>(rect, cc, outcanvas); }}
+			rglr::Filter<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
 	template <bool ENABLE_CLIPPING, typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_DrawArray(const GLState& state, const int count) {}
@@ -525,12 +529,12 @@ private:
 		rmlg::irect rect;
 		MakeBinRect(state, rect);
 
+		qfloat2 deviceScale, deviceOffset;
+		MakeDeviceValues(state, deviceScale, deviceOffset);
+
 		VertexInput vi_;
 
 		const ShaderUniforms ui = MakeUniforms(state);
-
-		qfloat2 deviceScale, deviceOffset;
-		MakeDeviceValues(state, deviceScale, deviceOffset);
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -646,12 +650,12 @@ private:
 		rmlg::irect rect;
 		MakeBinRect(state, rect);
 
+		qfloat2 deviceScale, deviceOffset;
+		MakeDeviceValues(state, deviceScale, deviceOffset);
+
 		VertexInput vi_;
 
 		const ShaderUniforms ui = MakeUniforms(state);
-
-		qfloat2 deviceScale, deviceOffset;
-		MakeDeviceValues(state, deviceScale, deviceOffset);
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -766,12 +770,13 @@ private:
 
 		const ShaderUniforms ui = MakeUniforms(state);
 
-		qfloat2 deviceScale, deviceOffset;
-		MakeDeviceValues(state, deviceScale, deviceOffset);
-
 		rmlg::irect rect;
 		MakeDrawRect(state, tileRect, rect);
 
+		qfloat2 deviceScale, deviceOffset;
+		MakeDeviceValues(state, deviceScale, deviceOffset);
+		deviceScale = deviceScale * 16.0F;
+		deviceOffset = deviceOffset * 16.0F;
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
@@ -819,22 +824,22 @@ private:
 			tmp = pdiv(tmp);
 			zOverW0 = tmp.z;
 			oneOverW0 = tmp.w;
-			fx0 = ftoi(16.0F * ((tmp.x + 1.0F) * deviceScale.x + deviceOffset.x));
-			fy0 = ftoi(16.0F * ((tmp.y + 1.0F) * deviceScale.y + deviceOffset.y));
+			fx0 = ftoi((tmp.x + 1.0F) * deviceScale.x + deviceOffset.x);
+			fy0 = ftoi((tmp.y + 1.0F) * deviceScale.y + deviceOffset.y);
 
 			PGM::ShadeVertex(vi_[1], ui, tmp, computed1);
 			tmp = pdiv(tmp);
 			zOverW1 = tmp.z;
 			oneOverW1 = tmp.w;
-			fx1 = ftoi(16.0F * ((tmp.x + 1.0F) * deviceScale.x + deviceOffset.x));
-			fy1 = ftoi(16.0F * ((tmp.y + 1.0F) * deviceScale.y + deviceOffset.y));
+			fx1 = ftoi((tmp.x + 1.0F) * deviceScale.x + deviceOffset.x);
+			fy1 = ftoi((tmp.y + 1.0F) * deviceScale.y + deviceOffset.y);
 
 			PGM::ShadeVertex(vi_[2], ui, tmp, computed2);
 			tmp = pdiv(tmp);
 			zOverW2 = tmp.z;
 			oneOverW2 = tmp.w;
-			fx2 = ftoi(16.0F * ((tmp.x + 1.0F) * deviceScale.x + deviceOffset.x));
-			fy2 = ftoi(16.0F * ((tmp.y + 1.0F) * deviceScale.y + deviceOffset.y));
+			fx2 = ftoi((tmp.x + 1.0F) * deviceScale.x + deviceOffset.x);
+			fy2 = ftoi((tmp.y + 1.0F) * deviceScale.y + deviceOffset.y);
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
@@ -858,7 +863,7 @@ private:
 	template <typename PGM>
 	void bin_DrawElementsClipped(const GLState& state) {
 		using rmlm::mat4;
-		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
+		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat2, rmlv::qfloat4;
 		using std::array, std::swap, std::min, std::max;
 
 		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
@@ -869,7 +874,7 @@ private:
 		rmlg::irect rect;
 		MakeBinRect(state, rect);
 
-		vec2 deviceScale, deviceOffset;
+		qfloat2 deviceScale, deviceOffset;
 		MakeDeviceValues(state, deviceScale, deviceOffset);
 
 		for (const auto& faceIndices : clipQueue_) {
@@ -924,8 +929,8 @@ private:
 			for (auto& vertex : clipA_) {
 				// convert clip-coord to device-coord
 				vertex.coord = pdiv(vertex.coord);
-				vertex.coord.x = (vertex.coord.x + 1.0F) * deviceScale.x + deviceOffset.x;
-				vertex.coord.y = (vertex.coord.y + 1.0F) * deviceScale.y + deviceOffset.y; }
+				vertex.coord.x = ((vertex.coord.x + 1.0F) * deviceScale.x + deviceOffset.x).get_x();
+				vertex.coord.y = ((vertex.coord.y + 1.0F) * deviceScale.y + deviceOffset.y).get_x(); }
 			// end of phase 2: poly contains a clipped N-gon
 
 			// check direction, maybe cull, maybe reorder
@@ -1050,21 +1055,6 @@ private:
 			h = state.viewportDim.y; }
 		scale = rmlv::qfloat2{ float(w/2), -float(h/2) };
 		offset = rmlv::qfloat2{ float(ox), float(bufferDimensionsInPixels_.y - oy) }; }
-
-	void MakeDeviceValues(const GLState& state, rmlv::vec2& scale, rmlv::vec2& offset) {
-		int ox, oy, w, h;
-		if (state.viewportDim.x == -1) {
-			ox = 0;
-			oy = 0;
-			w = bufferDimensionsInPixels_.x;
-			h = bufferDimensionsInPixels_.y; }
-		else {
-			ox = state.viewportOrigin.x;
-			oy = state.viewportOrigin.y;
-			w = state.viewportDim.x;
-			h = state.viewportDim.y; }
-		scale = rmlv::vec2{ float(w/2), -float(h/2) };
-		offset = rmlv::vec2{ float(ox), float(bufferDimensionsInPixels_.y - oy) }; }
 
 	void MakeBinRect(const GLState& state, rmlg::irect& out) {
 		using std::min, std::max, rmlg::irect;

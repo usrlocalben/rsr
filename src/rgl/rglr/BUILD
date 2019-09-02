@@ -32,9 +32,23 @@ cc_library(
     srcs = ["rglr_canvas_util.cxx"],
     hdrs = ["rglr_canvas_util.hxx"],
     deps = [
-        "//3rdparty/pixeltoaster",
         "//3rdparty/ryg-srgb",
         "//src/rml/rmlg:irect",
+        "//src/rml/rmlv:mvec4",
+        "//src/rml/rmlv:soa",
+        ":canvas",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "algorithm",
+    srcs = ["rglr_algorithm.cxx"],
+    hdrs = ["rglr_algorithm.hxx"],
+    deps = [
+        "//3rdparty/pixeltoaster",
+        "//src/rml/rmlg:irect",
+        "//src/rml/rmlv:mvec4",
         "//src/rml/rmlv:soa",
         ":canvas",
         ],

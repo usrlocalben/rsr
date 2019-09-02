@@ -4,9 +4,9 @@
 #include <string>
 
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rgl/rglr/rglr_algorithm.hxx"
 #include "src/rgl/rglr/rglr_blend.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
-#include "src/rgl/rglr/rglr_canvas_util.hxx"
 #include "src/rgl/rglr/rglr_texture.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
 #include "src/rgl/rglv/rglv_interpolate.hxx"
@@ -149,7 +149,7 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 	rglr::QFloat4Canvas cbc(8, 8);
 	rglr::QFloatCanvas dbc(8, 8);
 
-	rglr::fillRect(cbc.rect(), vec4{ 0,0,0,1.0 }, cbc);
+	rglr::Fill(cbc, vec4{ 0, 0, 0, 1.0F }, cbc.rect());
 
 	bool frontfacing = true;
 
@@ -199,7 +199,7 @@ bool check_triangle_uv() {
 	rglr::QFloat4Canvas cbc(width, height);
 	rglr::QFloatCanvas dbc(width, height);
 
-	rglr::fillRect(cbc.rect(), vec4{ 0,0,0,1.0 }, cbc);
+	rglr::Fill(cbc, vec4{ 0, 0, 0, 1.0F }, cbc.rect());
 
 	bool frontfacing = true;
 

@@ -68,8 +68,6 @@ public:
 
 		mvec4f scale{1.0f / (c1 + c2 + c3)};
 
-		const int last_row = targetHeightInPx_ - 1;
-
 		program_.Begin(minx, miny);
 		for (int y=miny; y<endy; y+=2, cb1+=cb1dxdy, cb2+=cb2dxdy, cb3+=cb3dxdy, program_.CR()) {
 			auto cx1{cb1}, cx2{cb2}, cx3{cb3};
@@ -79,7 +77,7 @@ public:
 				const mvec4i trimask(rmlv::sar<31>(edges));
 
 				// lower-left-origin opengl screen coords
-				const qfloat2 frag_coord = { mvec4f(x+0.5f)+rglv::FQX, mvec4f(last_row-y+0.5f)+rglv::FQYR };
+				const qfloat2 frag_coord = { mvec4f(x+0.5f)+mvec4f{0,1,0,1}, mvec4f(targetHeightInPx_-y-0.5f)+mvec4f{1,1,0,0} };
 
 				rglv::BaryCoord bary;
 				bary.x = itof(cx2) * scale;
