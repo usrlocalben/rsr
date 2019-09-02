@@ -155,16 +155,16 @@ struct DefaultTargetProgram {
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
 
 	inline void LoadColor(rmlv::qfloat4& destColor) {
-		destColor.r = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].r)));
-		destColor.g = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].g)));
-		destColor.b = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].b))); }
+		auto& cell = cb_[offs_];
+		rglr::QFloat4Canvas::Load(cb_+offs_, destColor.x.v, destColor.y.v, destColor.z.v); }
 
 	inline void StoreColor(rmlv::qfloat4 destColor,
 	                       rmlv::qfloat4 sourceColor,
 	                       rmlv::mvec4i fragMask) {
-		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].r)), selectbits(destColor.r, sourceColor.r, fragMask).v);
-		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].g)), selectbits(destColor.g, sourceColor.g, fragMask).v);
-		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].b)), selectbits(destColor.b, sourceColor.b, fragMask).v); }
+		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
+		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
+		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
+		rglr::QFloat4Canvas::Store(sr, sg, sb, cb_+offs_); }
 
 	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord bary, const bool frontfacing) {
 		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
@@ -536,7 +536,6 @@ private:
 		VertexInput vi_;
 
 		const ShaderUniforms ui = MakeUniforms(state);
-
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
