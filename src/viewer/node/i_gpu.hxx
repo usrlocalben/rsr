@@ -15,7 +15,7 @@ public:
 	virtual auto TileDimensions(rmlv::ivec2 tileDim) -> void = 0;
 	virtual auto Aspect(float aspect) -> void = 0;
 	virtual auto DoubleBuffer(bool value) -> void = 0;
-	virtual auto ColorCanvas(rglr::Int16Canvas* ptr) -> void = 0;
+	virtual auto ColorCanvas(rglr::QShort3Canvas* ptr) -> void = 0;
 	virtual auto DepthCanvas(rglr::QFloatCanvas* ptr) -> void = 0;
 	virtual auto IC() -> rglv::GL& = 0;
 	virtual auto Render() -> rclmt::jobsys::Job* = 0; };

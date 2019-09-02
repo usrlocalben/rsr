@@ -11,12 +11,12 @@ namespace rglr {
 
 void Fill(QFloatCanvas& dst, float value, rmlg::irect rect);
 void Fill(QFloat4Canvas& dst, rmlv::vec4 value, rmlg::irect rect);
-void Fill(Int16Canvas& dst, rmlv::vec4 value, rmlg::irect rect);
+void Fill(QShort3Canvas& dst, rmlv::vec4 value, rmlg::irect rect);
 void Stroke(TrueColorCanvas& dst, PixelToaster::TrueColorPixel color, rmlg::irect rect);
 void Downsample(const QFloat4Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
-void Downsample(const Int16Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
+void Downsample(const QShort3Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
 void Copy(const QFloat4Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
-void Copy(const Int16Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
+void Copy(const QShort3Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
 
 template <class SHADER, class CONVERTER>
 void Filter(const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::irect rect) {
@@ -45,10 +45,8 @@ void Filter(const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::irect r
 			for (int sub = 0; sub < 2; sub++, source1Addr++, q+=dqx) {
 
 				// load source1 color
-				__m128 scr = _mm_load_ps(reinterpret_cast<const float*>(&source1Addr->r));
-				__m128 scg = _mm_load_ps(reinterpret_cast<const float*>(&source1Addr->g));
-				__m128 scb = _mm_load_ps(reinterpret_cast<const float*>(&source1Addr->b));
-				qfloat3 source1Color{ scr, scg, scb };
+				qfloat3 sc;
+				QFloat4Canvas::Load(source1Addr, sc.x, sc.y, sc.z);
 
 				// shade & convert
 				qfloat3 fragColor = SHADER::ShadeCanvas(q, source1Color);
@@ -59,7 +57,7 @@ void Filter(const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::irect r
 
 
 template <class SHADER, class CONVERTER>
-void Filter(const Int16Canvas& src1, TrueColorCanvas& dst, const rmlg::irect rect) {
+void Filter(const QShort3Canvas& src1, TrueColorCanvas& dst, const rmlg::irect rect) {
 	using rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4;
 	using rmlv::mvec4f, rmlv::mvec4i;
 
@@ -86,7 +84,7 @@ void Filter(const Int16Canvas& src1, TrueColorCanvas& dst, const rmlg::irect rec
 
 				// load source1 color
 				qfloat3 source1Color;
-				rglr::Int16QPixel::Load(source1Addr, source1Color.x.v, source1Color.y.v, source1Color.z.v);
+				QShort3Canvas::Load(source1Addr, source1Color.x.v, source1Color.y.v, source1Color.z.v);
 
 				// shade & convert
 				qfloat3 fragColor = SHADER::ShadeCanvas(q, source1Color);

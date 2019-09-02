@@ -85,6 +85,22 @@ struct QFloat4Canvas {
 		_height = height;
 		_stride2 = width / 2; }
 
+	static inline void Load(const rmlv::qfloat4* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
+		rrrr = _mm_load_ps(reinterpret_cast<const float*>(&src->r));
+		gggg = _mm_load_ps(reinterpret_cast<const float*>(&src->g));
+		bbbb = _mm_load_ps(reinterpret_cast<const float*>(&src->b)); }
+
+	static inline void Store(__m128 rrrr, __m128 gggg, __m128 bbbb, rmlv::qfloat4* const dst) {
+		_mm_store_ps(reinterpret_cast<float*>(&dst->r), rrrr);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->g), gggg);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->b), bbbb); }
+
+	static inline void Store(__m128 rrrr, __m128 gggg, __m128 bbbb, __m128 aaaa, rmlv::qfloat4* const dst) {
+		_mm_store_ps(reinterpret_cast<float*>(&dst->r), rrrr);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->g), gggg);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->b), bbbb);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->a), aaaa); }
+
 	rmlv::vec4 get_pixel(int x, int y) {
 		const auto* data = reinterpret_cast<const float*>(_ptr);
 		const int channels = 4;
@@ -114,55 +130,25 @@ private:
 	int _stride2{0};
 	};
 
-//#define FOO_ALPHA_ALIGN
 
-struct Int16QPixel {
-	static constexpr float scale{255.0F};
+struct QShort3 {
+	uint16_t r[4];
+	uint16_t g[4];
+	uint16_t b[4]; };
+
+
+struct QShort4 {
 	uint16_t r[4];
 	uint16_t g[4];
 	uint16_t b[4];
-#ifdef FOO_ALPHA_ALIGN
-	uint16_t a[4];
-#endif
-
-	static inline void Load(const Int16QPixel* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
-		const __m128 factor = _mm_set1_ps(1.0F / scale);
-#ifndef FOO_ALPHA_ALIGN
-		__m128i irig = _mm_loadu_si128((__m128i*)&src->r);
-		__m128i ibia = _mm_loadu_si128((__m128i*)&src->b);
-#else
-		__m128i irig = _mm_load_si128((__m128i*)&src->r);
-		__m128i ibia = _mm_load_si128((__m128i*)&src->b);
-#endif
-		__m128i zero = _mm_setzero_si128();
-		__m128i ir = _mm_unpacklo_epi16(irig, zero);
-		__m128i ig = _mm_unpackhi_epi16(irig, zero);
-		__m128i ib = _mm_unpacklo_epi16(ibia, zero);
-		rrrr = _mm_mul_ps(_mm_cvtepi32_ps(ir), factor);
-		gggg = _mm_mul_ps(_mm_cvtepi32_ps(ig), factor);
-		bbbb = _mm_mul_ps(_mm_cvtepi32_ps(ib), factor); }
-
-	static inline void Store(__m128 rrrr, __m128 gggg, __m128 bbbb, Int16QPixel* dst) {
-		const __m128 factor = _mm_set1_ps(scale);
-		__m128i ir = _mm_cvtps_epi32(_mm_mul_ps(rrrr, factor));
-		__m128i ig = _mm_cvtps_epi32(_mm_mul_ps(gggg, factor));
-		__m128i ib = _mm_cvtps_epi32(_mm_mul_ps(bbbb, factor));
-		__m128i irig = _mm_packs_epi32(ir, ig);
-		__m128i ibxx = _mm_packs_epi32(ib, ib);
-#ifndef FOO_ALPHA_ALIGN
-		_mm_storeu_si128((__m128i*)&dst->r, irig);
-		_mm_storeu_si64((__m128i*)&dst->b, ibxx);
-#else
-		_mm_store_si128((__m128i*)&dst->r, irig);
-		_mm_store_si128((__m128i*)&dst->b, ibxx);
-#endif
-	}};
+	uint16_t a[4]; };
 
 
-struct Int16Canvas {
-	Int16Canvas() = default;
+struct QShort3Canvas {
+	static constexpr float scale{255.0F};
+	QShort3Canvas() = default;
 
-	Int16Canvas(const int width, const int height) :
+	QShort3Canvas(const int width, const int height) :
 		width_(width),
 		height_(height),
 		stride2_(width / 2) {
@@ -189,30 +175,92 @@ struct Int16Canvas {
 		height_ = height;
 		stride2_ = width / 2; }
 
-	/*rmlv::vec4 get_pixel(int x, int y) {
-		const auto* data = reinterpret_cast<const float*>(ptr_);
-		const int channels = 4;
-		const int pixelsPerQuad = 4;
-		const int elemsPerQuad = channels * pixelsPerQuad;
-		const int widthInQuads = width_ / 2;
+	static inline void Load(const QShort3* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
+		const __m128 factor = _mm_set1_ps(1.0F / scale);
+		__m128i irig = _mm_loadu_si128((__m128i*)&src->r);
+		__m128i ibia = _mm_loadu_si128((__m128i*)&src->b);
+		__m128i zero = _mm_setzero_si128();
+		__m128i ir = _mm_unpacklo_epi16(irig, zero);
+		__m128i ig = _mm_unpackhi_epi16(irig, zero);
+		__m128i ib = _mm_unpacklo_epi16(ibia, zero);
+		rrrr = _mm_mul_ps(_mm_cvtepi32_ps(ir), factor);
+		gggg = _mm_mul_ps(_mm_cvtepi32_ps(ig), factor);
+		bbbb = _mm_mul_ps(_mm_cvtepi32_ps(ib), factor); }
 
-		const int Yquad = y / 2;
-		const int Xquad = x / 2;
-
-		const int quadAddr = (Yquad * widthInQuads + Xquad) * elemsPerQuad;
-
-		//int cellidx = y / 2 * stride2_ + x / 2;
-		int sy = y % 2;
-		int sx = x % 2;
-		float r = data[ quadAddr +  0 + sy*2 + sx ];
-		float g = data[ quadAddr +  4 + sy*2 + sx ];
-		float b = data[ quadAddr +  8 + sy*2 + sx ];
-		float a = data[ quadAddr + 12 + sy*2 + sx ];
-		return rmlv::vec4{ r, g, b, a }; }*/
+	static inline void Store(__m128 rrrr, __m128 gggg, __m128 bbbb, QShort3* dst) {
+		const __m128 factor = _mm_set1_ps(scale);
+		__m128i ir = _mm_cvtps_epi32(_mm_mul_ps(rrrr, factor));
+		__m128i ig = _mm_cvtps_epi32(_mm_mul_ps(gggg, factor));
+		__m128i ib = _mm_cvtps_epi32(_mm_mul_ps(bbbb, factor));
+		__m128i irig = _mm_packs_epi32(ir, ig);
+		__m128i ibxx = _mm_packs_epi32(ib, ib);
+		_mm_storeu_si128((__m128i*)&dst->r, irig);
+		_mm_storeu_si64((__m128i*)&dst->b, ibxx); }
 
 private:
-	rcls::vector<Int16QPixel> buffer_;
-	Int16QPixel* ptr_{nullptr};
+	rcls::vector<QShort3> buffer_;
+	QShort3* ptr_{nullptr};
+	int width_{0};
+	int height_{0};
+	int stride2_{0}; };
+
+
+struct QShort4Canvas {
+	static constexpr float scale{255.0F};
+	QShort4Canvas() = default;
+
+	QShort4Canvas(const int width, const int height) :
+		width_(width),
+		height_(height),
+		stride2_(width / 2) {
+		buffer_.reserve(width * height / 4);
+		ptr_ = buffer_.data(); }
+
+	auto data() { return ptr_; }
+	auto cdata() const { return ptr_; }
+
+	auto width() const { return width_; }
+	auto height() const { return height_; }
+	auto stride2() const { return stride2_; }
+	rmlg::irect rect() const {
+		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{width_, height_} }; }
+	float aspect() const {
+		if (width_ == 0 || height_ == 0) {
+			return 1.0F; }
+		return float(width_) / float(height_); }
+
+	void resize(const int width, const int height) {
+		buffer_.reserve(width * height / 4);
+		ptr_ = buffer_.data();
+		width_ = width;
+		height_ = height;
+		stride2_ = width / 2; }
+
+	static inline void Load(const QShort4* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
+		const __m128 factor = _mm_set1_ps(1.0F / scale);
+		__m128i irig = _mm_load_si128((__m128i*)&src->r);
+		__m128i ibia = _mm_load_si128((__m128i*)&src->b);
+		__m128i zero = _mm_setzero_si128();
+		__m128i ir = _mm_unpacklo_epi16(irig, zero);
+		__m128i ig = _mm_unpackhi_epi16(irig, zero);
+		__m128i ib = _mm_unpacklo_epi16(ibia, zero);
+		rrrr = _mm_mul_ps(_mm_cvtepi32_ps(ir), factor);
+		gggg = _mm_mul_ps(_mm_cvtepi32_ps(ig), factor);
+		bbbb = _mm_mul_ps(_mm_cvtepi32_ps(ib), factor); }
+
+	static inline void Store(__m128 rrrr, __m128 gggg, __m128 bbbb, QShort4* dst) {
+		const __m128 factor = _mm_set1_ps(scale);
+		__m128i ir = _mm_cvtps_epi32(_mm_mul_ps(rrrr, factor));
+		__m128i ig = _mm_cvtps_epi32(_mm_mul_ps(gggg, factor));
+		__m128i ib = _mm_cvtps_epi32(_mm_mul_ps(bbbb, factor));
+		__m128i irig = _mm_packs_epi32(ir, ig);
+		__m128i ibxx = _mm_packs_epi32(ib, ib);
+		_mm_store_si128((__m128i*)&dst->r, irig);
+		_mm_store_si128((__m128i*)&dst->b, ibxx); }
+
+private:
+	rcls::vector<QShort4> buffer_;
+	QShort4* ptr_{nullptr};
 	int width_{0};
 	int height_{0};
 	int stride2_{0}; };
