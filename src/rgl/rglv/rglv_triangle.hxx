@@ -151,13 +151,9 @@ private:
 	inline void RenderCompleteBlock() {
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::mvec4f, rmlv::mvec4i;
 		// program_.update_max_z(cbz_ + nmaxz_);
-		auto qcy1 = qb1_;
-		auto qcy2 = qb2_;
-		auto qcyz = qbz_;
+		auto qcy1 = qb1_, qcy2 = qb2_,              qcyz = qbz_;
 		for (int iy=0; iy<q; iy+=2, qcy1+=qdx12_, qcy2+=qdx23_, qcyz+=qdzdy_, program_.CR2()) {
-			auto qcx1 = qcy1;
-			auto qcx2 = qcy2;
-			auto qcxz = qcyz;
+			auto qcx1 = qcy1, qcx2 = qcy2,              qcxz = qcyz;
 			for (int ix=0; ix<q; ix+=2, qcx1+=qdy12_, qcx2+=qdy23_, qcxz+=qdzdx_, program_.Right2()) {
 				// XXX const qfloat2 frag_coord = { mvec4f(x+0.5f)+rglv::FQX, mvec4f(last_row-y+0.5f)+rglv::FQYR };
 				qfloat b0 = itof(qcx2) * scale_;
@@ -168,28 +164,25 @@ private:
 
 	inline void RenderPartialBlock() {
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::mvec4f, rmlv::mvec4i, rmlv::sar;
-		auto qcy1 = qb1_;
-		auto qcy2 = qb2_;
-		auto qcy3 = qb3_;
-		auto qcyz = qbz_;
-		for (int iy=0; iy<q; iy+=2, qcy1+=qdx12_, qcy2+=qdx23_, qcy3+=qdx31_, qcyz+=qdzdy_, program_.CR2()) {
-			auto qcx1 = qcy1;
-			auto qcx2 = qcy2;
-			auto qcx3 = qcy3;
-			auto qcxz = qcyz;
-			for (int ix=0; ix<q; ix+=2, qcx1+=qdy12_, qcx2+=qdy23_, qcx3+=qdy31_, qcxz+=qdzdx_, program_.Right2()) {
+		auto qcy1 = qb1_, qcy2 = qb2_, qcy3 = qb3_, qcyz = qbz_;
+		for (int iy=0; iy<q; iy+=2) {
+			auto qcx1 = qcy1, qcx2 = qcy2, qcx3 = qcy3, qcxz = qcyz;
+			for (int ix=0; ix<q; ix+=2) {
 				mvec4i edges{qcx1|qcx2|qcx3};
-				if (movemask(bits2float(edges)) == 0xf) continue;
-				mvec4i triMask{sar<31>(edges)};
+				if (movemask(bits2float(edges)) != 0xf) {
+					mvec4i triMask{sar<31>(edges)};
 
-				// XXX frag_coord
-				//
-				qfloat b0 = itof(qcx2) * scale_;
-				qfloat b2 = itof(qcx1) * scale_;
-				qfloat b1 = mvec4f{1.0f} - b0 - b2;
-				BaryCoord bary{ b0, b1, b2 };
-				//BaryCoord bary{ 0.333F, 0.333F, 0.333F };
-				program_.Render(qfloat2{0, 0}, bary/*, qcxz*/, triMask); }}}
+					// XXX frag_coord
+					qfloat b0 = itof(qcx2) * scale_;
+					qfloat b2 = itof(qcx1) * scale_;
+					qfloat b1 = mvec4f{1.0f} - b0 - b2;
+					BaryCoord bary{ b0, b1, b2 };
+
+					program_.Render(qfloat2{0, 0}, bary/*, qcxz*/, triMask); }
+				qcx1+=qdy12_, qcx2+=qdy23_, qcx3+=qdy31_, qcxz+=qdzdx_;
+				program_.Right2(); }
+			qcy1+=qdx12_, qcy2+=qdx23_, qcy3+=qdx31_, qcyz+=qdzdy_;
+			program_.CR2(); }}
 
 private:
 	// global state
