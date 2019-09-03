@@ -67,56 +67,64 @@ struct GPUStats {
 
 template <typename TEXTURE_UNIT, typename FRAGMENT_PROGRAM, typename BLEND_PROGRAM>
 struct DefaultTargetProgram {
+	// global state
 	rmlv::qfloat4* cb_;
 	rmlv::qfloat* db_;
-
-	const TEXTURE_UNIT& tu0_, tu1_;
-
 	const int width_;
 	const int height_;
 	const rmlv::qfloat2 targetDimensions_;
-	int offs_, offsLeft_;
 
-	const rglv::VertexFloat1 oneOverW_;
-	const rglv::VertexFloat1 zOverW_;
-
-	const rglv::VertexFloat3 vo0_;
-	const rglv::VertexFloat3 vo1_;
-	const rglv::VertexFloat3 vo2_;
-	const rglv::VertexFloat3 vo3_;
-
+	// draw state
+	const TEXTURE_UNIT& tu0_, tu1_;
 	const ShaderUniforms uniforms_;
 
+	// triangle
+	rglv::VertexFloat1 oneOverW_;
+	rglv::VertexFloat1 zOverW_;
+	rglv::VertexFloat3 vo0_;
+	rglv::VertexFloat3 vo1_;
+	rglv::VertexFloat3 vo2_;
+	rglv::VertexFloat3 vo3_;
+	bool frontfacing_;
+
+	// fragment
+	int offs_, offsLeft_;
+
 	DefaultTargetProgram(
-		const TEXTURE_UNIT& tu0,
-		const TEXTURE_UNIT& tu1,
 		rglr::QFloat4Canvas& cc,
 		rglr::QFloatCanvas& dc,
-		ShaderUniforms uniforms,
-		VertexFloat1 oneOverW,
-		VertexFloat1 zOverW,
-		VertexOutputx1 computed0,
-		VertexOutputx1 computed1,
-		VertexOutputx1 computed2) :
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
+		ShaderUniforms uniforms) :
 		cb_(cc.data()),
 		db_(dc.data()),
-		tu0_(tu0),
-		tu1_(tu1),
 		width_(cc.width()),
 		height_(cc.height()),
 		targetDimensions_(float(cc.width()), float(cc.height())),
-		oneOverW_(oneOverW),
-		zOverW_(zOverW),
-		vo0_({ computed0.r0, computed1.r0, computed2.r0 }),
-		vo1_({ computed0.r1, computed1.r1, computed2.r1 }),
-		vo2_({ computed0.r2, computed1.r2, computed2.r2 }),
-		vo3_({ computed0.r3, computed1.r3, computed2.r3 }),
+		tu0_(tu0),
+		tu1_(tu1),
 		uniforms_(uniforms) {}
 
-	inline void Begin(int x, int y) {
+	inline void Load(VertexFloat1 oneOverW,
+	                 VertexFloat1 zOverW,
+	                 VertexOutputx1 computed0,
+	                 VertexOutputx1 computed1,
+	                 VertexOutputx1 computed2,
+					 bool frontfacing) {
+		oneOverW_ = oneOverW;
+		zOverW_ = zOverW;
+		vo0_ = { computed0.r0, computed1.r0, computed2.r0 };
+		vo1_ = { computed0.r1, computed1.r1, computed2.r1 };
+		vo2_ = { computed0.r2, computed1.r2, computed2.r2 };
+		vo3_ = { computed0.r3, computed1.r3, computed2.r3 };
+		frontfacing_ = frontfacing; }
+
+	inline void BeginBlock(int x, int y) {
 		offs_ = offsLeft_ = (y >> 1) * (width_ >> 1) + (x >> 1); }
 
-	inline void CR() {
+	inline void EndBlock() {}
+
+	inline void CR2() {
 		offsLeft_ += width_ >> 1;
 		offs_ = offsLeft_; }
 
@@ -150,7 +158,48 @@ struct DefaultTargetProgram {
 		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
 		rglr::QFloat4Canvas::Store(sr, sg, sb, cb_+offs_); }
 
-	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord bary, const bool frontfacing) {
+	inline void Render(const rmlv::qfloat2 fragCoord, rglv::BaryCoord bary) {
+		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
+
+		const auto fragDepth = rglv::Interpolate(bary, zOverW_);
+
+		// read depth buffer
+		qfloat destDepth; LoadDepth(destDepth);
+
+		const auto depthMask = float2bits(cmple(fragDepth, destDepth));
+		const auto fragMask = depthMask;
+
+		if (movemask(bits2float(fragMask)) == 0) {
+			return; }  // early out if whole quad fails depth test
+
+		// restore perspective
+		const auto fragW = rmlv::oneover(Interpolate(bary, oneOverW_));
+		bary.x = oneOverW_.v0 * bary.x * fragW;
+		bary.z = oneOverW_.v2 * bary.z * fragW;
+		bary.y = 1.0f - bary.x - bary.z;
+
+		VertexOutput vertexInterpolants{
+			Interpolate(bary, vo0_),
+			Interpolate(bary, vo1_),
+			Interpolate(bary, vo2_),
+			Interpolate(bary, vo3_) };
+
+		qfloat4 fragColor;
+		FRAGMENT_PROGRAM::ShadeFragment(fragCoord,
+		                                fragDepth,
+										uniforms_,
+		                                vertexInterpolants,
+		                                bary, tu0_, tu1_, fragColor);
+
+		qfloat4 destColor;
+		LoadColor(destColor);
+
+		// qfloat4 blendedColor = fragColor; // no blending
+
+		StoreColor(destColor, fragColor, fragMask);
+		StoreDepth(destDepth, fragDepth, fragMask); }
+
+	inline void Render(const rmlv::qfloat2 fragCoord, rglv::BaryCoord bary, const rmlv::mvec4i triMask) {
 		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
 
 		const auto fragDepth = rglv::Interpolate(bary, zOverW_);
@@ -246,6 +295,9 @@ struct SubStack {
 
 template<typename ...SHADERS>
 class GPU {
+	static constexpr uint8_t BF_IS_CLEAR = 1;
+	static constexpr uint8_t BF_NEED_CLEAR = 2;
+
 public:
 	void Reset(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks) {
 		SetSize(newBufferDimensionsInPixels, newTileDimensionsInBlocks);
@@ -262,6 +314,12 @@ public:
 		if (newBufferDimensionsInPixels != bufferDimensionsInPixels_ ||
 		    newTileDimensionsInBlocks != tileDimensionsInBlocks_) {
 			bufferDimensionsInPixels_ = newBufferDimensionsInPixels;
+
+			// bufferDimensionsInBlocks_ = bufferDimensionsInPixels_ / 8;
+			// int numBlocks = bufferDimensionsInBlocks_.x * bufferDimensionsInBlocks_.y;
+			// blockMaxZ_.reserve(numBlocks);
+			// blockFlag_.reserve(numBlocks);
+
 			tileDimensionsInBlocks_ = newTileDimensionsInBlocks;
 			deviceScale_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
 			                             -bufferDimensionsInPixels_.y/2 );
@@ -443,6 +501,7 @@ private:
 
 		auto& dc = *depthCanvasPtr_;
 		auto& cc = *colorCanvasPtr_;
+		bool needToFinish{false};
 
 		const GLState* stateptr = nullptr;
 		while (!cs.eof()) {
@@ -452,21 +511,47 @@ private:
 				stateptr = static_cast<const GLState*>(cs.consumePtr()); }
 			else if (cmd == CMD_CLEAR) {
 				int bits = cs.consumeByte();
+				int tb = rect.top.y / 8;
+				int lb = rect.left.x / 8;
+				int bb = rect.bottom.y / 8;
+				int rb = rect.right.x / 8;
 				if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
 					// std::cout << "clearing to " << color << std::endl;
+					/*
+					for (int by=tb; by<=bb; by++) {
+						uint8_t* rowData = &blockFlag_[by * bufferDimensionsInBlocks_.x];
+						for (int bx=lb; bx<=rb; bx++) {
+							rowData[bx] = BF_NEED_CLEAR; }}
+					*/
+					//needToFinish = true;
 					Fill(cc, stateptr->clearColor, rect); }
 				if ((bits & GL_DEPTH_BUFFER_BIT) != 0) {
+					/*
+					for (int by=tb; by<=bb; by++) {
+						float* rowData = &blockMaxZ[by * bufferDimensionsInBlocks_.x];
+						for (int bx=lb; bx<=rb; bx++) {
+							rowData[bx] = stateptr->clearDepth; }}
+					*/
 					Fill(dc, stateptr->clearDepth, rect); }
 				if ((bits & GL_STENCIL_BUFFER_BIT) != 0) {
 					// XXX not implemented
 					assert(false); }}
 			else if (cmd == CMD_STORE_FP32_HALF) {
+				/*if (needToFinish) {
+					Finish(tb, rb, bb, lb);
+					needToFinish = false; }*/
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
 				Downsample(cc, *smallcanvas, rect); }
 			else if (cmd == CMD_STORE_FP32) {
+				/*if (needToFinish) {
+					Finish(rect);
+					needToFinish = false; }*/
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
 				Copy(cc, *smallcanvas, rect); }
 			else if (cmd == CMD_STORE_TRUECOLOR) {
+				/*if (needToFinish) {
+					Finish(rect);
+					needToFinish = false; }*/
 				auto enableGamma = cs.consumeByte();
 				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
 				tile_StoreTrueColor<SHADERS...>(*stateptr, rect, enableGamma, outcanvas);
@@ -751,6 +836,12 @@ private:
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
+		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
+			cbc, dbc,
+			tu0, tu1,
+			ui };
+		TriangleRasterizer tr{targetProgram, rect, target_height};
+
 		array<VertexInput, 3> vi_;
 		array<VertexOutput, 3> computed;
 		array<qfloat4, 3> devCoord;
@@ -795,19 +886,16 @@ private:
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
-					tu0, tu1,
-					cbc, dbc,
-					ui,
+				targetProgram.Load(
 					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
 					computed[0].lane(ti),
 					computed[1].lane(ti),
-					computed[2].lane(ti) };
-				TriangleRasterizer tr(targetProgram, rect, target_height);
+					computed[2].lane(ti),
+					!backfacing);
 				tr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
 				        fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
-				        !backfacing); }
+						devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti]); }
 
 			// reset the SIMD lane counter
 			li = 0; }}
@@ -961,19 +1049,18 @@ private:
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
-			tu0, tu1,
-			cbc, dbc,
-			ui,
+		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{ cbc, dbc, tu0, tu1, ui };
+		TriangleRasterizer tr{targetProgram, rect, target_height};
+		targetProgram.Load(
 			VertexFloat1{ dev0.w, dev1.w, dev2.w },
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
 			data0,
 			data1,
-			data2 };
-		TriangleRasterizer tr(targetProgram, rect, target_height);
+			data2,
+			!backfacing);
 		tr.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
 		        int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
-		        !backfacing); }
+				dev0.z, dev1.z, dev2.z); }
 
 	auto MakeUniforms(const GLState& state) {
 		ShaderUniforms ui;
@@ -1002,12 +1089,15 @@ private:
 	bool doubleBuffer_{true};
 	rglr::QFloat4Canvas* colorCanvasPtr_{nullptr};
 	rglr::QFloatCanvas* depthCanvasPtr_{nullptr};
+	// std::vector<int> blockMaxZ_;
+	// std::vector<uint8_t> blockFlag_;
 
 	// tile/bin collection
 	std::vector<Tile> tiles_;
 	std::vector<TileStat> tileStats_;
 
 	// render target parameters
+	rmlv::ivec2 bufferDimensionsInBlocks_;
 	rmlv::ivec2 bufferDimensionsInPixels_;
 	rmlv::ivec2 bufferDimensionsInTiles_;
 	rmlv::ivec2 tileDimensionsInBlocks_;
