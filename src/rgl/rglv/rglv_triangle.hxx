@@ -19,10 +19,10 @@ class TriangleRasterizer {
 	static constexpr int q = 8;  // level 0 block is 8x8
 
 public:
-	TriangleRasterizer(FRAGMENT_PROCESSOR& fp, rmlg::irect rect, int targetHeightInPx) :
+	TriangleRasterizer(int targetHeightInPx, FRAGMENT_PROCESSOR& fp, rmlg::irect rect) :
+		targetHeightInPx_(targetHeightInPx),
 		program_(fp),
-		rect_(rect),
-		targetHeightInPx_(targetHeightInPx) {}
+		rect_(rect) {}
 
 	/*
 	void Draw(rmlv::vec4 s1, rmlv::vec4 s2, rmlv::vec4 s3, const bool frontfacing) {
@@ -73,10 +73,8 @@ public:
 
 		// block limits
 		const int qm1 = q - 1;
-		nmin1_ = 0; nmax1_ = 0;
-		nmin2_ = 0; nmax2_ = 0;
-		nmin3_ = 0; nmax3_ = 0;
-		nminz_ = 0; nmaxz_ = 0;
+		nmin1_ = 0; nmin2_ = 0; nmin3_ = 0; nminz_ = 0;
+		nmax1_ = 0; nmax2_ = 0; nmax3_ = 0; nmaxz_ = 0;
 		if (dx12_ >= 0) nmax1_ -= qm1*dx12_; else nmin1_ -= qm1*dx12_;
 		if (dy12_ >= 0) nmax1_ -= qm1*dy12_; else nmin1_ -= qm1*dy12_;
 		if (dx23_ >= 0) nmax2_ -= qm1*dx23_; else nmin2_ -= qm1*dx23_;
@@ -86,10 +84,7 @@ public:
 		if (dzdx_ >= 0) nmaxz_ += qm1*dzdx_; else nmin1_ += qm1*dzdx_;
 		if (dzdy_ >= 0) nmaxz_ += qm1*dzdy_; else nmin1_ += qm1*dzdy_;
 
-		cb1_ = c1;
-		cb2_ = c2;
-		cb3_ = c3;
-		cbz_ = cz;
+		cb1_ = c1; cb2_ = c2; cb3_ = c3; cbz_ = cz;
 		qb1_ = mvec4i{0,dy12_,0,dy12_} + mvec4i{0,0,dx12_,dx12_} + c1;
 		qb2_ = mvec4i{0,dy23_,0,dy23_} + mvec4i{0,0,dx23_,dx23_} + c2;
 		qb3_ = mvec4i{0,dy31_,0,dy31_} + mvec4i{0,0,dx31_,dx31_} + c3;
@@ -110,25 +105,25 @@ public:
 			NextRow(); }}
 
 private:
-	bool BlockIsTouchingTriangle() const {
+	inline bool BlockIsTouchingTriangle() const {
 		return cb1_>=nmax1_ && cb2_>=nmax2_ && cb3_>=nmax3_; }
-	bool BlockIsInsideTriangle() const {
+	inline bool BlockIsInsideTriangle() const {
 		return cb1_>=nmin1_ && cb2_>=nmin2_ && cb3_>=nmin3_; }
-	bool BlockIsInBounds() const {
+	inline bool BlockIsInBounds() const {
 		return minX_ <= x0_ && x0_ <= endX_; }
 
-	void AdvanceBlockInXUntilDead() {
+	inline void AdvanceBlockInXUntilDead() {
 		while (BlockIsInBounds() && BlockIsTouchingTriangle()) {
 			AdvanceBlockInX(); }}
 
-	void RenderBlocksUntilDead() {
+	inline void RenderBlocksUntilDead() {
 		while (1) {
 			AdvanceBlockInX();
 
 			if (!BlockIsInBounds()) break;
-			if (cb1_ < nmax1_) if (e1x_ < 0) break; else continue;
-			if (cb2_ < nmax2_) if (e2x_ < 0) break; else continue;
-			if (cb3_ < nmax3_) if (e3x_ < 0) break; else continue;
+			if (cb1_ < nmax1_) { if (e1x_ < 0) { break; } else { continue; }}
+			if (cb2_ < nmax2_) { if (e2x_ < 0) { break; } else { continue; }}
+			if (cb3_ < nmax3_) { if (e3x_ < 0) { break; } else { continue; }}
 
 			// if (!program_.BeginBlock(x0_, y0_/*, cbz_+nminz_*/)) continue;
 			program_.BeginBlock(x0_, y0_);
@@ -138,17 +133,17 @@ private:
 				RenderPartialBlock(); }
 			program_.EndBlock(); }}
 
-	void AdvanceBlockInX() {
+	inline void AdvanceBlockInX() {
 		x0_ += qstep_;
 		cb1_+=e1x_;   cb2_+=e2x_;   cb3_+=e3x_;   cbz_+=ezx_;
 		qb1_+=qe1x_;  qb2_+=qe2x_;  qb3_+=qe3x_;  qbz_+=qezx_; }
 
-	void NextRow() {
+	inline void NextRow() {
 		using rmlv::mvec4i;
 		cb1_+=q*dx12_;          cb2_+=q*dx23_;          cb3_+=q*dx31_;          cbz_+=q*dzdy_;
 		qb1_+=mvec4i{dx12_*q};  qb2_+=mvec4i{dx23_*q};  qb3_+=mvec4i{dx31_*q};  qbz_+=mvec4i{dzdy_*q}; }
 
-	void FlipBlockXDirection() {
+	inline void FlipBlockXDirection() {
 		qstep_ = -qstep_;
 		e1x_=-e1x_;   e2x_=-e2x_;    e3x_=-e3x_;    ezx_=-ezx_;
 		qe1x_=0-qe1x_; qe2x_=0-qe2x_;  qe3x_=0-qe3x_;  qezx_=0-qezx_; }

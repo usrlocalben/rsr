@@ -840,7 +840,7 @@ private:
 			cbc, dbc,
 			tu0, tu1,
 			ui };
-		TriangleRasterizer tr{targetProgram, rect, target_height};
+		TriangleRasterizer tr{target_height, targetProgram, rect};
 
 		array<VertexInput, 3> vi_;
 		array<VertexOutput, 3> computed;
@@ -1050,7 +1050,7 @@ private:
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
 		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{ cbc, dbc, tu0, tu1, ui };
-		TriangleRasterizer tr{targetProgram, rect, target_height};
+		TriangleRasterizer tr{target_height, targetProgram, rect};
 		targetProgram.Load(
 			VertexFloat1{ dev0.w, dev1.w, dev2.w },
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
