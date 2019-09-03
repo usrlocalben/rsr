@@ -79,10 +79,10 @@ public:
 		nminz_ = 0; nmaxz_ = 0;
 		if (dx12_ >= 0) nmax1_ -= qm1*dx12_; else nmin1_ -= qm1*dx12_;
 		if (dy12_ >= 0) nmax1_ -= qm1*dy12_; else nmin1_ -= qm1*dy12_;
-		if (dx23_ >= 0) nmax1_ -= qm1*dx23_; else nmin1_ -= qm1*dx23_;
-		if (dy23_ >= 0) nmax1_ -= qm1*dy23_; else nmin1_ -= qm1*dy23_;
-		if (dx31_ >= 0) nmax1_ -= qm1*dx31_; else nmin1_ -= qm1*dx31_;
-		if (dy31_ >= 0) nmax1_ -= qm1*dy31_; else nmin1_ -= qm1*dy31_;
+		if (dx23_ >= 0) nmax2_ -= qm1*dx23_; else nmin2_ -= qm1*dx23_;
+		if (dy23_ >= 0) nmax2_ -= qm1*dy23_; else nmin2_ -= qm1*dy23_;
+		if (dx31_ >= 0) nmax3_ -= qm1*dx31_; else nmin3_ -= qm1*dx31_;
+		if (dy31_ >= 0) nmax3_ -= qm1*dy31_; else nmin3_ -= qm1*dy31_;
 		if (dzdx_ >= 0) nmaxz_ += qm1*dzdx_; else nmin1_ += qm1*dzdx_;
 		if (dzdy_ >= 0) nmaxz_ += qm1*dzdy_; else nmin1_ += qm1*dzdy_;
 
@@ -127,8 +127,8 @@ private:
 
 			if (!BlockIsInBounds()) break;
 			if (cb1_ < nmax1_) if (e1x_ < 0) break; else continue;
-			if (cb2_ < nmax2_) if (e1x_ < 0) break; else continue;
-			if (cb3_ < nmax3_) if (e1x_ < 0) break; else continue;
+			if (cb2_ < nmax2_) if (e2x_ < 0) break; else continue;
+			if (cb3_ < nmax3_) if (e3x_ < 0) break; else continue;
 
 			// if (!program_.BeginBlock(x0_, y0_/*, cbz_+nminz_*/)) continue;
 			program_.BeginBlock(x0_, y0_);
@@ -159,11 +159,11 @@ private:
 		auto qcy1 = qb1_;
 		auto qcy2 = qb2_;
 		auto qcyz = qbz_;
-		for (int iy=0; iy<q; iy+=2, qcy1+=qdx12_, qcy2+=qdx23_, qcyz+=qdzdx_, program_.CR2()) {
+		for (int iy=0; iy<q; iy+=2, qcy1+=qdx12_, qcy2+=qdx23_, qcyz+=qdzdy_, program_.CR2()) {
 			auto qcx1 = qcy1;
 			auto qcx2 = qcy2;
 			auto qcxz = qcyz;
-			for (int ix=0; ix<q; ix+=2, qcx1+=qdy12_, qcx2 +=qdy23_, qcxz+=qdzdy_, program_.Right2()) {
+			for (int ix=0; ix<q; ix+=2, qcx1+=qdy12_, qcx2+=qdy23_, qcxz+=qdzdx_, program_.Right2()) {
 				// XXX const qfloat2 frag_coord = { mvec4f(x+0.5f)+rglv::FQX, mvec4f(last_row-y+0.5f)+rglv::FQYR };
 				qfloat b0 = itof(qcx2) * scale_;
 				qfloat b2 = itof(qcx1) * scale_;
@@ -184,7 +184,7 @@ private:
 			auto qcxz = qcyz;
 			for (int ix=0; ix<q; ix+=2, qcx1+=qdy12_, qcx2+=qdy23_, qcx3+=qdy31_, qcxz+=qdzdx_, program_.Right2()) {
 				mvec4i edges{qcx1|qcx2|qcx3};
-				// if (movemask(bits2float(edges)) == 0xf) continue;
+				if (movemask(bits2float(edges)) == 0xf) continue;
 				mvec4i triMask{sar<31>(edges)};
 
 				// XXX frag_coord
@@ -193,6 +193,7 @@ private:
 				qfloat b2 = itof(qcx1) * scale_;
 				qfloat b1 = mvec4f{1.0f} - b0 - b2;
 				BaryCoord bary{ b0, b1, b2 };
+				//BaryCoord bary{ 0.333F, 0.333F, 0.333F };
 				program_.Render(qfloat2{0, 0}, bary/*, qcxz*/, triMask); }}}
 
 private:
