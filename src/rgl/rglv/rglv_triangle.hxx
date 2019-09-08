@@ -75,8 +75,14 @@ public:
 		auto cl2 = cb2dxdy - cb2dydx * scanWidthInQuads;
 		auto cl3 = cb3dxdy - cb3dydx * scanWidthInQuads;
 
+		auto bdx1 = itof(cb1dydx) * scale;
+		auto bdx2 = itof(cb2dydx) * scale;
+
 		for (int y=miny; y<endy; y+=2, cb1+=cl1, cb2+=cl2, cb3+=cl3, program_.CR()) {
-			for (int x=minx; x<endx; x+=2, cb1+=cb1dydx, cb2+=cb2dydx, cb3+=cb3dydx, program_.Right2()) {
+			rglv::BaryCoord bary;
+			bary.x = itof(cb2) * scale;
+			bary.z = itof(cb1) * scale;
+			for (int x=minx; x<endx; x+=2, cb1+=cb1dydx, cb2+=cb2dydx, cb3+=cb3dydx, bary.x+=bdx2, bary.z+=bdx1, program_.Right2()) {
 				mvec4i edges{cb1|cb2|cb3};
 				if (movemask(bits2float(edges)) == 0xf) continue;
 				const mvec4i trimask(rmlv::sar<31>(edges));
@@ -84,9 +90,6 @@ public:
 				// lower-left-origin opengl screen coords
 				const qfloat2 frag_coord = { mvec4f(x+0.5f)+mvec4f{0,1,0,1}, mvec4f(targetHeightInPx_-y-0.5f)+mvec4f{1,1,0,0} };
 
-				rglv::BaryCoord bary;
-				bary.x = itof(cb2) * scale;
-				bary.z = itof(cb1) * scale;
 				bary.y = 1.0F - bary.x - bary.z;
 
 				program_.Render(frag_coord, trimask, bary, frontfacing); }}}
