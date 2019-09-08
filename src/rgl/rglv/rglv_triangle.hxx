@@ -69,10 +69,15 @@ public:
 		mvec4f scale{1.0f / (c1 + c2 + c3)};
 
 		program_.Begin(minx, miny);
-		for (int y=miny; y<endy; y+=2, cb1+=cb1dxdy, cb2+=cb2dxdy, cb3+=cb3dxdy, program_.CR()) {
-			auto cx1{cb1}, cx2{cb2}, cx3{cb3};
-			for (int x=minx; x<endx; x+=2, cx1+=cb1dydx, cx2+=cb2dydx, cx3+=cb3dydx, program_.Right2()) {
-				mvec4i edges{cx1|cx2|cx3};
+		int scanWidthInQuads = (endx - minx + 1) / 2;
+
+		auto cl1 = cb1dxdy - cb1dydx * scanWidthInQuads;
+		auto cl2 = cb2dxdy - cb2dydx * scanWidthInQuads;
+		auto cl3 = cb3dxdy - cb3dydx * scanWidthInQuads;
+
+		for (int y=miny; y<endy; y+=2, cb1+=cl1, cb2+=cl2, cb3+=cl3, program_.CR()) {
+			for (int x=minx; x<endx; x+=2, cb1+=cb1dydx, cb2+=cb2dydx, cb3+=cb3dydx, program_.Right2()) {
+				mvec4i edges{cb1|cb2|cb3};
 				if (movemask(bits2float(edges)) == 0xf) continue;
 				const mvec4i trimask(rmlv::sar<31>(edges));
 
@@ -80,8 +85,8 @@ public:
 				const qfloat2 frag_coord = { mvec4f(x+0.5f)+mvec4f{0,1,0,1}, mvec4f(targetHeightInPx_-y-0.5f)+mvec4f{1,1,0,0} };
 
 				rglv::BaryCoord bary;
-				bary.x = itof(cx2) * scale;
-				bary.z = itof(cx1) * scale;
+				bary.x = itof(cb2) * scale;
+				bary.z = itof(cb1) * scale;
 				bary.y = 1.0F - bary.x - bary.z;
 
 				program_.Render(frag_coord, trimask, bary, frontfacing); }}}
