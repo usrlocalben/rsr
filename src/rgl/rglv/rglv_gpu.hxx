@@ -669,7 +669,7 @@ private:
 				auto devCoord2 = devCoordBuffer_[i2];
 
 				const float area2 = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2);
-				if (std::abs(area2) < 1.0f) {
+				if (std::abs(area2) < 2.0f) {
 					continue; }
 
 				// handle backfacing tris and culling
