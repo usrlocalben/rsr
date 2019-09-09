@@ -246,12 +246,12 @@ inline float hadd(vec3 a) { return a.x + a.y + a.z; }
 inline float hadd(vec4 a) { return a.x + a.y + a.z + a.w; }
 
 inline float hmax(vec2 a) { return std::max(a.x, a.y); }
-inline float hmax(vec3 a) { return std::max(std::max(a.x, a.y), a.z); }
-inline float hmax(vec4 a) { return std::max(std::max(std::max(a.x, a.y), a.z), a.w); }
+inline float hmax(vec3 a) { return std::max({ a.x, a.y, a.z }); }
+inline float hmax(vec4 a) { return std::max({ a.x, a.y, a.z, a.w }); }
 
 inline float hmin(vec2 a) { return std::min(a.x, a.y); }
-inline float hmin(vec3 a) { return std::min(std::min(a.x, a.y), a.z); }
-inline float hmin(vec4 a) { return std::min(std::min(std::min(a.x, a.y), a.z), a.w); }
+inline float hmin(vec3 a) { return std::min({ a.x, a.y, a.z }); }
+inline float hmin(vec4 a) { return std::min({ a.x, a.y, a.z, a.w }); }
 
 // vmin/vmax
 inline ivec2 vmin(ivec2 a, ivec2 b) { return { std::min(a.x, b.x), std::min(a.y, b.y) }; }

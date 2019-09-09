@@ -668,8 +668,12 @@ private:
 				auto devCoord1 = devCoordBuffer_[i1];
 				auto devCoord2 = devCoordBuffer_[i2];
 
+				const float area2 = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2);
+				if (std::abs(area2) < 1.0f) {
+					continue; }
+
 				// handle backfacing tris and culling
-				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
+				const bool backfacing = area2 < 0;
 				if (backfacing) {
 					if (state.cullingEnabled && state.cullFace == GL_BACK) {
 						stats0_.totalTrianglesCulled++;
@@ -909,29 +913,21 @@ private:
 	template <typename FUNC>
 	void ForEachCoveredTile(const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
 		using std::min, std::max, std::lround, rmlv::ivec2;
-		//const ivec2 idev0{ dc0 };
-		//const ivec2 idev1{ dc1 };
-		//const ivec2 idev2{ dc2 };
 
-		auto fminx = min(dc0.x, min(dc1.x, dc2.x));
-		auto fminy = min(dc0.y, min(dc1.y, dc2.y));
-		auto fmaxx = max(dc0.x, max(dc1.x, dc2.x));
-		auto fmaxy = max(dc0.y, max(dc1.y, dc2.y));
+		int minx = max(int(min({ dc0.x, dc1.x, dc2.x })), 0);
+		int maxx = min(int(max({ dc0.x, dc1.x, dc2.x })), bufferDimensionsInPixels_.x-1);
+		int miny = max(int(min({ dc0.y, dc1.y, dc2.y })), 0);
+		int maxy = min(int(max({ dc0.y, dc1.y, dc2.y })), bufferDimensionsInPixels_.y-1);
 
-		int vminx = max(std::lround(fminx), 0L);
-		int vminy = max(std::lround(fminy), 0L);
-		int vmaxx = min(std::lround(fmaxx), (long)bufferDimensionsInPixels_.x-1);
-		int vmaxy = min(std::lround(fmaxy), (long)bufferDimensionsInPixels_.y-1);
+		auto topLeft = ivec2{ minx, miny } / tileDimensionsInPixels_;
+		auto bottomRight = ivec2{ maxx, maxy } / tileDimensionsInPixels_;
 
-		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
-		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
+		const int stride = bufferDimensionsInTiles_.x;
 
-		//int ofs = topLeft.y * bufferDimensionsInTiles_.x + topLeft.x;
 		auto* tileRow = &tiles_[topLeft.y * bufferDimensionsInTiles_.x];
-		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty) {
+		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tileRow+=stride) {
 			for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
-				func(tileRow[tx]); }
-			tileRow += bufferDimensionsInTiles_.x; }}
+				func(tileRow[tx]); }}}
 
 	template <typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
