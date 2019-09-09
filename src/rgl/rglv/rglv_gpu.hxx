@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <iostream>
 #include <numeric>
 #include <optional>
@@ -907,26 +908,30 @@ private:
 
 	template <typename FUNC>
 	void ForEachCoveredTile(const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
-		using std::min, std::max, rmlv::ivec2;
-		const ivec2 idev0{ dc0 };
-		const ivec2 idev1{ dc1 };
-		const ivec2 idev2{ dc2 };
+		using std::min, std::max, std::lround, rmlv::ivec2;
+		//const ivec2 idev0{ dc0 };
+		//const ivec2 idev1{ dc1 };
+		//const ivec2 idev2{ dc2 };
 
-		const int vminx = max(min(idev0.x, min(idev1.x, idev2.x)), 0);
-		const int vminy = max(min(idev0.y, min(idev1.y, idev2.y)), 0);
-		const int vmaxx = min(max(idev0.x, max(idev1.x, idev2.x)), bufferDimensionsInPixels_.x-1);
-		const int vmaxy = min(max(idev0.y, max(idev1.y, idev2.y)), bufferDimensionsInPixels_.y-1);
+		auto fminx = min(dc0.x, min(dc1.x, dc2.x));
+		auto fminy = min(dc0.y, min(dc1.y, dc2.y));
+		auto fmaxx = max(dc0.x, max(dc1.x, dc2.x));
+		auto fmaxy = max(dc0.y, max(dc1.y, dc2.y));
+
+		int vminx = max(std::lround(fminx), 0L);
+		int vminy = max(std::lround(fminy), 0L);
+		int vmaxx = min(std::lround(fmaxx), (long)bufferDimensionsInPixels_.x-1);
+		int vmaxy = min(std::lround(fmaxy), (long)bufferDimensionsInPixels_.y-1);
 
 		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
 		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
 
-		int ofs = topLeft.y * bufferDimensionsInTiles_.x + topLeft.x;
+		//int ofs = topLeft.y * bufferDimensionsInTiles_.x + topLeft.x;
+		auto* tileRow = &tiles_[topLeft.y * bufferDimensionsInTiles_.x];
 		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty) {
-			int ofsX = ofs;
 			for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
-				auto& tile = tiles_[ofsX++];
-				func(tile); }
-			ofs += bufferDimensionsInTiles_.x; }};
+				func(tileRow[tx]); }
+			tileRow += bufferDimensionsInTiles_.x; }}
 
 	template <typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
