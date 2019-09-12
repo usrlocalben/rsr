@@ -33,27 +33,33 @@ void Filter(const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::irect r
 		mvec4f{(dst.height() - 1 - rect.top.y) / float(dst.height())} - mvec4f{0,0,dh,dh}
 		};
 
-	for (int y = rect.top.y; y < rect.bottom.y; y += 2, q_row+=dqy) {
-		auto destRow1Addr = &dst.data()[y * dst.stride() + rect.left.x];
-		auto destRow2Addr = destRow1Addr + dst.stride();
+	const int srcStride2 = src1.stride2();
+	const int dstStride = dst.stride();
 
-		auto* source1Addr = &src1.cdata()[(y >> 1) * (dst.width() >> 1) + (rect.left.x >> 1)];
+	auto* src1y = &src1.cdata()[rect.top.y/2 * srcStride2 + rect.left.x/2];
+	auto* dstRow = &dst.data()[rect.top.y*dstStride];
 
+	for (int y = rect.top.y; y < rect.bottom.y; y += 2, q_row+=dqy, src1y+=srcStride2, dstRow+=dstStride*2) {
+		auto* src1x = src1y;
 		qfloat2 q{ q_row };
-		for (int x = rect.left.x; x < rect.right.x; x += 4, destRow1Addr+=4, destRow2Addr+=4) {
-			mvec4i packed[2];
-			for (int sub = 0; sub < 2; sub++, source1Addr++, q+=dqx) {
+		for (int x = rect.left.x; x < rect.right.x; x+=4) {
+			mvec4i packed0, packed1;
+			qfloat3 sc;
 
-				// load source1 color
-				qfloat3 sc;
-				QFloat4Canvas::Load(source1Addr, sc.x.v, sc.y.v, sc.z.v);
+			QFloat4Canvas::Load(src1x++, sc.x.v, sc.y.v, sc.z.v);
+			sc = SHADER::ShadeCanvas(q, sc);
+			packed0 = CONVERTER::to_tc(sc);
+			q += dqx;
 
-				// shade & convert
-				qfloat3 fragColor = SHADER::ShadeCanvas(q, sc);
-				packed[sub] = CONVERTER::to_tc(fragColor); }
+			QFloat4Canvas::Load(src1x++, sc.x.v, sc.y.v, sc.z.v);
+			sc = SHADER::ShadeCanvas(q, sc);
+			packed1 = CONVERTER::to_tc(sc);
+			q += dqx;
 
-			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow1Addr), _mm_unpacklo_epi64(packed[0].v, packed[1].v));
-			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow2Addr), _mm_unpackhi_epi64(packed[0].v, packed[1].v)); }}}
+			_mm_stream_si128(reinterpret_cast<__m128i*>(dstRow+x),
+			                 _mm_unpacklo_epi64(packed0.v, packed1.v));
+			_mm_stream_si128(reinterpret_cast<__m128i*>(dstRow+x+dstStride),
+			                 _mm_unpackhi_epi64(packed0.v, packed1.v)); }}}
 
 
 template <class SHADER, class CONVERTER>
