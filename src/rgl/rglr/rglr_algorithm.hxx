@@ -30,30 +30,39 @@ void Filter(const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::irect r
 	const qfloat2 dqy{ 0, -dh*2 };
 	qfloat2 q_row{
 		mvec4f{rect.left.x                     / float(dst.width()) } + mvec4f{0,dw,0,dw},
-		mvec4f{(dst.height() - 1 - rect.top.y) / float(dst.height())} - mvec4f{0,0,dh,dh}
+		mvec4f{(dst.height() - rect.top.y - 1) / float(dst.height())} - mvec4f{0,0,dh,dh}
 		};
+
+	//const int rectWidthInQuads = (rect.right.x - rect.left.x + 1) / 2;
+	//const qfloat2 lineskip = dqy - 
+
+	const int dstStride = dst.stride();
 
 	for (int y = rect.top.y; y < rect.bottom.y; y += 2, q_row+=dqy) {
 		auto destRow1Addr = &dst.data()[y * dst.stride() + rect.left.x];
-		auto destRow2Addr = destRow1Addr + dst.stride();
+		// auto destRow2Addr = destRow1Addr + dst.stride();
 
 		auto* source1Addr = &src1.cdata()[(y >> 1) * (dst.width() >> 1) + (rect.left.x >> 1)];
 
 		qfloat2 q{ q_row };
-		for (int x = rect.left.x; x < rect.right.x; x += 4, destRow1Addr+=4, destRow2Addr+=4) {
-			mvec4i packed[2];
-			for (int sub = 0; sub < 2; sub++, source1Addr++, q+=dqx) {
+		for (int x = rect.left.x; x < rect.right.x; x += 4, destRow1Addr+=4) {
+			mvec4i packed0, packed1;
+			qfloat3 sc;
 
-				// load source1 color
-				qfloat3 sc;
-				QFloat4Canvas::Load(source1Addr, sc.x.v, sc.y.v, sc.z.v);
+			QFloat4Canvas::Load(source1Addr++, sc.x.v, sc.y.v, sc.z.v);
+			sc = SHADER::ShadeCanvas(q, sc);
+			packed0 = CONVERTER::to_tc(sc);
+			q += dqx;
 
-				// shade & convert
-				qfloat3 fragColor = SHADER::ShadeCanvas(q, sc);
-				packed[sub] = CONVERTER::to_tc(fragColor); }
+			QFloat4Canvas::Load(source1Addr++, sc.x.v, sc.y.v, sc.z.v);
+			sc = SHADER::ShadeCanvas(q, sc);
+			packed1 = CONVERTER::to_tc(sc);
+			q += dqx;
 
-			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow1Addr), _mm_unpacklo_epi64(packed[0].v, packed[1].v));
-			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow2Addr), _mm_unpackhi_epi64(packed[0].v, packed[1].v)); }}}
+			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow1Addr),
+			                 _mm_unpacklo_epi64(packed0.v, packed1.v));
+			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow1Addr+dstStride),
+			                 _mm_unpackhi_epi64(packed0.v, packed1.v)); }}}
 
 
 template <class SHADER, class CONVERTER>
