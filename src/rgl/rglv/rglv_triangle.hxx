@@ -39,10 +39,10 @@ public:
 
 		const int q = 2; // block size is 2x2
 
-		int minx = max((min(min(x1,x2),x3) + 0xf) >> 4, rect_.left.x);
-		int endx = min((max(max(x1,x2),x3) + 0xf) >> 4, rect_.right.x);
-		int miny = max((min(min(y1,y2),y3) + 0xf) >> 4, rect_.top.y);
-		int endy = min((max(max(y1,y2),y3) + 0xf) >> 4, rect_.bottom.y);
+		int minx = max((rmlv::Min(x1, x2, x3) + 0xf) >> 4, rect_.left.x);
+		int endx = min((rmlv::Max(x1, x2, x3) + 0xf) >> 4, rect_.right.x);
+		int miny = max((rmlv::Min(y1, y2, y3) + 0xf) >> 4, rect_.top.y);
+		int endy = min((rmlv::Max(y1, y2, y3) + 0xf) >> 4, rect_.bottom.y);
 		minx &= ~(q - 1); // align to 2x2 block
 		miny &= ~(q - 1);
 

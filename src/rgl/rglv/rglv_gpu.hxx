@@ -960,10 +960,10 @@ private:
 		const ivec2 idev1{ dc1 };
 		const ivec2 idev2{ dc2 };
 
-		const int vminx = max(min(idev0.x, min(idev1.x, idev2.x)), rect.left.x);
-		const int vminy = max(min(idev0.y, min(idev1.y, idev2.y)), rect.top.y);
-		const int vmaxx = min(max(idev0.x, max(idev1.x, idev2.x)), rect.right.x);
-		const int vmaxy = min(max(idev0.y, max(idev1.y, idev2.y)), rect.bottom.y);
+		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x), rect.left.x);
+		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y), rect.top.y);
+		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x), rect.right.x);
+		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y), rect.bottom.y);
 
 		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
 		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
