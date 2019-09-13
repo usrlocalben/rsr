@@ -912,7 +912,7 @@ private:
 
 	template <typename FUNC>
 	void ForEachCoveredTile(const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
-		using std::min, std::max, std::lround, rmlv::ivec2;
+		using std::min, std::max, rmlv::ivec2;
 
 		int minx = max(int(rmlv::Min(dc0.x, dc1.x, dc2.x)), 0);
 		int maxx = min(int(rmlv::Max(dc0.x, dc1.x, dc2.x)), bufferDimensionsInPixels_.x-1);
