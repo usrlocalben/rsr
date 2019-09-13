@@ -41,10 +41,10 @@ public:
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3;
 		using rmlv::mvec4f, rmlv::mvec4i;
 
-			minX_= max((min(min(x1,x2),x3) + 0xf) >> 4, rect_.left.x);
-			endX_= min((max(max(x1,x2),x3) + 0xf) >> 4, rect_.right.x);
-		int minY = max((min(min(y1,y2),y3) + 0xf) >> 4, rect_.top.y);
-		int endY = min((max(max(y1,y2),y3) + 0xf) >> 4, rect_.bottom.y);
+			minX_= max((rmlv::Min(x1,x2,x3) + 0xf) >> 4, rect_.left.x);
+			endX_= min((rmlv::Max(x1,x2,x3) + 0xf) >> 4, rect_.right.x);
+		int minY = max((rmlv::Min(y1,y2,y3) + 0xf) >> 4, rect_.top.y);
+		int endY = min((rmlv::Max(y1,y2,y3) + 0xf) >> 4, rect_.bottom.y);
 
 		minX_ &= ~(q - 1); // align to block
 		minY &= ~(q - 1);
