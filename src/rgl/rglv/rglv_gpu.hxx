@@ -10,6 +10,7 @@
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclr/rclr_algorithm.hxx"
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
+#include "src/rgl/rglr/rglr_algorithm.hxx"
 #include "src/rgl/rglr/rglr_blend.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
 #include "src/rgl/rglr/rglr_canvas_util.hxx"
@@ -66,14 +67,8 @@ struct GPUStats {
 
 template <typename TEXTURE_UNIT, typename FRAGMENT_PROGRAM, typename BLEND_PROGRAM>
 struct DefaultTargetProgram {
-
-	// const FRAGMENT_PROGRAM& fp;
-	// const BLEND_PROGRAM& bp;
-
 	rmlv::qfloat4* cb_;
-	rmlv::qfloat4* cbx_;
 	rmlv::qfloat* db_;
-	rmlv::qfloat* dbx_;
 
 	const TEXTURE_UNIT& tu0_, tu1_;
 
@@ -144,16 +139,16 @@ struct DefaultTargetProgram {
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
 
 	inline void LoadColor(rmlv::qfloat4& destColor) {
-		destColor.r = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].r)));
-		destColor.g = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].g)));
-		destColor.b = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].b))); }
+		auto& cell = cb_[offs_];
+		rglr::QFloat4Canvas::Load(cb_+offs_, destColor.x.v, destColor.y.v, destColor.z.v); }
 
 	inline void StoreColor(rmlv::qfloat4 destColor,
 	                       rmlv::qfloat4 sourceColor,
 	                       rmlv::mvec4i fragMask) {
-		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].r)), selectbits(destColor.r, sourceColor.r, fragMask).v);
-		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].g)), selectbits(destColor.g, sourceColor.g, fragMask).v);
-		_mm_store_ps(reinterpret_cast<float*>(&(cb_[offs_].b)), selectbits(destColor.b, sourceColor.b, fragMask).v); }
+		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
+		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
+		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
+		rglr::QFloat4Canvas::Store(sr, sg, sb, cb_+offs_); }
 
 	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord bary, const bool frontfacing) {
 		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
@@ -268,6 +263,10 @@ public:
 		    newTileDimensionsInBlocks != tileDimensionsInBlocks_) {
 			bufferDimensionsInPixels_ = newBufferDimensionsInPixels;
 			tileDimensionsInBlocks_ = newTileDimensionsInBlocks;
+			deviceScale_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
+			                             -bufferDimensionsInPixels_.y/2 );
+			deviceOffset_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
+			                               bufferDimensionsInPixels_.y/2 );
 			Retile(); }}
 
 private:
@@ -455,18 +454,18 @@ private:
 				int bits = cs.consumeByte();
 				if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
 					// std::cout << "clearing to " << color << std::endl;
-					fillRect(rect, stateptr->clearColor, cc); }
+					Fill(cc, stateptr->clearColor, rect); }
 				if ((bits & GL_DEPTH_BUFFER_BIT) != 0) {
-					fillRect(rect, stateptr->clearDepth, dc); }
+					Fill(dc, stateptr->clearDepth, rect); }
 				if ((bits & GL_STENCIL_BUFFER_BIT) != 0) {
 					// XXX not implemented
 					assert(false); }}
 			else if (cmd == CMD_STORE_FP32_HALF) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				downsampleRect(rect, cc, *smallcanvas); }
+				Downsample(cc, *smallcanvas, rect); }
 			else if (cmd == CMD_STORE_FP32) {
 				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				copyRect(rect, cc, *smallcanvas); }
+				Copy(cc, *smallcanvas, rect); }
 			else if (cmd == CMD_STORE_TRUECOLOR) {
 				auto enableGamma = cs.consumeByte();
 				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
@@ -488,9 +487,9 @@ private:
 
 		auto& cc = *colorCanvasPtr_;
 		if (enableGamma) {
-			rglr::copyRect<PGM, rglr::sRGB>(rect, cc, outcanvas); }
+			rglr::Filter<PGM, rglr::sRGB>(cc, outcanvas, rect); }
 		else {
-			rglr::copyRect<PGM, rglr::LinearColor>(rect, cc, outcanvas); }}
+			rglr::Filter<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
 	template <bool ENABLE_CLIPPING, typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_DrawArray(const GLState& state, const int count) {}
@@ -519,11 +518,6 @@ private:
 		VertexInput vi_;
 
 		const ShaderUniforms ui = MakeUniforms(state);
-
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -595,7 +589,7 @@ private:
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.alloc<4>(), flags); }
 
-			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
+			auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
 			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -639,11 +633,6 @@ private:
 		VertexInput vi_;
 
 		const ShaderUniforms ui = MakeUniforms(state);
-
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
 
 		const auto siz = int(vao.size());
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -715,7 +704,7 @@ private:
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.alloc<4>(), flags); }
 
-			auto devCoord = pdiv(coord).xy() * deviceScale + deviceOffset;
+			auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
 			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
 
 		processAsManyFacesAsPossible();
@@ -757,11 +746,6 @@ private:
 		const int target_height = cbc.height();
 
 		const ShaderUniforms ui = MakeUniforms(state);
-
-		const qfloat2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                          -float(bufferDimensionsInPixels_.y/2) };
-		const qfloat2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                            float(bufferDimensionsInPixels_.y/2) };
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
@@ -806,8 +790,8 @@ private:
 				qfloat4 gl_Position;
 				PGM::ShadeVertex(vi_[i], ui, gl_Position, computed[i]);
 				devCoord[i] = pdiv(gl_Position);
-				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale.x + deviceOffset.x));
-				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale.y + deviceOffset.y)); }
+				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale_.x + deviceOffset_.x));
+				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale_.y + deviceOffset_.y)); }
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
@@ -837,10 +821,6 @@ private:
 		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
-		vec2 deviceScale{ float(bufferDimensionsInPixels_.x/2),
-		                 -float(bufferDimensionsInPixels_.y/2) };
-		vec2 deviceOffset{ float(bufferDimensionsInPixels_.x/2),
-		                   float(bufferDimensionsInPixels_.y/2) };
 		const ShaderUniforms ui = MakeUniforms(state);
 
 		for (const auto& faceIndices : clipQueue_) {
@@ -895,8 +875,8 @@ private:
 			for (auto& vertex : clipA_) {
 				// convert clip-coord to device-coord
 				vertex.coord = pdiv(vertex.coord);
-				vertex.coord.x = vertex.coord.x * deviceScale.x + deviceOffset.x;
-				vertex.coord.y = vertex.coord.y * deviceScale.y + deviceOffset.y; }
+				vertex.coord.x = (vertex.coord.x * deviceScale_.x + deviceOffset_.x).get_x();
+				vertex.coord.y = (vertex.coord.y * deviceScale_.y + deviceOffset_.y).get_x(); }
 			// end of phase 2: poly contains a clipped N-gon
 
 			// check direction, maybe cull, maybe reorder
@@ -932,10 +912,10 @@ private:
 		const ivec2 idev1{ dc1 };
 		const ivec2 idev2{ dc2 };
 
-		const int vminx = max(min(idev0.x, min(idev1.x, idev2.x)), 0);
-		const int vminy = max(min(idev0.y, min(idev1.y, idev2.y)), 0);
-		const int vmaxx = min(max(idev0.x, max(idev1.x, idev2.x)), bufferDimensionsInPixels_.x-1);
-		const int vmaxy = min(max(idev0.y, max(idev1.y, idev2.y)), bufferDimensionsInPixels_.y-1);
+		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x), 0);
+		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y), 0);
+		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x), bufferDimensionsInPixels_.x-1);
+		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y), bufferDimensionsInPixels_.y-1);
 
 		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
 		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
@@ -1032,6 +1012,8 @@ private:
 	rmlv::ivec2 bufferDimensionsInTiles_;
 	rmlv::ivec2 tileDimensionsInBlocks_;
 	rmlv::ivec2 tileDimensionsInPixels_;
+	rmlv::qfloat2 deviceScale_;
+	rmlv::qfloat2 deviceOffset_;
 
 	// IC users can write to
 	int userIC_{0};

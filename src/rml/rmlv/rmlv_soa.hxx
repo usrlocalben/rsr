@@ -107,6 +107,7 @@ struct qfloat4 {
 	inline qfloat4(mvec4f x, mvec4f y, mvec4f z, mvec4f w) noexcept :x(x), y(y), z(z), w(w) {}
 
 	inline qfloat4& operator+=(const qfloat4& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; w += rhs.w; return *this; }
+	inline qfloat4 operator*(const qfloat4& rhs) const { return { x*rhs.x, y*rhs.y, z*rhs.z, w*rhs.w }; }
 
 	inline qfloat2 xy() const { return{ x, y }; }
 	inline qfloat3 xyz() const { return{ x, y, z }; }
