@@ -39,10 +39,10 @@ public:
 
 		const int q = 2; // block size is 2x2
 
-		int minx = max((min(min(x1,x2),x3) + 0xf) >> 4, rect_.left.x);
-		int endx = min((max(max(x1,x2),x3) + 0xf) >> 4, rect_.right.x);
-		int miny = max((min(min(y1,y2),y3) + 0xf) >> 4, rect_.top.y);
-		int endy = min((max(max(y1,y2),y3) + 0xf) >> 4, rect_.bottom.y);
+		int minx = max((rmlv::Min(x1, x2, x3) + 0xf) >> 4, rect_.left.x);
+		int endx = min((rmlv::Max(x1, x2, x3) + 0xf) >> 4, rect_.right.x);
+		int miny = max((rmlv::Min(y1, y2, y3) + 0xf) >> 4, rect_.top.y);
+		int endy = min((rmlv::Max(y1, y2, y3) + 0xf) >> 4, rect_.bottom.y);
 		minx &= ~(q - 1); // align to 2x2 block
 		miny &= ~(q - 1);
 
@@ -68,8 +68,6 @@ public:
 
 		mvec4f scale{1.0f / (c1 + c2 + c3)};
 
-		const int last_row = targetHeightInPx_ - 1;
-
 		program_.Begin(minx, miny);
 		for (int y=miny; y<endy; y+=2, cb1+=cb1dxdy, cb2+=cb2dxdy, cb3+=cb3dxdy, program_.CR()) {
 			auto cx1{cb1}, cx2{cb2}, cx3{cb3};
@@ -79,14 +77,14 @@ public:
 				const mvec4i trimask(rmlv::sar<31>(edges));
 
 				// lower-left-origin opengl screen coords
-				const qfloat2 frag_coord = { mvec4f(x+0.5f)+rglv::FQX, mvec4f(last_row-y+0.5f)+rglv::FQYR };
+				const qfloat2 frag_coord = { mvec4f(x+0.5f)+mvec4f{0,1,0,1}, mvec4f(targetHeightInPx_-y-0.5f)+mvec4f{1,1,0,0} };
 
 				rglv::BaryCoord bary;
 				bary.x = itof(cx2) * scale;
 				bary.z = itof(cx1) * scale;
-				bary.y = mvec4f{1.0F} - bary.x - bary.z;
+				bary.y = 1.0F - bary.x - bary.z;
 
-				program_.render(frag_coord, trimask, bary, frontfacing); }}}
+				program_.Render(frag_coord, trimask, bary, frontfacing); }}}
 
 private:
 	FRAGMENT_PROCESSOR& program_;

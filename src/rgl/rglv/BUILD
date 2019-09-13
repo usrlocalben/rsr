@@ -33,6 +33,7 @@ cc_library(
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rclr:algorithm",
         "//src/rcl/rcls:aligned_containers",
+        "//src/rgl/rglr:algorithm",
         "//src/rgl/rglr:blend",
         "//src/rgl/rglr:canvas",
         "//src/rgl/rglr:canvas_util",
@@ -42,15 +43,16 @@ cc_library(
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
-        ":clipper",
         ":fragment",
         ":gl",
         ":gpu_protocol",
+        ":gpu_shaders",
         ":interpolate",
         ":math",
         ":packed_stream",
         ":triangle",
         ":vao",
+        ":view_frustum",
         ],
     copts = RSR_DEFAULT_COPTS,
     )
@@ -152,9 +154,9 @@ cc_test(
     )
 
 cc_library(
-    name = "clipper",
-    srcs = ["rglv_clipper.cxx"],
-    hdrs = ["rglv_clipper.hxx"],
+    name = "view_frustum",
+    srcs = ["rglv_view_frustum.cxx"],
+    hdrs = ["rglv_view_frustum.hxx"],
     deps = [
         "//src/rcl/rcls:aligned_containers",
         "//src/rml/rmlv:soa",
@@ -198,8 +200,8 @@ cc_library(
     srcs = ["rglv_marching_cubes.cxx"],
     hdrs = ["rglv_marching_cubes.hxx"],
     deps = [
-        "//src/rgl/rglv:gpu",
         "//src/rml/rmlv:vec",
+        ":vao",
         ],
     copts = RSR_DEFAULT_COPTS,
     )
@@ -246,9 +248,9 @@ cc_test(
     srcs = ["rglv_triangle.t.cxx"],
     deps = [
         "//src/rcl/rcls:aligned_containers",
+        "//src/rgl/rglr:algorithm",
         "//src/rgl/rglr:blend",
         "//src/rgl/rglr:canvas",
-        "//src/rgl/rglr:canvas_util",
         "//src/rgl/rglr:texture",
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:soa",
@@ -257,6 +259,19 @@ cc_test(
         ":gpu",  # DefaultTarget
         ":interpolate",
         ":triangle",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "gpu_shaders",
+    srcs = ["rglv_gpu_shaders.cxx"],
+    hdrs = ["rglv_gpu_shaders.hxx"],
+    deps = [
+        "//src/rml/rmlm:mat4",
+        "//src/rml/rmlv:soa",
+        "//src/rml/rmlv:vec",
+        ":interpolate",
         ],
     copts = RSR_DEFAULT_COPTS,
     )

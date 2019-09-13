@@ -2,7 +2,7 @@
 #include <string_view>
 
 #include "src/rgl/rglv/rglv_fragment.hxx"
-#include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_gpu_shaders.hxx"
 #include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rgl/rglv/rglv_triangle.hxx"
@@ -34,7 +34,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 	static int id;
 
 	template <typename TEXTURE_UNIT>
-	inline static void shadeFragment(
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
@@ -42,7 +42,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& v,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
+		const rglv::BaryCoord& _bary,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -52,7 +52,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		using namespace rmlv;
 		static const qfloat grey(0.1f);
 		static const qfloat3 face_color{ 0.5f, 0.6f, 0.7f };
-		const qfloat e = edgefactor(_BP);
+		const qfloat e = edgefactor(_bary);
 
 		//auto fd = (-gl_FragDepth + qfloat(1));
 		gl_FragColor = qfloat4{
@@ -61,16 +61,16 @@ struct WireframeProgram final : public rglv::BaseProgram {
 			mix(grey, face_color.v[2], e) *  qfloat(4.0f),
 			0.0f }; }
 
-	inline static rmlv::qfloat edgefactor(const rmlv::qfloat3& _BP) {
+	inline static rmlv::qfloat edgefactor(const rmlv::qfloat3& _bary) {
 		static const rmlv::qfloat thickfactor(1.5F);
-		rmlv::qfloat3 d = rglv::fwidth(_BP);
-		rmlv::qfloat3 a3 = rglv::smoothstep(0, d*thickfactor, _BP);
+		rmlv::qfloat3 d = rglv::fwidth(_bary);
+		rmlv::qfloat3 a3 = rglv::smoothstep(0, d*thickfactor, _bary);
 		return vmin(a3.v[0], vmin(a3.v[1], a3.v[2])); } };
 
 
 struct IQPostProgram final : public rglv::BaseProgram {
 	static int id;
-	inline static rmlv::qfloat3 shadeCanvas(const rmlv::qfloat2 q, const rmlv::qfloat3 source) {
+	inline static rmlv::qfloat3 ShadeCanvas(const rmlv::qfloat2 q, const rmlv::qfloat3 source) {
 		//const auto q = gl_FragCoord / targetSize;
 		auto col = source;
 		col = pow(col, rmlv::qfloat3(0.45F, 0.5F, 0.55F));
@@ -88,7 +88,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 #define gl_ModelViewMatrix u.mvm
 #define gl_ModelViewProjectionMatrix u.mvpm
 #define gl_NormalMatrix u.nm
-	inline static void shadeVertex(
+	inline static void ShadeVertex(
 		const rglv::VertexInput& v,
 		const rglv::ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
@@ -108,7 +108,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
 	template <typename TEXTURE_UNIT>
-	inline static void shadeFragment(
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
@@ -116,7 +116,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
+		const rglv::BaryCoord& _bary,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -140,7 +140,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 #define IN_TEXCOORD v.a2
 #define OUT_TEXCOORD outs.r0
 #define gl_ModelViewProjectionMatrix u.mvpm
-	static void shadeVertex(
+	static void ShadeVertex(
 		const rglv::VertexInput& v,
 		const rglv::ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
@@ -150,7 +150,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
 	template <typename TEXTURE_UNIT>
-	inline static void shadeFragment(
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
@@ -158,7 +158,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
+		const rglv::BaryCoord& _bary,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
@@ -184,7 +184,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 #define gl_ModelViewMatrix u.mvm
 #define gl_ModelViewProjectionMatrix u.mvpm
 #define gl_NormalMatrix u.nm
-	inline static void shadeVertex(
+	inline static void ShadeVertex(
 		const rglv::VertexInput& v,
 		const rglv::ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
@@ -204,7 +204,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
 
 	template <typename TEXTURE_UNIT>
-	inline static void shadeFragment(
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
@@ -212,7 +212,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		// vertex shader output
 		const rglv::VertexOutput& outs,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
+		const rglv::BaryCoord& _bary,
 		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,

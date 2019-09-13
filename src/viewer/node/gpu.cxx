@@ -58,14 +58,16 @@ public:
 		const int targetWidth = width_.value_or(256);
 		const int targetHeight = height_.value_or(256);
 		const ivec2 td = tileDim_.value_or(ivec2{8, 8});
-		gpu_.reset(ivec2{ targetWidth, targetHeight }, td);
+		gpu_.Reset(ivec2{ targetWidth, targetHeight }, td);
 		auto& ic = gpu_.IC();
 
 		auto backgroundColor = vec3{ 0, 0, 0 };
 		if (!layers_.empty()) {
 			auto& firstLayer = layers_[0];
 			backgroundColor = firstLayer->GetBackgroundColor(); }
-		ic.glClear(vec4{ backgroundColor, 1.0F });
+		ic.glClearColor(backgroundColor);
+		ic.glClearDepth(1.0F);
+		ic.glClear(rglv::GL_COLOR_BUFFER_BIT); //|rglv::GL_DEPTH_BUFFER_BIT);
 
 		if (layers_.empty()) {
 			jobsys::Job *postJob = Post();
@@ -79,13 +81,13 @@ public:
 		for (auto layer : layers_) {
 			layer->Run(); } }
 
-	void SetDimensions(int x, int y) override {
+	void Dimensions(int x, int y) override {
 		width_ = x; height_ = y; }
 
-	void SetTileDimensions(rmlv::ivec2 tileDim) override {
+	void TileDimensions(rmlv::ivec2 tileDim) override {
 		tileDim_ = tileDim; }
 
-	void SetAspect(float aspect) override {
+	void Aspect(float aspect) override {
 		aspect_ = aspect; }
 
 	rclmt::jobsys::Job* Draw() {
@@ -118,20 +120,20 @@ public:
 		self->Post(); }
 	void PostImpl() {}
 
-	void SetDoubleBuffer(bool value) override {
-		gpu_.enableDoubleBuffering = value; }
+	void DoubleBuffer(bool value) override {
+		gpu_.DoubleBuffer(value); }
 
-	void SetColorCanvas(rglr::QFloat4Canvas* ptr) override {
-		gpu_.d_cc = ptr; }
+	void ColorCanvas(rglr::QFloat4Canvas* ptr) override {
+		gpu_.ColorCanvas(ptr); }
 
-	void SetDepthCanvas(rglr::QFloatCanvas* ptr) override {
-		gpu_.d_dc = ptr; }
+	void DepthCanvas(rglr::QFloatCanvas* ptr) override {
+		gpu_.DepthCanvas(ptr); }
 
-	rglv::GL& GetIC() override {
+	rglv::GL& IC() override {
 		return gpu_.IC(); }
 
 	rclmt::jobsys::Job* Render() override {
-		return gpu_.render(); }
+		return gpu_.Run(); }
 
 private:
 	// internal
