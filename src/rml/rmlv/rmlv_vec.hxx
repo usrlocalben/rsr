@@ -11,6 +11,37 @@ namespace rmlv {
 
 constexpr auto M_PI = 3.14159265358979323846;
 
+template<typename T>
+T Min(const T& a, const T& b, const T& c) {
+	T out = a;
+	if (b < out) out = b;
+	if (c < out) out = c;
+	return out; }
+
+template<typename T>
+T Min(const T& a, const T& b, const T& c, const T& d) {
+	T out = a;
+	if (b < out) out = b;
+	if (c < out) out = c;
+	if (d < out) out = d;
+	return out; }
+
+
+template<typename T>
+T Max(const T& a, const T& b, const T& c) {
+	T out = a;
+	if (b > out) out = b;
+	if (c > out) out = c;
+	return out; }
+
+template<typename T>
+T Max(const T& a, const T& b, const T& c, const T& d) {
+	T out = a;
+	if (b > out) out = b;
+	if (c > out) out = c;
+	if (d > out) out = d;
+	return out; }
+
 
 inline double fract(const double x) {
 	double b;
@@ -246,12 +277,12 @@ inline float hadd(vec3 a) { return a.x + a.y + a.z; }
 inline float hadd(vec4 a) { return a.x + a.y + a.z + a.w; }
 
 inline float hmax(vec2 a) { return std::max(a.x, a.y); }
-inline float hmax(vec3 a) { return std::max(std::max(a.x, a.y), a.z); }
-inline float hmax(vec4 a) { return std::max(std::max(std::max(a.x, a.y), a.z), a.w); }
+inline float hmax(vec3 a) { return Max(a.x, a.y, a.z); }
+inline float hmax(vec4 a) { return Max(a.x, a.y, a.z, a.w); }
 
 inline float hmin(vec2 a) { return std::min(a.x, a.y); }
-inline float hmin(vec3 a) { return std::min(std::min(a.x, a.y), a.z); }
-inline float hmin(vec4 a) { return std::min(std::min(std::min(a.x, a.y), a.z), a.w); }
+inline float hmin(vec3 a) { return Min(a.x, a.y, a.z); }
+inline float hmin(vec4 a) { return Min(a.x, a.y, a.z, a.w); }
 
 // vmin/vmax
 inline ivec2 vmin(ivec2 a, ivec2 b) { return { std::min(a.x, b.x), std::min(a.y, b.y) }; }
