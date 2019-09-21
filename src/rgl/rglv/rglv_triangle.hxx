@@ -46,6 +46,8 @@ public:
 		minx &= ~(q - 1); // align to 2x2 block
 		miny &= ~(q - 1);
 
+		//if (minx > endx) return;
+
 		int dx12 = x1 - x2, dy12 = y2 - y1;
 		int dx23 = x2 - x3, dy23 = y3 - y2;
 		int dx31 = x3 - x1, dy31 = y1 - y3;
@@ -71,20 +73,27 @@ public:
 		program_.Begin(minx, miny);
 		for (int y=miny; y<endy; y+=2, cb1+=cb1dxdy, cb2+=cb2dxdy, cb3+=cb3dxdy, program_.CR()) {
 			auto cx1{cb1}, cx2{cb2}, cx3{cb3};
-			for (int x=minx; x<endx; x+=2, cx1+=cb1dydx, cx2+=cb2dydx, cx3+=cb3dydx, program_.Right2()) {
+			
+			int x = minx;
+			while (1) {
 				mvec4i edges{cx1|cx2|cx3};
-				if (movemask(bits2float(edges)) == 0xf) continue;
-				const mvec4i trimask(rmlv::sar<31>(edges));
+				if (movemask(bits2float(edges)) != 0xf) {
+					const mvec4i trimask(rmlv::sar<31>(edges));
 
-				// lower-left-origin opengl screen coords
-				const qfloat2 frag_coord = { mvec4f(x+0.5f)+mvec4f{0,1,0,1}, mvec4f(targetHeightInPx_-y-0.5f)+mvec4f{1,1,0,0} };
+					// lower-left-origin opengl screen coords
+					const qfloat2 frag_coord = { mvec4f(x+0.5f)+mvec4f{0,1,0,1}, mvec4f(targetHeightInPx_-y-0.5f)+mvec4f{1,1,0,0} };
 
-				rglv::BaryCoord bary;
-				bary.x = itof(cx2) * scale;
-				bary.z = itof(cx1) * scale;
-				bary.y = 1.0F - bary.x - bary.z;
+					rglv::BaryCoord bary;
+					bary.x = itof(cx2) * scale;
+					bary.z = itof(cx1) * scale;
+					bary.y = 1.0F - bary.x - bary.z;
 
-				program_.Render(frag_coord, trimask, bary, frontfacing); }}}
+					program_.Render(frag_coord, trimask, bary, frontfacing);}
+
+				x += 2;
+				if (x >= endx) break;
+				cx1+=cb1dydx, cx2+=cb2dydx, cx3+=cb3dydx, program_.Right2(); }}}
+
 
 private:
 	FRAGMENT_PROCESSOR& program_;

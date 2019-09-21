@@ -731,7 +731,7 @@ private:
 
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
-		using rmlv::mvec4i;
+		using rmlv::mvec4i, rmlv::mvec4f;
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat4;
 		using std::array, std::swap;
 
@@ -751,34 +751,40 @@ private:
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		array<VertexInput, 3> vi_;
-		array<VertexOutput, 3> computed;
-		array<qfloat4, 3> devCoord;
-		array<mvec4i, 3>  fx;
-		array<mvec4i, 3>  fy;
+		const auto dsx = deviceScale_.x * 16.0F;
+		const auto dsy = deviceScale_.y * 16.0F;
+		const auto dox = deviceOffset_.x * 16.0F;
+		const auto doy = deviceOffset_.y * 16.0F;
 
-		int li = 0;  // sse lane being loaded
-		bool eof = false;
-		bool backfacing;
+		VertexInput vi0, vi1, vi2;
+		bool backfacing[4];
+		int li{0};  // sse lane being loaded
+		bool eof{false};
 		while (!eof) {
 
-			const uint16_t i0 = cs.consumeUShort();
-			if (i0 == 0xffff) {
+			const uint16_t tmp = cs.consumeUShort();
+			if (tmp == 0xffff) {
 				eof = true; }
 
 			if (!eof) {
 				// load vertex data from the VAO into the current SIMD lane
 				const uint16_t i1 = cs.consumeUShort();
 				const uint16_t i2 = cs.consumeUShort();
-				backfacing = i0 & 0x8000;
-				array<uint16_t, 3> faceIndices = {uint16_t(i0 & 0x7fff), i1, i2};
+				backfacing[li] = tmp & 0x8000;
+				const uint16_t i0 = tmp & 0x7fff;
 
-				for (int i=0; i<3; ++i) {
-					const auto idx = faceIndices[i];
-					//---- vao specialization ----
-					vi_[i].a0.setLane(li, vec4{ vao.a0.at(idx), 1 });
-					vi_[i].a1.setLane(li, vec4{ vao.a1.at(idx), 0 });
-					vi_[i].a2.setLane(li, vec4{ vao.a2.at(idx), 0 }); }
+				vi0.a0.setLane(li, vec4{ vao.a0.at(i0), 1 });
+				vi0.a1.setLane(li, vec4{ vao.a1.at(i0), 0 });
+				vi0.a2.setLane(li, vec4{ vao.a2.at(i0), 0 });
+
+				vi1.a0.setLane(li, vec4{ vao.a0.at(i1), 1 });
+				vi1.a1.setLane(li, vec4{ vao.a1.at(i1), 0 });
+				vi1.a2.setLane(li, vec4{ vao.a2.at(i1), 0 });
+
+				vi2.a0.setLane(li, vec4{ vao.a0.at(i2), 1 });
+				vi2.a1.setLane(li, vec4{ vao.a1.at(i2), 0 });
+				vi2.a2.setLane(li, vec4{ vao.a2.at(i2), 0 });
+
 				li += 1; }
 
 			if (!eof && (li < 4)) {
@@ -786,28 +792,44 @@ private:
 				continue; }
 
 			// shade up to 4x3 verts
-			for (int i=0; i<3; ++i) {
-				qfloat4 gl_Position;
-				PGM::ShadeVertex(vi_[i], ui, gl_Position, computed[i]);
-				devCoord[i] = pdiv(gl_Position);
-				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale_.x + deviceOffset_.x));
-				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale_.y + deviceOffset_.y)); }
+			qfloat4 pos0, pos1, pos2;
+			VertexOutput computed0, computed1, computed2;
+			qfloat4 devCoord0, devCoord1, devCoord2;
+			mvec4i fx0, fx1, fx2;
+			mvec4i fy0, fy1, fy2;
+			const mvec4f fixedScale{16.0F};
+
+			PGM::ShadeVertex(vi0, ui, pos0, computed0);
+			PGM::ShadeVertex(vi1, ui, pos1, computed1);
+			PGM::ShadeVertex(vi2, ui, pos2, computed2);
+
+			devCoord0 = pdiv(pos0);
+			devCoord1 = pdiv(pos1);
+			devCoord2 = pdiv(pos2);
+
+			fx0 = ftoi(devCoord0.x * dsx + dox);
+			fx1 = ftoi(devCoord1.x * dsx + dox);
+			fx2 = ftoi(devCoord2.x * dsx + dox);
+
+			fy0 = ftoi(devCoord0.y * dsy + doy);
+			fy1 = ftoi(devCoord1.y * dsy + doy);
+			fy2 = ftoi(devCoord2.y * dsy + doy);
 
 			// draw up to 4 triangles
-			for (int ti=0; ti<li; ti++) {
+			for (int ti=0; ti<li; ++ti) {
 				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
 					tu0, tu1,
 					cbc, dbc,
 					ui,
-					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
-					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
-					computed[0].lane(ti),
-					computed[1].lane(ti),
-					computed[2].lane(ti) };
+					VertexFloat1{ devCoord0.w.lane[ti], devCoord1.w.lane[ti], devCoord2.w.lane[ti] },
+					VertexFloat1{ devCoord0.z.lane[ti], devCoord1.z.lane[ti], devCoord2.z.lane[ti] },
+					computed0.lane(ti),
+					computed1.lane(ti),
+					computed2.lane(ti) };
 				TriangleRasterizer tr(targetProgram, rect, target_height);
-				tr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
-				        fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
-				        !backfacing); }
+				tr.Draw(fx0.si[ti], fx1.si[ti], fx2.si[ti],
+				        fy0.si[ti], fy1.si[ti], fy2.si[ti],
+				        !backfacing[ti]); }
 
 			// reset the SIMD lane counter
 			li = 0; }}
