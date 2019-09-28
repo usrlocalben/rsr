@@ -158,7 +158,7 @@ struct DefaultTargetProgram {
 		// read depth buffer
 		qfloat destDepth; LoadDepth(destDepth);
 
-		const auto depthMask = float2bits(cmple(fragDepth, destDepth));
+		const auto depthMask = float2bits(cmplt(fragDepth, destDepth));
 		const auto fragMask = andnot(triMask, depthMask);
 
 		if (movemask(bits2float(fragMask)) == 0) {

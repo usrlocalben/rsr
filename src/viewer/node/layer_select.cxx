@@ -61,7 +61,8 @@ public:
 	void Render(rglv::GL* dc, int width, int height, float aspect, rclmt::jobsys::Job *link) override {
 		auto layerNode = GetSelectedLayer();
 		if (layerNode == nullptr) {
-			rclmt::jobsys::run(link); }
+			if (link != nullptr) {
+				rclmt::jobsys::run(link); }}
 		else {
 			layerNode->Render(dc, width, height, aspect, link); }}
 

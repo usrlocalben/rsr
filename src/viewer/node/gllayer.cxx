@@ -53,7 +53,6 @@ public:
 
 	void Main() override {
 		using rmlv::ivec2;
-
 		jobsys::Job *doneJob = jobsys::make_job(jobsys::noop);
 		AddLinksTo(doneJob);
 
@@ -92,9 +91,10 @@ public:
 			*pmat = mat4::ident();
 			*mvmat = mat4::ident(); }
 
-		pcnt_ = gls_.size();
 		for (auto gl : gls_) {
-			gl->Draw(dc, pmat, mvmat, jobsys::make_job(Impl::AllThen, std::tuple{&pcnt_, link}), 0);}}
+			gl->Draw(dc, pmat, mvmat, nullptr, 0);}
+		if (link != nullptr) {
+			jobsys::run(link); }}
 
 protected:
 	void AddDeps() override {
@@ -111,7 +111,6 @@ private:
 	void PostImpl() {}
 
 private:
-	std::atomic<int> pcnt_{};
 	std::vector<IGl*> gls_{};
 	ICamera* cameraNode_{nullptr};
 	IValue* colorNode_{nullptr};

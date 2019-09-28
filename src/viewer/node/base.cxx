@@ -77,8 +77,9 @@ void NodeBase::Main() {
 
 
 void NodeBase::AddDep(NodeBase* node) {
-	if (node != nullptr) {
-		deps_.emplace_back(node); }}
+	if (node == nullptr) return; // ignore null nodes
+	// if (find(begin(deps_), end(deps_), node) != end(deps_)) return;  // ignore reuse in same node
+	deps_.emplace_back(node); }
 
 
 void NodeBase::AddDeps(){}
@@ -97,7 +98,8 @@ void ComputeIndegreesFrom(NodeBase *node) {
 		return; }
 	visited.insert(node);
 	for (auto& dep : node->Deps()) {
-		dep->inc_indegreeWaitCnt();
+		dep->inc_indegreeWaitCnt(); }
+	for (auto& dep : node->Deps()) {
 		ComputeIndegreesFrom(dep); } }
 
 
