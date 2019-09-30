@@ -6,6 +6,7 @@
 #include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rgl/rglv/rglv_triangle.hxx"
+#include "src/rgl/rglv/rglv_vao.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
@@ -40,7 +41,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		// unforms
 		const rglv::ShaderUniforms& u,
 		// vertex shader output
-		const rglv::VertexOutput& v,
+		const WireframeProgram::VertexOutputMD& v,
 		// special
 		const rglv::BaryCoord& _bary,
 		// texture units
@@ -81,6 +82,53 @@ struct IQPostProgram final : public rglv::BaseProgram {
 
 struct EnvmapProgram final : public rglv::BaseProgram {
 	static int id;
+
+	struct VertexInput {
+		rmlv::qfloat4 a0;
+		rmlv::qfloat4 a1;
+		rmlv::qfloat4 a2; };
+
+	struct Loader {
+		Loader(const void* data, const void* unused1, const void* unused2) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
+			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
+			// assert(binState->array != nullptr);
+			}
+		int Size() const { return data_.size(); }
+		void LoadInstance(int id, VertexInput& vi) {}
+		void Load(int idx, VertexInput& vi) {
+			vi.a0 = data_.a0.loadxyz1(idx);
+			vi.a1 = data_.a1.loadxyz0(idx);
+			vi.a2 = data_.a2.loadxyz0(idx); }
+		void LoadOne(int idx, VertexInput& vi) {
+			vi.a0 = rmlv::vec4{ data_.a0.at(idx), 1 };
+			vi.a1 = rmlv::vec4{ data_.a1.at(idx), 0 };
+			vi.a2 = rmlv::vec4{ data_.a2.at(idx), 0 }; }
+		void LoadLane(int idx, int li, VertexInput& vi) {
+			vi.a0.setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
+			vi.a1.setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
+			vi.a2.setLane(li, rmlv::vec4{ data_.a2.at(idx), 0 }); }
+		const rglv::VertexArray_F3F3F3& data_; };
+
+	struct VertexOutputSD {
+		rmlv::vec3 r0;
+		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+			return { mix(a.r0, b.r0, t) }; }};
+
+	struct VertexOutputMD {
+		rmlv::qfloat3 r0;
+
+		VertexOutputSD Lane(const int li) {
+			return VertexOutputSD{
+				r0.lane(li) }; }};
+
+	struct Interpolants {
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
+			vo0({ d0.r0, d1.r0, d2.r0 }) {}
+		VertexOutputMD Interpolate(rglv::BaryCoord bary) const {
+			return { rglv::Interpolate(bary, vo0) }; }
+		rglv::VertexFloat3 vo0; };
+
 #define IN_POSITION v.a0
 #define IN_SMOOTH_NORMAL v.a1
 #define IN_FACE_NORMAL v.a2
@@ -89,10 +137,10 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 #define gl_ModelViewProjectionMatrix u.mvpm
 #define gl_NormalMatrix u.nm
 	inline static void ShadeVertex(
-		const rglv::VertexInput& v,
+		const VertexInput& v,
 		const rglv::ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
-		rglv::VertexOutput& outs
+		VertexOutputMD& outs
 		) {
 
 		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, IN_POSITION);
@@ -114,7 +162,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		// unforms
 		const rglv::ShaderUniforms& u,
 		// vertex shader output
-		const rglv::VertexOutput& outs,
+		const VertexOutputMD& outs,
 		// special
 		const rglv::BaryCoord& _bary,
 		// texture units
@@ -136,15 +184,62 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 
 struct AmyProgram final : public rglv::BaseProgram {
 	static int id;
+
+	struct VertexInput {
+		rmlv::qfloat4 a0;
+		rmlv::qfloat4 a1;
+		rmlv::qfloat4 a2; };
+
+	struct Loader {
+		Loader(const void* data, const void* unused1, const void* unused2) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
+			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
+			// assert(binState->array != nullptr);
+			}
+		int Size() const { return data_.size(); }
+		void LoadInstance(int id, VertexInput& vi) {}
+		void Load(int idx, VertexInput& vi) {
+			vi.a0 = data_.a0.loadxyz1(idx);
+			vi.a1 = data_.a1.loadxyz0(idx);
+			vi.a2 = data_.a2.loadxyz0(idx); }
+		void LoadOne(int idx, VertexInput& vi) {
+			vi.a0 = rmlv::vec4{ data_.a0.at(idx), 1 };
+			vi.a1 = rmlv::vec4{ data_.a1.at(idx), 0 };
+			vi.a2 = rmlv::vec4{ data_.a2.at(idx), 0 }; }
+		void LoadLane(int idx, int li, VertexInput& vi) {
+			vi.a0.setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
+			vi.a1.setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
+			vi.a2.setLane(li, rmlv::vec4{ data_.a2.at(idx), 0 }); }
+		const rglv::VertexArray_F3F3F3& data_; };
+
+	struct VertexOutputSD {
+		rmlv::vec3 r0;
+		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+			return { mix(a.r0, b.r0, t) }; }};
+
+	struct VertexOutputMD {
+		rmlv::qfloat3 r0;
+
+		VertexOutputSD Lane(const int li) {
+			return VertexOutputSD{
+				r0.lane(li) }; }};
+
+	struct Interpolants {
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
+			vo0({ d0.r0, d1.r0, d2.r0 }) {}
+		VertexOutputMD Interpolate(rglv::BaryCoord bary) const {
+			return { rglv::Interpolate(bary, vo0) }; }
+		rglv::VertexFloat3 vo0; };
+
 #define IN_POSITION v.a0
 #define IN_TEXCOORD v.a2
 #define OUT_TEXCOORD outs.r0
 #define gl_ModelViewProjectionMatrix u.mvpm
 	static void ShadeVertex(
-		const rglv::VertexInput& v,
+		const VertexInput& v,
 		const rglv::ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
-		rglv::VertexOutput& outs
+		VertexOutputMD& outs
 		) {
 		OUT_TEXCOORD = IN_TEXCOORD.xyz();
 		gl_Position = mul(gl_ModelViewProjectionMatrix, IN_POSITION); }
@@ -156,7 +251,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		// unforms
 		const rglv::ShaderUniforms& u,
 		// vertex shader output
-		const rglv::VertexOutput& outs,
+		const VertexOutputMD& outs,
 		// special
 		const rglv::BaryCoord& _bary,
 		// texture units
@@ -175,6 +270,53 @@ struct AmyProgram final : public rglv::BaseProgram {
 
 struct EnvmapXProgram final : public rglv::BaseProgram {
 	static int id;
+
+	struct VertexInput {
+		rmlv::qfloat4 a0;
+		rmlv::qfloat4 a1;
+		rmlv::qfloat4 a2; };
+
+	struct Loader {
+		Loader(const void* data, const void* unused1, const void* unused2) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
+			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
+			// assert(binState->array != nullptr);
+			}
+		int Size() const { return data_.size(); }
+		void LoadInstance(int id, VertexInput& vi) {}
+		void Load(int idx, VertexInput& vi) {
+			vi.a0 = data_.a0.loadxyz1(idx);
+			vi.a1 = data_.a1.loadxyz0(idx);
+			vi.a2 = data_.a2.loadxyz0(idx); }
+		void LoadOne(int idx, VertexInput& vi) {
+			vi.a0 = rmlv::vec4{ data_.a0.at(idx), 1 };
+			vi.a1 = rmlv::vec4{ data_.a1.at(idx), 0 };
+			vi.a2 = rmlv::vec4{ data_.a2.at(idx), 0 }; }
+		void LoadLane(int idx, int li, VertexInput& vi) {
+			vi.a0.setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
+			vi.a1.setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
+			vi.a2.setLane(li, rmlv::vec4{ data_.a2.at(idx), 0 }); }
+		const rglv::VertexArray_F3F3F3& data_; };
+
+	struct VertexOutputSD {
+		rmlv::vec3 r0;
+		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+			return { mix(a.r0, b.r0, t) }; }};
+
+	struct VertexOutputMD {
+		rmlv::qfloat3 r0;
+
+		VertexOutputSD Lane(const int li) {
+			return VertexOutputSD{
+				r0.lane(li) }; }};
+
+	struct Interpolants {
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
+			vo0({ d0.r0, d1.r0, d2.r0 }) {}
+		VertexOutputMD Interpolate(rglv::BaryCoord bary) const {
+			return { rglv::Interpolate(bary, vo0) }; }
+		rglv::VertexFloat3 vo0; };
+
 #define IN_POSITION v.a0
 #define IN_SMOOTH_NORMAL v.a1
 #define IN_FACE_NORMAL v.a2
@@ -185,10 +327,10 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 #define gl_ModelViewProjectionMatrix u.mvpm
 #define gl_NormalMatrix u.nm
 	inline static void ShadeVertex(
-		const rglv::VertexInput& v,
+		const VertexInput& v,
 		const rglv::ShaderUniforms& u,
 		rmlv::qfloat4& gl_Position,
-		rglv::VertexOutput& outs
+		VertexOutputMD& outs
 		) {
 
 		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, IN_POSITION);
@@ -210,7 +352,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		// unforms
 		const rglv::ShaderUniforms& u,
 		// vertex shader output
-		const rglv::VertexOutput& outs,
+		const VertexOutputMD& outs,
 		// special
 		const rglv::BaryCoord& _bary,
 		// texture units
