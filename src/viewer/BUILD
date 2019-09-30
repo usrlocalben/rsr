@@ -167,6 +167,7 @@ cc_library(
         "//src/rgl/rglv:interpolate",
         "//src/rgl/rglv:math",
         "//src/rgl/rglv:triangle",
+        "//src/rgl/rglv:vao",
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec", ],

@@ -9,23 +9,23 @@
 namespace rqdq {
 namespace rglv {
 
-void GL::glDrawArrays(const int mode, const int start, const int count, const bool enableClipping) {
+void GL::glDrawArrays(const int mode, const int start, const int count) {
 	assert(mode == GL_TRIANGLES);
 	assert(start == 0);
 	maybeUpdateState();
 	d_commands.appendByte(CMD_DRAW_ARRAY);
 	// d_commands.appendByte(0x14);  // videocore: 16-bit indices, triangles
-	d_commands.appendByte(enableClipping ? 1 : 0);
+	// d_commands.appendByte(enableClipping ? 1 : 0);
 	d_commands.appendInt(count); }
 
 
-void GL::glDrawElements(const int mode, const int count, const int type, const uint16_t* indices, const bool enableClipping) {
+void GL::glDrawElements(const int mode, const int count, const int type, const uint16_t* indices) {
 	assert(mode == GL_TRIANGLES);
 	assert(type == GL_UNSIGNED_SHORT);
 	maybeUpdateState();
 	d_commands.appendByte(CMD_DRAW_ELEMENTS);
 	d_commands.appendByte(0x14);  // videocore: 16-bit indices, triangles
-	d_commands.appendByte(enableClipping ? 1 : 0);
+	// d_commands.appendByte(enableClipping ? 1 : 0);
 	d_commands.appendInt(count);
 	d_commands.appendPtr(indices); }
 

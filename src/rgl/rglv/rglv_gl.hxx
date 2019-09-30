@@ -222,8 +222,8 @@ public:
 	//void drawElements(const VertexArray_F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3&);
-	void glDrawElements(int mode, int count, int type, const uint16_t* indices, bool enableClipping=true);
-	void glDrawArrays(int mode, int start, int count, bool enableClipping=true);
+	void glDrawElements(int mode, int count, int type, const uint16_t* indices);
+	void glDrawArrays(int mode, int start, int count);
 	void glClear(int bits);
 	void storeHalfsize(rglr::FloatingPointCanvas *dst);
 	void storeUnswizzled(rglr::FloatingPointCanvas *dst);
