@@ -606,18 +606,15 @@ private:
 		bool backfacing;
 		while (!eof) {
 
-			const uint16_t foo = cs.consumeUShort();
-			if (foo == 0xffff) {
+			const uint16_t firstWord = cs.consumeUShort();
+			if (firstWord == 0xffff) {
 				eof = true; }
 
 			if (!eof) {
-				// load vertex data from the VAO into the current SIMD lane
 				const uint16_t i1 = cs.consumeUShort();
 				const uint16_t i2 = cs.consumeUShort();
-				backfacing = foo & 0x8000;
-				const uint16_t i0 = foo & 0x7fff;
-				array<uint16_t, 3> faceIndices = {uint16_t(i0 & 0x7fff), i1, i2};
-
+				backfacing = firstWord & 0x8000;
+				const uint16_t i0 = firstWord & 0x7fff;
 				loader.LoadLane(i0, li, vi_[0]);
 				loader.LoadLane(i1, li, vi_[1]);
 				loader.LoadLane(i2, li, vi_[2]);
