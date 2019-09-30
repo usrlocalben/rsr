@@ -663,11 +663,12 @@ private:
 		const ShaderUniforms ui = MakeUniforms(state);
 
 		auto CVMix = [&](const ClippedVertex& a, const ClippedVertex& b, const float d) {
+			static_assert(sizeof(typename PGM::VertexOutputSD) <= sizeof(ClippedVertex::data), "shader output too large for clipped vertex buffer");
 			ClippedVertex out;
 			out.coord = mix(a.coord, b.coord, d);
-			const auto& ad = *reinterpret_cast<const typename PGM::VertexOutputSD*>(&a.data);
-			const auto& bd = *reinterpret_cast<const typename PGM::VertexOutputSD*>(&b.data);
-			auto& od = *reinterpret_cast<typename PGM::VertexOutputSD*>(&out.data);
+			auto& ad = *reinterpret_cast<const typename PGM::VertexOutputSD*>(&a.data);
+			auto& bd = *reinterpret_cast<const typename PGM::VertexOutputSD*>(&b.data);
+			auto& od = *reinterpret_cast<      typename PGM::VertexOutputSD*>(&out.data);
 			od = PGM::VertexOutputSD::Mix(ad, bd, d);
 			return out; };
 
