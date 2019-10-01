@@ -88,10 +88,10 @@ public:
 			auto& texture = textureNode1_->GetTexture();
 			dc.glBindTexture(1, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
 		dc.glEnable(rglv::GL_CULL_FACE);
-		if (uNode0_ != nullptr) {
+		/*if (uNode0_ != nullptr) {
 			dc.glColor(uNode0_->Eval(uSlot0_).as_vec3()); }
 		if (uNode1_ != nullptr) {
-			dc.glNormal(uNode1_->Eval(uSlot1_).as_vec3()); }
+			dc.glNormal(uNode1_->Eval(uSlot1_).as_vec3()); }*/
 		// dc.vertex_input_uniform(VertexInputUniform{ sin(float(gt.elapsed()*3.0f)) * 0.5f + 0.5f });
 		}
 

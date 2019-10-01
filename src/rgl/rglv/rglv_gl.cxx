@@ -57,21 +57,15 @@ void GL::storeTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst) 
 
 void GL::reset() {
 	d_dirty = true;
-	d_modelViewMatrixStack.reset();
-	d_projectionMatrixStack.reset();
-	d_textureMatrixStack.reset();
-	d_activeMatrixStack = &d_modelViewMatrixStack;
 	d_states.clear();
 	d_cs.reset();
+	d_ubuf.clear();
 	d_commands.reset(); }
 
 
 void GL::maybeUpdateState() {
 	if (!d_dirty) {
 		return; }
-	d_cs.modelViewMatrix = d_modelViewMatrixStack.top();
-	d_cs.projectionMatrix = d_projectionMatrixStack.top();
-	d_cs.textureMatrix = d_textureMatrixStack.top();
 	d_states.push_back(d_cs);
 	d_commands.appendByte(CMD_STATE);
 	d_commands.appendPtr(&d_states.back());
