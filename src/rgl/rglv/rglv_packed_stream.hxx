@@ -14,7 +14,8 @@ constexpr int maxSizeInBytes = 100000;
 class FastPackedStream {
 	int d_head{0};
 	int d_tail{0};
-	int d_mark{0};
+	int d_mark1{0};
+	int d_mark2{0};
 	std::vector<uint8_t> store;
 	uint8_t* d_buf;
 
@@ -38,8 +39,10 @@ public:
 	inline int  size() const { return d_head; }
 	inline void reset()      { d_head = d_tail = 0; }
 
-	inline void mark()       { d_mark = d_head; }
-	inline bool touched()    { return d_mark != d_head; }
+	inline void mark1()       { d_mark1 = d_head; }
+	inline bool touched1()    { return d_mark1 != d_head; }
+	inline void mark2()       { d_mark2 = d_head; }
+	inline bool touched2()    { return d_mark2 != d_head; }
 
 	inline void appendByte(uint8_t a) {
 		*reinterpret_cast<uint8_t*>(alloc(sizeof(uint8_t))) = a; }

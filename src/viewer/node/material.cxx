@@ -80,14 +80,14 @@ public:
 
 	void Apply(rglv::GL* _dc) override {
 		auto& dc = *_dc;
-		dc.glUseProgram(int(programId_));
+		dc.UseProgram(int(programId_));
 		if (textureNode0_ != nullptr) {
 			auto& texture = textureNode0_->GetTexture();
-			dc.glBindTexture(0, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
+			dc.BindTexture(0, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
 		if (textureNode1_ != nullptr) {
 			auto& texture = textureNode1_->GetTexture();
-			dc.glBindTexture(1, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
-		dc.glEnable(rglv::GL_CULL_FACE);
+			dc.BindTexture(1, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
+		dc.Enable(rglv::GL_CULL_FACE);
 		/*if (uNode0_ != nullptr) {
 			dc.glColor(uNode0_->Eval(uSlot0_).as_vec3()); }
 		if (uNode1_ != nullptr) {

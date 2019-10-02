@@ -234,7 +234,7 @@ public:
 			tile.Reset(); }
 		clippedVertexBuffer0_.clear();
 		stats0_ = GPUStats{};
-		IC().reset(); }
+		IC().Reset(); }
 
 	GL& IC() {
 		return (userIC_ == 0 ? IC0_ : IC1_); }
@@ -335,7 +335,7 @@ private:
 
 		binState = nullptr;
 		binUniforms = nullptr;
-		auto& cs = IC().d_commands;
+		auto& cs = IC().commands_;
 		int totalCommands = 0;
 		while (!cs.eof()) {
 			totalCommands += 1;
@@ -343,7 +343,7 @@ private:
 			// printf("cmd %02x %d:", cmd, cmd);
 			if (cmd == CMD_STATE) {
 				binState = static_cast<GLState*>(cs.consumePtr());
-				binUniforms = IC().glGetUniformBufferAddr(binState->uniformsOfs);
+				binUniforms = IC().GetUniformBufferAddr(binState->uniformsOfs);
 				// printf(" state is now at %p\n", binState);
 				for (auto& tile : tiles_) {
 					tile.commands0.appendByte(cmd);
@@ -380,21 +380,23 @@ private:
 				//auto flags = cs.consumeByte();
 				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
 				auto count = cs.consumeInt();
+				auto instanceCnt = cs.consumeInt();
 				struct SequenceSource {
 					int operator()(int ti) { return ti; }};
 				SequenceSource indexSource{};
-				bin_Draw<SequenceSource, SHADERS...>(count, indexSource); }
+				bin_Draw<SequenceSource, SHADERS...>(count, indexSource, instanceCnt); }
 			else if (cmd == CMD_DRAW_ELEMENTS) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
 				auto count = cs.consumeInt();
 				auto indices = static_cast<uint16_t*>(cs.consumePtr());
+				auto instanceCnt = cs.consumeInt();
 				struct ArraySource {
 					ArraySource(const uint16_t* data) : data_(data) {}
 					int operator()(int ti) { return data_[ti]; }
 					const uint16_t* const data_; };
 				ArraySource indexSource{indices};
-				bin_Draw<ArraySource, SHADERS...>(count, indexSource); }}
+				bin_Draw<ArraySource, SHADERS...>(count, indexSource, instanceCnt); }}
 
 		// stats...
 		int total_ = 0;
@@ -478,37 +480,43 @@ private:
 			rglr::Filter<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
 	template <typename INDEX_SOURCE, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource) {}
+	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
 
 	template <typename INDEX_SOURCE, typename PGM, typename ...PGMs>
-	void bin_Draw(const int count, INDEX_SOURCE& indexSource) {
+	void bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
 		if (PGM::id != binState->programId) {
-			return bin_Draw<INDEX_SOURCE, PGMs...>(count, indexSource); }
+			return bin_Draw<INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
 
-		typename PGM::Loader loader( state.array, nullptr, nullptr );
-
+		const typename PGM::UniformsMD uniforms(*static_cast<const PGM::UniformsSD*>(binUniforms));
+		const auto cullingEnabled = state.cullingEnabled;
+		const auto cullFace = state.cullFace;
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
+
+		typename PGM::VertexInput vData;
+
+		for (auto& tile : tiles_) {
+			tile.commands0.appendByte(CMD_DRAW_INLINE);
+			tile.commands0.mark1(); }
+
+		for (int iid=0; iid<instanceCnt; ++iid) {
+			loader.LoadInstance(iid, vData);
+
+		for (auto& tile : tiles_) {
+			tile.commands0.appendInt(iid);
+			tile.commands0.mark2(); }
 
 		clipFlagBuffer_.clear();
 		devCoordBuffer_.clear();
 		clipQueue_.clear();
 
-		for (auto& tile : tiles_) {
-			tile.commands0.appendByte(CMD_DRAW_INLINE);
-			tile.commands0.mark(); }
-
-		const typename PGM::UniformsMD uniforms(*static_cast<const PGM::UniformsSD*>(binUniforms));
-		const auto cullingEnabled = state.cullingEnabled;
-		const auto cullFace = state.cullFace;
-
 		const auto siz = loader.Size();
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
 
 		for (int vi=0; vi<siz; vi+=4) {
-			typename PGM::VertexInput vData;
 			loader.Load(vi, vData);
 
 			qfloat4 coord;
@@ -538,7 +546,7 @@ private:
 					stats0_.totalTrianglesCulled++;
 					continue; }
 				// queue for clipping
-				clipQueue_.push_back({ i0, i1, i2 });
+				clipQueue_.push_back({ iid, i0, i1, i2 });
 				continue; }
 
 			auto devCoord0 = devCoordBuffer_[i0];
@@ -565,8 +573,18 @@ private:
 				tile.commands0.appendUShort(i2); });}
 
 		for (auto & tile : tiles_) {
-			if (tile.commands0.touched()) {
+			if (tile.commands0.touched2()) {
 				tile.commands0.appendUShort(0xffff);}
+			else {
+				// remove the instanceId from any tiles
+				// that weren't covered by this draw
+				tile.commands0.unappend(4); }}
+
+		}  // instance loop
+
+		for (auto & tile : tiles_) {
+			if (tile.commands0.touched1()) {
+				tile.commands0.appendInt(-1); }
 			else {
 				// remove the CMD_DRAW_INLINE from any tiles
 				// that weren't covered by this draw
@@ -590,7 +608,7 @@ private:
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat4;
 		using std::array, std::swap;
 
-		typename PGM::Loader loader( state.array, nullptr, nullptr );
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 
 		auto& cbc = *colorCanvasPtr_;
 		auto& dbc = *depthCanvasPtr_;
@@ -607,6 +625,15 @@ private:
 		array<qfloat4, 3> devCoord;
 		array<mvec4i, 3>  fx;
 		array<mvec4i, 3>  fy;
+
+		while (1) {
+			const int iid = cs.consumeInt();
+			if (iid == -1) {
+				break; }
+
+		loader.LoadInstance(iid, vi_[0]);
+		loader.LoadInstance(iid, vi_[1]);
+		loader.LoadInstance(iid, vi_[2]);
 
 		int li = 0;  // sse lane being loaded
 		bool eof = false;
@@ -656,7 +683,10 @@ private:
 				        !backfacing); }
 
 			// reset the SIMD lane counter
-			li = 0; }}
+			li = 0; }
+
+		}  // instance loop
+		}  // func
 
 	template <typename PGM>
 	void bin_DrawElementsClipped(const GLState& state) {
@@ -664,7 +694,7 @@ private:
 		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
 		using std::array, std::swap, std::min, std::max;
 
-		typename PGM::Loader loader( state.array, nullptr, nullptr );
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
 		const typename PGM::UniformsMD uniforms(*static_cast<const PGM::UniformsSD*>(binUniforms));
@@ -683,10 +713,12 @@ private:
 			// phase 1: load _poly_ with the shaded vertex data
 			clipA_.clear();
 			for (int i=0; i<3; ++i) {
-				const auto idx = faceIndices[i];
+				const int iid = faceIndices[0];
+				const auto idx = faceIndices[i+1];
 
 				typename PGM::VertexInput vi_;
-				loader.LoadOne(idx, vi_);
+				loader.LoadLane(idx, 0, vi_);
+				loader.LoadInstance(iid, vi_);
 
 				qfloat4 coord;
 				typename PGM::VertexOutputMD computed;
@@ -873,7 +905,7 @@ private:
 	const void* binUniforms{nullptr};
 	SubStack<uint8_t, maxVAOSizeInVertices> clipFlagBuffer_;
 	SubStack<rmlv::vec2, maxVAOSizeInVertices> devCoordBuffer_;
-	rcls::vector<std::array<int, 3>> clipQueue_;
+	rcls::vector<std::array<int, 4>> clipQueue_;
 	rcls::vector<ClippedVertex> clipA_;
 	rcls::vector<ClippedVertex> clipB_;
 

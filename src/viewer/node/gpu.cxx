@@ -65,9 +65,9 @@ public:
 		if (!layers_.empty()) {
 			auto& firstLayer = layers_[0];
 			backgroundColor = firstLayer->GetBackgroundColor(); }
-		ic.glClearColor(backgroundColor);
-		ic.glClearDepth(1.0F);
-		ic.glClear(rglv::GL_COLOR_BUFFER_BIT); //|rglv::GL_DEPTH_BUFFER_BIT);
+		ic.ClearColor(backgroundColor);
+		ic.ClearDepth(1.0F);
+		ic.Clear(rglv::GL_COLOR_BUFFER_BIT); //|rglv::GL_DEPTH_BUFFER_BIT);
 
 		if (layers_.empty()) {
 			jobsys::Job *postJob = Post();

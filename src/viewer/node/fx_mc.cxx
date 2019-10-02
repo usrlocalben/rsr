@@ -166,12 +166,12 @@ public:
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 
-		auto [id, ptr] = dc.glReserveUniformBuffer<EnvmapProgram::UniformsSD>();
+		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapProgram::UniformsSD>();
 		ptr->pm = *pmat;
 		ptr->mvm = *mvmat;
 		ptr->nm = transpose(inverse(ptr->mvm));
 		ptr->mvpm = ptr->pm * ptr->mvm;
-		dc.glUniforms(id);
+		dc.UseUniforms(id);
 
 		auto& buffer = buffers_[activeBuffer_];
 		for (int ai=0; ai<bufferEnd_[activeBuffer_]; ai++) {
@@ -179,8 +179,8 @@ public:
 			if (vao.size() != 0) {
 				const int elements = vao.size();
 				vao.pad();
-				dc.glUseArray(vao);
-				dc.glDrawArrays(GL_TRIANGLES, 0, elements); }}
+				dc.UseBuffer(0, vao);
+				dc.DrawArrays(GL_TRIANGLES, 0, elements); }}
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); } }
 

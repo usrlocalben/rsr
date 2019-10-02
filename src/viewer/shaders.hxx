@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+#include <cassert>
 #include <string_view>
 
 #include "src/rgl/rglv/rglv_fragment.hxx"
@@ -111,21 +113,16 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4 faceNormal; };
 
 	struct Loader {
-		Loader(const void* data, const void* unused1, const void* unused2) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
-			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
-			// assert(binState->array != nullptr);
-			}
+		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
 		void LoadInstance(int id, VertexInput& vi) {}
 		void Load(int idx, VertexInput& vi) {
 			vi.position     = data_.a0.loadxyz1(idx);
 			vi.smoothNormal = data_.a1.loadxyz0(idx);
 			vi.faceNormal   = data_.a2.loadxyz0(idx); }
-		void LoadOne(int idx, VertexInput& vi) {
-			vi.position     = rmlv::vec4{ data_.a0.at(idx), 1 };
-			vi.smoothNormal = rmlv::vec4{ data_.a1.at(idx), 0 };
-			vi.faceNormal   = rmlv::vec4{ data_.a2.at(idx), 0 }; }
 		void LoadLane(int idx, int li, VertexInput& vi) {
 			vi.position    .setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
 			vi.smoothNormal.setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
@@ -198,21 +195,16 @@ struct AmyProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4 uv; };
 
 	struct Loader {
-		Loader(const void* data, const void* unused1, const void* unused2) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
-			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
-			// assert(binState->array != nullptr);
-			}
+		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
 		void LoadInstance(int id, VertexInput& vi) {}
 		void Load(int idx, VertexInput& vi) {
 			vi.position = data_.a0.loadxyz1(idx);
 			vi.normal   = data_.a1.loadxyz0(idx);
 			vi.uv       = data_.a2.loadxyz0(idx); }
-		void LoadOne(int idx, VertexInput& vi) {
-			vi.position = rmlv::vec4{ data_.a0.at(idx), 1 };
-			vi.normal   = rmlv::vec4{ data_.a1.at(idx), 0 };
-			vi.uv       = rmlv::vec4{ data_.a2.at(idx), 0 }; }
 		void LoadLane(int idx, int li, VertexInput& vi) {
 			vi.position.setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
 			vi.normal  .setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
@@ -298,19 +290,15 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4 smoothNormal; };
 
 	struct Loader {
-		Loader(const void* data, const void* unused1, const void* unused2) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
-			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
-			// assert(binState->array != nullptr);
-			}
+		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
 		void LoadInstance(int id, VertexInput& vi) {}
 		void Load(int idx, VertexInput& vi) {
 			vi.position     = data_.a0.loadxyz1(idx);
 			vi.smoothNormal = data_.a1.loadxyz0(idx); }
-		void LoadOne(int idx, VertexInput& vi) {
-			vi.position     = rmlv::vec4{ data_.a0.at(idx), 1 };
-			vi.smoothNormal = rmlv::vec4{ data_.a1.at(idx), 0 }; }
 		void LoadLane(int idx, int li, VertexInput& vi) {
 			vi.position    .setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
 			vi.smoothNormal.setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 }); }
