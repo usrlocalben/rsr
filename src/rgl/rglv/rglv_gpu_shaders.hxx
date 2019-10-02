@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 
+#include "src/rgl/rglv/rglv_gpu_protocol.hxx"
 #include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
@@ -41,7 +42,7 @@ struct BaseProgram {
 				assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
 		void LoadInstance(int id, VertexInput& vi) {}
-		void Load(int idx, VertexInput& vi) {
+		void LoadMD(int idx, VertexInput& vi) {
 			vi.a0 = data_.a0.loadxyz1(idx); }
 		/*void LoadOne(int idx, VertexInput& vi) {
 			vi.a0 = rmlv::vec4{ data_.a0.at(idx), 1 }; }*/

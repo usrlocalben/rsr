@@ -490,7 +490,7 @@ private:
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
 
-		const typename PGM::UniformsMD uniforms(*static_cast<const PGM::UniformsSD*>(binUniforms));
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
 		const auto cullingEnabled = state.cullingEnabled;
 		const auto cullFace = state.cullFace;
 		typename PGM::Loader loader( state.buffers, state.bufferFormat );
@@ -505,82 +505,82 @@ private:
 		for (int iid=0; iid<instanceCnt; ++iid) {
 			loader.LoadInstance(iid, vData);
 
-		for (auto& tile : tiles_) {
-			tile.commands0.appendInt(iid);
-			tile.commands0.mark2(); }
+			for (auto& tile : tiles_) {
+				tile.commands0.appendInt(iid);
+				tile.commands0.mark2(); }
 
-		clipFlagBuffer_.clear();
-		devCoordBuffer_.clear();
-		clipQueue_.clear();
+			clipFlagBuffer_.clear();
+			devCoordBuffer_.clear();
+			clipQueue_.clear();
 
-		const auto siz = loader.Size();
-		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
+			const auto siz = loader.Size();
+			// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
 
-		for (int vi=0; vi<siz; vi+=4) {
-			loader.Load(vi, vData);
+			for (int vi=0; vi<siz; vi+=4) {
+				loader.LoadMD(vi, vData);
 
-			qfloat4 coord;
-			typename PGM::VertexOutputMD unused;
-			PGM::ShadeVertex(vData, uniforms, coord, unused);
+				qfloat4 coord;
+				typename PGM::VertexOutputMD unused;
+				PGM::ShadeVertex(vData, uniforms, coord, unused);
 
-			auto flags = frustum.Test(coord);
-			store_bytes(clipFlagBuffer_.alloc<4>(), flags);
+				auto flags = frustum.Test(coord);
+				store_bytes(clipFlagBuffer_.alloc<4>(), flags);
 
-			auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
-			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
+				auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
+				devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
 
-		for (int ti=0; ti<count; ti+=3) {
-			stats0_.totalTrianglesSubmitted++;
+			for (int ti=0; ti<count; ti+=3) {
+				stats0_.totalTrianglesSubmitted++;
 
-			uint16_t i0 = indexSource(ti);
-			uint16_t i1 = indexSource(ti+1);
-			uint16_t i2 = indexSource(ti+2);
+				uint16_t i0 = indexSource(ti);
+				uint16_t i1 = indexSource(ti+1);
+				uint16_t i2 = indexSource(ti+2);
 
-			// check for triangles that need clipping
-			const auto cf0 = clipFlagBuffer_[i0];
-			const auto cf1 = clipFlagBuffer_[i1];
-			const auto cf2 = clipFlagBuffer_[i2];
-			if (cf0 | cf1 | cf2) {
-				if (cf0 & cf1 & cf2) {
-					// all points outside of at least one plane
-					stats0_.totalTrianglesCulled++;
+				// check for triangles that need clipping
+				const auto cf0 = clipFlagBuffer_[i0];
+				const auto cf1 = clipFlagBuffer_[i1];
+				const auto cf2 = clipFlagBuffer_[i2];
+				if (cf0 | cf1 | cf2) {
+					if (cf0 & cf1 & cf2) {
+						// all points outside of at least one plane
+						stats0_.totalTrianglesCulled++;
+						continue; }
+					// queue for clipping
+					clipQueue_.push_back({ iid, i0, i1, i2 });
 					continue; }
-				// queue for clipping
-				clipQueue_.push_back({ iid, i0, i1, i2 });
-				continue; }
 
-			auto devCoord0 = devCoordBuffer_[i0];
-			auto devCoord1 = devCoordBuffer_[i1];
-			auto devCoord2 = devCoordBuffer_[i2];
+				auto devCoord0 = devCoordBuffer_[i0];
+				auto devCoord1 = devCoordBuffer_[i1];
+				auto devCoord2 = devCoordBuffer_[i2];
 
-			// handle backfacing tris and culling
-			const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
-			if (backfacing) {
-				if (cullingEnabled && cullFace == GL_BACK) {
-					stats0_.totalTrianglesCulled++;
-					continue; }
-				// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
-				swap(i0, i2);
-				i0 |= 0x8000; }  // add backfacing flag
-			else {
-				if (cullingEnabled && cullFace == GL_FRONT) {
-					stats0_.totalTrianglesCulled++;
-					continue; }}
+				// handle backfacing tris and culling
+				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
+				if (backfacing) {
+					if (cullingEnabled && cullFace == GL_BACK) {
+						stats0_.totalTrianglesCulled++;
+						continue; }
+					// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
+					swap(i0, i2);
+					i0 |= 0x8000; }  // add backfacing flag
+				else {
+					if (cullingEnabled && cullFace == GL_FRONT) {
+						stats0_.totalTrianglesCulled++;
+						continue; }}
 
-			ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
-				tile.commands0.appendUShort(i0);  // also includes backfacing flag
-				tile.commands0.appendUShort(i1);
-				tile.commands0.appendUShort(i2); });}
+				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
+					tile.commands0.appendUShort(i0);  // also includes backfacing flag
+					tile.commands0.appendUShort(i1);
+					tile.commands0.appendUShort(i2); });}
 
-		for (auto & tile : tiles_) {
-			if (tile.commands0.touched2()) {
-				tile.commands0.appendUShort(0xffff);}
-			else {
-				// remove the instanceId from any tiles
-				// that weren't covered by this draw
-				tile.commands0.unappend(4); }}
+			for (auto & tile : tiles_) {
+				if (tile.commands0.touched2()) {
+					tile.commands0.appendUShort(0xffff);}
+				else {
+					// remove the instanceId from any tiles
+					// that weren't covered by this draw
+					tile.commands0.unappend(4); }}
 
-		}  // instance loop
+			}  // instance loop
 
 		for (auto & tile : tiles_) {
 			if (tile.commands0.touched1()) {
@@ -614,7 +614,7 @@ private:
 		auto& dbc = *depthCanvasPtr_;
 		const int target_height = cbc.height();
 
-		const typename PGM::UniformsMD uniforms(*static_cast<const PGM::UniformsSD*>(uniformsPtr));
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
@@ -697,7 +697,7 @@ private:
 		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
-		const typename PGM::UniformsMD uniforms(*static_cast<const PGM::UniformsSD*>(binUniforms));
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
 
 		auto CVMix = [&](const ClippedVertex& a, const ClippedVertex& b, const float d) {
 			static_assert(sizeof(typename PGM::VertexOutputSD) <= sizeof(ClippedVertex::data), "shader output too large for clipped vertex buffer");
@@ -831,7 +831,7 @@ private:
 		auto& dbc = *depthCanvasPtr_;
 		const int target_height = cbc.height();
 
-		const typename PGM::UniformsMD uniforms(*static_cast<const PGM::UniformsSD*>(uniformsPtr));
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
 
 		const auto tmp = cs.consumeUShort();
 		const bool backfacing = (tmp & 0x8000) != 0;

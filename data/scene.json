@@ -2,74 +2,21 @@
 	{"$render": { "id": "nRender",
 		"sRGB": false,
 		"program": "IQ",
-		"gpu": {"$gpu": {"layers": ["lAmy", "lEffects", "nPIPLayer"]}}}},
+		"gpu": {"$gpu": {"layers": ["lAmy", "lEffects"]}}}},
 
 	{"$layer": { "id": "lAmy",
 		"camera": {"$orthographic": {}},
 		"color": "amyBackgroundColor",
 		"gl": [ "nAmy" ]}},
 	
-	{"$layerSelect": {"id": "chooser",
-		"selector": {"$float": {"x": 1}},
-		"layers": ["nPIPLayer", "lEffects"]}},
-
 	{"$computedVec3": {
 		"id": "amyBackgroundColor",
 		"code": "{pow(238/255.0, 2.2333), pow(248/255.0, 2.2333), 1.0}"}},
 
 	{"$layer": { "id": "lEffects",
-		"camera": {"$perspective": {
-			"position": {"$vec3": {"x": 0, "y": 0, "z": 24}},
-			"h": 3.14, "v": 0,
-			"fov": 55.0,
-			"originX": -0.425}},
-		"gl": [ "nAuraForLaura" ]}},
-
-	{"$layer": { "id": "lCarpet",
 		"camera": "uiCamera",
-		"gl": [ "nCarpet" ]}},
-	
-	{"$fxCarpet": { "id": "nCarpet",
-		"material": "mAmy",
-		"freq": {"$computedVec3": {
-			"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-			"code": "{sin(t*1.5)/2.0+1.0, sin(t*0.5)/1, 0}"}},
-		"phase": {"$computedVec3": {
-			"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-			"code": "{t, t*1.333, 0}"}}}},
+		"gl": [ "nMany" ]}},
 
-	{"$perspective": { "id": "nCam",
-		"position": {"$vec3": {"x": 2, "y": 0, "z": 4}},
-		"h": 3.14, "v": 0,
-		"fov": 55.0}},
-
-	{"$renderToTexture": {"id": "texRTT", "gpu": "nGPU2", "width": 256, "height": 256, "aa": true, "aspect": 1.666}},
-	{"$material": {"id": "mTest", "program": "Amy", "filter": false, "texture0": "texRTT"}},
-
-	{"$layer": { "id": "nPIPLayer",
-		"camera": {"$orthographic": {}},
-		"gl": ["npipborder", "npip"]}},
-	{"$fxXYQuad": { "id": "npipborder",
-		"material": "mBlack",
-		"leftTop": {"$vec2": {"x": 0.09, "y": -0.09}},
-		"rightBottom": {"$vec2": {"x": 0.91, "y": -0.91}},
-		"z": {"$float": {"x": 0.91}}}},
-	{"$fxXYQuad": { "id": "npip",
-		"material": "mTest",
-		"leftTop": {"$vec2": {"x": 0.1, "y": -0.1}},
-		"rightBottom": {"$vec2": {"x": 0.9, "y": -0.9}},
-		"z": {"$float": {"x": 0.9}}}},
-
-	{"$gpu": { "id": "nGPU2",
-		"color": {"$float": {"x": 0.333}},
-		"layers": [ "nfoo" ]}},
-	{"$layer": { "id": "nfoo",
-		"color": {"$float": {"x": 0.333}},
-		"camera": "uiCamera",
-		"gl": [ "nField" ]}},
-
-
-	{"$group": {"id": "nGeo", "gl": [ "nAmy" ]}},
 	{"$fxXYQuad": { "id": "nAmy",
 		"material": "mAmy",
 		"leftTop": "circlelt",
@@ -92,16 +39,6 @@
 
 	{"$float": {"id": "amp1", "x": 0}},
 
-	{"$translate": {"id":"nField",
-		"gl": {"$fxMC": {
-			"material": "mBlack",
-			"frob": "globals:wallclock",
-			"precision": 32,
-			"range": 3.2,
-			"forkDepth": 3}},
-		"scale": {"$float": {"x": 1.0}},
-		"rotate": "fieldrotator"}},
-
 	{"$material": {"id": "mWire", "program": "Wireframe"}},
 
 	{"$material": { "id": "mBlack",
@@ -116,58 +53,19 @@
 		"u1": "sync:foo",
 		"texture0": {"$image": {"file": "data/textures/env-purple.png"}}}},
 
-	{"$computedVec3": {
+	{"$computedVec3": { "id": "roto",
 		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-		"code": "{pow(sin(t)*0.5+0.5, 8), 0, 0}"}},
+		"code": "{0.00, t*0.005, 0.00}"}},
 
 	{"$material": { "id": "mAmy",
 		"program": "Amy",
 		"filter": true,
 		"texture0": {"$image": {"file": "data/textures/amy1024.png"}}}},
 
-	{"$translate": { "id":"nAuraForLaura",
-		"gl": {"$fxAuraForLaura": {
-			"material": "mPurpleFade",
-			"freq": {"$computedVec3": {
-				"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-				"code": "{sin(t*1.5)/2.0+1.0, sin(t*0.5)/1, 0}"}},
-			"phase": {"$computedVec3": {
-				"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-				"code": "{t, t*1.333, 0}"}},
-			"mesh": "p5.obj"}},
-		"translate": {"$computedVec3": {
-			"inputs": [
-				{"name": "amp", "type": "real", "source": "auraamp"},
-				{"name": "nx", "type": "real", "source": "noiser1"},
-				{"name": "ny", "type": "real", "source": "noiser2"},
-				{"name": "nz", "type": "real", "source": "noiser3"} ],
-			"code": "{nx*amp, ny*amp, nz*amp}"}},
-		"scale": {"$float": {"x": 0.4}},
-		"rotate": "aurarotator"}},
+	{"$material": {"id": "mMany",
+		"program": "Many"}},
 
-	{"$float": {"id": "auraamp", "x": 10}},
-
-	{"$noise": {"id": "noiser1", "coord": {"$vec3": {
-			"x": 0,
-			"y": "globals:wallclock",
-			"z": 0}}}},
-
-	{"$noise": {"id": "noiser2", "coord": {"$vec3": {
-			"x": 0.2348792,
-			"y": "globals:wallclock",
-			"z": 0}}}},
-
-	{"$noise": {"id": "noiser3", "coord": {"$vec3": {
-			"x": 0.4718937,
-			"y": "globals:wallclock",
-			"z": 0}}}},
-
-	{"$vec3": {"id": "norotator", "x": 0, "y": 0, "z": 0}},
-	{"$computedVec3": { "id": "fieldrotator",
-		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-		"code": "{t*0.1, sin(t*0.41)*0.333, sin(t*0.222)*0.3}"}},
-
-	{"$computedVec3": { "id": "aurarotator",
-		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-		"code": "{0, sin(t*0.5)*0.2+0.2, sin(t*0.222)*0.1}"}}
+	{"$translate": {"id": "nMany",
+		"rotate": "roto",
+		"gl": {"$fxMany": {"material": "mMany", "mesh": "mycube.obj"}}}}
 ]

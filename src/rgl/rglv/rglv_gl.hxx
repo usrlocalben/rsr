@@ -135,6 +135,8 @@ public:
 		return { idx, ptr }; }
 
 	void* GetUniformBufferAddr(int ofs) {
+		if (ofs == -1) {
+			return nullptr; }
 		return &ubuf_[ofs]; }
 
 	void BindTexture(int unit, const PixelToaster::FloatingPointPixel *ptr, int width, int height, int stride, const int mode) {
@@ -154,7 +156,7 @@ public:
 
 	void UseBuffer(int idx, float* ptr) {
 		dirty_ = true;
-		cs_.buffers[idx] = &ptr;
+		cs_.buffers[idx] = ptr;
 		cs_.bufferFormat[idx] = AF_FLOAT; }
 
 	void ClearColor(rmlv::vec3 value) {

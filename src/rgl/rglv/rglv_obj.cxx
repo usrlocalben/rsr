@@ -53,7 +53,7 @@ struct SVec2 {
 		// will be non-negative. this
 		// offset prevents badness for
 		// some meshes. XXX
-		return vec4{ x+100.0F, y+100.0F, 0, 0 }; }
+		return vec4{ x, y, 0, 0 }; }
 		//return rqlma::Vec4{ x, y, 0, 0 }; };
 	vec2 xy() const {
 		// the bilinear texture sampler
@@ -61,7 +61,7 @@ struct SVec2 {
 		// will be non-negative. this
 		// offset prevents badness for
 		// some meshes. XXX
-		return vec2{ x + 100.0F, y + 100.0F }; }
+		return vec2{ x, y }; }
 		//return rqlma::Vec4{ x, y, 0, 0 }; };
 	static SVec2 read(std::stringstream& ss) {
 		float x, y;

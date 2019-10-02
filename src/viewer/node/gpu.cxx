@@ -24,7 +24,7 @@ using namespace rqv;
 
 namespace jobsys = rclmt::jobsys;
 
-using GPU = rglv::GPU<rglv::BaseProgram, WireframeProgram, IQPostProgram, EnvmapProgram, AmyProgram, EnvmapXProgram>;
+using GPU = rglv::GPU<rglv::BaseProgram, WireframeProgram, IQPostProgram, EnvmapProgram, AmyProgram, EnvmapXProgram, ManyProgram>;
 
 
 class GPUNode : public IGPU {

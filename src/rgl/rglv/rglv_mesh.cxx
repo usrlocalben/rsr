@@ -210,7 +210,10 @@ std::tuple<VertexArray_F3F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3F3(c
 			// computed smooth normals
 			auto d1 = m.vertex_normals[face.point_idx[i]];
 			// computed face normals
-			auto d2 = face.normal;
+			auto d2 = vec3{ m.texcoords[face.texcoord_idx[i]], 0 };
+			// auto d2 = vec3{ 0.0F, i*0.5F, 0.4F }; //vec3{ m.texcoords[face.texcoord_idx[i]], 0 };
+
+			//face.normal;
 
 			// blended normals
 			// normalize(mix(smooth, faceted, 0.666)),

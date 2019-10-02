@@ -36,6 +36,9 @@ struct Float3Array {
 	rmlv::qfloat3 load(const int idx) const {
 		return rmlv::qfloat3{ _mm_load_ps(&x[idx]), _mm_load_ps(&y[idx]), _mm_load_ps(&z[idx]) };}
 
+	rmlv::qfloat2 loadxy(const int idx) const {
+		return rmlv::qfloat2{ _mm_load_ps(&x[idx]), _mm_load_ps(&y[idx]) }; }
+
 	rmlv::qfloat4 loadxyz1(const int idx) const {
 		return rmlv::qfloat4{ _mm_load_ps(&x[idx]), _mm_load_ps(&y[idx]), _mm_load_ps(&z[idx]), _mm_set1_ps(1.0F) };}
 
