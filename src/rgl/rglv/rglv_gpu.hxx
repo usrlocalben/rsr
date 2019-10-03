@@ -498,6 +498,8 @@ private:
 
 		typename PGM::VertexInput vData;
 
+		clipQueue_.clear();
+
 		for (auto& tile : tiles_) {
 			tile.commands0.appendByte(CMD_DRAW_INLINE);
 			tile.commands0.mark1(); }
@@ -511,7 +513,6 @@ private:
 
 			clipFlagBuffer_.clear();
 			devCoordBuffer_.clear();
-			clipQueue_.clear();
 
 			const auto siz = loader.Size();
 			// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
