@@ -21,7 +21,7 @@ namespace {
 
 using namespace rqv;
 
-constexpr int many = 10000;
+constexpr int many = 30000;
 
 
 class Impl final : public IGl {

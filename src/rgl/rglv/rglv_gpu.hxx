@@ -507,10 +507,6 @@ private:
 		for (int iid=0; iid<instanceCnt; ++iid) {
 			loader.LoadInstance(iid, vData);
 
-			for (auto& tile : tiles_) {
-				tile.commands0.appendInt(iid);
-				tile.commands0.mark2(); }
-
 			clipFlagBuffer_.clear();
 			devCoordBuffer_.clear();
 
@@ -568,26 +564,20 @@ private:
 						stats0_.totalTrianglesCulled++;
 						continue; }}
 
-				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
+				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2, &iid](auto& tile) {
+					tile.commands0.appendUShort(iid);
 					tile.commands0.appendUShort(i0);  // also includes backfacing flag
 					tile.commands0.appendUShort(i1);
 					tile.commands0.appendUShort(i2); });}
 
-			for (auto & tile : tiles_) {
-				if (tile.commands0.touched2()) {
-					tile.commands0.appendUShort(0xffff);}
-				else {
-					// remove the instanceId from any tiles
-					// that weren't covered by this draw
-					tile.commands0.unappend(4); }}
 
 			}  // instance loop
 
 		for (auto & tile : tiles_) {
 			if (tile.commands0.touched1()) {
-				tile.commands0.appendInt(-1); }
+				tile.commands0.appendUShort(0xffff);}
 			else {
-				// remove the CMD_DRAW_INLINE from any tiles
+				// remove the instanceId from any tiles
 				// that weren't covered by this draw
 				tile.commands0.unappend(1); }}
 
@@ -627,39 +617,11 @@ private:
 		array<mvec4i, 3>  fx;
 		array<mvec4i, 3>  fy;
 
-		while (1) {
-			const int iid = cs.consumeInt();
-			if (iid == -1) {
-				break; }
-
-		loader.LoadInstance(iid, vi_[0]);
-		loader.LoadInstance(iid, vi_[1]);
-		loader.LoadInstance(iid, vi_[2]);
-
 		int li = 0;  // sse lane being loaded
-		bool eof = false;
+		uint16_t firstWord;
 		bool backfacing;
-		while (!eof) {
 
-			const uint16_t firstWord = cs.consumeUShort();
-			if (firstWord == 0xffff) {
-				eof = true; }
-
-			if (!eof) {
-				const uint16_t i1 = cs.consumeUShort();
-				const uint16_t i2 = cs.consumeUShort();
-				backfacing = firstWord & 0x8000;
-				const uint16_t i0 = firstWord & 0x7fff;
-				loader.LoadLane(i0, li, vi_[0]);
-				loader.LoadLane(i1, li, vi_[1]);
-				loader.LoadLane(i2, li, vi_[2]);
-				li += 1; }
-
-			if (!eof && (li < 4)) {
-				// keep loading if not eof and there are lanes remaining
-				continue; }
-
-			// shade up to 4x3 verts
+		auto flush = [&]() {
 			for (int i=0; i<3; ++i) {
 				qfloat4 gl_Position;
 				PGM::ShadeVertex(vi_[i], uniforms, gl_Position, computed[i]);
@@ -684,9 +646,42 @@ private:
 				        !backfacing); }
 
 			// reset the SIMD lane counter
-			li = 0; }
+			li = 0; };
 
-		}  // instance loop
+		int loadedInstanceId = cs.peekUShort();
+		loader.LoadInstance(loadedInstanceId, vi_[0]);
+		loader.LoadInstance(loadedInstanceId, vi_[1]);
+		loader.LoadInstance(loadedInstanceId, vi_[2]);
+
+		while (1) {
+			firstWord = cs.consumeUShort();
+			if (firstWord == 0xffff) {
+				flush();
+				break; }
+
+			const int iid = firstWord;
+			if (iid != loadedInstanceId) {
+				flush();
+				loadedInstanceId = iid;
+				loader.LoadInstance(iid, vi_[0]);
+				loader.LoadInstance(iid, vi_[1]);
+				loader.LoadInstance(iid, vi_[2]); }
+
+			{
+				const uint16_t tmp = cs.consumeUShort();
+				const uint16_t i1 = cs.consumeUShort();
+				const uint16_t i2 = cs.consumeUShort();
+				backfacing = tmp & 0x8000;
+				const uint16_t i0 = tmp & 0x7fff;
+				loader.LoadLane(i0, li, vi_[0]);
+				loader.LoadLane(i1, li, vi_[1]);
+				loader.LoadLane(i2, li, vi_[2]);
+				li += 1; }
+
+			if (li == 4) {
+				flush(); }}
+
+
 		}  // func
 
 	template <typename PGM>

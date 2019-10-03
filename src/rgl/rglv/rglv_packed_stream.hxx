@@ -30,6 +30,9 @@ class FastPackedStream {
 		d_tail += many;
 		return ptr; }
 
+	inline uint8_t *peek() const {
+		return &d_buf[d_tail]; }
+
 public:
 	FastPackedStream()  {
 		store.reserve(maxSizeInBytes);
@@ -59,6 +62,9 @@ public:
 		appendFloat(a.y);
 		appendFloat(a.z);
 		appendFloat(a.w); }
+
+	inline auto peekUShort() const {
+		return *reinterpret_cast<uint16_t*>(peek()); }
 
 	inline auto consumeByte() {
 		return *reinterpret_cast<uint8_t*>(consume(sizeof(uint8_t))); }
