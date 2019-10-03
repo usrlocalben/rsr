@@ -21,7 +21,7 @@ namespace {
 
 using namespace rqv;
 
-constexpr int many = 30000;
+constexpr int many = 6000;
 
 
 class Impl final : public IGl {
@@ -108,16 +108,42 @@ public:
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 
-		auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
+		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
 		ptr->pm = *pmat;
 		ptr->mvm = *mvmat;
 		ptr->nm = transpose(inverse(ptr->mvm));
 		ptr->mvpm = ptr->pm * ptr->mvm;
+		ptr->magic = 0.222F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
-		dc.UseBuffer(1, (float*)mats_.data());
-		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), many);
+		dc.UseBuffer(1, (float*)(mats_.data()+0));
+		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), 2000);}
+
+		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
+		ptr->pm = *pmat;
+		ptr->mvm = *mvmat;
+		ptr->nm = transpose(inverse(ptr->mvm));
+		ptr->mvpm = ptr->pm * ptr->mvm;
+		ptr->magic = 0.555F;
+		dc.UseUniforms(id);
+
+		dc.UseBuffer(0, vbo_);
+		dc.UseBuffer(1, (float*)(mats_.data()+2000));
+		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), 2000);}
+
+		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
+		ptr->pm = *pmat;
+		ptr->mvm = *mvmat;
+		ptr->nm = transpose(inverse(ptr->mvm));
+		ptr->mvpm = ptr->pm * ptr->mvm;
+		ptr->magic = 0.888;
+		dc.UseUniforms(id);
+
+		dc.UseBuffer(0, vbo_);
+		dc.UseBuffer(1, (float*)(mats_.data()+4000));
+		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), 2000);}
+
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); } }
 

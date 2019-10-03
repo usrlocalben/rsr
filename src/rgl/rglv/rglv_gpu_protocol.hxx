@@ -17,10 +17,18 @@ constexpr uint8_t CMD_CLEAR = 10;
 // vao ptr, idx ptr
 constexpr uint8_t CMD_DRAW_ELEMENTS = 11;
 
-constexpr uint8_t CMD_DRAW_ARRAY = 12;
+constexpr uint8_t CMD_DRAW_ARRAYS = 12;
+
+constexpr uint8_t CMD_DRAW_ELEMENTS_INSTANCED = 13;
+
+constexpr uint8_t CMD_DRAW_ARRAYS_INSTANCED = 14;
 
 // 0xffff terminated list of unsigned int indexed GL_TRIANGLES
-constexpr uint8_t CMD_DRAW_INLINE = 13;
+constexpr uint8_t CMD_DRAW_INLINE = 15;
+
+// like CMD_DRAW_INLINE, but each triangle is prefixed with
+// a uint16_t instanceId
+constexpr uint8_t CMD_DRAW_INLINE_INSTANCED = 16;
 
 // buffer commands
 // ptr to floatingpointcanvas

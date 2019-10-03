@@ -376,7 +376,15 @@ private:
 					tile.commands0.appendByte(cmd);
 					tile.commands0.appendByte(enableGamma);
 					tile.commands0.appendPtr(ptr); }}
-			else if (cmd == CMD_DRAW_ARRAY) {
+			else if (cmd == CMD_DRAW_ARRAYS) {
+				//auto flags = cs.consumeByte();
+				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
+				auto count = cs.consumeInt();
+				struct SequenceSource {
+					int operator()(int ti) { return ti; }};
+				SequenceSource indexSource{};
+				bin_Draw<false, SequenceSource, SHADERS...>(count, indexSource, 1); }
+			else if (cmd == CMD_DRAW_ARRAYS_INSTANCED) {
 				//auto flags = cs.consumeByte();
 				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
 				auto count = cs.consumeInt();
@@ -384,8 +392,19 @@ private:
 				struct SequenceSource {
 					int operator()(int ti) { return ti; }};
 				SequenceSource indexSource{};
-				bin_Draw<SequenceSource, SHADERS...>(count, indexSource, instanceCnt); }
+				bin_Draw<true, SequenceSource, SHADERS...>(count, indexSource, instanceCnt); }
 			else if (cmd == CMD_DRAW_ELEMENTS) {
+				auto flags = cs.consumeByte();
+				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
+				auto count = cs.consumeInt();
+				auto indices = static_cast<uint16_t*>(cs.consumePtr());
+				struct ArraySource {
+					ArraySource(const uint16_t* data) : data_(data) {}
+					int operator()(int ti) { return data_[ti]; }
+					const uint16_t* const data_; };
+				ArraySource indexSource{indices};
+				bin_Draw<false, ArraySource, SHADERS...>(count, indexSource, 1); }
+			else if (cmd == CMD_DRAW_ELEMENTS_INSTANCED) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
 				auto count = cs.consumeInt();
@@ -396,7 +415,7 @@ private:
 					int operator()(int ti) { return data_[ti]; }
 					const uint16_t* const data_; };
 				ArraySource indexSource{indices};
-				bin_Draw<ArraySource, SHADERS...>(count, indexSource, instanceCnt); }}
+				bin_Draw<true, ArraySource, SHADERS...>(count, indexSource, instanceCnt); } }
 
 		// stats...
 		int total_ = 0;
@@ -461,7 +480,9 @@ private:
 			else if (cmd == CMD_CLIPPED_TRI) {
 				tile_DrawClipped<SHADERS...>(*stateptr, uniformptr, rect, cs); }
 			else if (cmd == CMD_DRAW_INLINE) {
-				tile_DrawElements<SHADERS...>(*stateptr, uniformptr, rect, cs); }}}
+				tile_DrawElements<false, SHADERS...>(*stateptr, uniformptr, rect, cs); }
+			else if (cmd == CMD_DRAW_INLINE_INSTANCED) {
+				tile_DrawElements<true, SHADERS...>(*stateptr, uniformptr, rect, cs); }}}
 
 	template <typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
@@ -479,13 +500,13 @@ private:
 		else {
 			rglr::Filter<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
-	template <typename INDEX_SOURCE, typename ...PGMs>
+	template <bool INSTANCED, typename INDEX_SOURCE, typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
 
-	template <typename INDEX_SOURCE, typename PGM, typename ...PGMs>
+	template <bool INSTANCED, typename INDEX_SOURCE, typename PGM, typename ...PGMs>
 	void bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
 		if (PGM::id != binState->programId) {
-			return bin_Draw<INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
+			return bin_Draw<INSTANCED, INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
@@ -500,12 +521,21 @@ private:
 
 		clipQueue_.clear();
 
+		if (INSTANCED) {
+			// coding error if this is not true
+			// XXX could use constexpr instead of template param?
+			assert(instanceCnt == 1); }
+
 		for (auto& tile : tiles_) {
-			tile.commands0.appendByte(CMD_DRAW_INLINE);
+			if (INSTANCED) {
+				tile.commands0.appendByte(CMD_DRAW_INLINE_INSTANCED); }
+			else {
+				tile.commands0.appendByte(CMD_DRAW_INLINE); }
 			tile.commands0.mark1(); }
 
 		for (int iid=0; iid<instanceCnt; ++iid) {
-			loader.LoadInstance(iid, vData);
+			if (INSTANCED) {
+				loader.LoadInstance(iid, vData); }
 
 			clipFlagBuffer_.clear();
 			devCoordBuffer_.clear();
@@ -565,7 +595,8 @@ private:
 						continue; }}
 
 				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2, &iid](auto& tile) {
-					tile.commands0.appendUShort(iid);
+					if (INSTANCED) {
+						tile.commands0.appendUShort(iid); }
 					tile.commands0.appendUShort(i0);  // also includes backfacing flag
 					tile.commands0.appendUShort(i1);
 					tile.commands0.appendUShort(i2); });}
@@ -577,21 +608,21 @@ private:
 			if (tile.commands0.touched1()) {
 				tile.commands0.appendUShort(0xffff);}
 			else {
-				// remove the instanceId from any tiles
+				// remove the command from any tiles
 				// that weren't covered by this draw
 				tile.commands0.unappend(1); }}
 
 		stats0_.totalTrianglesClipped = clipQueue_.size();
 		if (!clipQueue_.empty()) {
-			bin_DrawElementsClipped<PGM>(state); }}
+			bin_DrawElementsClipped<INSTANCED, PGM>(state); }}
 
-	template <typename ...PGMs>
+	template <bool INSTANCED, typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {}
 
-	template<typename PGM, typename ...PGMs>
+	template<bool INSTANCED, typename PGM, typename ...PGMs>
 	void tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {
 		if (state.programId != PGM::id) {
-			return tile_DrawElements<PGMs...>(state, uniformsPtr, rect, cs); }
+			return tile_DrawElements<INSTANCED, PGMs...>(state, uniformsPtr, rect, cs); }
 
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
@@ -648,10 +679,12 @@ private:
 			// reset the SIMD lane counter
 			li = 0; };
 
-		int loadedInstanceId = cs.peekUShort();
-		loader.LoadInstance(loadedInstanceId, vi_[0]);
-		loader.LoadInstance(loadedInstanceId, vi_[1]);
-		loader.LoadInstance(loadedInstanceId, vi_[2]);
+		int loadedInstanceId;
+		if (INSTANCED) {
+			loadedInstanceId = cs.peekUShort();
+			loader.LoadInstance(loadedInstanceId, vi_[0]);
+			loader.LoadInstance(loadedInstanceId, vi_[1]);
+			loader.LoadInstance(loadedInstanceId, vi_[2]); }
 
 		while (1) {
 			firstWord = cs.consumeUShort();
@@ -659,16 +692,21 @@ private:
 				flush();
 				break; }
 
-			const int iid = firstWord;
-			if (iid != loadedInstanceId) {
-				flush();
-				loadedInstanceId = iid;
-				loader.LoadInstance(iid, vi_[0]);
-				loader.LoadInstance(iid, vi_[1]);
-				loader.LoadInstance(iid, vi_[2]); }
+			if (INSTANCED) {
+				const int iid = firstWord;
+				if (iid != loadedInstanceId) {
+					flush();
+					loadedInstanceId = iid;
+					loader.LoadInstance(iid, vi_[0]);
+					loader.LoadInstance(iid, vi_[1]);
+					loader.LoadInstance(iid, vi_[2]); }}
 
 			{
-				const uint16_t tmp = cs.consumeUShort();
+				uint16_t tmp;
+				if (INSTANCED) {
+					tmp = cs.consumeUShort(); }
+				else {
+					tmp = firstWord; }
 				const uint16_t i1 = cs.consumeUShort();
 				const uint16_t i2 = cs.consumeUShort();
 				backfacing = tmp & 0x8000;
@@ -684,7 +722,7 @@ private:
 
 		}  // func
 
-	template <typename PGM>
+	template <bool INSTANCED, typename PGM>
 	void bin_DrawElementsClipped(const GLState& state) {
 		using rmlm::mat4;
 		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
@@ -714,7 +752,8 @@ private:
 
 				typename PGM::VertexInput vi_;
 				loader.LoadLane(idx, 0, vi_);
-				loader.LoadInstance(iid, vi_);
+				if (INSTANCED) {
+					loader.LoadInstance(iid, vi_); }
 
 				qfloat4 coord;
 				typename PGM::VertexOutputMD computed;

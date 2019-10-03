@@ -372,19 +372,22 @@ struct ManyProgram final : public rglv::BaseProgram {
 		rmlm::mat4 mvm;
 		rmlm::mat4 pm;
 		rmlm::mat4 nm;
-		rmlm::mat4 mvpm; };
+		rmlm::mat4 mvpm;
+		float magic; };
 
 	struct UniformsMD {
 		rmlm::qmat4 mvm;
 		rmlm::qmat4 pm;
 		rmlm::qmat4 nm;
 		rmlm::qmat4 mvpm;
+		rmlv::qfloat magic;
 
 		UniformsMD(const UniformsSD& data) :
 			mvm(data.mvm),
 			pm(data.pm),
 			nm(data.nm),
-			mvpm(data.mvpm) {} };
+			mvpm(data.mvpm),
+			magic(data.magic) {} };
 
 	struct VertexInput {
 		rmlv::qfloat4 position;
@@ -459,7 +462,7 @@ struct ManyProgram final : public rglv::BaseProgram {
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
-		gl_FragColor = { outs.uv.x, outs.uv.y, 0.0F, 1.0F }; }
+		gl_FragColor = { outs.uv.x, outs.uv.y, u.magic, 1.0F }; }
 		};
 
 

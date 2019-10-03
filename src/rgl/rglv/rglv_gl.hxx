@@ -173,8 +173,10 @@ public:
 	//void drawElements(const VertexArray_F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3&);
-	void DrawElements(int mode, int count, int type, const uint16_t* indices, int instanceCnt=1);
-	void DrawArrays(int mode, int start, int count, int instanceCnt=1);
+	void DrawElements(int mode, int count, int type, const uint16_t* indices);
+	void DrawArrays(int mode, int start, int count);
+	void DrawElementsInstanced(int mode, int count, int type, const uint16_t* indices, int instanceCnt);
+	void DrawArraysInstanced(int mode, int start, int count, int instanceCnt);
 	void Clear(int bits);
 	void StoreHalfsize(rglr::FloatingPointCanvas *dst);
 	void StoreUnswizzled(rglr::FloatingPointCanvas *dst);
