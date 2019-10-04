@@ -40,9 +40,6 @@ constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
 
 constexpr auto maxVAOSizeInVertices = 500000L;
 
-constexpr int maxThreads = 8;
-
-
 struct ClippedVertex {
 	rmlv::vec4 coord;  // either clip-coord or device-coord
 	uint8_t data[64]; };
@@ -237,6 +234,11 @@ struct SubStack {
 template<typename ...SHADERS>
 class GPU {
 public:
+	GPU(int concurrency) :
+		concurrency_(concurrency),
+		threadColorBufs_(concurrency),
+		threadDepthBufs_(concurrency) {}
+
 	void Reset(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks) {
 		SetSize(newBufferDimensionsInPixels, newTileDimensionsInBlocks);
 		for (auto& tile : tiles_) {
@@ -266,7 +268,7 @@ private:
 		tileDimensionsInPixels_ = tileDimensionsInBlocks_ * blockDimensionsInPixels;
 		bufferDimensionsInTiles_ = (bufferDimensionsInPixels_ + (tileDimensionsInPixels_ - ivec2{1, 1})) / tileDimensionsInPixels_;
 
-		for (int ti=0; ti<maxThreads; ++ti) {
+		for (int ti=0; ti<concurrency_; ++ti) {
 			threadColorBufs_[ti].resize(tileDimensionsInPixels_.x, tileDimensionsInPixels_.y);
 			threadDepthBufs_[ti].resize(tileDimensionsInPixels_.x, tileDimensionsInPixels_.y); }
 
@@ -864,8 +866,9 @@ private:
 	// configuration
 	bool doubleBuffer_{true};
 
-	std::array<rglr::QFloat4Canvas, maxThreads> threadColorBufs_{};
-	std::array<rglr::QFloatCanvas, maxThreads>  threadDepthBufs_{};
+	const int concurrency_;
+	std::vector<rglr::QFloat4Canvas> threadColorBufs_{};
+	std::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
 
 	// tile/bin collection
 	std::vector<Tile> tiles_;
