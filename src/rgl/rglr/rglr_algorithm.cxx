@@ -26,19 +26,17 @@ void Fill(QFloatCanvas& dst, const float value, const rmlg::irect rect) {
 
 
 void Fill(QFloat4Canvas& dst, const rmlv::vec4 value, const rmlg::irect rect) {
-	const int rectHeightInQuads = (rect.height()) / 2;
-	const int rectWidthInQuads = (rect.width()) / 2;
-
 	const __m128 red   = _mm_set1_ps(value.x);
 	const __m128 green = _mm_set1_ps(value.y);
 	const __m128 blue  = _mm_set1_ps(value.z);
 	const __m128 alpha = _mm_set1_ps(value.w);
 
-	auto* p = dst.data() + rect.top.y/2*dst.stride2() + rect.left.x/2;
-	int rowIncr = dst.stride2() - rectWidthInQuads;
+	auto* p = dst.data();
 
-	for (int yy=0; yy<rectHeightInQuads; ++yy, p+=rowIncr) {
-		for (int xx=0; xx<rectWidthInQuads; ++xx) {
+	const int regionHeightInQuads = dst.height() / 2;
+	const int regionWidthInQuads = dst.width() / 2;
+	for (int yy=0; yy<regionHeightInQuads; ++yy) {
+		for (int xx=0; xx<regionWidthInQuads; ++xx) {
 			QFloat4Canvas::Store(red, green, blue, alpha, p++); }}}
 
 
