@@ -521,7 +521,7 @@ private:
 
 		clipQueue_.clear();
 
-		if (INSTANCED) {
+		if (!INSTANCED) {
 			// coding error if this is not true
 			// XXX could use constexpr instead of template param?
 			assert(instanceCnt == 1); }

@@ -21,7 +21,7 @@ namespace {
 
 using namespace rqv;
 
-constexpr int many = 6000;
+constexpr int batch = 5000;
 
 
 class Impl final : public IGl {
@@ -30,19 +30,6 @@ public:
 		IGl(id, std::move(inputs)) {
 		using rmlm::mat4;
 		using std::cout;
-
-		/*
-		cout << "==== BEGIN MESH DUMP ====\n";
-		for (const auto& face : mesh.faces) {
-			cout << "face\n";
-			for (int i=0; i<3; ++i) {
-				auto d0 = mesh.points[face.point_idx[i]];
-				auto d1 = mesh.normals[face.normal_idx[i]];
-				auto d2 = mesh.texcoords[face.texcoord_idx[i]];
-				cout << i << ": " << d0 << " / " << d1 << " / " << d2 << "\n";
-			}}
-		cout << "====  END  MESH DUMP ====\n";
-		*/
 
 		auto [tmpVBO, tmpIdx] = make_indexed_vao_F3F3F3(mesh);
 		vbo_ = tmpVBO;
@@ -56,12 +43,15 @@ public:
 		std::uniform_real_distribution<float> volDist(-radius, radius);
 		std::uniform_real_distribution<float> rotDist(0, 6.28);
 
-		mats_.resize(many);
-		for (int i=0; i<many; ++i) {
-			mat4& M = mats_[i];
+		mats_.reserve(batch*3);
+
+		radius = 20.0F;
+		offset = 2.5F;
+		for (int i=0; i<batch; ++i) {
+			mat4& M = mats_.emplace_back();
 			M = mat4::ident(); 
 
-			float angle = i / float(many) * 3.1415926F * 2;
+			float angle = i / float(batch) * 3.1415926F * 2;
 			float displacement;
 			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
 			float x = sin(angle) * radius + displacement;
@@ -75,8 +65,51 @@ public:
 			float scale = std::uniform_real_distribution<float>(0.10F, 0.30F)(e2);
 			M = M * mat4::scale(rmlv::vec3{scale});
 
-			M = M * mat4::rotate(rotDist(e2), normalize(rmlv::vec3{0.2F, 0.4F, 0.6F}));
-			} }
+			M = M * mat4::rotate(rotDist(e2), normalize(rmlv::vec3{0.2F, 0.4F, 0.6F})); }
+
+		radius = 40.0F;
+		offset = 4.5F;
+		for (int i=0; i<batch; ++i) {
+			mat4& M = mats_.emplace_back();
+			M = mat4::ident(); 
+
+			float angle = i / float(batch) * 3.1415926F * 2;
+			float displacement;
+			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
+			float x = sin(angle) * radius + displacement;
+			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
+			float y = displacement * 0.4F;
+			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
+			float z = cos(angle) * radius + displacement;
+
+			M = M * mat4::translate({ x, y, z });
+
+			float scale = std::uniform_real_distribution<float>(0.10F, 0.30F)(e2);
+			M = M * mat4::scale(rmlv::vec3{scale});
+
+			M = M * mat4::rotate(rotDist(e2), normalize(rmlv::vec3{0.2F, 0.4F, 0.6F})); }
+
+		offset = 50.0F;
+		offset = 10.0F;
+		for (int i=0; i<batch; ++i) {
+			mat4& M = mats_.emplace_back();
+			M = mat4::ident(); 
+
+			float angle = i / float(batch) * 3.1415926F * 2;
+			float displacement;
+			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
+			float x = sin(angle) * radius + displacement;
+			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
+			float y = displacement * 0.4F;
+			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
+			float z = cos(angle) * radius + displacement;
+
+			M = M * mat4::translate({ x, y, z });
+
+			float scale = std::uniform_real_distribution<float>(0.10F, 0.30F)(e2);
+			M = M * mat4::scale(rmlv::vec3{scale});
+
+			M = M * mat4::rotate(rotDist(e2), normalize(rmlv::vec3{0.2F, 0.4F, 0.6F})); } }
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "material") {
@@ -118,7 +151,7 @@ public:
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+0));
-		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), 2000);}
+		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
 		ptr->pm = *pmat;
@@ -129,8 +162,8 @@ public:
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
-		dc.UseBuffer(1, (float*)(mats_.data()+2000));
-		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), 2000);}
+		dc.UseBuffer(1, (float*)(mats_.data()+batch));
+		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
 		ptr->pm = *pmat;
@@ -141,8 +174,8 @@ public:
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
-		dc.UseBuffer(1, (float*)(mats_.data()+4000));
-		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), 2000);}
+		dc.UseBuffer(1, (float*)(mats_.data()+batch+batch));
+		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); } }

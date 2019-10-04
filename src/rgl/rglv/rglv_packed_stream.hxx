@@ -8,7 +8,7 @@
 namespace rqdq {
 namespace rglv {
 
-constexpr int maxSizeInBytes = 100000;
+constexpr int maxSizeInBytes = 1024 * 1024;
 
 
 class FastPackedStream {
