@@ -234,7 +234,7 @@ public:
 			tile.Reset(); }
 		clippedVertexBuffer0_.clear();
 		stats0_ = GPUStats{};
-		IC().reset(); }
+		IC().Reset(); }
 
 	GL& IC() {
 		return (userIC_ == 0 ? IC0_ : IC1_); }
@@ -335,7 +335,7 @@ private:
 
 		binState = nullptr;
 		binUniforms = nullptr;
-		auto& cs = IC().d_commands;
+		auto& cs = IC().commands_;
 		int totalCommands = 0;
 		while (!cs.eof()) {
 			totalCommands += 1;
@@ -343,7 +343,7 @@ private:
 			// printf("cmd %02x %d:", cmd, cmd);
 			if (cmd == CMD_STATE) {
 				binState = static_cast<GLState*>(cs.consumePtr());
-				binUniforms = IC().glGetUniformBufferAddr(binState->uniformsOfs);
+				binUniforms = IC().GetUniformBufferAddr(binState->uniformsOfs);
 				// printf(" state is now at %p\n", binState);
 				for (auto& tile : tiles_) {
 					tile.commands0.appendByte(cmd);
@@ -380,21 +380,23 @@ private:
 				//auto flags = cs.consumeByte();
 				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
 				auto count = cs.consumeInt();
+				auto instanceCnt = cs.consumeInt();
 				struct SequenceSource {
 					int operator()(int ti) { return ti; }};
 				SequenceSource indexSource{};
-				bin_Draw<SequenceSource, SHADERS...>(count, indexSource); }
+				bin_Draw<SequenceSource, SHADERS...>(count, indexSource, instanceCnt); }
 			else if (cmd == CMD_DRAW_ELEMENTS) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
 				auto count = cs.consumeInt();
 				auto indices = static_cast<uint16_t*>(cs.consumePtr());
+				auto instanceCnt = cs.consumeInt();
 				struct ArraySource {
 					ArraySource(const uint16_t* data) : data_(data) {}
 					int operator()(int ti) { return data_[ti]; }
 					const uint16_t* const data_; };
 				ArraySource indexSource{indices};
-				bin_Draw<ArraySource, SHADERS...>(count, indexSource); }}
+				bin_Draw<ArraySource, SHADERS...>(count, indexSource, instanceCnt); }}
 
 		// stats...
 		int total_ = 0;
@@ -478,95 +480,112 @@ private:
 			rglr::Filter<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
 	template <typename INDEX_SOURCE, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource) {}
+	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
 
 	template <typename INDEX_SOURCE, typename PGM, typename ...PGMs>
-	void bin_Draw(const int count, INDEX_SOURCE& indexSource) {
+	void bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
 		if (PGM::id != binState->programId) {
-			return bin_Draw<INDEX_SOURCE, PGMs...>(count, indexSource); }
+			return bin_Draw<INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
 
-		typename PGM::Loader loader( state.array, nullptr, nullptr );
-
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
+		const auto cullingEnabled = state.cullingEnabled;
+		const auto cullFace = state.cullFace;
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
-		clipFlagBuffer_.clear();
-		devCoordBuffer_.clear();
+		typename PGM::VertexInput vData;
+
 		clipQueue_.clear();
 
 		for (auto& tile : tiles_) {
 			tile.commands0.appendByte(CMD_DRAW_INLINE);
-			tile.commands0.mark(); }
+			tile.commands0.mark1(); }
 
-		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
-		const auto cullingEnabled = state.cullingEnabled;
-		const auto cullFace = state.cullFace;
+		for (int iid=0; iid<instanceCnt; ++iid) {
+			loader.LoadInstance(iid, vData);
 
-		const auto siz = loader.Size();
-		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
+			for (auto& tile : tiles_) {
+				tile.commands0.appendInt(iid);
+				tile.commands0.mark2(); }
 
-		for (int vi=0; vi<siz; vi+=4) {
-			typename PGM::VertexInput vData;
-			loader.Load(vi, vData);
+			clipFlagBuffer_.clear();
+			devCoordBuffer_.clear();
 
-			qfloat4 coord;
-			typename PGM::VertexOutputMD unused;
-			PGM::ShadeVertex(vData, uniforms, coord, unused);
+			const auto siz = loader.Size();
+			// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
 
-			auto flags = frustum.Test(coord);
-			store_bytes(clipFlagBuffer_.alloc<4>(), flags);
+			for (int vi=0; vi<siz; vi+=4) {
+				loader.LoadMD(vi, vData);
 
-			auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
-			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
+				qfloat4 coord;
+				typename PGM::VertexOutputMD unused;
+				PGM::ShadeVertex(vData, uniforms, coord, unused);
 
-		for (int ti=0; ti<count; ti+=3) {
-			stats0_.totalTrianglesSubmitted++;
+				auto flags = frustum.Test(coord);
+				store_bytes(clipFlagBuffer_.alloc<4>(), flags);
 
-			uint16_t i0 = indexSource(ti);
-			uint16_t i1 = indexSource(ti+1);
-			uint16_t i2 = indexSource(ti+2);
+				auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
+				devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
 
-			// check for triangles that need clipping
-			const auto cf0 = clipFlagBuffer_[i0];
-			const auto cf1 = clipFlagBuffer_[i1];
-			const auto cf2 = clipFlagBuffer_[i2];
-			if (cf0 | cf1 | cf2) {
-				if (cf0 & cf1 & cf2) {
-					// all points outside of at least one plane
-					stats0_.totalTrianglesCulled++;
+			for (int ti=0; ti<count; ti+=3) {
+				stats0_.totalTrianglesSubmitted++;
+
+				uint16_t i0 = indexSource(ti);
+				uint16_t i1 = indexSource(ti+1);
+				uint16_t i2 = indexSource(ti+2);
+
+				// check for triangles that need clipping
+				const auto cf0 = clipFlagBuffer_[i0];
+				const auto cf1 = clipFlagBuffer_[i1];
+				const auto cf2 = clipFlagBuffer_[i2];
+				if (cf0 | cf1 | cf2) {
+					if (cf0 & cf1 & cf2) {
+						// all points outside of at least one plane
+						stats0_.totalTrianglesCulled++;
+						continue; }
+					// queue for clipping
+					clipQueue_.push_back({ iid, i0, i1, i2 });
 					continue; }
-				// queue for clipping
-				clipQueue_.push_back({ i0, i1, i2 });
-				continue; }
 
-			auto devCoord0 = devCoordBuffer_[i0];
-			auto devCoord1 = devCoordBuffer_[i1];
-			auto devCoord2 = devCoordBuffer_[i2];
+				auto devCoord0 = devCoordBuffer_[i0];
+				auto devCoord1 = devCoordBuffer_[i1];
+				auto devCoord2 = devCoordBuffer_[i2];
 
-			// handle backfacing tris and culling
-			const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
-			if (backfacing) {
-				if (cullingEnabled && cullFace == GL_BACK) {
-					stats0_.totalTrianglesCulled++;
-					continue; }
-				// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
-				swap(i0, i2);
-				i0 |= 0x8000; }  // add backfacing flag
-			else {
-				if (cullingEnabled && cullFace == GL_FRONT) {
-					stats0_.totalTrianglesCulled++;
-					continue; }}
+				// handle backfacing tris and culling
+				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
+				if (backfacing) {
+					if (cullingEnabled && cullFace == GL_BACK) {
+						stats0_.totalTrianglesCulled++;
+						continue; }
+					// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
+					swap(i0, i2);
+					i0 |= 0x8000; }  // add backfacing flag
+				else {
+					if (cullingEnabled && cullFace == GL_FRONT) {
+						stats0_.totalTrianglesCulled++;
+						continue; }}
 
-			ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
-				tile.commands0.appendUShort(i0);  // also includes backfacing flag
-				tile.commands0.appendUShort(i1);
-				tile.commands0.appendUShort(i2); });}
+				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
+					tile.commands0.appendUShort(i0);  // also includes backfacing flag
+					tile.commands0.appendUShort(i1);
+					tile.commands0.appendUShort(i2); });}
+
+			for (auto & tile : tiles_) {
+				if (tile.commands0.touched2()) {
+					tile.commands0.appendUShort(0xffff);}
+				else {
+					// remove the instanceId from any tiles
+					// that weren't covered by this draw
+					tile.commands0.unappend(4); }}
+
+			}  // instance loop
 
 		for (auto & tile : tiles_) {
-			if (tile.commands0.touched()) {
-				tile.commands0.appendUShort(0xffff);}
+			if (tile.commands0.touched1()) {
+				tile.commands0.appendInt(-1); }
 			else {
 				// remove the CMD_DRAW_INLINE from any tiles
 				// that weren't covered by this draw
@@ -590,7 +609,7 @@ private:
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat4;
 		using std::array, std::swap;
 
-		typename PGM::Loader loader( state.array, nullptr, nullptr );
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 
 		auto& cbc = *colorCanvasPtr_;
 		auto& dbc = *depthCanvasPtr_;
@@ -607,6 +626,15 @@ private:
 		array<qfloat4, 3> devCoord;
 		array<mvec4i, 3>  fx;
 		array<mvec4i, 3>  fy;
+
+		while (1) {
+			const int iid = cs.consumeInt();
+			if (iid == -1) {
+				break; }
+
+		loader.LoadInstance(iid, vi_[0]);
+		loader.LoadInstance(iid, vi_[1]);
+		loader.LoadInstance(iid, vi_[2]);
 
 		int li = 0;  // sse lane being loaded
 		bool eof = false;
@@ -656,7 +684,10 @@ private:
 				        !backfacing); }
 
 			// reset the SIMD lane counter
-			li = 0; }}
+			li = 0; }
+
+		}  // instance loop
+		}  // func
 
 	template <typename PGM>
 	void bin_DrawElementsClipped(const GLState& state) {
@@ -664,7 +695,7 @@ private:
 		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
 		using std::array, std::swap, std::min, std::max;
 
-		typename PGM::Loader loader( state.array, nullptr, nullptr );
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
@@ -683,10 +714,12 @@ private:
 			// phase 1: load _poly_ with the shaded vertex data
 			clipA_.clear();
 			for (int i=0; i<3; ++i) {
-				const auto idx = faceIndices[i];
+				const int iid = faceIndices[0];
+				const auto idx = faceIndices[i+1];
 
 				typename PGM::VertexInput vi_;
-				loader.LoadOne(idx, vi_);
+				loader.LoadLane(idx, 0, vi_);
+				loader.LoadInstance(iid, vi_);
 
 				qfloat4 coord;
 				typename PGM::VertexOutputMD computed;
@@ -873,7 +906,7 @@ private:
 	const void* binUniforms{nullptr};
 	SubStack<uint8_t, maxVAOSizeInVertices> clipFlagBuffer_;
 	SubStack<rmlv::vec2, maxVAOSizeInVertices> devCoordBuffer_;
-	rcls::vector<std::array<int, 3>> clipQueue_;
+	rcls::vector<std::array<int, 4>> clipQueue_;
 	rcls::vector<ClippedVertex> clipA_;
 	rcls::vector<ClippedVertex> clipB_;
 

@@ -66,8 +66,8 @@ struct GLState {
 	int programId;			// default is zero??? unclear
 	int uniformsOfs;
 
-	const void *array;		// default is nullptr
-	int arrayFormat;		// unused... 0
+	std::array<const void*, 4> buffers;
+	std::array<int, 4> bufferFormat;
 
 	std::array<TextureState, 2> tus;
 
@@ -90,73 +90,82 @@ struct GLState {
 
 		for (auto& tu : tus) {
 			tu.reset(); }
-		array = nullptr;
-		arrayFormat = 0; } };
+		for (auto& item : buffers) {
+			item = nullptr; }
+		for (auto& item : bufferFormat) {
+			item = 0; }}};
 
 
 class GL {
 public:
 	GL() = default;
 
-	void glEnable(const int value) {
-		d_dirty = true;
+	void Enable(const int value) {
+		dirty_ = true;
 		if (value == GL_CULL_FACE) {
-			d_cs.cullingEnabled = true; }
+			cs_.cullingEnabled = true; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
 
-	void glDisable(const int value) {
-		d_dirty = true;
+	void Disable(const int value) {
+		dirty_ = true;
 		if (value == GL_CULL_FACE) {
-			d_cs.cullingEnabled = false; }
+			cs_.cullingEnabled = false; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
 
-	void glCullFace(const int value) {
-		d_dirty = true;
-		d_cs.cullFace = value; }
+	void CullFace(const int value) {
+		dirty_ = true;
+		cs_.cullFace = value; }
 
-	void glUseProgram(const int v) {
-		d_dirty = true;
-		d_cs.programId = v; }
+	void UseProgram(const int v) {
+		dirty_ = true;
+		cs_.programId = v; }
 
-	void glUniforms(const int ofs) {
-		d_dirty = true;
-		d_cs.uniformsOfs = ofs; }
+	void UseUniforms(const int ofs) {
+		dirty_ = true;
+		cs_.uniformsOfs = ofs; }
 
 	template <typename T>
-	std::pair<int, T*> glReserveUniformBuffer() {
+	std::pair<int, T*> AllocUniformBuffer() {
 		const int amt = (sizeof(T) + 0xf) & 0xfffffff0;
-		int idx = d_ubuf.size();
-		for (int i=0; i<amt; i++) { d_ubuf.emplace_back(); }
-		auto* ptr = reinterpret_cast<T*>(d_ubuf.data() + idx);
+		int idx = ubuf_.size();
+		for (int i=0; i<amt; i++) { ubuf_.emplace_back(); }
+		auto* ptr = reinterpret_cast<T*>(ubuf_.data() + idx);
 		return { idx, ptr }; }
 
-	void* glGetUniformBufferAddr(int ofs) {
-		return &d_ubuf[ofs]; }
+	void* GetUniformBufferAddr(int ofs) {
+		if (ofs == -1) {
+			return nullptr; }
+		return &ubuf_[ofs]; }
 
-	void glBindTexture(int unit, const PixelToaster::FloatingPointPixel *ptr, int width, int height, int stride, const int mode) {
-		d_dirty = true;
+	void BindTexture(int unit, const PixelToaster::FloatingPointPixel *ptr, int width, int height, int stride, const int mode) {
+		dirty_ = true;
 		assert(mode == GL_LINEAR_MIPMAP_NEAREST || mode == GL_NEAREST_MIPMAP_NEAREST);
-		auto& tu = d_cs.tus[unit];
+		auto& tu = cs_.tus[unit];
 		tu.ptr = ptr;
 		tu.filter = mode;
 		tu.width = width;
 		tu.height = height;
 		tu.stride = stride; }
 
-	void glUseArray(const VertexArray_F3F3F3& vao) {
-		d_dirty = true;
-		d_cs.array = static_cast<const void*>(&vao);
-		d_cs.arrayFormat = AF_VAO_F3F3F3; }
+	void UseBuffer(int idx, const VertexArray_F3F3F3& vao) {
+		dirty_ = true;
+		cs_.buffers[idx] = &vao;
+		cs_.bufferFormat[idx] = AF_VAO_F3F3F3; }
 
-	void glClearColor(rmlv::vec3 value) {
-		d_dirty = true;
-		d_cs.clearColor = rmlv::vec4{ value, 1.0F }; }
+	void UseBuffer(int idx, float* ptr) {
+		dirty_ = true;
+		cs_.buffers[idx] = ptr;
+		cs_.bufferFormat[idx] = AF_FLOAT; }
 
-	void glClearDepth(float value) {
-		d_dirty = true;
-		d_cs.clearDepth = value; }
+	void ClearColor(rmlv::vec3 value) {
+		dirty_ = true;
+		cs_.clearColor = rmlv::vec4{ value, 1.0F }; }
+
+	void ClearDepth(float value) {
+		dirty_ = true;
+		cs_.clearDepth = value; }
 
 	//inline void glUniform(const VertexInputUniform& viu) {
 	//	state.vertex_input_uniform = viu; }
@@ -164,27 +173,27 @@ public:
 	//void drawElements(const VertexArray_F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3&);
-	void glDrawElements(int mode, int count, int type, const uint16_t* indices);
-	void glDrawArrays(int mode, int start, int count);
-	void glClear(int bits);
-	void storeHalfsize(rglr::FloatingPointCanvas *dst);
-	void storeUnswizzled(rglr::FloatingPointCanvas *dst);
-	void storeTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst);
-	void endDrawing() {}
-	void reset();
+	void DrawElements(int mode, int count, int type, const uint16_t* indices, int instanceCnt=1);
+	void DrawArrays(int mode, int start, int count, int instanceCnt=1);
+	void Clear(int bits);
+	void StoreHalfsize(rglr::FloatingPointCanvas *dst);
+	void StoreUnswizzled(rglr::FloatingPointCanvas *dst);
+	void StoreTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst);
+	void Finish() {}
+	void Reset();
 
 private:
-	void maybeUpdateState();
+	void MaybeUpdateState();
 
 public:
 	mutable std::mutex mutex;
-	FastPackedStream d_commands;
+	FastPackedStream commands_;
 
 private:
-	GLState d_cs;
-	bool d_dirty{false};
-	std::vector<uint8_t> d_ubuf;
-	std::deque<GLState> d_states; };
+	GLState cs_;
+	bool dirty_{false};
+	std::vector<uint8_t> ubuf_;
+	std::deque<GLState> states_; };
 
 
 }  // namespace rglv

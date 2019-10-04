@@ -69,10 +69,10 @@ public:
 		auto& ic = gpuNode_->IC();
 		outCanvas_ = rglr::FloatingPointCanvas(outputTexture_.buf.data(), width_, height_, width_);
 		if (enableAA_) {
-			ic.storeHalfsize(&outCanvas_); }
+			ic.StoreHalfsize(&outCanvas_); }
 		else {
-			ic.storeUnswizzled(&outCanvas_); }
-		ic.endDrawing();
+			ic.StoreUnswizzled(&outCanvas_); }
+		ic.Finish();
 		auto renderJob = gpuNode_->Render();
 		rclmt::jobsys::add_link(renderJob, PostProcess());
 		rclmt::jobsys::run(renderJob); }

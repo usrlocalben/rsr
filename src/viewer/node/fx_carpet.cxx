@@ -62,15 +62,15 @@ public:
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 
-		auto [id, ptr] = dc.glReserveUniformBuffer<rglv::BaseProgram::UniformsSD>();
+		auto [id, ptr] = dc.AllocUniformBuffer<rglv::BaseProgram::UniformsSD>();
 		ptr->pm = *pmat;
 		ptr->mvm = *mvmat;
 		ptr->nm = transpose(inverse(ptr->mvm));
 		ptr->mvpm = ptr->pm * ptr->mvm;
-		dc.glUniforms(id);
+		dc.UseUniforms(id);
 
-		dc.glUseArray(buffers_[activeBuffer_]);
-		dc.glDrawArrays(GL_TRIANGLES, 0, 6);
+		dc.UseBuffer(0, buffers_[activeBuffer_]);
+		dc.DrawArrays(GL_TRIANGLES, 0, 6);
 		if (link != nullptr) {
 			jobsys::run(link); } }
 

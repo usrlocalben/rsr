@@ -91,6 +91,26 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
+    name = "fx_many",
+    srcs = ["fx_many.cxx"],
+    deps = [
+        "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
+        "//src/rgl/rglv:gl",
+        "//src/rgl/rglv:vao",
+        "//src/rml/rmlm:mat4",
+        "//src/rml/rmlv:mvec4",
+        "//src/rml/rmlv:soa",
+        "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
+        "//src/viewer:shaders",
+        ":base",
+        ":i_gl",
+        ":i_material",
+        ":i_value", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
     name = "fx_xyquad",
     srcs = ["fx_xyquad.cxx"],
     deps = [

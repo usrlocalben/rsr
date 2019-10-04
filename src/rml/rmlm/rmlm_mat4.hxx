@@ -95,6 +95,26 @@ struct alignas(64) mat4 {
 			tx*z - sy, ty*z + sx, tz*z + c,  0,
 			0,         0,         0,         1 }; }
 
+	static inline mat4 rotate(const float theta, rmlv::vec3 a) {
+		/*glRotate() matrix*/
+		const float s = sin(theta);
+		const float c = cos(theta);
+		const float t = 1.0F - c;
+
+		const float tx = t * a.x;
+		const float ty = t * a.y;
+		const float tz = t * a.z;
+
+		const float sz = s * a.z;
+		const float sy = s * a.y;
+		const float sx = s * a.x;
+
+		return mat4{
+			tx*a.x + c,  tx*a.y - sz, tx*a.z + sy, 0,
+			tx*a.y + sz, ty*a.y + c,  ty*a.z - sx, 0,
+			tx*a.z - sy, ty*a.z + sx, tz*a.z + c,  0,
+			0,         0,         0,         1 }; }
+
 	union {
 		float cr[4][4]; // col,row
 		std::array<float, 16> ff; };

@@ -10,6 +10,7 @@ int IQPostProgram::id = int(ShaderProgramId::IQ);
 int EnvmapProgram::id = int(ShaderProgramId::Envmap);
 int AmyProgram::id = int(ShaderProgramId::Amy);
 int EnvmapXProgram::id = int(ShaderProgramId::EnvmapX);
+int ManyProgram::id = int(ShaderProgramId::Many);
 
 
 ShaderProgramId ShaderProgramNameSerializer::Deserialize(std::string_view text) {
@@ -25,6 +26,8 @@ ShaderProgramId ShaderProgramNameSerializer::Deserialize(std::string_view text) 
 		return ShaderProgramId::Amy; }
 	if (text == "EnvmapX") {
 		return ShaderProgramId::EnvmapX; }
+	if (text == "Many") {
+		return ShaderProgramId::Many; }
 	cout << "can't deserialize shader program \""s << text << "\", using Default"s << endl;
 	return ShaderProgramId::Default; }
 

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <random>
 #include <string_view>
 #include <utility>
 
@@ -20,14 +21,62 @@ namespace {
 
 using namespace rqv;
 
-//PixelToaster::Timer ttt;
+constexpr int many = 10000;
+
 
 class Impl final : public IGl {
 public:
 	Impl(std::string_view id, InputList inputs, const rglv::Mesh& mesh) :
-		IGl(id, std::move(inputs)),
-		src_(mesh),
-		dst_(mesh) {}
+		IGl(id, std::move(inputs)) {
+		using rmlm::mat4;
+		using std::cout;
+
+		/*
+		cout << "==== BEGIN MESH DUMP ====\n";
+		for (const auto& face : mesh.faces) {
+			cout << "face\n";
+			for (int i=0; i<3; ++i) {
+				auto d0 = mesh.points[face.point_idx[i]];
+				auto d1 = mesh.normals[face.normal_idx[i]];
+				auto d2 = mesh.texcoords[face.texcoord_idx[i]];
+				cout << i << ": " << d0 << " / " << d1 << " / " << d2 << "\n";
+			}}
+		cout << "====  END  MESH DUMP ====\n";
+		*/
+
+		auto [tmpVBO, tmpIdx] = make_indexed_vao_F3F3F3(mesh);
+		vbo_ = tmpVBO;
+		meshIndices_ = tmpIdx;
+
+		float radius = 50.0F;
+		float offset =  5.0F;
+
+		std::random_device rd;
+		std::mt19937 e2(rd());
+		std::uniform_real_distribution<float> volDist(-radius, radius);
+		std::uniform_real_distribution<float> rotDist(0, 6.28);
+
+		mats_.resize(many);
+		for (int i=0; i<many; ++i) {
+			mat4& M = mats_[i];
+			M = mat4::ident(); 
+
+			float angle = i / float(many) * 3.1415926F * 2;
+			float displacement;
+			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
+			float x = sin(angle) * radius + displacement;
+			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
+			float y = displacement * 0.4F;
+			displacement = std::uniform_real_distribution<float>(-offset, offset)(e2);
+			float z = cos(angle) * radius + displacement;
+
+			M = M * mat4::translate({ x, y, z });
+
+			float scale = std::uniform_real_distribution<float>(0.10F, 0.30F)(e2);
+			M = M * mat4::scale(rmlv::vec3{scale});
+
+			M = M * mat4::rotate(rotDist(e2), normalize(rmlv::vec3{0.2F, 0.4F, 0.6F}));
+			} }
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "material") {
@@ -36,26 +85,18 @@ public:
 				TYPE_ERROR(IMaterial);
 				return false; }
 			return true; }
-		if (attr == "freq") {
-			freqNode_ = dynamic_cast<IValue*>(other);
-			freqSlot_ = slot;
-			if (freqNode_ == nullptr) {
+		/* if (attr == "num") {
+			numNode_ = dynamic_cast<IValue*>(other);
+			numSlot_ = slot;
+			if (numNode_ == nullptr) {
 				TYPE_ERROR(IValue);
 				return false; }
-			return true; }
-		if (attr == "phase") {
-			phaseNode_ = dynamic_cast<IValue*>(other);
-			phaseSlot_ = slot;
-			if (phaseNode_ == nullptr) {
-				TYPE_ERROR(IValue);
-				return false; }
-			return true; }
+			return true; } */
 		return IGl::Connect(attr, other, slot); }
 
 	void AddDeps() override {
-		AddDep(materialNode_);
-		AddDep(freqNode_);
-		AddDep(phaseNode_); }
+		AddDep(materialNode_); }
+		// AddDep(numNode_); }
 
 	void Main() override {
 		rclmt::jobsys::run(Compute());}
@@ -67,15 +108,16 @@ public:
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 
-		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapXProgram::UniformsSD>();
+		auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
 		ptr->pm = *pmat;
 		ptr->mvm = *mvmat;
 		ptr->nm = transpose(inverse(ptr->mvm));
 		ptr->mvpm = ptr->pm * ptr->mvm;
 		dc.UseUniforms(id);
 
-		dc.UseBuffer(0, buffers_[activeBuffer_]);
-		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data());
+		dc.UseBuffer(0, vbo_);
+		dc.UseBuffer(1, (float*)mats_.data());
+		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), many);
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); } }
 
@@ -83,8 +125,7 @@ public:
 	rclmt::jobsys::Job* Compute(rclmt::jobsys::Job* parent = nullptr) {
 		if (parent != nullptr) {
 			return rclmt::jobsys::make_job_as_child(parent, Impl::ComputeJmp, std::tuple{this}); }
-		
-			return rclmt::jobsys::make_job(Impl::ComputeJmp, std::tuple{this}); }
+		return rclmt::jobsys::make_job(Impl::ComputeJmp, std::tuple{this}); }
 
 private:
 	static void ComputeJmp(rclmt::jobsys::Job* job, unsigned threadId, std::tuple<Impl*>* data) {
@@ -92,76 +133,44 @@ private:
 		self->ComputeImpl(); }
 	void ComputeImpl() {
 		using rmlv::ivec2;
+		activeBuffer_ = (activeBuffer_+1)%3;
 
-		const int numPoints = src_.points.size();
-
-		rmlv::vec3 freq{ 0.0F };
+		/*rmlv::vec3 freq{ 0.0F };
 		if (freqNode_ != nullptr) {
 			freq = freqNode_->Eval(freqSlot_).as_vec3();
 
 		rmlv::vec3 phase{ 0.0F };
 		if (phaseNode_ != nullptr) {
-			phase = phaseNode_->Eval(phaseSlot_).as_vec3(); }
+			phase = phaseNode_->Eval(phaseSlot_).as_vec3(); }*/
 
-		//const float t = float(ttt.time());
-		/*
-		const float angle = t;
-		const float freqx = sin(angle) * 0.75 + 0.75;
-		const float freqy = freqx * 0.61283476f; // sin(t*1.3f)*4.0f;
-		const float freqz = 0;  //sin(t*1.1f)*4.0f;
-		*/
-
-		const float amp = 1.0F; //sin(t*1.4)*30.0f;
-
-		for (int i=0; i<numPoints; i++) {
-			rmlv::vec3 position = src_.points[i];
-			rmlv::vec3 normal = src_.vertex_normals[i];
-
-			float f = (sin(position.x*freq.x + phase.x) + 0.5F);// * sin(vvn.y*freqy+t) * sin(vvn.z*freqz+t)
-			position += normal * amp * f; // normal*amp*f
-			float ff = (sin(position.y*freq.y + phase.y) + 0.5F);
-			position += normal * amp * ff;
-
-			dst_.points[i] = position; }
-		dst_.compute_face_and_vertex_normals();
-
-		if (meshIndices_.empty()) {
-			for (const auto& face : src_.faces) {
-				for (auto idx : face.point_idx) {
-					meshIndices_.push_back(idx); }}}
-
-		activeBuffer_ = (activeBuffer_+1)%3;
-		auto& vao = buffers_[activeBuffer_];
-		vao.clear();
-		for (int i=0; i<numPoints; i++) {
-			vao.append(dst_.points[i], dst_.vertex_normals[i], 0); }
 
 		auto postSetup = rclmt::jobsys::make_job(rclmt::jobsys::noop);
 		AddLinksTo(postSetup);
 		materialNode_->AddLink(postSetup);
-		materialNode_->Run();}}
+		materialNode_->Run();}
 
 private:
 	// state
-	std::array<rglv::VertexArray_F3F3F3, 3> buffers_{};
 	int activeBuffer_{0};
+	rglv::VertexArray_F3F3F3 vbo_;
 	rcls::vector<uint16_t> meshIndices_;
-	rglv::Mesh src_;
-	rglv::Mesh dst_;
+	rcls::vector<rmlm::mat4> mats_;
+	// std::array<rglv::VertexArray_F3F3F3, 3> buffers_{};
 
 	// inputs
 	IMaterial* materialNode_{nullptr};
-	IValue* freqNode_{nullptr};
+	/*IValue* freqNode_{nullptr};
 	std::string freqSlot_{};
 	IValue* phaseNode_{nullptr};
-	std::string phaseSlot_{}; };
+	std::string phaseSlot_{};*/
+	};
 
 
 class Compiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("material", /*required=*/true)) { return; }
-		if (!Input("freq", /*required=*/true)) { return; }
-		if (!Input("phase", /*required=*/true)) { return; }
+		// if (!Input("freq", /*required=*/true)) { return; }
+		// if (!Input("phase", /*required=*/true)) { return; }
 
 		std::string_view meshPath{"notfound.obj"};
 		if (auto jv = rclx::jv_find(data_, "mesh", JSON_STRING)) {
@@ -172,7 +181,7 @@ class Compiler final : public NodeCompiler {
 
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$fxAuraForLaura", [](){ return std::make_unique<Compiler>(); });
+	NodeRegistry::GetInstance().Register("$fxMany", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

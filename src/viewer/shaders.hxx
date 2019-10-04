@@ -1,7 +1,10 @@
 #pragma once
+#include <array>
+#include <cassert>
 #include <string_view>
 
 #include "src/rgl/rglv/rglv_fragment.hxx"
+#include "src/rgl/rglv/rglv_gpu_protocol.hxx"
 #include "src/rgl/rglv/rglv_gpu_shaders.hxx"
 #include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
@@ -24,7 +27,8 @@ enum class ShaderProgramId {
 	IQ,
 	Envmap,
 	Amy,
-	EnvmapX, };
+	EnvmapX,
+	Many, };
 
 
 struct ShaderProgramNameSerializer {
@@ -111,21 +115,16 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4 faceNormal; };
 
 	struct Loader {
-		Loader(const void* data, const void* unused1, const void* unused2) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
-			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
-			// assert(binState->array != nullptr);
-			}
+		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == rglv::AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
 		void LoadInstance(int id, VertexInput& vi) {}
-		void Load(int idx, VertexInput& vi) {
+		void LoadMD(int idx, VertexInput& vi) {
 			vi.position     = data_.a0.loadxyz1(idx);
 			vi.smoothNormal = data_.a1.loadxyz0(idx);
 			vi.faceNormal   = data_.a2.loadxyz0(idx); }
-		void LoadOne(int idx, VertexInput& vi) {
-			vi.position     = rmlv::vec4{ data_.a0.at(idx), 1 };
-			vi.smoothNormal = rmlv::vec4{ data_.a1.at(idx), 0 };
-			vi.faceNormal   = rmlv::vec4{ data_.a2.at(idx), 0 }; }
 		void LoadLane(int idx, int li, VertexInput& vi) {
 			vi.position    .setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
 			vi.smoothNormal.setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
@@ -198,21 +197,16 @@ struct AmyProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4 uv; };
 
 	struct Loader {
-		Loader(const void* data, const void* unused1, const void* unused2) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
-			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
-			// assert(binState->array != nullptr);
-			}
+		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == rglv::AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
 		void LoadInstance(int id, VertexInput& vi) {}
-		void Load(int idx, VertexInput& vi) {
+		void LoadMD(int idx, VertexInput& vi) {
 			vi.position = data_.a0.loadxyz1(idx);
 			vi.normal   = data_.a1.loadxyz0(idx);
 			vi.uv       = data_.a2.loadxyz0(idx); }
-		void LoadOne(int idx, VertexInput& vi) {
-			vi.position = rmlv::vec4{ data_.a0.at(idx), 1 };
-			vi.normal   = rmlv::vec4{ data_.a1.at(idx), 0 };
-			vi.uv       = rmlv::vec4{ data_.a2.at(idx), 0 }; }
 		void LoadLane(int idx, int li, VertexInput& vi) {
 			vi.position.setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
 			vi.normal  .setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
@@ -298,19 +292,15 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4 smoothNormal; };
 
 	struct Loader {
-		Loader(const void* data, const void* unused1, const void* unused2) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
-			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
-			// assert(binState->array != nullptr);
-			}
+		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == rglv::AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
 		void LoadInstance(int id, VertexInput& vi) {}
-		void Load(int idx, VertexInput& vi) {
+		void LoadMD(int idx, VertexInput& vi) {
 			vi.position     = data_.a0.loadxyz1(idx);
 			vi.smoothNormal = data_.a1.loadxyz0(idx); }
-		void LoadOne(int idx, VertexInput& vi) {
-			vi.position     = rmlv::vec4{ data_.a0.at(idx), 1 };
-			vi.smoothNormal = rmlv::vec4{ data_.a1.at(idx), 0 }; }
 		void LoadLane(int idx, int li, VertexInput& vi) {
 			vi.position    .setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
 			vi.smoothNormal.setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 }); }
@@ -372,6 +362,104 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		gl_FragColor = tu0.sample({ outs.envmapUV.x, outs.envmapUV.y });
 		// gl_FragColor = mix(gl_FragColor, u.backColor, u.opacity); }
 		}
+		};
+
+
+struct ManyProgram final : public rglv::BaseProgram {
+	static int id;
+
+	struct UniformsSD {
+		rmlm::mat4 mvm;
+		rmlm::mat4 pm;
+		rmlm::mat4 nm;
+		rmlm::mat4 mvpm; };
+
+	struct UniformsMD {
+		rmlm::qmat4 mvm;
+		rmlm::qmat4 pm;
+		rmlm::qmat4 nm;
+		rmlm::qmat4 mvpm;
+
+		UniformsMD(const UniformsSD& data) :
+			mvm(data.mvm),
+			pm(data.pm),
+			nm(data.nm),
+			mvpm(data.mvpm) {} };
+
+	struct VertexInput {
+		rmlv::qfloat4 position;
+		rmlv::qfloat4 normal;
+		rmlv::qfloat2 uv;
+		rmlm::qmat4 imat; };
+
+	struct Loader {
+		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+			vbo_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])),
+			mats_(static_cast<const rmlm::mat4*>(buffers[1])) {
+			assert(formats[0] == rglv::AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr);
+			assert(formats[1] == rglv::AF_FLOAT);
+			assert(buffers[1] != nullptr); }
+		int Size() const { return vbo_.size(); }
+		void LoadInstance(int id, VertexInput& vi) {
+			vi.imat = mats_[id]; } //rmlm::mat4::ident(); } //mats_[id]; }
+		void LoadMD(int idx, VertexInput& vi) {
+			vi.position = vbo_.a0.loadxyz1(idx);
+			vi.normal   = vbo_.a1.loadxyz0(idx);
+			vi.uv       = vbo_.a2.loadxy(idx); }
+		void LoadLane(int idx, int li, VertexInput& vi) {
+			vi.position.setLane(li, rmlv::vec4{ vbo_.a0.at(idx), 1 });
+			vi.normal  .setLane(li, rmlv::vec4{ vbo_.a1.at(idx), 0 });
+			vi.uv      .setLane(li, vbo_.a2.at(idx).xy()); }
+		const rglv::VertexArray_F3F3F3& vbo_;
+		const rmlm::mat4* const mats_; };
+
+	struct VertexOutputSD {
+		rmlv::vec2 uv;
+		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+			return { mix(a.uv, b.uv, t) }; }};
+
+	struct VertexOutputMD {
+		rmlv::qfloat2 uv;
+
+		VertexOutputSD Lane(const int li) {
+			return VertexOutputSD{
+				uv.lane(li) }; }};
+
+	struct Interpolants {
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
+			uv({ d0.uv, d1.uv, d2.uv }) {}
+		VertexOutputMD Interpolate(rglv::BaryCoord bary) const {
+			return { rglv::Interpolate(bary, uv) }; }
+		rglv::VertexFloat2 uv; };
+
+	inline static void ShadeVertex(
+		const VertexInput& v,
+		const UniformsMD& u,
+		rmlv::qfloat4& gl_Position,
+		VertexOutputMD& outs
+		) {
+		rmlv::qfloat4 p1 = mul(v.imat, v.position);
+		outs.uv = v.uv;
+		gl_Position = mul(gl_ModelViewProjectionMatrix, p1); }
+
+	template <typename TEXTURE_UNIT>
+	inline static void ShadeFragment(
+		// built-in
+		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
+		// unforms
+		const UniformsMD& u,
+		// vertex shader output
+		const VertexOutputMD& outs,
+		// special
+		const rglv::BaryCoord& _bary,
+		// texture units
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
+		// outputs
+		rmlv::qfloat4& gl_FragColor
+		) {
+		gl_FragColor = { outs.uv.x, outs.uv.y, 0.0F, 1.0F }; }
 		};
 
 

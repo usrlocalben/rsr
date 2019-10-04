@@ -9,67 +9,69 @@
 namespace rqdq {
 namespace rglv {
 
-void GL::glDrawArrays(const int mode, const int start, const int count) {
+void GL::DrawArrays(const int mode, const int start, const int count, int instanceCnt) {
 	assert(mode == GL_TRIANGLES);
 	assert(start == 0);
-	maybeUpdateState();
-	d_commands.appendByte(CMD_DRAW_ARRAY);
-	// d_commands.appendByte(0x14);  // videocore: 16-bit indices, triangles
-	// d_commands.appendByte(enableClipping ? 1 : 0);
-	d_commands.appendInt(count); }
+	MaybeUpdateState();
+	commands_.appendByte(CMD_DRAW_ARRAY);
+	// commands_.appendByte(0x14);  // videocore: 16-bit indices, triangles
+	// commands_.appendByte(enableClipping ? 1 : 0);
+	commands_.appendInt(count);
+	commands_.appendInt(instanceCnt); }
 
 
-void GL::glDrawElements(const int mode, const int count, const int type, const uint16_t* indices) {
+void GL::DrawElements(const int mode, const int count, const int type, const uint16_t* indices, int instanceCnt) {
 	assert(mode == GL_TRIANGLES);
 	assert(type == GL_UNSIGNED_SHORT);
-	maybeUpdateState();
-	d_commands.appendByte(CMD_DRAW_ELEMENTS);
-	d_commands.appendByte(0x14);  // videocore: 16-bit indices, triangles
-	// d_commands.appendByte(enableClipping ? 1 : 0);
-	d_commands.appendInt(count);
-	d_commands.appendPtr(indices); }
+	MaybeUpdateState();
+	commands_.appendByte(CMD_DRAW_ELEMENTS);
+	commands_.appendByte(0x14);  // videocore: 16-bit indices, triangles
+	// commands_.appendByte(enableClipping ? 1 : 0);
+	commands_.appendInt(count);
+	commands_.appendPtr(indices);
+	commands_.appendInt(instanceCnt); }
 
 
-void GL::glClear(const int bits) {
-	maybeUpdateState();
-	d_commands.appendByte(CMD_CLEAR);
-	d_commands.appendByte(bits); }
+void GL::Clear(const int bits) {
+	MaybeUpdateState();
+	commands_.appendByte(CMD_CLEAR);
+	commands_.appendByte(bits); }
 
 
-void GL::storeHalfsize(rglr::FloatingPointCanvas *dst) {
-	maybeUpdateState();
-	d_commands.appendByte(CMD_STORE_FP32_HALF);
-	d_commands.appendPtr(dst); }
+void GL::StoreHalfsize(rglr::FloatingPointCanvas *dst) {
+	MaybeUpdateState();
+	commands_.appendByte(CMD_STORE_FP32_HALF);
+	commands_.appendPtr(dst); }
 
 
-void GL::storeUnswizzled(rglr::FloatingPointCanvas *dst) {
-	maybeUpdateState();
-	d_commands.appendByte(CMD_STORE_FP32);
-	d_commands.appendPtr(dst); }
+void GL::StoreUnswizzled(rglr::FloatingPointCanvas *dst) {
+	MaybeUpdateState();
+	commands_.appendByte(CMD_STORE_FP32);
+	commands_.appendPtr(dst); }
 
 
-void GL::storeTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst) {
-	maybeUpdateState();
-	d_commands.appendByte(CMD_STORE_TRUECOLOR);
-	d_commands.appendByte(static_cast<uint8_t>(enableGammaCorrection));
-	d_commands.appendPtr(dst); }
+void GL::StoreTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst) {
+	MaybeUpdateState();
+	commands_.appendByte(CMD_STORE_TRUECOLOR);
+	commands_.appendByte(static_cast<uint8_t>(enableGammaCorrection));
+	commands_.appendPtr(dst); }
 
 
-void GL::reset() {
-	d_dirty = true;
-	d_states.clear();
-	d_cs.reset();
-	d_ubuf.clear();
-	d_commands.reset(); }
+void GL::Reset() {
+	dirty_ = true;
+	states_.clear();
+	cs_.reset();
+	ubuf_.clear();
+	commands_.reset(); }
 
 
-void GL::maybeUpdateState() {
-	if (!d_dirty) {
+void GL::MaybeUpdateState() {
+	if (!dirty_) {
 		return; }
-	d_states.push_back(d_cs);
-	d_commands.appendByte(CMD_STATE);
-	d_commands.appendPtr(&d_states.back());
-	d_dirty = false; }
+	states_.push_back(cs_);
+	commands_.appendByte(CMD_STATE);
+	commands_.appendPtr(&states_.back());
+	dirty_ = false; }
 
 
 }  // namespace rglv
