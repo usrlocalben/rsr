@@ -30,10 +30,6 @@ constexpr int GL_FRONT = 1;
 constexpr int GL_BACK = 2;
 constexpr int GL_FRONT_AND_BACK = (GL_FRONT | GL_BACK);
 
-constexpr int GL_MODELVIEW = 1;
-constexpr int GL_PROJECTION = 2;
-constexpr int GL_TEXTURE = 3;
-
 constexpr int GL_UNSIGNED_SHORT = 1;
 
 constexpr int GL_NEAREST_MIPMAP_NEAREST = 0;
@@ -60,17 +56,16 @@ struct TextureState {
 
 
 struct GLState {
-	rmlm::mat4 modelViewMatrix;	// defaults to identity
-	rmlm::mat4 projectionMatrix;
-	rmlm::mat4 textureMatrix;
 	rmlv::vec4 clearColor;
 	float clearDepth;
 	int clearStencil;
+
 	bool cullingEnabled;		// default for GL_CULL_FACE is false
 	int cullFace;			// default GL_BACK
-	rmlv::vec4 color;		// default 1,1,1,1
-	rmlv::vec3 normal;      // XXX what's the default?
+
 	int programId;			// default is zero??? unclear
+	int uniformsOfs;
+
 	const void *array;		// default is nullptr
 	int arrayFormat;		// unused... 0
 
@@ -83,14 +78,16 @@ struct GLState {
 	int texture1MinFilter;
 
 	void reset() {
-		clearStencil = 0;
-		clearDepth = 1.0F;
 		clearColor = rmlv::vec4{ 0.0F, 0.0F, 0.0F, 1.0F };
+		clearDepth = 1.0F;
+		clearStencil = 0;
+
 		cullingEnabled = false;
 		cullFace = GL_BACK;
-		color = rmlv::vec4{1.0F,1.0F,1.0F,1.0F};
-		normal = rmlv::vec3{ 0.0F, 1.0F, 0.0F };
+
 		programId = 0;
+		uniformsOfs = -1;
+
 		for (auto& tu : tus) {
 			tu.reset(); }
 		array = nullptr;
@@ -99,61 +96,7 @@ struct GLState {
 
 class GL {
 public:
-	GL() :d_activeMatrixStack(&d_modelViewMatrixStack) {}
-
-	void glPushMatrix() {
-		d_dirty = true;
-		d_activeMatrixStack->push(); }
-
-	void glPopMatrix() {
-		d_dirty = true;
-		d_activeMatrixStack->pop(); }
-
-	void glMultMatrix(const rmlm::mat4& m) {
-		d_dirty = true;
-		d_activeMatrixStack->mul(m); }
-
-	void glTranslate(const rmlv::vec4& a) {
-		d_dirty = true;
-		d_activeMatrixStack->mul(rmlm::mat4::translate(a)); }
-
-	void glTranslate(const rmlv::vec3& a) {
-		d_dirty = true;
-		d_activeMatrixStack->mul(rmlm::mat4::translate(a)); }
-
-	void glTranslate(const float x, const float y, const float z) {
-		d_dirty = true;
-		d_activeMatrixStack->mul(rmlm::mat4::translate(x, y, z)); }
-
-	void glScale(const rmlv::vec4& a) {
-		d_dirty = true;
-		d_activeMatrixStack->mul(rmlm::mat4::scale(a)); }
-
-	void glScale(const float x, const float y, const float z) {
-		d_dirty = true;
-		d_activeMatrixStack->mul(rmlm::mat4::scale(x, y, z)); }
-
-	void glRotate(const float theta, const float x, const float y, const float z) {
-		d_dirty = true;
-		d_activeMatrixStack->mul(rmlm::mat4::rotate(theta, x, y, z)); }
-
-	void glLoadIdentity() {
-		d_dirty = true;
-		d_activeMatrixStack->load(rmlm::mat4::ident()); }
-
-	void glLoadMatrix(const rmlm::mat4& m) {
-		d_dirty = true;
-		d_activeMatrixStack->load(m); }
-
-	void glMatrixMode(const int value) {
-		if (value == GL_MODELVIEW) {
-			d_activeMatrixStack = &d_modelViewMatrixStack; }
-		else if (value == GL_PROJECTION) {
-			d_activeMatrixStack = &d_projectionMatrixStack; }
-		else if (value == GL_TEXTURE) {
-			d_activeMatrixStack = &d_textureMatrixStack; }
-		else {
-			throw std::runtime_error("unknown matrix mode"); }}
+	GL() = default;
 
 	void glEnable(const int value) {
 		d_dirty = true;
@@ -173,25 +116,24 @@ public:
 		d_dirty = true;
 		d_cs.cullFace = value; }
 
-	void glColor(const rmlv::vec3& v) {
-		d_dirty = true;
-		d_cs.color = rmlv::vec4{ v.x, v.y, v.z, 1.0F }; }
-
-	void glColor(const rmlv::vec4& v) {
-		d_dirty = true;
-		d_cs.color = v; }
-
-	void glColor(const float r, const float g, const float b) {
-		d_dirty = true;
-		d_cs.color = rmlv::vec4{ r, g, b, 1.0F }; }
-
-	void glNormal(const rmlv::vec3& v) {
-		d_dirty = true;
-		d_cs.normal = v; }
-
 	void glUseProgram(const int v) {
 		d_dirty = true;
 		d_cs.programId = v; }
+
+	void glUniforms(const int ofs) {
+		d_dirty = true;
+		d_cs.uniformsOfs = ofs; }
+
+	template <typename T>
+	std::pair<int, T*> glReserveUniformBuffer() {
+		const int amt = (sizeof(T) + 0xf) & 0xfffffff0;
+		int idx = d_ubuf.size();
+		for (int i=0; i<amt; i++) { d_ubuf.emplace_back(); }
+		auto* ptr = reinterpret_cast<T*>(d_ubuf.data() + idx);
+		return { idx, ptr }; }
+
+	void* glGetUniformBufferAddr(int ofs) {
+		return &d_ubuf[ofs]; }
 
 	void glBindTexture(int unit, const PixelToaster::FloatingPointPixel *ptr, int width, int height, int stride, const int mode) {
 		d_dirty = true;
@@ -239,13 +181,9 @@ public:
 	FastPackedStream d_commands;
 
 private:
-	rmlm::Mat4Stack d_modelViewMatrixStack;
-	rmlm::Mat4Stack d_projectionMatrixStack;
-	rmlm::Mat4Stack d_textureMatrixStack;
-	rmlm::Mat4Stack* d_activeMatrixStack;
-
 	GLState d_cs;
 	bool d_dirty{false};
+	std::vector<uint8_t> d_ubuf;
 	std::deque<GLState> d_states; };
 
 

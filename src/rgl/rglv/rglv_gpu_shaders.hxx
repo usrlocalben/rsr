@@ -8,18 +8,26 @@
 namespace rqdq {
 namespace rglv {
 
-
-struct ShaderUniforms {
-	rmlv::qfloat4 u0;
-	rmlv::qfloat4 u1;
-	rmlm::qmat4 mvm;
-	rmlm::qmat4 pm;
-	rmlm::qmat4 nm;
-	rmlm::qmat4 mvpm; };
-
-
 struct BaseProgram {
 	static int id;
+
+	struct UniformsSD {
+		rmlm::mat4 mvm;
+		rmlm::mat4 pm;
+		rmlm::mat4 nm;
+		rmlm::mat4 mvpm; };
+
+	struct UniformsMD {
+		rmlm::qmat4 mvm;
+		rmlm::qmat4 pm;
+		rmlm::qmat4 nm;
+		rmlm::qmat4 mvpm;
+
+		UniformsMD(const UniformsSD& data) :
+			mvm(data.mvm),
+			pm(data.pm),
+			nm(data.nm),
+			mvpm(data.mvpm) {} };
 
 	struct VertexInput {
 		rmlv::qfloat4 a0; };
@@ -55,7 +63,7 @@ struct BaseProgram {
 
 	inline static void ShadeVertex(
 		const VertexInput& v,
-		const ShaderUniforms& u,
+		const UniformsMD& u,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs
 		) {
@@ -66,7 +74,7 @@ struct BaseProgram {
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// uniforms
-		const ShaderUniforms& u,
+		const UniformsMD& u,
 		// vertex shader output
 		const VertexOutputMD& v,
 		// special

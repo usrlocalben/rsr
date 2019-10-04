@@ -43,7 +43,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
-		const rglv::ShaderUniforms& u,
+		const rglv::BaseProgram::UniformsMD& u,
 		// vertex shader output
 		const WireframeProgram::VertexOutputMD& v,
 		// special
@@ -86,6 +86,24 @@ struct IQPostProgram final : public rglv::BaseProgram {
 
 struct EnvmapProgram final : public rglv::BaseProgram {
 	static int id;
+
+	struct UniformsSD {
+		rmlm::mat4 mvm;
+		rmlm::mat4 pm;
+		rmlm::mat4 nm;
+		rmlm::mat4 mvpm; };
+
+	struct UniformsMD {
+		const rmlm::qmat4 mvm;
+		const rmlm::qmat4 pm;
+		const rmlm::qmat4 nm;
+		const rmlm::qmat4 mvpm;
+
+		UniformsMD(const UniformsSD& data) :
+			mvm(data.mvm),
+			pm(data.pm),
+			nm(data.nm),
+			mvpm(data.mvpm) {} };
 
 	struct VertexInput {
 		rmlv::qfloat4 position;
@@ -135,7 +153,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 
 	inline static void ShadeVertex(
 		const VertexInput& v,
-		const rglv::ShaderUniforms& u,
+		const UniformsMD& u,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& out
 		) {
@@ -157,7 +175,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
-		const rglv::ShaderUniforms& u,
+		const UniformsMD& u,
 		// vertex shader output
 		const VertexOutputMD& outs,
 		// special
@@ -222,7 +240,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 
 	static void ShadeVertex(
 		const VertexInput& v,
-		const rglv::ShaderUniforms& u,
+		const rglv::BaseProgram::UniformsMD& u,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs
 		) {
@@ -234,7 +252,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
-		const rglv::ShaderUniforms& u,
+		const rglv::BaseProgram::UniformsMD& u,
 		// vertex shader output
 		const VertexOutputMD& outs,
 		// special
@@ -250,6 +268,30 @@ struct AmyProgram final : public rglv::BaseProgram {
 
 struct EnvmapXProgram final : public rglv::BaseProgram {
 	static int id;
+
+	struct UniformsSD {
+		rmlm::mat4 mvm;
+		rmlm::mat4 pm;
+		rmlm::mat4 nm;
+		rmlm::mat4 mvpm;
+		rmlv::vec4 backColor;
+		float opacity; };
+
+	struct UniformsMD {
+		rmlm::qmat4 mvm;
+		rmlm::qmat4 pm;
+		rmlm::qmat4 nm;
+		rmlm::qmat4 mvpm;
+		rmlv::qfloat4 backColor;
+		rmlv::qfloat opacity;
+
+		UniformsMD(const UniformsSD& data) :
+			mvm(data.mvm),
+			pm(data.pm),
+			nm(data.nm),
+			mvpm(data.mvpm),
+			backColor(data.backColor),
+			opacity(data.opacity) {} };
 
 	struct VertexInput {
 		rmlv::qfloat4 position;
@@ -295,7 +337,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 
 	inline static void ShadeVertex(
 		const VertexInput& v,
-		const rglv::ShaderUniforms& u,
+		const UniformsMD& u,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs
 		) {
@@ -311,14 +353,12 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		outs.envmapUV = { uu, vv, 0 };
 		gl_Position = mul(gl_ModelViewProjectionMatrix, v.position); }
 
-#define UNIFORM_BACKCOLOR u.u0
-#define UNIFORM_OPACITY u.u1
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// unforms
-		const rglv::ShaderUniforms& u,
+		const UniformsMD& u,
 		// vertex shader output
 		const VertexOutputMD& outs,
 		// special
@@ -330,10 +370,9 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4& gl_FragColor
 		) {
 		gl_FragColor = tu0.sample({ outs.envmapUV.x, outs.envmapUV.y });
-		gl_FragColor = mix(gl_FragColor, UNIFORM_BACKCOLOR, UNIFORM_OPACITY.x); }
-#undef UNIFORM_BACKCOLOR
-#undef UNIFORM_OPACITY
-};
+		// gl_FragColor = mix(gl_FragColor, u.backColor, u.opacity); }
+		}
+		};
 
 
 }  // namespace rqv
