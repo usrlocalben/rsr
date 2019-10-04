@@ -45,12 +45,7 @@ const int kMaxSizeInBytes = 100000;
 
 struct ClippedVertex {
 	rmlv::vec4 coord;  // either clip-coord or device-coord
-	VertexOutputx1 data; };
-
-
-inline ClippedVertex mix(ClippedVertex a, ClippedVertex b, float d) {
-	return { mix(a.coord, b.coord, d),
-	         mix(a.data, b.data, d) }; }
+	uint8_t data[64]; };
 
 
 struct GPUStats {
@@ -67,7 +62,7 @@ struct GPUStats {
 	int totalTrianglesDrawn; };
 
 
-template <typename TEXTURE_UNIT, typename FRAGMENT_PROGRAM, typename BLEND_PROGRAM>
+template <typename TEXTURE_UNIT, typename SHADER_PROGRAM, typename BLEND_PROGRAM>
 struct DefaultTargetProgram {
 	rmlv::qfloat4* cb_;
 	rmlv::qfloat* db_;
@@ -82,10 +77,7 @@ struct DefaultTargetProgram {
 	const rglv::VertexFloat1 oneOverW_;
 	const rglv::VertexFloat1 zOverW_;
 
-	const rglv::VertexFloat3 vo0_;
-	const rglv::VertexFloat3 vo1_;
-	const rglv::VertexFloat3 vo2_;
-	const rglv::VertexFloat3 vo3_;
+	const typename SHADER_PROGRAM::Interpolants vo_;
 
 	const ShaderUniforms uniforms_;
 
@@ -97,9 +89,9 @@ struct DefaultTargetProgram {
 		ShaderUniforms uniforms,
 		VertexFloat1 oneOverW,
 		VertexFloat1 zOverW,
-		VertexOutputx1 computed0,
-		VertexOutputx1 computed1,
-		VertexOutputx1 computed2) :
+		typename SHADER_PROGRAM::VertexOutputSD computed0,
+		typename SHADER_PROGRAM::VertexOutputSD computed1,
+		typename SHADER_PROGRAM::VertexOutputSD computed2) :
 		cb_(cc.data()),
 		db_(dc.data()),
 		tu0_(tu0),
@@ -109,10 +101,7 @@ struct DefaultTargetProgram {
 		targetDimensions_(float(cc.width()), float(cc.height())),
 		oneOverW_(oneOverW),
 		zOverW_(zOverW),
-		vo0_({ computed0.r0, computed1.r0, computed2.r0 }),
-		vo1_({ computed0.r1, computed1.r1, computed2.r1 }),
-		vo2_({ computed0.r2, computed1.r2, computed2.r2 }),
-		vo3_({ computed0.r3, computed1.r3, computed2.r3 }),
+		vo_(computed0, computed1, computed2),
 		uniforms_(uniforms) {}
 
 	inline void Begin(int x, int y) {
@@ -172,18 +161,10 @@ struct DefaultTargetProgram {
 		bary.z = oneOverW_.v2 * bary.z * fragW;
 		bary.y = 1.0f - bary.x - bary.z;
 
-		VertexOutput vertexInterpolants{
-			Interpolate(bary, vo0_),
-			Interpolate(bary, vo1_),
-			Interpolate(bary, vo2_),
-			Interpolate(bary, vo3_) };
+		auto data = vo_.Interpolate(bary);
 
 		qfloat4 fragColor;
-		FRAGMENT_PROGRAM::ShadeFragment(fragCoord,
-		                                fragDepth,
-										uniforms_,
-		                                vertexInterpolants,
-		                                bary, tu0_, tu1_, fragColor);
+		SHADER_PROGRAM::ShadeFragment(fragCoord, fragDepth, uniforms_, data, bary, tu0_, tu1_, fragColor);
 
 		qfloat4 destColor;
 		LoadColor(destColor);
@@ -344,7 +325,7 @@ private:
 		using fmt::printf;
 		// printf("----- BEGIN BINNING -----\n");
 
-		GLState* stateptr = nullptr;
+		binState = nullptr;
 		auto& cs = IC().d_commands;
 		cs.appendByte(CMD_EOF);
 		int totalCommands = 0;
@@ -357,11 +338,11 @@ private:
 					AppendByte(t, cmd); }
 				break; }
 			else if (cmd == CMD_STATE) {
-				stateptr = static_cast<GLState*>(cs.consumePtr());
-				// printf(" state is now at %p\n", stateptr);
+				binState = static_cast<GLState*>(cs.consumePtr());
+				// printf(" state is now at %p\n", binState);
 				for (int t=0; t<tilesHead_.size(); t++) {
 					AppendByte(t, cmd);
-					AppendPtr(t, stateptr); }}
+					AppendPtr(t, binState); }}
 			else if (cmd == CMD_CLEAR) {
 				auto arg = cs.consumeByte();
 				// printf(" clear with color ");
@@ -392,24 +373,22 @@ private:
 			else if (cmd == CMD_DRAW_ARRAY) {
 				//auto flags = cs.consumeByte();
 				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
-				auto enableClipping = bool(cs.consumeByte());
 				auto count = cs.consumeInt();
-				// printf(" drawElements %02x %d %p", flags, count, indices);
-				if (enableClipping) {
-					bin_DrawArray<true, SHADERS...>(*stateptr, count); }
-				else {
-					bin_DrawArray<false, SHADERS...>(*stateptr, count); }}
+				struct SequenceSource {
+					int operator()(int ti) { return ti; }};
+				SequenceSource indexSource{};
+				bin_Draw<SequenceSource, SHADERS...>(count, indexSource); }
 			else if (cmd == CMD_DRAW_ELEMENTS) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
-				auto enableClipping = bool(cs.consumeByte());
 				auto count = cs.consumeInt();
 				auto indices = static_cast<uint16_t*>(cs.consumePtr());
-				// printf(" drawElements %02x %d %p", flags, count, indices);
-				if (enableClipping) {
-					bin_DrawElements<true, SHADERS...>(*stateptr, count, indices); }
-				else {
-					bin_DrawElements<false, SHADERS...>(*stateptr, count, indices); }}}
+				struct ArraySource {
+					ArraySource(const uint16_t* data) : data_(data) {}
+					int operator()(int ti) { return data_[ti]; }
+					const uint16_t* const data_; };
+				ArraySource indexSource{indices};
+				bin_Draw<ArraySource, SHADERS...>(count, indexSource); }}
 
 		// stats...
 		int total_ = 0;
@@ -494,19 +473,18 @@ private:
 		else {
 			rglr::Filter<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
-	template <bool ENABLE_CLIPPING, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_DrawArray(const GLState& state, const int count) {}
+	template <typename INDEX_SOURCE, typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource) {}
 
-	template <bool ENABLE_CLIPPING, typename PGM, typename ...PGMs>
-	void bin_DrawArray(const GLState& state, const int count) {
-		if (state.programId != PGM::id) {
-			return bin_DrawArray<ENABLE_CLIPPING, PGMs...>(state, count); }
+	template <typename INDEX_SOURCE, typename PGM, typename ...PGMs>
+	void bin_Draw(const int count, INDEX_SOURCE& indexSource) {
+		if (PGM::id != binState->programId) {
+			return bin_Draw<INDEX_SOURCE, PGMs...>(count, indexSource); }
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
-		assert(state.arrayFormat == AF_VAO_F3F3F3);
-		assert(state.array != nullptr);
+		const auto& state = *binState;
 
-		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
+		typename PGM::Loader loader( state.array, nullptr, nullptr );
 
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
@@ -518,84 +496,69 @@ private:
 			AppendByte(t, CMD_DRAW_INLINE);
 			Mark(t); }
 
-		VertexInput vi_;
-
 		const ShaderUniforms ui = MakeUniforms(state);
+		const auto cullingEnabled = state.cullingEnabled;
+		const auto cullFace = state.cullFace;
 
-		const auto siz = int(vao.size());
+		const auto siz = loader.Size();
 		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
-		int vi = 0;
-		int ti = 0;
 
-		auto processAsManyFacesAsPossible = [&]() {
-			for (; ti < count; ti += 3) {
-				int i0 = ti;
-				int i1 = ti + 1;
-				int i2 = ti + 2;
-				if (i0 >= vi || i1 >= vi || i2 >= vi) {
-					break; }
-
-				stats0_.totalTrianglesSubmitted++;
-
-				if (ENABLE_CLIPPING) {
-					// check for triangles that need clipping
-					const auto cf0 = clipFlagBuffer_[i0];
-					const auto cf1 = clipFlagBuffer_[i1];
-					const auto cf2 = clipFlagBuffer_[i2];
-					if (cf0 | cf1 | cf2) {
-						if (cf0 & cf1 & cf2) {
-							// all points outside of at least one plane
-							stats0_.totalTrianglesCulled++;
-							continue; }
-						// queue for clipping
-						clipQueue_.push_back({ i0, i1, i2 });
-						continue; }}
-
-				auto devCoord0 = devCoordBuffer_[i0];
-				auto devCoord1 = devCoordBuffer_[i1];
-				auto devCoord2 = devCoordBuffer_[i2];
-
-				// handle backfacing tris and culling
-				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
-				if (backfacing) {
-					if (state.cullingEnabled && state.cullFace == GL_BACK) {
-						stats0_.totalTrianglesCulled++;
-						continue; }
-					// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
-					swap(i0, i2);
-					i0 |= 0x8000; }  // add backfacing flag
-				else {
-					if (state.cullingEnabled && state.cullFace == GL_FRONT) {
-						stats0_.totalTrianglesCulled++;
-						continue; }}
-
-				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&](int t) {
-					AppendUShort(t, i0);  // also includes backfacing flag
-					AppendUShort(t, i1);
-					AppendUShort(t, i2); });}};
-
-		for (; vi < siz && ti < count; vi += 4) {
-			if ((vi & 0x1ff) == 0) {
-				processAsManyFacesAsPossible(); }
-
-			//----- begin vao specialization -----
-			vi_.a0 = vao.a0.loadxyz1(vi);
-			vi_.a1 = vao.a1.loadxyz0(vi);
-			vi_.a2 = vao.a2.loadxyz0(vi);
-			//------ end vao specialization ------
+		for (int vi=0; vi<siz; vi+=4) {
+			typename PGM::VertexInput vData;
+			loader.Load(vi, vData);
 
 			qfloat4 coord;
-			VertexOutput unused;
-			PGM::ShadeVertex(vi_, ui, coord, unused);
+			typename PGM::VertexOutputMD unused;
+			PGM::ShadeVertex(vData, ui, coord, unused);
 
-			if (ENABLE_CLIPPING) {
-				auto flags = frustum.Test(coord);
-				store_bytes(clipFlagBuffer_.alloc<4>(), flags); }
+			auto flags = frustum.Test(coord);
+			store_bytes(clipFlagBuffer_.alloc<4>(), flags);
 
 			auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
 			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
 
-		processAsManyFacesAsPossible();
+		for (int ti=0; ti<count; ti+=3) {
+			stats0_.totalTrianglesSubmitted++;
+
+			uint16_t i0 = indexSource(ti);
+			uint16_t i1 = indexSource(ti+1);
+			uint16_t i2 = indexSource(ti+2);
+
+			// check for triangles that need clipping
+			const auto cf0 = clipFlagBuffer_[i0];
+			const auto cf1 = clipFlagBuffer_[i1];
+			const auto cf2 = clipFlagBuffer_[i2];
+			if (cf0 | cf1 | cf2) {
+				if (cf0 & cf1 & cf2) {
+					// all points outside of at least one plane
+					stats0_.totalTrianglesCulled++;
+					continue; }
+				// queue for clipping
+				clipQueue_.push_back({ i0, i1, i2 });
+				continue; }
+
+			auto devCoord0 = devCoordBuffer_[i0];
+			auto devCoord1 = devCoordBuffer_[i1];
+			auto devCoord2 = devCoordBuffer_[i2];
+
+			// handle backfacing tris and culling
+			const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
+			if (backfacing) {
+				if (cullingEnabled && cullFace == GL_BACK) {
+					stats0_.totalTrianglesCulled++;
+					continue; }
+				// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
+				swap(i0, i2);
+				i0 |= 0x8000; }  // add backfacing flag
+			else {
+				if (cullingEnabled && cullFace == GL_FRONT) {
+					stats0_.totalTrianglesCulled++;
+					continue; }}
+
+			ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&](int t) {
+				AppendUShort(t, i0);  // also includes backfacing flag
+				AppendUShort(t, i1);
+				AppendUShort(t, i2); }); }
 
 		for (int t=0; t<tilesHead_.size(); t++) {
 			if (Touched(t)) {
@@ -606,122 +569,7 @@ private:
 				Unappend(t, 1); }}
 
 		stats0_.totalTrianglesClipped = clipQueue_.size();
-		if (ENABLE_CLIPPING && !clipQueue_.empty()) {
-			bin_DrawElementsClipped<PGM>(state); }}
-
-	template <bool ENABLE_CLIPPING, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_DrawElements(const GLState& state, const int count, const uint16_t * const indices) {}
-
-	template <bool ENABLE_CLIPPING, typename PGM, typename ...PGMs>
-	void bin_DrawElements(const GLState& state, const int count, const uint16_t * const indices) {
-		if (PGM::id != state.programId) {
-			return bin_DrawElements<ENABLE_CLIPPING, PGMs...>(state, count, indices); }
-		using std::min, std::max, std::swap;
-		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
-		assert(state.arrayFormat == AF_VAO_F3F3F3);
-		assert(state.array != nullptr);
-
-		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
-
-		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
-
-		clipFlagBuffer_.clear();
-		devCoordBuffer_.clear();
-		clipQueue_.clear();
-
-		for (int t=0; t<tilesHead_.size(); t++) {
-			AppendByte(t, CMD_DRAW_INLINE);
-			Mark(t); }
-
-		VertexInput vi_;
-
-		const ShaderUniforms ui = MakeUniforms(state);
-
-		const auto siz = int(vao.size());
-		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
-		int vi = 0;
-		int ti = 0;
-
-		auto processAsManyFacesAsPossible = [&]() {
-			for (; ti < count; ti += 3) {
-				uint16_t i0 = indices[ti + 0];
-				uint16_t i1 = indices[ti + 1];
-				uint16_t i2 = indices[ti + 2];
-				if (i0 >= vi || i1 >= vi || i2 >= vi) {
-					break; }
-
-				stats0_.totalTrianglesSubmitted++;
-
-				if (ENABLE_CLIPPING) {
-					// check for triangles that need clipping
-					const auto cf0 = clipFlagBuffer_[i0];
-					const auto cf1 = clipFlagBuffer_[i1];
-					const auto cf2 = clipFlagBuffer_[i2];
-					if (cf0 | cf1 | cf2) {
-						if (cf0 & cf1 & cf2) {
-							// all points outside of at least one plane
-							stats0_.totalTrianglesCulled++;
-							continue; }
-						// queue for clipping
-						clipQueue_.push_back({ i0, i1, i2 });
-						continue; }}
-
-				auto devCoord0 = devCoordBuffer_[i0];
-				auto devCoord1 = devCoordBuffer_[i1];
-				auto devCoord2 = devCoordBuffer_[i2];
-
-				// handle backfacing tris and culling
-				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
-				if (backfacing) {
-					if (state.cullingEnabled && state.cullFace == GL_BACK) {
-						stats0_.totalTrianglesCulled++;
-						continue; }
-					// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
-					swap(i0, i2);
-					i0 |= 0x8000; }  // add backfacing flag
-				else {
-					if (state.cullingEnabled && state.cullFace == GL_FRONT) {
-						stats0_.totalTrianglesCulled++;
-						continue; }}
-
-				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&](int t) {
-					AppendUShort(t, i0);  // also includes backfacing flag
-					AppendUShort(t, i1);
-					AppendUShort(t, i2); });}};
-
-		for (; vi < siz && ti < count; vi += 4) {
-			if ((vi & 0x1ff) == 0) {
-				processAsManyFacesAsPossible(); }
-
-			//----- begin vao specialization -----
-			vi_.a0 = vao.a0.loadxyz1(vi);
-			vi_.a1 = vao.a1.loadxyz0(vi);
-			vi_.a2 = vao.a2.loadxyz0(vi);
-			//------ end vao specialization ------
-
-			qfloat4 coord;
-			VertexOutput unused;
-			PGM::ShadeVertex(vi_, ui, coord, unused);
-
-			if (ENABLE_CLIPPING) {
-				auto flags = frustum.Test(coord);
-				store_bytes(clipFlagBuffer_.alloc<4>(), flags); }
-
-			auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
-			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
-
-		processAsManyFacesAsPossible();
-
-		for (int t=0; t<tilesHead_.size(); t++) {
-			if (Touched(t)) {
-				AppendUShort(t, 0xffff); }
-			else {
-				// remove the CMD_DRAW_INLINE from any tiles
-				// that weren't covered by this draw
-				Unappend(t, 1); }}
-
-		stats0_.totalTrianglesClipped = clipQueue_.size();
-		if (ENABLE_CLIPPING && !clipQueue_.empty()) {
+		if (!clipQueue_.empty()) {
 			bin_DrawElementsClipped<PGM>(state); }}
 
 	template <typename ...PGMs>
@@ -738,11 +586,7 @@ private:
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat4;
 		using std::array, std::swap;
 
-		//---- begin vao specialization ----
-		assert(state.array != nullptr);
-		assert(state.arrayFormat == AF_VAO_F3F3F3);
-		auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
-		//----- end vao specialization -----
+		typename PGM::Loader loader( state.array, nullptr, nullptr );
 
 		auto& cbc = *colorCanvasPtr_;
 		auto& dbc = *depthCanvasPtr_;
@@ -754,8 +598,8 @@ private:
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		array<VertexInput, 3> vi_;
-		array<VertexOutput, 3> computed;
+		array<typename PGM::VertexInput, 3> vi_;
+		array<typename PGM::VertexOutputMD, 3> computed;
 		array<qfloat4, 3> devCoord;
 		array<mvec4i, 3>  fx;
 		array<mvec4i, 3>  fy;
@@ -764,24 +608,18 @@ private:
 		bool eof = false;
 		bool backfacing;
 		while (!eof) {
-
-			const uint16_t i0 = cs.ConsumeUShort();
-			if (i0 == 0xffff) {
+			const uint16_t firstWord = cs.ConsumeUShort();
+			if (firstWord == 0xffff) {
 				eof = true; }
 
 			if (!eof) {
-				// load vertex data from the VAO into the current SIMD lane
 				const uint16_t i1 = cs.ConsumeUShort();
 				const uint16_t i2 = cs.ConsumeUShort();
-				backfacing = i0 & 0x8000;
-				array<uint16_t, 3> faceIndices = {uint16_t(i0 & 0x7fff), i1, i2};
-
-				for (int i=0; i<3; ++i) {
-					const auto idx = faceIndices[i];
-					//---- vao specialization ----
-					vi_[i].a0.setLane(li, vec4{ vao.a0.at(idx), 1 });
-					vi_[i].a1.setLane(li, vec4{ vao.a1.at(idx), 0 });
-					vi_[i].a2.setLane(li, vec4{ vao.a2.at(idx), 0 }); }
+				backfacing = firstWord & 0x8000;
+				const uint16_t i0 = firstWord & 0x7fff;
+				loader.LoadLane(i0, li, vi_[0]);
+				loader.LoadLane(i1, li, vi_[1]);
+				loader.LoadLane(i2, li, vi_[2]);
 				li += 1; }
 
 			if (!eof && (li < 4)) {
@@ -804,9 +642,9 @@ private:
 					ui,
 					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
-					computed[0].lane(ti),
-					computed[1].lane(ti),
-					computed[2].lane(ti) };
+					computed[0].Lane(ti),
+					computed[1].Lane(ti),
+					computed[2].Lane(ti) };
 				TriangleRasterizer tr(targetProgram, rect, target_height);
 				tr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
 				        fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
@@ -820,10 +658,21 @@ private:
 		using rmlm::mat4;
 		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
 		using std::array, std::swap, std::min, std::max;
-		const auto& vao = *static_cast<const VertexArray_F3F3F3*>(state.array);
+
+		typename PGM::Loader loader( state.array, nullptr, nullptr );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
 		const ShaderUniforms ui = MakeUniforms(state);
+
+		auto CVMix = [&](const ClippedVertex& a, const ClippedVertex& b, const float d) {
+			static_assert(sizeof(typename PGM::VertexOutputSD) <= sizeof(ClippedVertex::data), "shader output too large for clipped vertex buffer");
+			ClippedVertex out;
+			out.coord = mix(a.coord, b.coord, d);
+			auto& ad = *reinterpret_cast<const typename PGM::VertexOutputSD*>(&a.data);
+			auto& bd = *reinterpret_cast<const typename PGM::VertexOutputSD*>(&b.data);
+			auto& od = *reinterpret_cast<      typename PGM::VertexOutputSD*>(&out.data);
+			od = PGM::VertexOutputSD::Mix(ad, bd, d);
+			return out; };
 
 		for (const auto& faceIndices : clipQueue_) {
 			// phase 1: load _poly_ with the shaded vertex data
@@ -831,17 +680,18 @@ private:
 			for (int i=0; i<3; ++i) {
 				const auto idx = faceIndices[i];
 
-				//---- begin vao specialization ----
-				VertexInput vi_;
-				vi_.a0 = vec4{ vao.a0.at(idx), 1 };
-				vi_.a1 = vec4{ vao.a1.at(idx), 0 };
-				vi_.a2 = vec4{ vao.a2.at(idx), 0 };
-				//----- end vao specialization -----
+				typename PGM::VertexInput vi_;
+				loader.LoadOne(idx, vi_);
 
 				qfloat4 coord;
-				VertexOutput computed;
+				typename PGM::VertexOutputMD computed;
 				PGM::ShadeVertex(vi_, ui, coord, computed);
-				clipA_.push_back(ClippedVertex{ coord.lane(0), computed.lane(0) }); }
+
+				ClippedVertex cv;
+				cv.coord = coord.lane(0);
+				auto* tmp = reinterpret_cast<typename PGM::VertexOutputSD*>(&cv.data);
+				*tmp = computed.Lane(0);
+				clipA_.emplace_back(cv); }
 
 			// phase 2: sutherland-hodgman clipping
 			for (const auto plane : rglv::clipping_panes) {
@@ -863,8 +713,8 @@ private:
 					if (hereIsInside != nextIsInside) {
 						hereIsInside = !hereIsInside;
 						const float d = frustum.Distance(plane, here.coord, next.coord);
-						auto newVertex = mix(here, next, d);
-						clipB_.push_back(newVertex); }}
+						auto newVertex = CVMix(here, next, d);
+						clipB_.emplace_back(newVertex); }}
 
 				swap(clipA_, clipB_);
 				if (clipA_.size() == 0) {
@@ -953,9 +803,9 @@ private:
 		vec4 dev0 = clippedVertexBuffer1_[i0].coord;
 		vec4 dev1 = clippedVertexBuffer1_[i1].coord;
 		vec4 dev2 = clippedVertexBuffer1_[i2].coord;
-		VertexOutputx1 data0 = clippedVertexBuffer1_[i0].data;
-		VertexOutputx1 data1 = clippedVertexBuffer1_[i1].data;
-		VertexOutputx1 data2 = clippedVertexBuffer1_[i2].data;
+		auto& data0 = *reinterpret_cast<typename PGM::VertexOutputSD*>(&(clippedVertexBuffer1_[i0].data));
+		auto& data1 = *reinterpret_cast<typename PGM::VertexOutputSD*>(&(clippedVertexBuffer1_[i1].data));
+		auto& data2 = *reinterpret_cast<typename PGM::VertexOutputSD*>(&(clippedVertexBuffer1_[i2].data));
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
@@ -1080,6 +930,7 @@ private:
 	GPUStats stats0_;
 
 	// buffers used during binning and clipping
+	const GLState* binState{nullptr};
 	SubStack<uint8_t, maxVAOSizeInVertices> clipFlagBuffer_;
 	SubStack<rmlv::vec2, maxVAOSizeInVertices> devCoordBuffer_;
 	rcls::vector<std::array<int, 3>> clipQueue_;

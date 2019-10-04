@@ -272,6 +272,7 @@ cc_library(
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
         ":interpolate",
+        ":vao",
         ],
     copts = RSR_DEFAULT_COPTS,
     )
