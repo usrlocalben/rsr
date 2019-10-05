@@ -26,19 +26,17 @@ void Fill(QFloatCanvas& dst, const float value, const rmlg::irect rect) {
 
 
 void Fill(QFloat4Canvas& dst, const rmlv::vec4 value, const rmlg::irect rect) {
-	const int rectHeightInQuads = (rect.height()) / 2;
-	const int rectWidthInQuads = (rect.width()) / 2;
-
 	const __m128 red   = _mm_set1_ps(value.x);
 	const __m128 green = _mm_set1_ps(value.y);
 	const __m128 blue  = _mm_set1_ps(value.z);
 	const __m128 alpha = _mm_set1_ps(value.w);
 
-	auto* p = dst.data() + rect.top.y/2*dst.stride2() + rect.left.x/2;
-	int rowIncr = dst.stride2() - rectWidthInQuads;
+	auto* p = dst.data();
 
-	for (int yy=0; yy<rectHeightInQuads; ++yy, p+=rowIncr) {
-		for (int xx=0; xx<rectWidthInQuads; ++xx) {
+	const int regionHeightInQuads = dst.height() / 2;
+	const int regionWidthInQuads = dst.width() / 2;
+	for (int yy=0; yy<regionHeightInQuads; ++yy) {
+		for (int xx=0; xx<regionWidthInQuads; ++xx) {
 			QFloat4Canvas::Store(red, green, blue, alpha, p++); }}}
 
 
@@ -77,12 +75,18 @@ void Stroke(TrueColorCanvas& dst, PixelToaster::TrueColorPixel color, const rmlg
 
 void Downsample(const QFloat4Canvas& src, FloatingPointCanvas& dst, const rmlg::irect rect) {
 	const __m128 oneQuarter = _mm_set1_ps(0.25F);
-	for (int y = rect.top.y; y < rect.bottom.y; y += 2) {
-		auto dstpx = &dst.data()[(y >> 1) * dst.stride() + (rect.left.x >> 1)];
-		auto srcpx = &src.cdata()[(y >> 1) * (src.width() >> 1) + (rect.left.x >> 1)];
 
-		for (int x = rect.left.x; x < rect.right.x; x += 2) {
-			_mm_prefetch(reinterpret_cast<const char*>(srcpx + (src.width() >> 1)), _MM_HINT_T0);
+	const int dstStride = dst.stride();
+	const int srcStride = src.stride2();
+
+	auto dsty = dst.data() + (rect.top.y>>1)*dstStride + (rect.left.x>>1);
+	auto srcy = src.cdata();
+	for (int y=rect.top.y; y<rect.bottom.y; y+=2, dsty+=dstStride, srcy+=srcStride) {
+		auto dstpx = dsty;
+		auto srcpx = srcy;
+
+		for (int x = rect.left.x; x < rect.right.x; x += 2, ++srcpx, ++dstpx) {
+			// _mm_prefetch(reinterpret_cast<const char*>(srcpx + (src.width() >> 1)), _MM_HINT_T0);
 
 			__m128 r0, r1, r2, r3 = _mm_setzero_ps();
 			QFloat4Canvas::Load(srcpx, r0, r1, r2);
@@ -92,16 +96,18 @@ void Downsample(const QFloat4Canvas& src, FloatingPointCanvas& dst, const rmlg::
 			ax = _mm_add_ps(_mm_add_ps(_mm_add_ps(r0, r1), r2), r3);
 			ax = _mm_mul_ps(ax, oneQuarter);
 
-			_mm_stream_ps(reinterpret_cast<float*>(&dstpx->v), ax);
-			srcpx++;
-			dstpx++; }}}
+			_mm_stream_ps(reinterpret_cast<float*>(&dstpx->v), ax); }}}
 
 
 void Downsample(const QShort3Canvas& src, FloatingPointCanvas& dst, const rmlg::irect rect) {
 	const __m128 oneQuarter = _mm_set1_ps(0.25F);
-	for (int y = rect.top.y; y < rect.bottom.y; y += 2) {
-		auto dstpx = &dst.data()[(y >> 1) * dst.stride() + (rect.left.x >> 1)];
-		auto srcpx = &src.cdata()[(y >> 1) * (src.width() >> 1) + (rect.left.x >> 1)];
+	const int dstStride = dst.stride();
+	const int srcStride = src.stride2();
+	auto dsty = dst.data() + (rect.top.y>>1)*dstStride + (rect.left.x>>1);
+	auto srcy = src.cdata();
+	for (int y = rect.top.y; y < rect.bottom.y; y += 2, dsty+=dstStride, srcy+=srcStride) {
+		auto dstpx = dsty;
+		auto srcpx = srcy;
 
 		for (int x = rect.left.x; x < rect.right.x; x += 2, ++srcpx, ++dstpx) {
 			__m128 r0, r1, r2, r3 = _mm_setzero_ps();
@@ -117,13 +123,13 @@ void Downsample(const QShort3Canvas& src, FloatingPointCanvas& dst, const rmlg::
 
 void Copy(const QFloat4Canvas& src, FloatingPointCanvas& dst, const rmlg::irect rect) {
 	auto dstRowAddr = &dst.data()[rect.top.y*dst.stride()];
-	auto srcRowAddr = &src.cdata()[(rect.top.y >> 1) * (src.width() >> 1)];
+	auto srcRowAddr = src.cdata();
 
 	for (int y = rect.top.y; y < rect.bottom.y; y += 2) {
 
 		auto dstAddrR1 = &dstRowAddr[rect.left.x];
 		auto dstAddrR2 = dstAddrR1 + dst.stride();
-		auto srcAddr = &srcRowAddr[rect.left.x / 2];
+		auto srcAddr = srcRowAddr;
 
 		for (int x = rect.left.x; x < rect.right.x; x += 4) {
 			// BEGIN process 4x2 pixels (2 quads)
@@ -150,18 +156,18 @@ void Copy(const QFloat4Canvas& src, FloatingPointCanvas& dst, const rmlg::irect 
 			srcAddr += 2; }
 
 		dstRowAddr += dst.stride() * 2;
-		srcRowAddr += src.width() / 2; }}
+		srcRowAddr += src.stride2(); }}
 
 
 void Copy(const QShort3Canvas& src, FloatingPointCanvas& dst, const rmlg::irect rect) {
 	auto dstRowAddr = &dst.data()[rect.top.y*dst.stride()];
-	auto srcRowAddr = &src.cdata()[(rect.top.y >> 1) * (src.width() >> 1)];
+	auto srcRowAddr = src.cdata();
 
 	for (int y = rect.top.y; y < rect.bottom.y; y += 2) {
 
 		auto dstAddrR1 = &dstRowAddr[rect.left.x];
 		auto dstAddrR2 = dstAddrR1 + dst.stride();
-		auto srcAddr = &srcRowAddr[rect.left.x / 2];
+		auto srcAddr = srcRowAddr;
 
 		for (int x = rect.left.x; x < rect.right.x; x += 4) {
 			// BEGIN process 4x2 pixels (2 quads)
@@ -188,7 +194,7 @@ void Copy(const QShort3Canvas& src, FloatingPointCanvas& dst, const rmlg::irect 
 			srcAddr += 2; }
 
 		dstRowAddr += dst.stride() * 2;
-		srcRowAddr += src.width() / 2; }}
+		srcRowAddr += src.stride2(); }}
 
 
 }  // namespace rglr

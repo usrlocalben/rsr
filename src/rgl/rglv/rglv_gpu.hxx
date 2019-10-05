@@ -40,7 +40,6 @@ constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
 
 constexpr auto maxVAOSizeInVertices = 500000L;
 
-
 struct ClippedVertex {
 	rmlv::vec4 coord;  // either clip-coord or device-coord
 	uint8_t data[64]; };
@@ -64,12 +63,13 @@ template <typename TEXTURE_UNIT, typename SHADER_PROGRAM, typename BLEND_PROGRAM
 struct DefaultTargetProgram {
 	rmlv::qfloat4* cb_;
 	rmlv::qfloat* db_;
-
+	int ofsX_, ofsY_;
 	const TEXTURE_UNIT& tu0_, tu1_;
 
-	const int width_;
-	const int height_;
-	const rmlv::qfloat2 targetDimensions_;
+
+	const int stride_;
+	// const int height_;
+	// const rmlv::qfloat2 targetDimensions_;
 	int offs_, offsLeft_;
 
 	const rglv::VertexFloat1 oneOverW_;
@@ -84,6 +84,8 @@ struct DefaultTargetProgram {
 		const TEXTURE_UNIT& tu1,
 		rglr::QFloat4Canvas& cc,
 		rglr::QFloatCanvas& dc,
+		int ofsX,
+		int ofsY,
 		typename SHADER_PROGRAM::UniformsMD uniforms,
 		VertexFloat1 oneOverW,
 		VertexFloat1 zOverW,
@@ -92,21 +94,23 @@ struct DefaultTargetProgram {
 		typename SHADER_PROGRAM::VertexOutputSD computed2) :
 		cb_(cc.data()),
 		db_(dc.data()),
+		ofsX_(ofsX),
+		ofsY_(ofsY),
 		tu0_(tu0),
 		tu1_(tu1),
-		width_(cc.width()),
-		height_(cc.height()),
-		targetDimensions_(float(cc.width()), float(cc.height())),
+		stride_(cc.width() >> 1),
 		oneOverW_(oneOverW),
 		zOverW_(zOverW),
 		vo_(computed0, computed1, computed2),
 		uniforms_(uniforms) {}
 
 	inline void Begin(int x, int y) {
-		offs_ = offsLeft_ = (y >> 1) * (width_ >> 1) + (x >> 1); }
+		x -= ofsX_;
+		y -= ofsY_;
+		offs_ = offsLeft_ = (y>>1)*stride_ + (x>>1); }
 
 	inline void CR() {
-		offsLeft_ += width_ >> 1;
+		offsLeft_ += stride_;
 		offs_ = offsLeft_; }
 
 	inline void Right2() {
@@ -228,6 +232,11 @@ struct SubStack {
 template<typename ...SHADERS>
 class GPU {
 public:
+	GPU(int concurrency) :
+		concurrency_(concurrency),
+		threadColorBufs_(concurrency),
+		threadDepthBufs_(concurrency) {}
+
 	void Reset(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks) {
 		SetSize(newBufferDimensionsInPixels, newTileDimensionsInBlocks);
 		for (auto& tile : tiles_) {
@@ -256,6 +265,10 @@ private:
 		using std::min, std::max;
 		tileDimensionsInPixels_ = tileDimensionsInBlocks_ * blockDimensionsInPixels;
 		bufferDimensionsInTiles_ = (bufferDimensionsInPixels_ + (tileDimensionsInPixels_ - ivec2{1, 1})) / tileDimensionsInPixels_;
+
+		for (int ti=0; ti<concurrency_; ++ti) {
+			threadColorBufs_[ti].resize(tileDimensionsInPixels_.x, tileDimensionsInPixels_.y);
+			threadDepthBufs_[ti].resize(tileDimensionsInPixels_.x, tileDimensionsInPixels_.y); }
 
 		tiles_.clear();
 		int seq = 0;
@@ -444,8 +457,8 @@ private:
 		auto& cs = tiles_[tileIdx].commands1;
 		tiles_[tileIdx].threadId = tid;
 
-		auto& dc = *depthCanvasPtr_;
-		auto& cc = *colorCanvasPtr_;
+		auto& dc = threadDepthBufs_[rclmt::jobsys::thread_id];
+		auto& cc = threadColorBufs_[rclmt::jobsys::thread_id];
 
 		const GLState* stateptr = nullptr;
 		const void* uniformptr = nullptr;
@@ -494,7 +507,7 @@ private:
 
 		// XXX add support for uniforms in stream-out shader
 
-		auto& cc = *colorCanvasPtr_;
+		auto& cc = threadColorBufs_[rclmt::jobsys::thread_id];
 		if (enableGamma) {
 			rglr::Filter<PGM, rglr::sRGB>(cc, outcanvas, rect); }
 		else {
@@ -631,8 +644,8 @@ private:
 
 		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 
-		auto& cbc = *colorCanvasPtr_;
-		auto& dbc = *depthCanvasPtr_;
+		auto& cbc = threadColorBufs_[rclmt::jobsys::thread_id];
+		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
 		const int target_height = cbc.height();
 
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
@@ -662,6 +675,7 @@ private:
 				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
 					tu0, tu1,
 					cbc, dbc,
+					rect.left.x, rect.top.y,
 					uniforms,
 					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
@@ -859,8 +873,8 @@ private:
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 
-		auto& cbc = *colorCanvasPtr_;
-		auto& dbc = *depthCanvasPtr_;
+		auto& cbc = threadColorBufs_[rclmt::jobsys::thread_id];
+		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
 		const int target_height = cbc.height();
 
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
@@ -885,6 +899,7 @@ private:
 		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
 			tu0, tu1,
 			cbc, dbc,
+			rect.left.x, rect.top.y,
 			uniforms,
 			VertexFloat1{ dev0.w, dev1.w, dev2.w },
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
@@ -901,16 +916,16 @@ public:
 		return doubleBuffer_; }
 	void DoubleBuffer(bool value) {
 		doubleBuffer_ = value; }
-	void ColorCanvas(rglr::QFloat4Canvas* ptr) {
-		colorCanvasPtr_ = ptr; }
-	void DepthCanvas(rglr::QFloatCanvas* ptr) {
-		depthCanvasPtr_ = ptr; }
+	void ColorCanvas(rglr::QFloat4Canvas* ptr) {}
+	void DepthCanvas(rglr::QFloatCanvas* ptr) {}
 
 private:
 	// configuration
 	bool doubleBuffer_{true};
-	rglr::QFloat4Canvas* colorCanvasPtr_{nullptr};
-	rglr::QFloatCanvas* depthCanvasPtr_{nullptr};
+
+	const int concurrency_;
+	std::vector<rglr::QFloat4Canvas> threadColorBufs_{};
+	std::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
 
 	// tile/bin collection
 	std::vector<Tile> tiles_;

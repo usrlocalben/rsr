@@ -29,7 +29,7 @@ using GPU = rglv::GPU<rglv::BaseProgram, WireframeProgram, IQPostProgram, Envmap
 
 class GPUNode : public IGPU {
 public:
-	using IGPU::IGPU;
+	GPUNode(std::string_view id, InputList inputs) : IGPU(id, inputs), gpu_(jobsys::thread_count) {}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "layer") {
