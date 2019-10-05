@@ -22,7 +22,9 @@ using vec3 = rmlv::vec3;
 using vec4 = rmlv::vec4;
 using qfloat4 = rmlv::qfloat4;
 using qfloat2 = rmlv::qfloat2;
+using VertexFloat1 = rglv::VertexFloat1;
 using VertexFloat2 = rglv::VertexFloat2;
+using VertexFloat3 = rglv::VertexFloat3;
 
 const int TARGET_WIDTH = 8;
 const int TARGET_HEIGHT = 8;
@@ -30,62 +32,175 @@ const int TARGET_HEIGHT = 8;
 bool check_triangle_uv();
 bool check_triangle(array<vec4, 3> /*points*/, array<string, 8> /*expected*/);
 
-struct DebugWithFragCoord final : public rglv::BaseProgram {
-	template <typename TU>
-	static void shadeFragment(
+template <typename SHADER_PROGRAM, typename BLEND_PROGRAM>
+struct TestTargetProgram {
+	rmlv::qfloat4* cb_;
+	rmlv::qfloat* db_;
+
+	const int stride_;
+	int offs_, offsLeft_;
+
+	const rglv::VertexFloat1 oneOverW_;
+	const rglv::VertexFloat1 zOverW_;
+
+	const typename SHADER_PROGRAM::Interpolants vo_;
+
+	TestTargetProgram(
+		rglr::QFloat4Canvas& cc,
+		rglr::QFloatCanvas& dc,
+		VertexFloat1 oneOverW,
+		VertexFloat1 zOverW,
+		typename SHADER_PROGRAM::VertexOutputSD computed0,
+		typename SHADER_PROGRAM::VertexOutputSD computed1,
+		typename SHADER_PROGRAM::VertexOutputSD computed2) :
+		cb_(cc.data()),
+		db_(dc.data()),
+		stride_(cc.width() >> 1),
+		oneOverW_(oneOverW),
+		zOverW_(zOverW),
+		vo_(computed0, computed1, computed2) {}
+
+	inline void Begin(int x, int y) {
+		offs_ = offsLeft_ = (y>>1)*stride_ + (x>>1); }
+
+	inline void CR() {
+		offsLeft_ += stride_;
+		offs_ = offsLeft_; }
+
+	inline void Right2() {
+		offs_++; }
+
+	inline void LoadDepth(rmlv::qfloat& destDepth) {
+		// from depthbuffer
+		// destDepth = _mm_load_ps(reinterpret_cast<float*>(&db[offs]));
+
+		// from alpha
+		destDepth = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].a))); }
+
+	inline void StoreDepth(rmlv::qfloat destDepth,
+	                       rmlv::qfloat sourceDepth,
+	                       rmlv::mvec4i fragMask) {
+		// auto addr = &db_[offs_];   // depthbuffer
+		auto addr = &(cb_[offs_].a);  // alpha-channel
+		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
+		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
+
+	inline void LoadColor(rmlv::qfloat4& destColor) {
+		auto& cell = cb_[offs_];
+		rglr::QFloat4Canvas::Load(cb_+offs_, destColor.x.v, destColor.y.v, destColor.z.v); }
+
+	inline void StoreColor(rmlv::qfloat4 destColor,
+	                       rmlv::qfloat4 sourceColor,
+	                       rmlv::mvec4i fragMask) {
+		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
+		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
+		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
+		rglr::QFloat4Canvas::Store(sr, sg, sb, cb_+offs_); }
+
+	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord BS, const bool frontfacing) {
+		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
+
+		const auto fragDepth = rglv::Interpolate(BS, zOverW_);
+
+		// read depth buffer
+		qfloat destDepth; LoadDepth(destDepth);
+
+		const auto depthMask = float2bits(cmple(fragDepth, destDepth));
+		const auto fragMask = andnot(triMask, depthMask);
+
+		if (movemask(bits2float(fragMask)) == 0) {
+			return; }  // early out if whole quad fails depth test
+
+		// restore perspective
+		const auto fragW = rmlv::oneover(Interpolate(BS, oneOverW_));
+		rglv::BaryCoord BP;
+		BP.x = oneOverW_.v0 * BS.x * fragW;
+		BP.z = oneOverW_.v2 * BS.z * fragW;
+		BP.y = 1.0f - BP.x - BP.z;
+
+		auto data = vo_.Interpolate(BS, BP);
+
+		qfloat4 fragColor;
+		SHADER_PROGRAM::ShadeFragment(fragCoord, fragDepth, data, BS, BP, fragColor);
+
+		qfloat4 destColor;
+		LoadColor(destColor);
+
+		// qfloat4 blendedColor = fragColor; // no blending
+
+		StoreColor(destColor, fragColor, fragMask);
+		StoreDepth(destDepth, fragDepth, fragMask); } };
+
+
+struct TestShaderBase {
+	struct VertexOutputSD {
+		rmlv::vec3 r0;
+		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+			return { mix(a.r0, b.r0, t) }; }};
+
+	struct VertexOutputMD {
+		rmlv::qfloat3 r0; };
+
+	struct Interpolants {
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
+			r0({ d0.r0, d1.r0, d2.r0 }) {}
+		VertexOutputMD Interpolate(const rglv::BaryCoord& BS, const rglv::BaryCoord& BP) const {
+			return { rglv::Interpolate(BP, r0) }; }
+		rglv::VertexFloat3 r0; };
+
+	inline static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
-		// unforms
-		const rglv::ShaderUniforms& u,
 		// vertex shader output
-		const rglv::VertexOutput& outs,
+		const VertexOutputMD& v,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
-		// texture units
-		const TU& tu0, const TU& tu1,
+		const rglv::BaryCoord& BS, const rglv::BaryCoord& BP,
+		// outputs
+		rmlv::qfloat4& gl_FragColor
+		) {
+		gl_FragColor = rmlv::mvec4f::one(); }};
+
+
+struct DebugWithFragCoord final : public TestShaderBase {
+	static void ShadeFragment(
+		// built-in
+		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
+		// vertex shader output
+		const VertexOutputMD& v,
+		// special
+		const rglv::BaryCoord& BS, const rglv::BaryCoord& BP,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
 		gl_FragColor = qfloat4{ gl_FragCoord.x, gl_FragCoord.y, 0, 0 }; } };
 
 
-struct DebugWithBary final : public rglv::BaseProgram {
-	template <typename TU>
-	static void shadeFragment(
+struct DebugWithBary final : public TestShaderBase {
+	static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
-		// unforms
-		const rglv::ShaderUniforms& u,
 		// vertex shader output
-		const rglv::VertexOutput& outs,
+		const VertexOutputMD& v,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
-		// texture units
-		const TU& tu0, const TU& tu1,
+		const rglv::BaryCoord& BS, const rglv::BaryCoord& BP,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
-		gl_FragColor = qfloat4{ _BS.x, _BS.y, _BS.z, 0 }; } };
+		gl_FragColor = qfloat4{ BS.x, BS.y, BS.z, 0 }; } };
 
 
-struct DebugWithUV : public rglv::BaseProgram {
-	template <typename TU>
-	static void shadeFragment(
+struct DebugWithUV : public TestShaderBase {
+	static void ShadeFragment(
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
-		// unforms
-		const rglv::ShaderUniforms& u,
 		// vertex shader output
-		const rglv::VertexOutput& outs,
+		const VertexOutputMD& v,
 		// special
-		const rglv::BaryCoord& _BS, const rglv::BaryCoord& _BP,
-		// texture units
-		const TU& tu0,
-		const TU& tu1,
+		const rglv::BaryCoord& BS, const rglv::BaryCoord& BP,
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
-			gl_FragColor = qfloat4{ outs.r0.x, outs.r0.y, 0, 0 }; }};
+			gl_FragColor = qfloat4{ v.r0.x, v.r0.y, 0, 0 }; }};
 
 
 int main(int argc, char **argv) {
@@ -153,15 +268,13 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 
 	bool frontfacing = true;
 
-	using sampler = rglr::ts_pow2_mipmap;
-	const sampler nullTexture1(nullptr, 256, 256, 256, 0);
-	const sampler nullTexture2(nullptr, 256, 256, 256, 0);
-	rglv::ShaderUniforms nullUniforms{};
-	rglv::DefaultTargetProgram<sampler, DebugWithBary, rglr::BlendProgram::Set> target_program(
-		nullTexture1, nullTexture2, cbc, dbc,
-		nullUniforms,
-		points[0], points[1], points[2],
-		rglv::VertexOutputx1{}, rglv::VertexOutputx1{}, rglv::VertexOutputx1{});
+	TestTargetProgram<DebugWithBary, rglr::BlendProgram::Set> target_program(
+		cbc, dbc,
+		VertexFloat1{ points[0].w, points[1].w, points[2].w },
+		VertexFloat1{ points[0].z, points[1].z, points[2].z },
+		DebugWithBary::VertexOutputSD{},
+		DebugWithBary::VertexOutputSD{},
+		DebugWithBary::VertexOutputSD{});
 	rglv::TriangleRasterizer tr(target_program, cbc.rect(), cbc.height());
 	tr.Draw(points[0], points[1], points[2], frontfacing);
 
@@ -211,34 +324,29 @@ bool check_triangle_uv() {
 	array<vec4, 3> points_lower_right = { urp, llp, lrp };
 	array<vec2, 3> uv_lower_right = { uruv, lluv, lruv };
 
-	using sampler = rglr::ts_pow2_mipmap;
-	const sampler nullTexture1(nullptr, 256, 256, 256, 0);
-	const sampler nullTexture2(nullptr, 256, 256, 256, 0);
-	rglv::ShaderUniforms nullUniforms{};
-
 	{
 		auto& points = points_upper_left;
 		auto& uvs = uv_upper_left;
-		rglv::VertexOutputx1 computed1; computed1.r0 = vec3{ uvs[0], 0 };
-		rglv::VertexOutputx1 computed2; computed2.r0 = vec3{ uvs[1], 0 };
-		rglv::VertexOutputx1 computed3; computed3.r0 = vec3{ uvs[2], 0 };
-		rglv::DefaultTargetProgram<sampler, DebugWithUV, rglr::BlendProgram::Set> target_program(
-			nullTexture1, nullTexture2, cbc, dbc,
-			nullUniforms,
-			points[0], points[1], points[2],
+		DebugWithUV::VertexOutputSD computed1; computed1.r0 = vec3{ uvs[0], 0 };
+		DebugWithUV::VertexOutputSD computed2; computed2.r0 = vec3{ uvs[1], 0 };
+		DebugWithUV::VertexOutputSD computed3; computed3.r0 = vec3{ uvs[2], 0 };
+		TestTargetProgram<DebugWithUV, rglr::BlendProgram::Set> target_program(
+			cbc, dbc,
+			VertexFloat1{ points[0].w, points[1].w, points[2].w },
+			VertexFloat1{ points[0].z, points[1].z, points[2].z },
 			computed1, computed2, computed3);
 		rglv::TriangleRasterizer tr(target_program, cbc.rect(), cbc.height());
 		tr.Draw(points[0], points[1], points[2], frontfacing); }
 	{
 		auto& points = points_lower_right;
 		auto& uvs = uv_lower_right;
-		rglv::VertexOutputx1 computed1; computed1.r0 = vec3{ uvs[0], 0 };
-		rglv::VertexOutputx1 computed2; computed2.r0 = vec3{ uvs[1], 0 };
-		rglv::VertexOutputx1 computed3; computed3.r0 = vec3{ uvs[2], 0 };
-		rglv::DefaultTargetProgram<sampler, DebugWithUV, rglr::BlendProgram::Set> target_program(
-			nullTexture1, nullTexture2, cbc, dbc,
-			nullUniforms,
-			points[0], points[1], points[2],
+		DebugWithUV::VertexOutputSD computed1; computed1.r0 = vec3{ uvs[0], 0 };
+		DebugWithUV::VertexOutputSD computed2; computed2.r0 = vec3{ uvs[1], 0 };
+		DebugWithUV::VertexOutputSD computed3; computed3.r0 = vec3{ uvs[2], 0 };
+		TestTargetProgram<DebugWithUV, rglr::BlendProgram::Set> target_program(
+			cbc, dbc,
+			VertexFloat1{ points[0].w, points[1].w, points[2].w },
+			VertexFloat1{ points[0].z, points[1].z, points[2].z },
 			computed1, computed2, computed3);
 		rglv::TriangleRasterizer tr(target_program, cbc.rect(), cbc.height());
 		tr.Draw(points[0], points[1], points[2], frontfacing); }
