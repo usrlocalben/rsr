@@ -1,5 +1,6 @@
 #include "src/rcl/rclw/rclw_guid.hxx"
 
+#include <stdexcept>
 #include <string>
 
 #include <Windows.h>
