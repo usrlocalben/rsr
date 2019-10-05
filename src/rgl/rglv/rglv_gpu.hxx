@@ -77,7 +77,7 @@ struct DefaultTargetProgram {
 
 	const typename SHADER_PROGRAM::Interpolants vo_;
 
-	const ShaderUniforms uniforms_;
+	const typename SHADER_PROGRAM::UniformsMD uniforms_;
 
 	DefaultTargetProgram(
 		const TEXTURE_UNIT& tu0,
@@ -86,7 +86,7 @@ struct DefaultTargetProgram {
 		rglr::QFloatCanvas& dc,
 		int ofsX,
 		int ofsY,
-		ShaderUniforms uniforms,
+		typename SHADER_PROGRAM::UniformsMD uniforms,
 		VertexFloat1 oneOverW,
 		VertexFloat1 zOverW,
 		typename SHADER_PROGRAM::VertexOutputSD computed0,
@@ -99,8 +99,6 @@ struct DefaultTargetProgram {
 		tu0_(tu0),
 		tu1_(tu1),
 		stride_(cc.width() >> 1),
-		// height_(cc.height()),
-		// targetDimensions_(float(cc.width()), float(cc.height())),
 		oneOverW_(oneOverW),
 		zOverW_(zOverW),
 		vo_(computed0, computed1, computed2),
@@ -245,7 +243,7 @@ public:
 			tile.Reset(); }
 		clippedVertexBuffer0_.clear();
 		stats0_ = GPUStats{};
-		IC().reset(); }
+		IC().Reset(); }
 
 	GL& IC() {
 		return (userIC_ == 0 ? IC0_ : IC1_); }
@@ -349,7 +347,8 @@ private:
 		// printf("----- BEGIN BINNING -----\n");
 
 		binState = nullptr;
-		auto& cs = IC().d_commands;
+		binUniforms = nullptr;
+		auto& cs = IC().commands_;
 		int totalCommands = 0;
 		while (!cs.eof()) {
 			totalCommands += 1;
@@ -357,10 +356,12 @@ private:
 			// printf("cmd %02x %d:", cmd, cmd);
 			if (cmd == CMD_STATE) {
 				binState = static_cast<GLState*>(cs.consumePtr());
+				binUniforms = IC().GetUniformBufferAddr(binState->uniformsOfs);
 				// printf(" state is now at %p\n", binState);
 				for (auto& tile : tiles_) {
 					tile.commands0.appendByte(cmd);
-					tile.commands0.appendPtr(binState); }}
+					tile.commands0.appendPtr(binState);
+					tile.commands0.appendPtr(binUniforms); }}
 			else if (cmd == CMD_CLEAR) {
 				auto arg = cs.consumeByte();
 				// printf(" clear with color ");
@@ -388,14 +389,23 @@ private:
 					tile.commands0.appendByte(cmd);
 					tile.commands0.appendByte(enableGamma);
 					tile.commands0.appendPtr(ptr); }}
-			else if (cmd == CMD_DRAW_ARRAY) {
+			else if (cmd == CMD_DRAW_ARRAYS) {
 				//auto flags = cs.consumeByte();
 				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
 				auto count = cs.consumeInt();
 				struct SequenceSource {
 					int operator()(int ti) { return ti; }};
 				SequenceSource indexSource{};
-				bin_Draw<SequenceSource, SHADERS...>(count, indexSource); }
+				bin_Draw<false, SequenceSource, SHADERS...>(count, indexSource, 1); }
+			else if (cmd == CMD_DRAW_ARRAYS_INSTANCED) {
+				//auto flags = cs.consumeByte();
+				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
+				auto count = cs.consumeInt();
+				auto instanceCnt = cs.consumeInt();
+				struct SequenceSource {
+					int operator()(int ti) { return ti; }};
+				SequenceSource indexSource{};
+				bin_Draw<true, SequenceSource, SHADERS...>(count, indexSource, instanceCnt); }
 			else if (cmd == CMD_DRAW_ELEMENTS) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -406,7 +416,19 @@ private:
 					int operator()(int ti) { return data_[ti]; }
 					const uint16_t* const data_; };
 				ArraySource indexSource{indices};
-				bin_Draw<ArraySource, SHADERS...>(count, indexSource); }}
+				bin_Draw<false, ArraySource, SHADERS...>(count, indexSource, 1); }
+			else if (cmd == CMD_DRAW_ELEMENTS_INSTANCED) {
+				auto flags = cs.consumeByte();
+				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
+				auto count = cs.consumeInt();
+				auto indices = static_cast<uint16_t*>(cs.consumePtr());
+				auto instanceCnt = cs.consumeInt();
+				struct ArraySource {
+					ArraySource(const uint16_t* data) : data_(data) {}
+					int operator()(int ti) { return data_[ti]; }
+					const uint16_t* const data_; };
+				ArraySource indexSource{indices};
+				bin_Draw<true, ArraySource, SHADERS...>(count, indexSource, instanceCnt); } }
 
 		// stats...
 		int total_ = 0;
@@ -439,11 +461,13 @@ private:
 		auto& cc = threadColorBufs_[rclmt::jobsys::thread_id];
 
 		const GLState* stateptr = nullptr;
+		const void* uniformptr = nullptr;
 		while (!cs.eof()) {
 			auto cmd = cs.consumeByte();
 			// fmt::printf("tile(%d) cmd(%02x, %d)\n", tileIdx, cmd, cmd);
 			if (cmd == CMD_STATE) {
-				stateptr = static_cast<const GLState*>(cs.consumePtr()); }
+				stateptr = static_cast<const GLState*>(cs.consumePtr());
+				uniformptr = cs.consumePtr(); }
 			else if (cmd == CMD_CLEAR) {
 				int bits = cs.consumeByte();
 				if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
@@ -463,21 +487,25 @@ private:
 			else if (cmd == CMD_STORE_TRUECOLOR) {
 				auto enableGamma = cs.consumeByte();
 				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
-				tile_StoreTrueColor<SHADERS...>(*stateptr, rect, enableGamma, outcanvas);
+				tile_StoreTrueColor<SHADERS...>(*stateptr, uniformptr, rect, enableGamma, outcanvas);
 				// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
 				}
 			else if (cmd == CMD_CLIPPED_TRI) {
-				tile_DrawClipped<SHADERS...>(*stateptr, rect, cs); }
+				tile_DrawClipped<SHADERS...>(*stateptr, uniformptr, rect, cs); }
 			else if (cmd == CMD_DRAW_INLINE) {
-				tile_DrawElements<SHADERS...>(*stateptr, rect, cs); }}}
+				tile_DrawElements<false, SHADERS...>(*stateptr, uniformptr, rect, cs); }
+			else if (cmd == CMD_DRAW_INLINE_INSTANCED) {
+				tile_DrawElements<true, SHADERS...>(*stateptr, uniformptr, rect, cs); }}}
 
 	template <typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_StoreTrueColor(const GLState& state, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
 
 	template <typename PGM, typename ...PGMs>
-	void tile_StoreTrueColor(const GLState& state, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
+	void tile_StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
 		if (state.programId != PGM::id) {
-			return tile_StoreTrueColor<PGMs...>(state, rect, enableGamma, outcanvas); }
+			return tile_StoreTrueColor<PGMs...>(state, uniformsPtr, rect, enableGamma, outcanvas); }
+
+		// XXX add support for uniforms in stream-out shader
 
 		auto& cc = threadColorBufs_[rclmt::jobsys::thread_id];
 		if (enableGamma) {
@@ -485,112 +513,128 @@ private:
 		else {
 			rglr::Filter<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
-	template <typename INDEX_SOURCE, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource) {}
+	template <bool INSTANCED, typename INDEX_SOURCE, typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
 
-	template <typename INDEX_SOURCE, typename PGM, typename ...PGMs>
-	void bin_Draw(const int count, INDEX_SOURCE& indexSource) {
+	template <bool INSTANCED, typename INDEX_SOURCE, typename PGM, typename ...PGMs>
+	void bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
 		if (PGM::id != binState->programId) {
-			return bin_Draw<INDEX_SOURCE, PGMs...>(count, indexSource); }
+			return bin_Draw<INSTANCED, INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
 
-		typename PGM::Loader loader( state.array, nullptr, nullptr );
-
-		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
-
-		clipFlagBuffer_.clear();
-		devCoordBuffer_.clear();
-		clipQueue_.clear();
-
-		for (auto& tile : tiles_) {
-			tile.commands0.appendByte(CMD_DRAW_INLINE);
-			tile.commands0.mark(); }
-
-		const ShaderUniforms ui = MakeUniforms(state);
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
 		const auto cullingEnabled = state.cullingEnabled;
 		const auto cullFace = state.cullFace;
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
+		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
-		const auto siz = loader.Size();
-		// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
+		typename PGM::VertexInput vData;
 
-		for (int vi=0; vi<siz; vi+=4) {
-			typename PGM::VertexInput vData;
-			loader.Load(vi, vData);
+		clipQueue_.clear();
 
-			qfloat4 coord;
-			typename PGM::VertexOutputMD unused;
-			PGM::ShadeVertex(vData, ui, coord, unused);
+		if (!INSTANCED) {
+			// coding error if this is not true
+			// XXX could use constexpr instead of template param?
+			assert(instanceCnt == 1); }
 
-			auto flags = frustum.Test(coord);
-			store_bytes(clipFlagBuffer_.alloc<4>(), flags);
-
-			auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
-			devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
-
-		for (int ti=0; ti<count; ti+=3) {
-			stats0_.totalTrianglesSubmitted++;
-
-			uint16_t i0 = indexSource(ti);
-			uint16_t i1 = indexSource(ti+1);
-			uint16_t i2 = indexSource(ti+2);
-
-			// check for triangles that need clipping
-			const auto cf0 = clipFlagBuffer_[i0];
-			const auto cf1 = clipFlagBuffer_[i1];
-			const auto cf2 = clipFlagBuffer_[i2];
-			if (cf0 | cf1 | cf2) {
-				if (cf0 & cf1 & cf2) {
-					// all points outside of at least one plane
-					stats0_.totalTrianglesCulled++;
-					continue; }
-				// queue for clipping
-				clipQueue_.push_back({ i0, i1, i2 });
-				continue; }
-
-			auto devCoord0 = devCoordBuffer_[i0];
-			auto devCoord1 = devCoordBuffer_[i1];
-			auto devCoord2 = devCoordBuffer_[i2];
-
-			// handle backfacing tris and culling
-			const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
-			if (backfacing) {
-				if (cullingEnabled && cullFace == GL_BACK) {
-					stats0_.totalTrianglesCulled++;
-					continue; }
-				// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
-				swap(i0, i2);
-				i0 |= 0x8000; }  // add backfacing flag
+		for (auto& tile : tiles_) {
+			if (INSTANCED) {
+				tile.commands0.appendByte(CMD_DRAW_INLINE_INSTANCED); }
 			else {
-				if (cullingEnabled && cullFace == GL_FRONT) {
-					stats0_.totalTrianglesCulled++;
-					continue; }}
+				tile.commands0.appendByte(CMD_DRAW_INLINE); }
+			tile.commands0.mark1(); }
 
-			ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2](auto& tile) {
-				tile.commands0.appendUShort(i0);  // also includes backfacing flag
-				tile.commands0.appendUShort(i1);
-				tile.commands0.appendUShort(i2); });}
+		for (int iid=0; iid<instanceCnt; ++iid) {
+			if (INSTANCED) {
+				loader.LoadInstance(iid, vData); }
+
+			clipFlagBuffer_.clear();
+			devCoordBuffer_.clear();
+
+			const auto siz = loader.Size();
+			// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
+
+			for (int vi=0; vi<siz; vi+=4) {
+				loader.LoadMD(vi, vData);
+
+				qfloat4 coord;
+				typename PGM::VertexOutputMD unused;
+				PGM::ShadeVertex(vData, uniforms, coord, unused);
+
+				auto flags = frustum.Test(coord);
+				store_bytes(clipFlagBuffer_.alloc<4>(), flags);
+
+				auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
+				devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
+
+			for (int ti=0; ti<count; ti+=3) {
+				stats0_.totalTrianglesSubmitted++;
+
+				uint16_t i0 = indexSource(ti);
+				uint16_t i1 = indexSource(ti+1);
+				uint16_t i2 = indexSource(ti+2);
+
+				// check for triangles that need clipping
+				const auto cf0 = clipFlagBuffer_[i0];
+				const auto cf1 = clipFlagBuffer_[i1];
+				const auto cf2 = clipFlagBuffer_[i2];
+				if (cf0 | cf1 | cf2) {
+					if (cf0 & cf1 & cf2) {
+						// all points outside of at least one plane
+						stats0_.totalTrianglesCulled++;
+						continue; }
+					// queue for clipping
+					clipQueue_.push_back({ iid, i0, i1, i2 });
+					continue; }
+
+				auto devCoord0 = devCoordBuffer_[i0];
+				auto devCoord1 = devCoordBuffer_[i1];
+				auto devCoord2 = devCoordBuffer_[i2];
+
+				// handle backfacing tris and culling
+				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
+				if (backfacing) {
+					if (cullingEnabled && cullFace == GL_BACK) {
+						stats0_.totalTrianglesCulled++;
+						continue; }
+					// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
+					swap(i0, i2);
+					i0 |= 0x8000; }  // add backfacing flag
+				else {
+					if (cullingEnabled && cullFace == GL_FRONT) {
+						stats0_.totalTrianglesCulled++;
+						continue; }}
+
+				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2, &iid](auto& tile) {
+					if (INSTANCED) {
+						tile.commands0.appendUShort(iid); }
+					tile.commands0.appendUShort(i0);  // also includes backfacing flag
+					tile.commands0.appendUShort(i1);
+					tile.commands0.appendUShort(i2); });}
+
+			}  // instance loop
 
 		for (auto & tile : tiles_) {
-			if (tile.commands0.touched()) {
+			if (tile.commands0.touched1()) {
 				tile.commands0.appendUShort(0xffff);}
 			else {
-				// remove the CMD_DRAW_INLINE from any tiles
+				// remove the command from any tiles
 				// that weren't covered by this draw
 				tile.commands0.unappend(1); }}
 
 		stats0_.totalTrianglesClipped = clipQueue_.size();
 		if (!clipQueue_.empty()) {
-			bin_DrawElementsClipped<PGM>(state); }}
+			bin_DrawElementsClipped<INSTANCED, PGM>(state); }}
 
-	template <typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
+	template <bool INSTANCED, typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {}
 
-	template<typename PGM, typename ...PGMs>
-	void tile_DrawElements(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {
+	template<bool INSTANCED, typename PGM, typename ...PGMs>
+	void tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {
 		if (state.programId != PGM::id) {
-			return tile_DrawElements<PGMs...>(state, rect, cs); }
+			return tile_DrawElements<INSTANCED, PGMs...>(state, uniformsPtr, rect, cs); }
 
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
@@ -598,13 +642,13 @@ private:
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat4;
 		using std::array, std::swap;
 
-		typename PGM::Loader loader( state.array, nullptr, nullptr );
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 
 		auto& cbc = threadColorBufs_[rclmt::jobsys::thread_id];
 		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
 		const int target_height = cbc.height();
 
-		const ShaderUniforms ui = MakeUniforms(state);
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
@@ -615,34 +659,13 @@ private:
 		array<qfloat4, 3> devCoord;
 		array<mvec4i, 3>  fx;
 		array<mvec4i, 3>  fy;
-
-		int li = 0;  // sse lane being loaded
-		bool eof = false;
 		bool backfacing;
-		while (!eof) {
+		int li = 0;  // sse lane being loaded
 
-			const uint16_t firstWord = cs.consumeUShort();
-			if (firstWord == 0xffff) {
-				eof = true; }
-
-			if (!eof) {
-				const uint16_t i1 = cs.consumeUShort();
-				const uint16_t i2 = cs.consumeUShort();
-				backfacing = firstWord & 0x8000;
-				const uint16_t i0 = firstWord & 0x7fff;
-				loader.LoadLane(i0, li, vi_[0]);
-				loader.LoadLane(i1, li, vi_[1]);
-				loader.LoadLane(i2, li, vi_[2]);
-				li += 1; }
-
-			if (!eof && (li < 4)) {
-				// keep loading if not eof and there are lanes remaining
-				continue; }
-
-			// shade up to 4x3 verts
+		auto flush = [&]() {
 			for (int i=0; i<3; ++i) {
 				qfloat4 gl_Position;
-				PGM::ShadeVertex(vi_[i], ui, gl_Position, computed[i]);
+				PGM::ShadeVertex(vi_[i], uniforms, gl_Position, computed[i]);
 				devCoord[i] = pdiv(gl_Position);
 				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale_.x + deviceOffset_.x));
 				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale_.y + deviceOffset_.y)); }
@@ -653,7 +676,7 @@ private:
 					tu0, tu1,
 					cbc, dbc,
 					rect.left.x, rect.top.y,
-					ui,
+					uniforms,
 					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
 					computed[0].Lane(ti),
@@ -665,18 +688,61 @@ private:
 				        !backfacing); }
 
 			// reset the SIMD lane counter
-			li = 0; }}
+			li = 0; };
 
-	template <typename PGM>
+		int loadedInstanceId;
+		if (INSTANCED) {
+			loadedInstanceId = cs.peekUShort();
+			loader.LoadInstance(loadedInstanceId, vi_[0]);
+			loader.LoadInstance(loadedInstanceId, vi_[1]);
+			loader.LoadInstance(loadedInstanceId, vi_[2]); }
+
+		while (1) {
+			uint16_t firstWord = cs.consumeUShort();
+			if (firstWord == 0xffff) {
+				flush();
+				break; }
+
+			if (INSTANCED) {
+				const int iid = firstWord;
+				if (iid != loadedInstanceId) {
+					flush();
+					loadedInstanceId = iid;
+					loader.LoadInstance(iid, vi_[0]);
+					loader.LoadInstance(iid, vi_[1]);
+					loader.LoadInstance(iid, vi_[2]); }}
+
+			{
+				uint16_t tmp;
+				if (INSTANCED) {
+					tmp = cs.consumeUShort(); }
+				else {
+					tmp = firstWord; }
+				const uint16_t i1 = cs.consumeUShort();
+				const uint16_t i2 = cs.consumeUShort();
+				backfacing = tmp & 0x8000;
+				const uint16_t i0 = tmp & 0x7fff;
+				loader.LoadLane(i0, li, vi_[0]);
+				loader.LoadLane(i1, li, vi_[1]);
+				loader.LoadLane(i2, li, vi_[2]);
+				li += 1; }
+
+			if (li == 4) {
+				flush(); }}
+
+
+		}  // func
+
+	template <bool INSTANCED, typename PGM>
 	void bin_DrawElementsClipped(const GLState& state) {
 		using rmlm::mat4;
 		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
 		using std::array, std::swap, std::min, std::max;
 
-		typename PGM::Loader loader( state.array, nullptr, nullptr );
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
-		const ShaderUniforms ui = MakeUniforms(state);
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
 
 		auto CVMix = [&](const ClippedVertex& a, const ClippedVertex& b, const float d) {
 			static_assert(sizeof(typename PGM::VertexOutputSD) <= sizeof(ClippedVertex::data), "shader output too large for clipped vertex buffer");
@@ -692,14 +758,17 @@ private:
 			// phase 1: load _poly_ with the shaded vertex data
 			clipA_.clear();
 			for (int i=0; i<3; ++i) {
-				const auto idx = faceIndices[i];
+				const int iid = faceIndices[0];
+				const auto idx = faceIndices[i+1];
 
 				typename PGM::VertexInput vi_;
-				loader.LoadOne(idx, vi_);
+				loader.LoadLane(idx, 0, vi_);
+				if (INSTANCED) {
+					loader.LoadInstance(iid, vi_); }
 
 				qfloat4 coord;
 				typename PGM::VertexOutputMD computed;
-				PGM::ShadeVertex(vi_, ui, coord, computed);
+				PGM::ShadeVertex(vi_, uniforms, coord, computed);
 
 				ClippedVertex cv;
 				cv.coord = coord.lane(0);
@@ -795,12 +864,12 @@ private:
 			ofs += bufferDimensionsInTiles_.x; }};
 
 	template <typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {}
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {}
 
 	template <typename PGM, typename ...PGMs>
-	void tile_DrawClipped(const GLState& state, const rmlg::irect& rect, FastPackedStream& cs) {
+	void tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {
 		if (state.programId != PGM::id) {
-			return tile_DrawClipped<PGMs...>(state, rect, cs); }
+			return tile_DrawClipped<PGMs...>(state, uniformsPtr, rect, cs); }
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 
@@ -808,7 +877,7 @@ private:
 		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
 		const int target_height = cbc.height();
 
-		const ShaderUniforms ui = MakeUniforms(state);
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
 
 		const auto tmp = cs.consumeUShort();
 		const bool backfacing = (tmp & 0x8000) != 0;
@@ -831,7 +900,7 @@ private:
 			tu0, tu1,
 			cbc, dbc,
 			rect.left.x, rect.top.y,
-			ui,
+			uniforms,
 			VertexFloat1{ dev0.w, dev1.w, dev2.w },
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
 			data0,
@@ -841,18 +910,6 @@ private:
 		tr.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
 		        int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
 		        !backfacing); }
-
-	auto MakeUniforms(const GLState& state) {
-		ShaderUniforms ui;
-		ui.u0 = state.color;
-		ui.u1 = rmlv::vec4{ state.normal, 0.0F };
-		//ui.u1 =
-
-		ui.mvm = state.modelViewMatrix;
-		ui.pm = state.projectionMatrix;
-		ui.nm = transpose(inverse(state.modelViewMatrix));
-		ui.mvpm = state.projectionMatrix * state.modelViewMatrix;
-		return ui; }
 
 public:
 	bool DoubleBuffer() const {
@@ -892,9 +949,10 @@ private:
 
 	// buffers used during binning and clipping
 	const GLState* binState{nullptr};
+	const void* binUniforms{nullptr};
 	SubStack<uint8_t, maxVAOSizeInVertices> clipFlagBuffer_;
 	SubStack<rmlv::vec2, maxVAOSizeInVertices> devCoordBuffer_;
-	rcls::vector<std::array<int, 3>> clipQueue_;
+	rcls::vector<std::array<int, 4>> clipQueue_;
 	rcls::vector<ClippedVertex> clipA_;
 	rcls::vector<ClippedVertex> clipB_;
 

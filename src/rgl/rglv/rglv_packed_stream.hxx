@@ -8,13 +8,14 @@
 namespace rqdq {
 namespace rglv {
 
-constexpr int maxSizeInBytes = 100000;
+constexpr int maxSizeInBytes = 1024 * 1024;
 
 
 class FastPackedStream {
 	int d_head{0};
 	int d_tail{0};
-	int d_mark{0};
+	int d_mark1{0};
+	int d_mark2{0};
 	std::vector<uint8_t> store;
 	uint8_t* d_buf;
 
@@ -29,6 +30,9 @@ class FastPackedStream {
 		d_tail += many;
 		return ptr; }
 
+	inline uint8_t *peek() const {
+		return &d_buf[d_tail]; }
+
 public:
 	FastPackedStream()  {
 		store.reserve(maxSizeInBytes);
@@ -38,8 +42,10 @@ public:
 	inline int  size() const { return d_head; }
 	inline void reset()      { d_head = d_tail = 0; }
 
-	inline void mark()       { d_mark = d_head; }
-	inline bool touched()    { return d_mark != d_head; }
+	inline void mark1()       { d_mark1 = d_head; }
+	inline bool touched1()    { return d_mark1 != d_head; }
+	inline void mark2()       { d_mark2 = d_head; }
+	inline bool touched2()    { return d_mark2 != d_head; }
 
 	inline void appendByte(uint8_t a) {
 		*reinterpret_cast<uint8_t*>(alloc(sizeof(uint8_t))) = a; }
@@ -56,6 +62,9 @@ public:
 		appendFloat(a.y);
 		appendFloat(a.z);
 		appendFloat(a.w); }
+
+	inline auto peekUShort() const {
+		return *reinterpret_cast<uint16_t*>(peek()); }
 
 	inline auto consumeByte() {
 		return *reinterpret_cast<uint8_t*>(consume(sizeof(uint8_t))); }

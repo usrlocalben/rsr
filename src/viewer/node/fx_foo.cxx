@@ -9,6 +9,7 @@
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/rgl/rglv/rglv_mesh.hxx"
 #include "src/viewer/compile.hxx"
+#include "src/viewer/shaders.hxx"
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/i_gl.hxx"
 #include "src/viewer/node/i_material.hxx"
@@ -42,12 +43,16 @@ public:
 		std::lock_guard<std::mutex> lock(dc.mutex);
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
-		dc.glMatrixMode(GL_PROJECTION);
-		dc.glLoadMatrix(*pmat);
-		dc.glMatrixMode(GL_MODELVIEW);
-		dc.glLoadMatrix(*mvmat);
-		dc.glUseArray(meshVAO_);
-		dc.glDrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data());
+
+		auto [id, ptr] = dc.AllocUniformBuffer<rglv::BaseProgram::UniformsSD>();
+		ptr->pm = *pmat;
+		ptr->mvm = *mvmat;
+		ptr->nm = transpose(inverse(ptr->mvm));
+		ptr->mvpm = ptr->pm * ptr->mvm;
+		dc.UseUniforms(id);
+
+		dc.UseBuffer(0, meshVAO_);
+		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data());
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); }}
 

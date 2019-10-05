@@ -1,4 +1,7 @@
 #pragma once
+#include <cassert>
+
+#include "src/rgl/rglv/rglv_gpu_protocol.hxx"
 #include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
@@ -8,34 +11,41 @@
 namespace rqdq {
 namespace rglv {
 
-
-struct ShaderUniforms {
-	rmlv::qfloat4 u0;
-	rmlv::qfloat4 u1;
-	rmlm::qmat4 mvm;
-	rmlm::qmat4 pm;
-	rmlm::qmat4 nm;
-	rmlm::qmat4 mvpm; };
-
-
 struct BaseProgram {
 	static int id;
+
+	struct UniformsSD {
+		rmlm::mat4 mvm;
+		rmlm::mat4 pm;
+		rmlm::mat4 nm;
+		rmlm::mat4 mvpm; };
+
+	struct UniformsMD {
+		rmlm::qmat4 mvm;
+		rmlm::qmat4 pm;
+		rmlm::qmat4 nm;
+		rmlm::qmat4 mvpm;
+
+		UniformsMD(const UniformsSD& data) :
+			mvm(data.mvm),
+			pm(data.pm),
+			nm(data.nm),
+			mvpm(data.mvpm) {} };
 
 	struct VertexInput {
 		rmlv::qfloat4 a0; };
 
 	struct Loader {
-		Loader(const void* data, void* unused1, void* unused2) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(data)) {
-			// assert(binState->arrayFormat == AF_VAO_F3F3F3);
-			// assert(binState->array != nullptr);
-			}
+		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+				assert(formats[0] == AF_VAO_F3F3F3);
+				assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
 		void LoadInstance(int id, VertexInput& vi) {}
-		void Load(int idx, VertexInput& vi) {
+		void LoadMD(int idx, VertexInput& vi) {
 			vi.a0 = data_.a0.loadxyz1(idx); }
-		void LoadOne(int idx, VertexInput& vi) {
-			vi.a0 = rmlv::vec4{ data_.a0.at(idx), 1 }; }
+		/*void LoadOne(int idx, VertexInput& vi) {
+			vi.a0 = rmlv::vec4{ data_.a0.at(idx), 1 }; }*/
 		void LoadLane(int idx, int li, VertexInput& vi) {
 			vi.a0.setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 }); }
 		const rglv::VertexArray_F3F3F3& data_; };
@@ -55,7 +65,7 @@ struct BaseProgram {
 
 	inline static void ShadeVertex(
 		const VertexInput& v,
-		const ShaderUniforms& u,
+		const UniformsMD& u,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs
 		) {
@@ -66,7 +76,7 @@ struct BaseProgram {
 		// built-in
 		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
 		// uniforms
-		const ShaderUniforms& u,
+		const UniformsMD& u,
 		// vertex shader output
 		const VertexOutputMD& v,
 		// special

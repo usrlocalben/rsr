@@ -76,11 +76,11 @@ public:
 		gpuNode_->DepthCanvas(GetDepthCanvas());
 		auto& ic = gpuNode_->IC();
 		if (smallCanvas_ != nullptr) {
-			ic.storeHalfsize(smallCanvas_); }
+			ic.StoreHalfsize(smallCanvas_); }
 		if (outCanvas_ != nullptr) {
-			ic.glUseProgram(int(programId_));
-			ic.storeTrueColor(sRGB_, outCanvas_); }
-		ic.endDrawing();
+			ic.UseProgram(int(programId_));
+			ic.StoreTrueColor(sRGB_, outCanvas_); }
+		ic.Finish();
 		auto renderJob = gpuNode_->Render();
 		AddLinksTo(renderJob);
 		rclmt::jobsys::run(renderJob); }

@@ -7,6 +7,7 @@
 #include "src/rgl/rglv/rglv_gl.hxx"
 #include "src/rgl/rglv/rglv_mesh.hxx"
 #include "src/viewer/compile.hxx"
+#include "src/viewer/shaders.hxx"
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/i_gl.hxx"
 #include "src/viewer/node/i_material.hxx"
@@ -60,12 +61,16 @@ public:
 		std::lock_guard<std::mutex> lock(dc.mutex);
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
-		dc.glMatrixMode(GL_PROJECTION);
-		dc.glLoadMatrix(*pmat);
-		dc.glMatrixMode(GL_MODELVIEW);
-		dc.glLoadMatrix(*mvmat);
-		dc.glUseArray(buffers_[activeBuffer_]);
-		dc.glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		auto [id, ptr] = dc.AllocUniformBuffer<rglv::BaseProgram::UniformsSD>();
+		ptr->pm = *pmat;
+		ptr->mvm = *mvmat;
+		ptr->nm = transpose(inverse(ptr->mvm));
+		ptr->mvpm = ptr->pm * ptr->mvm;
+		dc.UseUniforms(id);
+
+		dc.UseBuffer(0, buffers_[activeBuffer_]);
+		dc.DrawArrays(GL_TRIANGLES, 0, 6);
 		if (link != nullptr) {
 			jobsys::run(link); } }
 

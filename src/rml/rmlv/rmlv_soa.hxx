@@ -42,6 +42,10 @@ struct qfloat2 {
 	inline vec2 lane(const int li) {
 		return vec2{ x.lane[li], y.lane[li] }; }
 
+	inline void setLane(const int li, const vec2 a) {
+		x.lane[li] = a.x;
+		y.lane[li] = a.y; }
+
 	inline void copyTo(vec2* dst) {
 		__m128 v0 = _mm_unpacklo_ps(x.v, y.v);  // x0 y0 x1 y1
 		__m128 v1 = _mm_unpackhi_ps(x.v, y.v);  // x2 y2 x3 y3

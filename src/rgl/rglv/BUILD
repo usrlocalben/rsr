@@ -271,6 +271,7 @@ cc_library(
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
+        ":gpu_protocol",
         ":interpolate",
         ":vao",
         ],

@@ -9,6 +9,7 @@
 #include "src/rgl/rglv/rglv_marching_cubes.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
 #include "src/viewer/compile.hxx"
+#include "src/viewer/shaders.hxx"
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/i_gl.hxx"
 #include "src/viewer/node/i_material.hxx"
@@ -160,24 +161,26 @@ public:
 		auto& dc = *_dc;
 		using rglv::GL_UNSIGNED_SHORT;
 		using rglv::GL_CULL_FACE;
-		using rglv::GL_PROJECTION;
-		using rglv::GL_MODELVIEW;
 		using rglv::GL_TRIANGLES;
 		std::lock_guard<std::mutex> lock(dc.mutex);
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
-		dc.glMatrixMode(GL_PROJECTION);
-		dc.glLoadMatrix(*pmat);
-		dc.glMatrixMode(GL_MODELVIEW);
-		dc.glLoadMatrix(*mvmat);
+
+		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapProgram::UniformsSD>();
+		ptr->pm = *pmat;
+		ptr->mvm = *mvmat;
+		ptr->nm = transpose(inverse(ptr->mvm));
+		ptr->mvpm = ptr->pm * ptr->mvm;
+		dc.UseUniforms(id);
+
 		auto& buffer = buffers_[activeBuffer_];
 		for (int ai=0; ai<bufferEnd_[activeBuffer_]; ai++) {
 			auto& vao = buffer[ai];
 			if (vao.size() != 0) {
 				const int elements = vao.size();
 				vao.pad();
-				dc.glUseArray(vao);
-				dc.glDrawArrays(GL_TRIANGLES, 0, elements); }}
+				dc.UseBuffer(0, vao);
+				dc.DrawArrays(GL_TRIANGLES, 0, elements); }}
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); } }
 

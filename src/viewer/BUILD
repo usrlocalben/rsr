@@ -99,6 +99,7 @@ cc_library(
         "//src/viewer/node:fx_auraforlaura",
         "//src/viewer/node:fx_carpet",
         "//src/viewer/node:fx_foo",
+        "//src/viewer/node:fx_many",
         "//src/viewer/node:fx_mc",
         "//src/viewer/node:fx_xyquad",
         "//src/viewer/node:gllayer",
@@ -119,6 +120,7 @@ cc_library(
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_auraforlaura)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_carpet)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_foo)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_many)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_mc)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_xyquad)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:gllayer)",
@@ -164,6 +166,7 @@ cc_library(
     deps = [
         "//src/rgl/rglv:fragment",
         "//src/rgl/rglv:gpu_shaders",
+        "//src/rgl/rglv:gpu_protocol",
         "//src/rgl/rglv:interpolate",
         "//src/rgl/rglv:math",
         "//src/rgl/rglv:triangle",
