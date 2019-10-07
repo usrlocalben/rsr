@@ -17,6 +17,7 @@
 #define gl_ModelViewMatrix u.mvm
 #define gl_ModelViewProjectionMatrix u.mvpm
 #define gl_NormalMatrix u.nm
+#define gl_ProjectionMatrix u.pm
 
 namespace rqdq {
 namespace rqv {
@@ -40,7 +41,7 @@ struct ShaderProgramNameSerializer {
  * http://codeflow.org/entries/2012/aug/02/easy-wireframe-display-with-barycentric-coordinates/
  */
 struct WireframeProgram final : public rglv::BaseProgram {
-	static int id;
+	static constexpr int id = int(ShaderProgramId::Wireframe);
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
@@ -78,7 +79,8 @@ struct WireframeProgram final : public rglv::BaseProgram {
 
 
 struct IQPostProgram final : public rglv::BaseProgram {
-	static int id;
+	static constexpr int id = int(ShaderProgramId::IQ);
+
 	inline static rmlv::qfloat3 ShadeCanvas(const rmlv::qfloat2 q, const rmlv::qfloat3 source) {
 		//const auto q = gl_FragCoord / targetSize;
 		auto col = source;
@@ -89,25 +91,7 @@ struct IQPostProgram final : public rglv::BaseProgram {
 
 
 struct EnvmapProgram final : public rglv::BaseProgram {
-	static int id;
-
-	struct UniformsSD {
-		rmlm::mat4 mvm;
-		rmlm::mat4 pm;
-		rmlm::mat4 nm;
-		rmlm::mat4 mvpm; };
-
-	struct UniformsMD {
-		const rmlm::qmat4 mvm;
-		const rmlm::qmat4 pm;
-		const rmlm::qmat4 nm;
-		const rmlm::qmat4 mvpm;
-
-		UniformsMD(const UniformsSD& data) :
-			mvm(data.mvm),
-			pm(data.pm),
-			nm(data.nm),
-			mvpm(data.mvpm) {} };
+	static constexpr int id = int(ShaderProgramId::Envmap);
 
 	struct VertexInput {
 		rmlv::qfloat4 position;
@@ -189,7 +173,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 
 
 struct AmyProgram final : public rglv::BaseProgram {
-	static int id;
+	static constexpr int id = int(ShaderProgramId::Amy);
 
 	struct VertexInput {
 		rmlv::qfloat4 position;
@@ -261,29 +245,18 @@ struct AmyProgram final : public rglv::BaseProgram {
 
 
 struct EnvmapXProgram final : public rglv::BaseProgram {
-	static int id;
+	static constexpr int id = int(ShaderProgramId::EnvmapX);
 
-	struct UniformsSD {
-		rmlm::mat4 mvm;
-		rmlm::mat4 pm;
-		rmlm::mat4 nm;
-		rmlm::mat4 mvpm;
+	struct UniformsSD : public rglv::BaseProgram::UniformsSD {
 		rmlv::vec4 backColor;
 		float opacity; };
 
-	struct UniformsMD {
-		rmlm::qmat4 mvm;
-		rmlm::qmat4 pm;
-		rmlm::qmat4 nm;
-		rmlm::qmat4 mvpm;
+	struct UniformsMD : public rglv::BaseProgram::UniformsMD {
 		rmlv::qfloat4 backColor;
 		rmlv::qfloat opacity;
 
 		UniformsMD(const UniformsSD& data) :
-			mvm(data.mvm),
-			pm(data.pm),
-			nm(data.nm),
-			mvpm(data.mvpm),
+			rglv::BaseProgram::UniformsMD(data),
 			backColor(data.backColor),
 			opacity(data.opacity) {} };
 
@@ -366,27 +339,16 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 
 
 struct ManyProgram final : public rglv::BaseProgram {
-	static int id;
+	static constexpr int id = int(ShaderProgramId::Many);
 
-	struct UniformsSD {
-		rmlm::mat4 mvm;
-		rmlm::mat4 pm;
-		rmlm::mat4 nm;
-		rmlm::mat4 mvpm;
+	struct UniformsSD : public rglv::BaseProgram::UniformsSD {
 		float magic; };
 
-	struct UniformsMD {
-		rmlm::qmat4 mvm;
-		rmlm::qmat4 pm;
-		rmlm::qmat4 nm;
-		rmlm::qmat4 mvpm;
+	struct UniformsMD : public rglv::BaseProgram::UniformsMD {
 		rmlv::qfloat magic;
 
 		UniformsMD(const UniformsSD& data) :
-			mvm(data.mvm),
-			pm(data.pm),
-			nm(data.nm),
-			mvpm(data.mvpm),
+			rglv::BaseProgram::UniformsMD(data),
 			magic(data.magic) {} };
 
 	struct VertexInput {
@@ -472,3 +434,4 @@ struct ManyProgram final : public rglv::BaseProgram {
 #undef gl_ModelViewMatrix
 #undef gl_ModelViewProjectionMatrix
 #undef gl_NormalMatrix
+#undef gl_ProjectionMatrix
