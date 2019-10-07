@@ -14,10 +14,10 @@
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#define gl_ModelViewMatrix u.mvm
-#define gl_ModelViewProjectionMatrix u.mvpm
-#define gl_NormalMatrix u.nm
-#define gl_ProjectionMatrix u.pm
+#define gl_ModelViewMatrix mats.vm
+#define gl_ModelViewProjectionMatrix mats.vpm
+#define gl_NormalMatrix mats.nm
+#define gl_ProjectionMatrix mats.pm
 
 namespace rqdq {
 namespace rqv {
@@ -45,24 +45,21 @@ struct WireframeProgram final : public rglv::BaseProgram {
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
-		// built-in
-		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
-		// unforms
+		const rglv::Matrices& mats,
 		const rglv::BaseProgram::UniformsMD& u,
-		// vertex shader output
-		const WireframeProgram::VertexOutputMD& v,
-		// special
-		const rglv::BaryCoord& _bary,
-		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
-		// outputs
+		const rglv::BaryCoord& BP,
+		const WireframeProgram::VertexOutputMD& v,
+		const rmlv::qfloat2& gl_FragCoord,
+		/* gl_FrontFacing, */
+		const rmlv::qfloat& gl_FragDepth,
 		rmlv::qfloat4& gl_FragColor
 		) {
 		using namespace rmlv;
 		static const qfloat grey(0.1f);
 		static const qfloat3 face_color{ 0.5f, 0.6f, 0.7f };
-		const qfloat e = edgefactor(_bary);
+		const qfloat e = edgefactor(BP);
 
 		//auto fd = (-gl_FragDepth + qfloat(1));
 		gl_FragColor = qfloat4{
@@ -71,10 +68,10 @@ struct WireframeProgram final : public rglv::BaseProgram {
 			mix(grey, face_color.v[2], e) *  qfloat(4.0f),
 			0.0f }; }
 
-	inline static rmlv::qfloat edgefactor(const rmlv::qfloat3& _bary) {
+	inline static rmlv::qfloat edgefactor(const rmlv::qfloat3& BP) {
 		static const rmlv::qfloat thickfactor(1.5F);
-		rmlv::qfloat3 d = rglv::fwidth(_bary);
-		rmlv::qfloat3 a3 = rglv::smoothstep(0, d*thickfactor, _bary);
+		rmlv::qfloat3 d = rglv::fwidth(BP);
+		rmlv::qfloat3 a3 = rglv::smoothstep(0, d*thickfactor, BP);
 		return vmin(a3.v[0], vmin(a3.v[1], a3.v[2])); } };
 
 
@@ -135,11 +132,11 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		rglv::VertexFloat2 envmapUV; };
 
 	inline static void ShadeVertex(
-		const VertexInput& v,
+		const rglv::Matrices& mats,
 		const UniformsMD& u,
+		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
-		VertexOutputMD& out
-		) {
+		VertexOutputMD& out) {
 
 		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, v.position);
 		rmlv::qfloat3 e = normalize(position.xyz());
@@ -155,20 +152,16 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
-		// built-in
-		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
-		// unforms
+		const rglv::Matrices& mats,
 		const UniformsMD& u,
-		// vertex shader output
-		const VertexOutputMD& outs,
-		// special
-		const rglv::BaryCoord& _bary,
-		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
-		// outputs
-		rmlv::qfloat4& gl_FragColor
-		) {
+		const rglv::BaryCoord& BP,
+		const VertexOutputMD& outs,
+		const rmlv::qfloat2& gl_FragCoord,
+		/* gl_FrontFacing, */
+		const rmlv::qfloat& gl_FragDepth,
+		rmlv::qfloat4& gl_FragColor) {
 		gl_FragColor = tu0.sample({ outs.envmapUV.x, outs.envmapUV.y }); } };
 
 
@@ -217,46 +210,41 @@ struct AmyProgram final : public rglv::BaseProgram {
 		rglv::VertexFloat3 uv; };
 
 	static void ShadeVertex(
-		const VertexInput& v,
+		const rglv::Matrices& mats,
 		const rglv::BaseProgram::UniformsMD& u,
+		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
-		VertexOutputMD& outs
-		) {
+		VertexOutputMD& outs) {
 		outs.uv = v.uv.xyz();
 		gl_Position = mul(gl_ModelViewProjectionMatrix, v.position); }
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
-		// built-in
-		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
-		// unforms
+		const rglv::Matrices& mats,
 		const rglv::BaseProgram::UniformsMD& u,
-		// vertex shader output
-		const VertexOutputMD& outs,
-		// special
-		const rglv::BaryCoord& _bary,
-		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
-		// outputs
-		rmlv::qfloat4& gl_FragColor
-		) {
+		const rglv::BaryCoord& BP,
+		const VertexOutputMD& outs,
+		const rmlv::qfloat2& gl_FragCoord,
+		/* gl_FrontFacing, */
+		const rmlv::qfloat& gl_FragDepth,
+		rmlv::qfloat4& gl_FragColor) {
 		gl_FragColor = tu0.sample({ outs.uv.x, outs.uv.y }); } };
 
 
 struct EnvmapXProgram final : public rglv::BaseProgram {
 	static constexpr int id = int(ShaderProgramId::EnvmapX);
 
-	struct UniformsSD : public rglv::BaseProgram::UniformsSD {
+	struct UniformsSD {
 		rmlv::vec4 backColor;
 		float opacity; };
 
-	struct UniformsMD : public rglv::BaseProgram::UniformsMD {
+	struct UniformsMD {
 		rmlv::qfloat4 backColor;
 		rmlv::qfloat opacity;
 
 		UniformsMD(const UniformsSD& data) :
-			rglv::BaseProgram::UniformsMD(data),
 			backColor(data.backColor),
 			opacity(data.opacity) {} };
 
@@ -299,11 +287,11 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		rglv::VertexFloat3 envmapUV; };
 
 	inline static void ShadeVertex(
-		const VertexInput& v,
+		const rglv::Matrices& mats,
 		const UniformsMD& u,
+		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
-		VertexOutputMD& outs
-		) {
+		VertexOutputMD& outs) {
 
 		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, v.position);
 		rmlv::qfloat3 e = normalize(position.xyz());
@@ -318,37 +306,31 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
-		// built-in
-		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
-		// unforms
+		const rglv::Matrices& mats,
 		const UniformsMD& u,
-		// vertex shader output
-		const VertexOutputMD& outs,
-		// special
-		const rglv::BaryCoord& _bary,
-		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
-		// outputs
-		rmlv::qfloat4& gl_FragColor
-		) {
+		const rglv::BaryCoord& BP,
+		const VertexOutputMD& outs,
+		const rmlv::qfloat2& gl_FragCoord,
+		/* gl_FrontFacing, */
+		const rmlv::qfloat& gl_FragDepth,
+		rmlv::qfloat4& gl_FragColor) {
 		gl_FragColor = tu0.sample({ outs.envmapUV.x, outs.envmapUV.y });
 		// gl_FragColor = mix(gl_FragColor, u.backColor, u.opacity); }
-		}
-		};
+		} };
 
 
 struct ManyProgram final : public rglv::BaseProgram {
 	static constexpr int id = int(ShaderProgramId::Many);
 
-	struct UniformsSD : public rglv::BaseProgram::UniformsSD {
+	struct UniformsSD {
 		float magic; };
 
-	struct UniformsMD : public rglv::BaseProgram::UniformsMD {
+	struct UniformsMD {
 		rmlv::qfloat magic;
 
 		UniformsMD(const UniformsSD& data) :
-			rglv::BaseProgram::UniformsMD(data),
 			magic(data.magic) {} };
 
 	struct VertexInput {
@@ -399,33 +381,28 @@ struct ManyProgram final : public rglv::BaseProgram {
 		rglv::VertexFloat2 uv; };
 
 	inline static void ShadeVertex(
-		const VertexInput& v,
+		const rglv::Matrices& mats,
 		const UniformsMD& u,
+		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
-		VertexOutputMD& outs
-		) {
+		VertexOutputMD& outs) {
 		rmlv::qfloat4 p1 = mul(v.imat, v.position);
 		outs.uv = v.uv;
 		gl_Position = mul(gl_ModelViewProjectionMatrix, p1); }
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
-		// built-in
-		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
-		// unforms
+		const rglv::Matrices& mats,
 		const UniformsMD& u,
-		// vertex shader output
-		const VertexOutputMD& outs,
-		// special
-		const rglv::BaryCoord& _bary,
-		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
-		// outputs
-		rmlv::qfloat4& gl_FragColor
-		) {
-		gl_FragColor = { outs.uv.x, outs.uv.y, u.magic, 1.0F }; }
-		};
+		const rglv::BaryCoord& BP,
+		const VertexOutputMD& outs,
+		const rmlv::qfloat2& gl_FragCoord,
+		/* gl_FrontFacing, */
+		const rmlv::qfloat& gl_FragDepth,
+		rmlv::qfloat4& gl_FragColor) {
+		gl_FragColor = { outs.uv.x, outs.uv.y, u.magic, 1.0F }; } };
 
 
 }  // namespace rqv

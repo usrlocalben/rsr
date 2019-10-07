@@ -166,11 +166,9 @@ public:
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 
+		dc.ViewMatrix(*mvmat);
+		dc.ProjectionMatrix(*pmat);
 		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapProgram::UniformsSD>();
-		ptr->pm = *pmat;
-		ptr->mvm = *mvmat;
-		ptr->nm = transpose(inverse(ptr->mvm));
-		ptr->mvpm = ptr->pm * ptr->mvm;
 		dc.UseUniforms(id);
 
 		auto& buffer = buffers_[activeBuffer_];

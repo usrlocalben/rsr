@@ -77,6 +77,10 @@ struct GLState {
 	int texture1Stride;
 	int texture1MinFilter;
 
+	rmlm::mat4 viewMatrix;
+	rmlm::mat4 normalMatrix;
+	rmlm::mat4 projectionMatrix;
+
 	void reset() {
 		clearColor = rmlv::vec4{ 0.0F, 0.0F, 0.0F, 1.0F };
 		clearDepth = 1.0F;
@@ -166,6 +170,18 @@ public:
 	void ClearDepth(float value) {
 		dirty_ = true;
 		cs_.clearDepth = value; }
+
+	void ViewMatrix(const rmlm::mat4& m) {
+		dirty_ = true;
+		cs_.viewMatrix = m; }
+
+	void ProjectionMatrix(const rmlm::mat4& m) {
+		dirty_ = true;
+		cs_.projectionMatrix = m; }
+
+	void NormalMatrix(const rmlm::mat4& m) {
+		dirty_ = true;
+		cs_.normalMatrix = m; }
 
 	//inline void glUniform(const VertexInputUniform& viu) {
 	//	state.vertex_input_uniform = viu; }

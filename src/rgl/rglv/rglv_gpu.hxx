@@ -59,13 +59,21 @@ struct GPUStats {
 	int totalTrianglesDrawn; };
 
 
+inline Matrices MakeMatrices(const GLState& s) {
+	Matrices m;
+	m.vm = s.viewMatrix;
+	m.pm = s.projectionMatrix;
+	m.nm = transpose(inverse(s.viewMatrix));
+	m.vpm = s.projectionMatrix * s.viewMatrix;
+	return m; }
+
+
 template <typename TEXTURE_UNIT, typename SHADER_PROGRAM, typename BLEND_PROGRAM>
-struct DefaultTargetProgram {
+struct TriangleProgram {
 	rmlv::qfloat4* cb_;
 	rmlv::qfloat* db_;
 	int ofsX_, ofsY_;
 	const TEXTURE_UNIT& tu0_, tu1_;
-
 
 	const int stride_;
 	// const int height_;
@@ -77,15 +85,18 @@ struct DefaultTargetProgram {
 
 	const typename SHADER_PROGRAM::Interpolants vo_;
 
+	const Matrices matrices_;
+
 	const typename SHADER_PROGRAM::UniformsMD uniforms_;
 
-	DefaultTargetProgram(
+	TriangleProgram(
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
 		rglr::QFloat4Canvas& cc,
 		rglr::QFloatCanvas& dc,
 		int ofsX,
 		int ofsY,
+		Matrices matrices,
 		typename SHADER_PROGRAM::UniformsMD uniforms,
 		VertexFloat1 oneOverW,
 		VertexFloat1 zOverW,
@@ -102,6 +113,7 @@ struct DefaultTargetProgram {
 		oneOverW_(oneOverW),
 		zOverW_(zOverW),
 		vo_(computed0, computed1, computed2),
+		matrices_(matrices),
 		uniforms_(uniforms) {}
 
 	inline void Begin(int x, int y) {
@@ -163,10 +175,18 @@ struct DefaultTargetProgram {
 		bary.z = oneOverW_.v2 * bary.z * fragW;
 		bary.y = 1.0f - bary.x - bary.z;
 
-		auto data = vo_.Interpolate(bary);
+		auto attrs = vo_.Interpolate(bary);
 
 		qfloat4 fragColor;
-		SHADER_PROGRAM::ShadeFragment(fragCoord, fragDepth, uniforms_, data, bary, tu0_, tu1_, fragColor);
+		SHADER_PROGRAM::ShadeFragment(
+			matrices_,
+			uniforms_,
+			tu0_, tu1_,
+			bary, attrs,
+			fragCoord,
+			/*frontFacing,*/
+			fragDepth,
+			fragColor);
 
 		qfloat4 destColor;
 		LoadColor(destColor);
@@ -524,13 +544,14 @@ private:
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
 
+		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
 		const auto cullingEnabled = state.cullingEnabled;
 		const auto cullFace = state.cullFace;
 		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
-		typename PGM::VertexInput vData;
+		typename PGM::VertexInput vertex;
 
 		clipQueue_.clear();
 
@@ -548,7 +569,7 @@ private:
 
 		for (int iid=0; iid<instanceCnt; ++iid) {
 			if (INSTANCED) {
-				loader.LoadInstance(iid, vData); }
+				loader.LoadInstance(iid, vertex); }
 
 			clipFlagBuffer_.clear();
 			devCoordBuffer_.clear();
@@ -557,11 +578,11 @@ private:
 			// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
 
 			for (int vi=0; vi<siz; vi+=4) {
-				loader.LoadMD(vi, vData);
+				loader.LoadMD(vi, vertex);
 
 				qfloat4 coord;
 				typename PGM::VertexOutputMD unused;
-				PGM::ShadeVertex(vData, uniforms, coord, unused);
+				PGM::ShadeVertex(matrices, uniforms, vertex, coord, unused);
 
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.alloc<4>(), flags);
@@ -648,13 +669,14 @@ private:
 		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
 		const int target_height = cbc.height();
 
+		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		array<typename PGM::VertexInput, 3> vi_;
+		array<typename PGM::VertexInput, 3> vertex;
 		array<typename PGM::VertexOutputMD, 3> computed;
 		array<qfloat4, 3> devCoord;
 		array<mvec4i, 3>  fx;
@@ -665,27 +687,28 @@ private:
 		auto flush = [&]() {
 			for (int i=0; i<3; ++i) {
 				qfloat4 gl_Position;
-				PGM::ShadeVertex(vi_[i], uniforms, gl_Position, computed[i]);
+				PGM::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
 				devCoord[i] = pdiv(gl_Position);
 				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale_.x + deviceOffset_.x));
 				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale_.y + deviceOffset_.y)); }
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
+				TriangleProgram<sampler, PGM, rglr::BlendProgram::Set> rasterizerProgram{
 					tu0, tu1,
 					cbc, dbc,
 					rect.left.x, rect.top.y,
+					matrices,
 					uniforms,
 					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
 					computed[0].Lane(ti),
 					computed[1].Lane(ti),
 					computed[2].Lane(ti) };
-				TriangleRasterizer tr(targetProgram, rect, target_height);
-				tr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
-				        fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
-				        !backfacing); }
+				TriangleRasterizer rasterizesr(rasterizerProgram, rect, target_height);
+				rasterizesr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
+				                 fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
+				                 !backfacing); }
 
 			// reset the SIMD lane counter
 			li = 0; };
@@ -693,9 +716,9 @@ private:
 		int loadedInstanceId;
 		if (INSTANCED) {
 			loadedInstanceId = cs.peekUShort();
-			loader.LoadInstance(loadedInstanceId, vi_[0]);
-			loader.LoadInstance(loadedInstanceId, vi_[1]);
-			loader.LoadInstance(loadedInstanceId, vi_[2]); }
+			loader.LoadInstance(loadedInstanceId, vertex[0]);
+			loader.LoadInstance(loadedInstanceId, vertex[1]);
+			loader.LoadInstance(loadedInstanceId, vertex[2]); }
 
 		while (1) {
 			uint16_t firstWord = cs.consumeUShort();
@@ -708,9 +731,9 @@ private:
 				if (iid != loadedInstanceId) {
 					flush();
 					loadedInstanceId = iid;
-					loader.LoadInstance(iid, vi_[0]);
-					loader.LoadInstance(iid, vi_[1]);
-					loader.LoadInstance(iid, vi_[2]); }}
+					loader.LoadInstance(iid, vertex[0]);
+					loader.LoadInstance(iid, vertex[1]);
+					loader.LoadInstance(iid, vertex[2]); }}
 
 			{
 				uint16_t tmp;
@@ -722,9 +745,9 @@ private:
 				const uint16_t i2 = cs.consumeUShort();
 				backfacing = tmp & 0x8000;
 				const uint16_t i0 = tmp & 0x7fff;
-				loader.LoadLane(i0, li, vi_[0]);
-				loader.LoadLane(i1, li, vi_[1]);
-				loader.LoadLane(i2, li, vi_[2]);
+				loader.LoadLane(i0, li, vertex[0]);
+				loader.LoadLane(i1, li, vertex[1]);
+				loader.LoadLane(i2, li, vertex[2]);
 				li += 1; }
 
 			if (li == 4) {
@@ -742,6 +765,7 @@ private:
 		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
+		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
 
 		auto CVMix = [&](const ClippedVertex& a, const ClippedVertex& b, const float d) {
@@ -761,14 +785,14 @@ private:
 				const int iid = faceIndices[0];
 				const auto idx = faceIndices[i+1];
 
-				typename PGM::VertexInput vi_;
-				loader.LoadLane(idx, 0, vi_);
+				typename PGM::VertexInput vertex;
+				loader.LoadLane(idx, 0, vertex);
 				if (INSTANCED) {
-					loader.LoadInstance(iid, vi_); }
+					loader.LoadInstance(iid, vertex); }
 
 				qfloat4 coord;
 				typename PGM::VertexOutputMD computed;
-				PGM::ShadeVertex(vi_, uniforms, coord, computed);
+				PGM::ShadeVertex(matrices, uniforms, vertex, coord, computed);
 
 				ClippedVertex cv;
 				cv.coord = coord.lane(0);
@@ -877,6 +901,7 @@ private:
 		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
 		const int target_height = cbc.height();
 
+		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
 
 		const auto tmp = cs.consumeUShort();
@@ -896,20 +921,21 @@ private:
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		DefaultTargetProgram<sampler, PGM, rglr::BlendProgram::Set> targetProgram{
+		TriangleProgram<sampler, PGM, rglr::BlendProgram::Set> rasterizerProgram{
 			tu0, tu1,
 			cbc, dbc,
 			rect.left.x, rect.top.y,
+			matrices,
 			uniforms,
 			VertexFloat1{ dev0.w, dev1.w, dev2.w },
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
 			data0,
 			data1,
 			data2 };
-		TriangleRasterizer tr(targetProgram, rect, target_height);
-		tr.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
-		        int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
-		        !backfacing); }
+		TriangleRasterizer rasterizer(rasterizerProgram, rect, target_height);
+		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
+		                int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
+		                !backfacing); }
 
 public:
 	bool DoubleBuffer() const {

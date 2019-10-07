@@ -11,26 +11,19 @@
 namespace rqdq {
 namespace rglv {
 
+struct Matrices {
+	rmlm::qmat4 vm;
+	rmlm::qmat4 pm;
+	rmlm::qmat4 nm;
+	rmlm::qmat4 vpm; };
+
+
 struct BaseProgram {
 	static int id;
 
-	struct UniformsSD {
-		rmlm::mat4 mvm;
-		rmlm::mat4 pm;
-		rmlm::mat4 nm;
-		rmlm::mat4 mvpm; };
-
+	struct UniformsSD {};
 	struct UniformsMD {
-		rmlm::qmat4 mvm;
-		rmlm::qmat4 pm;
-		rmlm::qmat4 nm;
-		rmlm::qmat4 mvpm;
-
-		UniformsMD(const UniformsSD& data) :
-			mvm(data.mvm),
-			pm(data.pm),
-			nm(data.nm),
-			mvpm(data.mvpm) {} };
+		UniformsMD(const UniformsSD& data) {} };
 
 	struct VertexInput {
 		rmlv::qfloat4 a0; };
@@ -64,27 +57,25 @@ struct BaseProgram {
 			return {}; } };
 
 	inline static void ShadeVertex(
-		const VertexInput& v,
+		const Matrices& m,
 		const UniformsMD& u,
+		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs
 		) {
-		gl_Position = rmlm::mul(u.mvpm, v.a0); }
+		gl_Position = rmlm::mul(m.vpm, v.a0); }
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
-		// built-in
-		const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth,
-		// uniforms
+		const Matrices& m,
 		const UniformsMD& u,
-		// vertex shader output
-		const VertexOutputMD& v,
-		// special
-		const rglv::BaryCoord& bary,
-		// texture units
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
-		// outputs
+		const rglv::BaryCoord& bary,
+		const VertexOutputMD& v,
+		const rmlv::qfloat2& gl_FragCoord,
+		/* gl_FrontFacing, */
+		const rmlv::qfloat& gl_FragDepth,
 		rmlv::qfloat4& gl_FragColor
 		) {
 		gl_FragColor = rmlv::mvec4f::one(); }

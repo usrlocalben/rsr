@@ -109,11 +109,9 @@ public:
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 
+		dc.ViewMatrix(*mvmat);
+		dc.ProjectionMatrix(*pmat);
 		auto [id, ptr] = dc.AllocUniformBuffer<AmyProgram::UniformsSD>();
-		ptr->pm = rglv::make_glOrtho(-1.0F, 1.0F, -1.0F, 1.0F, 1.0, -1.0);
-		ptr->mvm = rmlm::mat4::ident();
-		ptr->nm = transpose(inverse(ptr->mvm));
-		ptr->mvpm = ptr->pm * ptr->mvm;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, buffers_[activeBuffer_]);

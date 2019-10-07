@@ -141,12 +141,9 @@ public:
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 
+		dc.ProjectionMatrix(*pmat);
+		dc.ViewMatrix(*mvmat);
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->pm = *pmat;
-		ptr->mvm = *mvmat;
-		ptr->nm = transpose(inverse(ptr->mvm));
-		ptr->mvpm = ptr->pm * ptr->mvm;
-		ptr->magic = 0.222F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
@@ -154,10 +151,6 @@ public:
 		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->pm = *pmat;
-		ptr->mvm = *mvmat;
-		ptr->nm = transpose(inverse(ptr->mvm));
-		ptr->mvpm = ptr->pm * ptr->mvm;
 		ptr->magic = 0.555F;
 		dc.UseUniforms(id);
 
@@ -166,10 +159,6 @@ public:
 		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->pm = *pmat;
-		ptr->mvm = *mvmat;
-		ptr->nm = transpose(inverse(ptr->mvm));
-		ptr->mvpm = ptr->pm * ptr->mvm;
 		ptr->magic = 0.888;
 		dc.UseUniforms(id);
 
