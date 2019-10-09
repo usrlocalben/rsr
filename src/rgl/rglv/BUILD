@@ -277,3 +277,14 @@ cc_library(
         ],
     copts = RSR_DEFAULT_COPTS,
     )
+
+cc_library(
+    name = "icosphere",
+    srcs = ["rglv_icosphere.cxx"],
+    hdrs = ["rglv_icosphere.hxx"],
+    deps = [
+        "//src/rml/rmlv:vec",
+        "//src/rcl/rcls:aligned_containers",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )

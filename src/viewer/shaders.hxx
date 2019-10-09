@@ -295,7 +295,8 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 
 		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, v.position);
 		rmlv::qfloat3 e = normalize(position.xyz());
-		rmlv::qfloat3 n = normalize(mul(gl_NormalMatrix, v.smoothNormal).xyz());
+		auto sn = normalize(v.smoothNormal);
+		rmlv::qfloat3 n = normalize(mul(gl_NormalMatrix, sn).xyz());
 		rmlv::qfloat3 r = rglv::reflect(e, n);
 
 		rmlv::qfloat m = rmlv::qfloat{2.0F} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0F)*(r.z + 1.0F)));

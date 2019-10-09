@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cassert>
 #include <optional>
 
@@ -49,15 +50,39 @@ struct Float3Array {
 		assert(x.size() == y.size() && y.size() == z.size());
 		return int(x.size()); }
 
+	void add(int idx, rmlv::vec3 d) {
+		x[idx] += d.x;
+		y[idx] += d.y;
+		z[idx] += d.z; }
+
+	void set(int idx, rmlv::vec3 d) {
+		x[idx] = d.x;
+		y[idx] = d.y;
+		z[idx] = d.z; }
+
 	inline void push_back(rmlv::vec3 a) {
 		assert(x.size() == y.size() && y.size() == z.size());
 		x.push_back(a.x); y.push_back(a.y); z.push_back(a.z); }
 
+	void reserve(int num) {
+		x.reserve(num);
+		y.reserve(num);
+		z.reserve(num); }
+
+	void resize(int num) {
+		x.resize(num, 0.0F);
+		y.resize(num, 0.0F);
+		z.resize(num, 0.0F); }
+
 	void clear() {
-		x.reserve(1024);
-		y.reserve(1024);
-		z.reserve(1024);
-		x.clear(); y.clear(); z.clear();}
+		x.clear();
+		y.clear();
+		z.clear();}
+
+	void zero() {
+		std::fill(begin(x), end(x), 0.0F);
+		std::fill(begin(y), end(y), 0.0F);
+		std::fill(begin(z), end(z), 0.0F); }
 
 	rcls::vector<float> x, y, z; };
 
@@ -131,6 +156,11 @@ struct VertexArray_F3F3F3 {
 		a1.push_back(v1);
 		a2.push_back(v2);
 		return idx; }
+
+	void resize(int num) {
+		a0.resize(num);
+		a1.resize(num);
+		a2.resize(num); }
 
 	void pad() {
 		const int rag = size() % 4;

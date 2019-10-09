@@ -134,7 +134,7 @@
 			"phase": {"$computedVec3": {
 				"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
 				"code": "{t, t*1.333, 0}"}},
-			"mesh": "p5.obj"}},
+			"divs": 5}},
 		"translate": {"$computedVec3": {
 			"inputs": [
 				{"name": "amp", "type": "real", "source": "auraamp"},

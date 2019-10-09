@@ -29,7 +29,7 @@ cc_library(
         "//3rdparty/pixeltoaster",
         "//src/rcl/rclx:gason_util",
         "//src/rgl/rglv:gl",
-        "//src/rgl/rglv:mesh",
+        "//src/rgl/rglv:icosphere",
         "//src/rml/rmlm:mat4",
         "//src/viewer:compile",
         "//src/viewer:shaders",

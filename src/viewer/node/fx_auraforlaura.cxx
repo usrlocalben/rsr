@@ -6,7 +6,7 @@
 
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
-#include "src/rgl/rglv/rglv_mesh.hxx"
+#include "src/rgl/rglv/rglv_icosphere.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/viewer/compile.hxx"
 #include "src/viewer/shaders.hxx"
@@ -24,10 +24,14 @@ using namespace rqv;
 
 class Impl final : public IGl {
 public:
-	Impl(std::string_view id, InputList inputs, const rglv::Mesh& mesh) :
+	Impl(std::string_view id, InputList inputs, int divs) :
 		IGl(id, std::move(inputs)),
-		src_(mesh),
-		dst_(mesh) {}
+		mesh_(divs),
+		numVertices_(mesh_.GetNumVertices()) {
+
+		for (auto& vbo : vbos_) {
+			vbo.resize(numVertices_);
+			vbo.pad(); }}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "material") {
@@ -72,8 +76,8 @@ public:
 		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapXProgram::UniformsSD>();
 		dc.UseUniforms(id);
 
-		dc.UseBuffer(0, buffers_[activeBuffer_]);
-		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data());
+		dc.UseBuffer(0, *vbo_);
+		dc.DrawElements(GL_TRIANGLES, mesh_.GetNumIndices(), GL_UNSIGNED_SHORT, mesh_.GetIndices());
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); } }
 
@@ -91,7 +95,9 @@ private:
 	void ComputeImpl() {
 		using rmlv::ivec2;
 
-		const int numPoints = src_.points.size();
+		mod2_ = (mod2_+1)%2;
+		vbo_ = &vbos_[mod2_];
+		auto& vbo = *vbo_;
 
 		rmlv::vec3 freq{ 0.0F };
 		if (freqNode_ != nullptr) {
@@ -111,28 +117,32 @@ private:
 
 		const float amp = 1.0F; //sin(t*1.4)*30.0f;
 
-		for (int i=0; i<numPoints; i++) {
-			rmlv::vec3 position = src_.points[i];
-			rmlv::vec3 normal = src_.vertex_normals[i];
+		for (int i=0; i<numVertices_; i++) {
+			rmlv::vec3 position = mesh_.GP(i);
+			rmlv::vec3 normal = position;
+			position *= 19.91F;
 
 			float f = (sin(position.x*freq.x + phase.x) + 0.5F);// * sin(vvn.y*freqy+t) * sin(vvn.z*freqz+t)
 			position += normal * amp * f; // normal*amp*f
 			float ff = (sin(position.y*freq.y + phase.y) + 0.5F);
 			position += normal * amp * ff;
 
-			dst_.points[i] = position; }
-		dst_.compute_face_and_vertex_normals();
+			vbo.a0.set(i, position); }
 
-		if (meshIndices_.empty()) {
-			for (const auto& face : src_.faces) {
-				for (auto idx : face.point_idx) {
-					meshIndices_.push_back(idx); }}}
+		vbo.a1.zero();
+		for (int i{0}; i<mesh_.GetNumIndices(); i+=3) {
+			int i0=mesh_.GetIndices()[i+0];
+			int i1=mesh_.GetIndices()[i+1];
+			int i2=mesh_.GetIndices()[i+2];
+			auto p0 = vbo.a0.at(i0);
+			auto p1 = vbo.a0.at(i1);
+			auto p2 = vbo.a0.at(i2);
+			auto dir = cross(p1-p0, p2-p0);
 
-		activeBuffer_ = (activeBuffer_+1)%3;
-		auto& vao = buffers_[activeBuffer_];
-		vao.clear();
-		for (int i=0; i<numPoints; i++) {
-			vao.append(dst_.points[i], dst_.vertex_normals[i], 0); }
+			// dir will be normalized in vertex shader
+			vbo.a1.add(i0, dir);
+			vbo.a1.add(i1, dir);
+			vbo.a1.add(i2, dir); }
 
 		auto postSetup = rclmt::jobsys::make_job(rclmt::jobsys::noop);
 		AddLinksTo(postSetup);
@@ -140,12 +150,13 @@ private:
 		materialNode_->Run();}}
 
 private:
+	const rglv::Icosphere mesh_;
+	const int numVertices_;
+
 	// state
-	std::array<rglv::VertexArray_F3F3F3, 3> buffers_{};
-	int activeBuffer_{0};
-	rcls::vector<uint16_t> meshIndices_;
-	rglv::Mesh src_;
-	rglv::Mesh dst_;
+	int mod2_{0};
+	std::array<rglv::VertexArray_F3F3F3, 2> vbos_{};
+	rglv::VertexArray_F3F3F3* vbo_;
 
 	// inputs
 	IMaterial* materialNode_{nullptr};
@@ -161,12 +172,11 @@ class Compiler final : public NodeCompiler {
 		if (!Input("freq", /*required=*/true)) { return; }
 		if (!Input("phase", /*required=*/true)) { return; }
 
-		std::string_view meshPath{"notfound.obj"};
-		if (auto jv = rclx::jv_find(data_, "mesh", JSON_STRING)) {
-			meshPath = jv->toString(); }
-		const auto& mesh = meshStore_->get(meshPath);
+		int divs = 0;
+		if (auto jv = rclx::jv_find(data_, "divs", JSON_NUMBER)) {
+			divs = (int)jv->toNumber(); }
 
-		out_ = std::make_shared<Impl>(id_, std::move(inputs_), mesh); }};
+		out_ = std::make_shared<Impl>(id_, std::move(inputs_), divs); }};
 
 
 struct init { init() {
