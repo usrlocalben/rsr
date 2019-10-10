@@ -1,8 +1,8 @@
 [
 	{"$render": { "id": "nRender",
-		"sRGB": false,
-		"program": "IQ",
-		"gpu": {"$gpu": {"layers": ["lAmy", "lEffects", "nPIPLayer"]}}}},
+		"sRGB": true,
+		"program": "Default",
+		"gpu": {"$gpu": {"layers": ["lAmy", "lEffects"]}}}},
 
 	{"$layer": { "id": "lAmy",
 		"camera": {"$orthographic": {}},
@@ -116,6 +116,27 @@
 		"u1": "sync:foo",
 		"texture0": {"$image": {"file": "data/textures/env-purple.png"}}}},
 
+	{"$material": { "id": "mPurpleFade2",
+		"program": "EnvmapX",
+		"filter": false,
+		"u0": "amyBackgroundColor",
+		"u1": "sync:foo",
+		"texture0": {"$image": {"file": "data/textures/env-purple.png"}}}},
+
+	{"$material": { "id": "mPurpleFade3",
+		"program": "EnvmapX",
+		"filter": false,
+		"u0": "amyBackgroundColor",
+		"u1": "sync:foo",
+		"texture0": {"$image": {"file": "data/textures/env-purple.png"}}}},
+
+	{"$material": { "id": "mPurpleFade4",
+		"program": "EnvmapX",
+		"filter": false,
+		"u0": "amyBackgroundColor",
+		"u1": "sync:foo",
+		"texture0": {"$image": {"file": "data/textures/env-purple.png"}}}},
+
 	{"$computedVec3": {
 		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
 		"code": "{pow(sin(t)*0.5+0.5, 8), 0, 0}"}},
@@ -125,27 +146,39 @@
 		"filter": true,
 		"texture0": {"$image": {"file": "data/textures/amy1024.png"}}}},
 
+	{"$computedVec3": {"id": "auraFreq",
+		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
+		"code": "{sin(t*1.5)/0.25+10.0, sin(t*0.5)/0.05+5, 0}"}},
+
+	{"$computedVec3": {"id": "auraPhase",
+		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
+		"code": "{t, t*1.333, 0}"}},
+
+	{"$float": {"id": "auraPositionNoiseAmt", "x": 0}},
+
+	{"$fxAuraForLaura": {"id": "aura1of4", "hunk": 0,
+		"material": "mPurpleFade",  "freq": "auraFreq", "phase": "auraPhase", "divs": 6}},
+	{"$fxAuraForLaura": {"id": "aura2of4", "hunk": 1,
+		"material": "mPurpleFade2", "freq": "auraFreq", "phase": "auraPhase", "divs": 6}},
+	{"$fxAuraForLaura": {"id": "aura3of4", "hunk": 2,
+		"material": "mPurpleFade3", "freq": "auraFreq", "phase": "auraPhase", "divs": 6}},
+	{"$fxAuraForLaura": {"id": "aura4of4", "hunk": 3,
+		"material": "mPurpleFade4", "freq": "auraFreq", "phase": "auraPhase", "divs": 6}},
+
 	{"$translate": { "id":"nAuraForLaura",
-		"gl": {"$fxAuraForLaura": {
-			"material": "mPurpleFade",
-			"freq": {"$computedVec3": {
-				"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-				"code": "{sin(t*1.5)/2.0+1.0, sin(t*0.5)/1, 0}"}},
-			"phase": {"$computedVec3": {
-				"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-				"code": "{t, t*1.333, 0}"}},
-			"divs": 5}},
+		"gl": {"$group": {
+			"gl": ["aura1of4", "aura2of4", "aura3of4", "aura4of4"
+			]}},
 		"translate": {"$computedVec3": {
 			"inputs": [
-				{"name": "amp", "type": "real", "source": "auraamp"},
+				{"name": "amp", "type": "real", "source": "auraPositionNoiseAmt"},
 				{"name": "nx", "type": "real", "source": "noiser1"},
 				{"name": "ny", "type": "real", "source": "noiser2"},
 				{"name": "nz", "type": "real", "source": "noiser3"} ],
 			"code": "{nx*amp, ny*amp, nz*amp}"}},
-		"scale": {"$float": {"x": 0.4}},
+		"scale": {"$float": {"x": 9.0}},
 		"rotate": "aurarotator"}},
 
-	{"$float": {"id": "auraamp", "x": 10}},
 
 	{"$noise": {"id": "noiser1", "coord": {"$vec3": {
 			"x": 0,

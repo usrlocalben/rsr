@@ -3,18 +3,25 @@
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-
 namespace rqdq {
 namespace rglv {
 
-Icosphere::Icosphere(int divs) {
+Icosphere::Icosphere(int divs, int reqColor) {
 	using rmlv::vec3;
+	std::vector<int> tmpt;
+	auto F = [&](int i0, int i1, int i2, int color) {
+		tmpt.emplace_back(i0);
+		tmpt.emplace_back(i1);
+		tmpt.emplace_back(i2);
+		tmpt.emplace_back(color); };
+
+	// 1. Create an icosohedron
 	const float t = (1.0F + sqrt(5.0)) / 2.0F;
 
 	const auto p0 = AP( -1.0F,  t, 0.0F );
@@ -32,44 +39,46 @@ Icosphere::Icosphere(int divs) {
 	const auto pA = AP(   -t, 0, -1 );
 	const auto pB = AP(   -t, 0,  1 );
 
-	tmps_.emplace();
-	tmps_->reserve(5*4*3);
+	tmpt.reserve(5*4*4);
 
-	F(p0, pB, p5);
-	F(p0, p5, p1);
-	F(p0, p1, p7);
-	F(p0, p7, pA);
-	F(p0, pA, pB);
+	F(p0, pB, p5, 0);
+	F(p0, p5, p1, 0);
+	F(p0, p1, p7, 0);
+	F(p0, p7, pA, 0);
+	F(p0, pA, pB, 0);
 
-	F(p1, p5, p9);
-	F(p5, pB, p4);
-	F(pB, pA, p2);
-	F(pA, p7, p6);
-	F(p7, p1, p8);
+	F(p1, p5, p9, 1);
+	F(p5, pB, p4, 1);
+	F(pB, pA, p2, 1);
+	F(pA, p7, p6, 1);
+	F(p7, p1, p8, 1);
 
-	F(p3, p9, p4);
-	F(p3, p4, p2);
-	F(p3, p2, p6);
-	F(p3, p6, p8);
-	F(p3, p8, p9);
+	F(p3, p9, p4, 2);
+	F(p3, p4, p2, 2);
+	F(p3, p2, p6, 2);
+	F(p3, p6, p8, 2);
+	F(p3, p8, p9, 2);
 
-	F(p4, p9, p5);
-	F(p2, p4, pB);
-	F(p6, p2, pA);
-	F(p8, p6, p7);
-	F(p9, p8, p1);
+	F(p4, p9, p5, 3);
+	F(p2, p4, pB, 3);
+	F(p6, p2, pA, 3);
+	F(p8, p6, p7, 3);
+	F(p9, p8, p1, 3);
 
-	std::swap(*tmps_, tris_);
-	tmps_->clear();
-	// px/py/pz & tris contain the first level mesh
+	std::swap(tmpt, tris_);
+	tmpt.clear();
+	// now, px/py/pz & tris contain the first level mesh
 
+	// 2. subdivide divs# of times
 	for (int dnum{0}; dnum<divs; ++dnum) {
 		int numTris = tris_.size() / 3;
 		int newTris = numTris * 4;
-		tmps_->reserve(newTris * 3);
+		tmpt.reserve(newTris * 3);
 
-		for (int i=0; i<tris_.size(); i+=3) {
+		for (int i=0; i<tris_.size(); i+=4) {
 			auto i0=tris_[i+0], i1=tris_[i+1], i2=tris_[i+2];
+			auto color = tris_[i+3];
+
 			auto p0=GP(i0), p1=GP(i1), p2=GP(i2);
 
 			auto i0i1 = MP(i0, i1, p0, p1);
@@ -84,20 +93,57 @@ Icosphere::Icosphere(int divs) {
 			 *  i1--i1i2--i2
 			 */
 
-			F( i0,  i0i1, i2i0);   // a
-			F(i0i1,  i1,  i1i2);   // b
-			F(i0i1, i1i2, i2i0);   // c
-			F(i2i0, i1i2,  i2 );}  // d
+			F( i0,  i0i1, i2i0, color);   // a
+			F(i0i1,  i1,  i1i2, color);   // b
+			F(i0i1, i1i2, i2i0, color);   // c
+			F(i2i0, i1i2,  i2 , color);}  // d
 
-		std::swap(*tmps_, tris_);
-		tmps_->clear();
+		std::swap(tmpt, tris_);
+		tmpt.clear();
 		edges_.clear(); }
 
-	vCnt_ = px.size();
-	Sphereize();
+
+	// 3. identify all points that touch reqColor'd faces
+	std::vector<bool> pf(px.size(), false);
+	for (int i=0; i<tris_.size(); i+=4) {
+		auto i0=tris_[i+0], i1=tris_[i+1], i2=tris_[i+2];
+		auto color = tris_[i+3];
+		if (color == reqColor) {
+			pf[i0] = true;
+			pf[i1] = true;
+			pf[i2] = true; }}
+
+	// 4a. create indices list for the requested subgraph
+	// copy colored tris into the final indices list,
+	// put unwanted tris that share wanted vertices
+	// into a temporary list (fringes)
+	tmpt.clear();
+	std::vector<int> fringe;
+	for (int i=0; i<tris_.size(); i+=4) {
+		auto i0=tris_[i+0], i1=tris_[i+1], i2=tris_[i+2];
+		auto color = tris_[i+3];
+		if (color == reqColor) {
+			tmpt.emplace_back(i0);
+			tmpt.emplace_back(i1);
+			tmpt.emplace_back(i2); }
+		else {
+			if (pf[i0] || pf[i1] || pf[i2]) {
+				fringe.emplace_back(i0);
+				fringe.emplace_back(i1);
+				fringe.emplace_back(i2); }}}
+	swap(tris_, tmpt);
+
+	// 4b. record the number of indices to use when rendering
+	numRenderIndices_ = tris_.size();
+
+	// 4c. append the fringe tris, for e.g. vertex normal calc
+	std::copy(begin(fringe), end(fringe), back_inserter(tris_));
+
+	// 5. finalize
 	Optimize();
-	Pad();
-	tmps_ = {}; }
+	Sphereize();
+	vCnt_ = px.size();
+	Pad(); }
 
 
 /**
@@ -107,6 +153,7 @@ void Icosphere::Sphereize() {
 	// sphereize
 	for (int i=0; i<px.size(); ++i) {
 		UP(i, normalize(GP(i))); }}
+
 
 /**
  * pad point lists for sse reads
@@ -124,7 +171,6 @@ void Icosphere::Pad() {
  * probably naive, but should help
  */
 void Icosphere::Optimize() {
-	using std::cout;
 	int seq=0;
 	const int vcnt = px.size();
 	std::vector<int> access(vcnt, -1);
@@ -134,35 +180,32 @@ void Icosphere::Optimize() {
 		if (access[i1] == -1) access[i1] = seq++;
 		if (access[i2] == -1) access[i2] = seq++; }
 
-	/*
-	cout << "seq: " << seq << "\n";
-
-	cout << "access = [";
-	bool first = true;
-	for (int i=0; i<vcnt; ++i) {
-		if (first) {
-			first = false; }
-		else {
-			cout << ", "; }
-		cout << access[i]; }
-	cout << "]\n";
-	*/
+	int newvcnt = seq;
 
 	rcls::vector<float> tmp;
 	tmp = px;
+	px.resize(newvcnt);
 	for (int i=0; i<vcnt; i++) {
+		if (access[i] == -1) continue;
 		px[access[i]] = tmp[i]; }
 	tmp = py;
+	py.resize(newvcnt);
 	for (int i=0; i<vcnt; i++) {
+		if (access[i] == -1) continue;
 		py[access[i]] = tmp[i]; }
 	tmp = pz;
+	pz.resize(newvcnt);
 	for (int i=0; i<vcnt; i++) {
+		if (access[i] == -1) continue;
 		pz[access[i]] = tmp[i]; }
 
 	for (int i=0; i<tris_.size(); i++) {
 		tris_[i] = access[tris_[i]]; }}
 
-// add point
+
+/**
+ * add a point, return its index
+ */
 inline int Icosphere::AP(float x, float y, float z) {
 	int idx = px.size();
 	px.emplace_back(x);
@@ -170,17 +213,26 @@ inline int Icosphere::AP(float x, float y, float z) {
 	pz.emplace_back(z);
 	return idx; }
 
-// update point
+
+/**
+ * update an existing point
+ */
 inline void Icosphere::UP(int i, rmlv::vec3 d) {
 	px[i] = d.x;
 	py[i] = d.y;
 	pz[i] = d.z; }
 
-// add midpoint
+
+/**
+ * (maybe) add a midpoint
+ * important: midpoints are stored in an edge list
+ *            so the same point will be used by
+ *            both faces that share the same edge
+ *            ensuring the new mesh is water-tight
+ */
 inline int Icosphere::MP(int i0, int i1, rmlv::vec3 p0, rmlv::vec3 p1) {
 	if (i0 > i1) {
 		std::swap(i0, i1); }
-
 	uint64_t key = ((uint64_t)i0<<32)|i1;
 	if (auto found = edges_.find(key); found != end(edges_)) {
 		return found->second; }
@@ -189,12 +241,6 @@ inline int Icosphere::MP(int i0, int i1, rmlv::vec3 p0, rmlv::vec3 p1) {
 	int newIdx = AP(newP.x, newP.y, newP.z);
 	edges_[key] = newIdx;
 	return newIdx; }
-
-// add face to tmps
-void Icosphere::F(int i0, int i1, int i2) {
-	tmps_->emplace_back(i0);
-	tmps_->emplace_back(i1);
-	tmps_->emplace_back(i2); }
 
 
 }  // namespace rglv
