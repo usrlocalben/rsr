@@ -24,14 +24,19 @@ using namespace rqv;
 
 class Impl final : public IGl {
 public:
-	Impl(std::string_view id, InputList inputs, int divs) :
+	Impl(std::string_view id, InputList inputs, int divs, int hunk) :
 		IGl(id, std::move(inputs)),
-		mesh_(divs),
-		numVertices_(mesh_.GetNumVertices()) {
+		mesh_(divs, hunk),
+		numVertices_(mesh_.GetNumVertices()),
+		numRenderIndices_(mesh_.GetNumRenderIndices()) {
 
 		for (auto& vbo : vbos_) {
 			vbo.resize(numVertices_);
-			vbo.pad(); }}
+			vbo.pad(); }
+
+		indices_.resize(mesh_.GetNumIndices());
+		for (int i=0; i<indices_.size(); ++i) {
+			indices_[i] = mesh_.GetIndices()[i]; }}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "material") {
@@ -54,12 +59,20 @@ public:
 				TYPE_ERROR(IValue);
 				return false; }
 			return true; }
+		if (attr == "amp") {
+			ampNode_ = dynamic_cast<IValue*>(other);
+			ampSlot_ = slot;
+			if (ampNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
 		return IGl::Connect(attr, other, slot); }
 
 	void AddDeps() override {
 		AddDep(materialNode_);
 		AddDep(freqNode_);
-		AddDep(phaseNode_); }
+		AddDep(phaseNode_);
+		AddDep(ampNode_); }
 
 	void Main() override {
 		rclmt::jobsys::run(Compute());}
@@ -77,7 +90,7 @@ public:
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, *vbo_);
-		dc.DrawElements(GL_TRIANGLES, mesh_.GetNumIndices(), GL_UNSIGNED_SHORT, mesh_.GetIndices());
+		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data());
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); } }
 
@@ -85,8 +98,7 @@ public:
 	rclmt::jobsys::Job* Compute(rclmt::jobsys::Job* parent = nullptr) {
 		if (parent != nullptr) {
 			return rclmt::jobsys::make_job_as_child(parent, Impl::ComputeJmp, std::tuple{this}); }
-		
-			return rclmt::jobsys::make_job(Impl::ComputeJmp, std::tuple{this}); }
+		return rclmt::jobsys::make_job(Impl::ComputeJmp, std::tuple{this}); }
 
 private:
 	static void ComputeJmp(rclmt::jobsys::Job* job, unsigned threadId, std::tuple<Impl*>* data) {
@@ -107,6 +119,10 @@ private:
 		if (phaseNode_ != nullptr) {
 			phase = phaseNode_->Eval(phaseSlot_).as_vec3(); }
 
+		float amp{ 0.5F };
+		if (ampNode_ != nullptr) {
+			amp = ampNode_->Eval(ampSlot_).as_float(); }
+
 		//const float t = float(ttt.time());
 		/*
 		const float angle = t;
@@ -115,12 +131,9 @@ private:
 		const float freqz = 0;  //sin(t*1.1f)*4.0f;
 		*/
 
-		const float amp = 1.0F; //sin(t*1.4)*30.0f;
-
 		for (int i=0; i<numVertices_; i++) {
 			rmlv::vec3 position = mesh_.GP(i);
 			rmlv::vec3 normal = position;
-			position *= 19.91F;
 
 			float f = (sin(position.x*freq.x + phase.x) + 0.5F);// * sin(vvn.y*freqy+t) * sin(vvn.z*freqz+t)
 			position += normal * amp * f; // normal*amp*f
@@ -131,9 +144,9 @@ private:
 
 		vbo.a1.zero();
 		for (int i{0}; i<mesh_.GetNumIndices(); i+=3) {
-			int i0=mesh_.GetIndices()[i+0];
-			int i1=mesh_.GetIndices()[i+1];
-			int i2=mesh_.GetIndices()[i+2];
+			int i0=indices_[i+0];
+			int i1=indices_[i+1];
+			int i2=indices_[i+2];
 			auto p0 = vbo.a0.at(i0);
 			auto p1 = vbo.a0.at(i1);
 			auto p2 = vbo.a0.at(i2);
@@ -152,9 +165,11 @@ private:
 private:
 	const rglv::Icosphere mesh_;
 	const int numVertices_;
+	const int numRenderIndices_;
 
 	// state
 	int mod2_{0};
+	std::vector<uint16_t> indices_;
 	std::array<rglv::VertexArray_F3F3F3, 2> vbos_{};
 	rglv::VertexArray_F3F3F3* vbo_;
 
@@ -163,7 +178,9 @@ private:
 	IValue* freqNode_{nullptr};
 	std::string freqSlot_{};
 	IValue* phaseNode_{nullptr};
-	std::string phaseSlot_{}; };
+	std::string phaseSlot_{};
+	IValue* ampNode_{nullptr};
+	std::string ampSlot_{}; };
 
 
 class Compiler final : public NodeCompiler {
@@ -171,12 +188,17 @@ class Compiler final : public NodeCompiler {
 		if (!Input("material", /*required=*/true)) { return; }
 		if (!Input("freq", /*required=*/true)) { return; }
 		if (!Input("phase", /*required=*/true)) { return; }
+		if (!Input("amp", /*required=*/true)) { return; }
 
 		int divs = 0;
 		if (auto jv = rclx::jv_find(data_, "divs", JSON_NUMBER)) {
 			divs = (int)jv->toNumber(); }
 
-		out_ = std::make_shared<Impl>(id_, std::move(inputs_), divs); }};
+		int hunk = 0;
+		if (auto jv = rclx::jv_find(data_, "hunk", JSON_NUMBER)) {
+			hunk = (int)jv->toNumber(); }
+
+		out_ = std::make_shared<Impl>(id_, std::move(inputs_), divs, hunk); }};
 
 
 struct init { init() {

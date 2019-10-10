@@ -1,8 +1,8 @@
 [
 	{"$render": { "id": "nRender",
-		"sRGB": false,
-		"program": "IQ",
-		"gpu": {"$gpu": {"layers": ["lAmy", "lEffects", "nPIPLayer"]}}}},
+		"sRGB": true,
+		"program": "Default",
+		"gpu": {"$gpu": {"layers": ["lAmy", "lEffects"]}}}},
 
 	{"$layer": { "id": "lAmy",
 		"camera": {"$orthographic": {}},
@@ -114,7 +114,7 @@
 		"filter": false,
 		"u0": "amyBackgroundColor",
 		"u1": "sync:foo",
-		"texture0": {"$image": {"file": "data/textures/env-purple.png"}}}},
+		"texture0": {"$image": {"id": "texpurple1", "file": "data/textures/env-purple.png"}}}},
 
 	{"$computedVec3": {
 		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
@@ -125,49 +125,63 @@
 		"filter": true,
 		"texture0": {"$image": {"file": "data/textures/amy1024.png"}}}},
 
+	{"$computedVec3": {"id": "auraFreq",
+		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
+		"code": "{(pow(sin(t*0.5),7))*10+15.0, sin(t*0.25)*15+10, 0}"}},
+
+	{"$computedVec3": {"id": "auraPhase",
+		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
+		"code": "{t*1, t*5.0, 0}"}},
+
+	{"$float": {"id": "auraPositionNoiseAmt", "x": 0}},
+
+	{"$float": {"id": "auraAmp", "x": 0.05}},
+
+	{"$computedVec3": { "id": "auraRotation",
+		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
+		"code": "{0, sin(t*0.5)*0.2+0.2, sin(t*0.222)*0.1}"}},
+
+	{"$fxAuraForLaura": {"id": "aura1of4", "hunk": 0,
+		"material": "mPurpleFade", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
+	{"$fxAuraForLaura": {"id": "aura2of4", "hunk": 1,
+		"material": "mPurpleFade", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
+	{"$fxAuraForLaura": {"id": "aura3of4", "hunk": 2,
+		"material": "mPurpleFade", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
+	{"$fxAuraForLaura": {"id": "aura4of4", "hunk": 3,
+		"material": "mPurpleFade", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
+
 	{"$translate": { "id":"nAuraForLaura",
-		"gl": {"$fxAuraForLaura": {
-			"material": "mPurpleFade",
-			"freq": {"$computedVec3": {
-				"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-				"code": "{sin(t*1.5)/2.0+1.0, sin(t*0.5)/1, 0}"}},
-			"phase": {"$computedVec3": {
-				"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-				"code": "{t, t*1.333, 0}"}},
-			"divs": 5}},
+		"gl": {"$group": {
+			"gl": ["aura1of4", "aura2of4", "aura3of4", "aura4of4"
+			]}},
 		"translate": {"$computedVec3": {
 			"inputs": [
-				{"name": "amp", "type": "real", "source": "auraamp"},
-				{"name": "nx", "type": "real", "source": "noiser1"},
-				{"name": "ny", "type": "real", "source": "noiser2"},
-				{"name": "nz", "type": "real", "source": "noiser3"} ],
+				{"name": "amp", "type": "real", "source": "auraPositionNoiseAmt"},
+				{"name": "nx", "type": "real", "source": "auraPositionNoiseX"},
+				{"name": "ny", "type": "real", "source": "auraPositionNoiseY"},
+				{"name": "nz", "type": "real", "source": "auraPositionNoiseZ"} ],
 			"code": "{nx*amp, ny*amp, nz*amp}"}},
-		"scale": {"$float": {"x": 0.4}},
-		"rotate": "aurarotator"}},
+		"scale": {"$float": {"x": 9.0}},
+		"rotate": "auraRotation"}},
 
-	{"$float": {"id": "auraamp", "x": 10}},
+	{"$noise": {"id": "auraPositionNoiseX", "coord": {"$vec3": {
+		"x": 0,
+		"y": "globals:wallclock",
+		"z": 0}}}},
 
-	{"$noise": {"id": "noiser1", "coord": {"$vec3": {
-			"x": 0,
-			"y": "globals:wallclock",
-			"z": 0}}}},
+	{"$noise": {"id": "auraPositionNoiseY", "coord": {"$vec3": {
+		"x": 0.2348792,
+		"y": "globals:wallclock",
+		"z": 0}}}},
 
-	{"$noise": {"id": "noiser2", "coord": {"$vec3": {
-			"x": 0.2348792,
-			"y": "globals:wallclock",
-			"z": 0}}}},
-
-	{"$noise": {"id": "noiser3", "coord": {"$vec3": {
-			"x": 0.4718937,
-			"y": "globals:wallclock",
-			"z": 0}}}},
+	{"$noise": {"id": "auraPositionNoiseZ", "coord": {"$vec3": {
+		"x": 0.4718937,
+		"y": "globals:wallclock",
+		"z": 0}}}},
 
 	{"$vec3": {"id": "norotator", "x": 0, "y": 0, "z": 0}},
 	{"$computedVec3": { "id": "fieldrotator",
 		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
 		"code": "{t*0.1, sin(t*0.41)*0.333, sin(t*0.222)*0.3}"}},
 
-	{"$computedVec3": { "id": "aurarotator",
-		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-		"code": "{0, sin(t*0.5)*0.2+0.2, sin(t*0.222)*0.1}"}}
 ]
