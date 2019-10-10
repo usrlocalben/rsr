@@ -54,10 +54,11 @@ public:
 		jobsys::run(link); }
 
 	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) override {
-		pcnt_ = gls_.size();
 		for (auto glnode : gls_) {
 			// XXX increment depth even if matrix/transform stack is not modified?
-			glnode->Draw(dc, pmat, mvmat, jobsys::make_job(Impl::AllThen, std::tuple{&pcnt_, link}), depth); }}
+			glnode->Draw(dc, pmat, mvmat, nullptr, depth); }
+		if (link) {
+			jobsys::run(link); }}
 
 protected:
 	void AddDeps() override {
@@ -65,7 +66,6 @@ protected:
 			AddDep(item); }}
 
 protected:
-	std::atomic<int> pcnt_;  // AllThen counter
 	std::vector<IGl*> gls_; };
 
 
