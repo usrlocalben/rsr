@@ -1,0 +1,26 @@
+[
+	{"$render": { "id": "nRender",
+		"sRGB": false,
+		"program": "IQ",
+		"gpu": {"$gpu": {"layers": ["mainLayer"]}}}},
+
+	{"$layer": { "id": "mainLayer",
+		"color": {"$computedVec3": {
+			"code": "{0.222, 0.222, 0.333}"}},
+		"camera": {"$perspective": {
+			"position": {"$vec3": {"x": -18.5, "y": 4.5, "z": 44.0}},
+			"h": 3.0, "v": -0.4,
+			"fov": 45.0,
+			"originX": 0}},
+		"gl": [ "lotsOfCubes" ]}},
+
+	{"$computedVec3": { "id": "lotsRotation",
+		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
+		"code": "{sin(t*0.25)*0.001, t*0.005, 0.00}"}},
+
+	{"$translate": {"id": "lotsOfCubes",
+		"rotate": "lotsRotation",
+		"gl": {"$fxMany": {
+			"material": {"$material": {"program": "Many"}},
+			"mesh": "mycube.obj"}}}}
+]
