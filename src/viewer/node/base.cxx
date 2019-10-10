@@ -18,12 +18,12 @@ NodeBase::~NodeBase() = default;
 
 
 void NodeBase::AddLinksTo(rclmt::jobsys::Job* parent) {
-	for (auto link : links_) {
-		rclmt::jobsys::add_link(parent, link); } }
+	for (int i=0; i<linkCnt_; i++) {
+		rclmt::jobsys::add_link(parent, links_[i]); } }
 
 void NodeBase::RunLinks() {
-	for (auto link : links_) {
-		rclmt::jobsys::run(link); }}
+	for (int i=0; i<linkCnt_; i++) {
+		rclmt::jobsys::run(links_[i]); }}
 
 
 void NodeBase::Run() {
@@ -31,8 +31,8 @@ void NodeBase::Run() {
 		return; }
 	if (!this->IsValid()) {
 		std::cout << "node(" << id_ << "): validation failed" << std::endl;
-		for (auto link : links_) {
-			rclmt::jobsys::run(link); } }
+		for (int i=0; i<linkCnt_; i++) {
+			rclmt::jobsys::run(links_[i]); } }
 	this->Main(); }
 
 
@@ -53,12 +53,12 @@ rclmt::jobsys::Job* NodeBase::AfterAll(rclmt::jobsys::Job* job) {
 
 
 void NodeBase::AddLink(rclmt::jobsys::Job *after) {
-	links_.push_back(after); }
+	links_[linkCnt_++] = after; }
 
 
 void NodeBase::Reset() {
 	indegreeWaitCnt_ = 0;
-	links_.clear();
+	linkCnt_ = 0;
 	groupCnt_ = 0; }
 
 
@@ -72,8 +72,8 @@ bool NodeBase::IsValid() {
 
 
 void NodeBase::Main() {
-	for (auto& link : links_) {
-		rclmt::jobsys::run(link); }}
+	for (int i=0; i<linkCnt_; i++) {
+		rclmt::jobsys::run(links_[i]); }}
 
 
 void NodeBase::AddDep(NodeBase* node) {
@@ -90,15 +90,16 @@ const std::vector<NodeBase*>& NodeBase::Deps() {
 	return deps_; }
 
 
-void ComputeIndegreesFrom(NodeBase *node) {
+void ComputeIndegreesFrom(NodeBase *node, int d) {
 	thread_local std::unordered_set<NodeBase*> visited;
-	visited.clear();
+	if (d == 0) {
+		visited.clear(); }
 	if (visited.find(node) != end(visited)) {
 		return; }
 	visited.insert(node);
 	for (auto& dep : node->Deps()) {
 		dep->inc_indegreeWaitCnt();
-		ComputeIndegreesFrom(dep); } }
+		ComputeIndegreesFrom(dep, d+1); } }
 
 
 }  // namespace rqv

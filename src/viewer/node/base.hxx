@@ -1,5 +1,7 @@
 #pragma once
 #include <algorithm>
+#include <array>
+#include <atomic>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -55,8 +57,9 @@ private:
 	std::string id_;
 	InputList inputs_;
 	std::atomic<int> groupCnt_{0};
-	int indegreeWaitCnt_{0};
-	std::vector<rclmt::jobsys::Job*> links_; };
+	std::atomic<int> indegreeWaitCnt_{0};
+	std::atomic<int> linkCnt_;
+	std::array<rclmt::jobsys::Job*, 16> links_; };
 
 
 using NodeList = std::vector<std::shared_ptr<NodeBase>>;
@@ -64,7 +67,7 @@ using NodeList = std::vector<std::shared_ptr<NodeBase>>;
 #define TYPE_ERROR(nt) \
 	{ std::cerr << "Node id=" << get_id() << ": refusing to connect @gpu to id=" << other->get_id() << " because it is the wrong type (expected " << #nt << ")\n"; }
 
-void ComputeIndegreesFrom(NodeBase *node);
+void ComputeIndegreesFrom(NodeBase *node, int d=0);
 
 
 }  // namespace rqv
