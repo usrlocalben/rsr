@@ -8,7 +8,7 @@
 		"color": {"$computedVec3": {
 			"code": "{0.222, 0.222, 0.333}"}},
 		"camera": {"$perspective": {
-			"position": {"$vec3": {"x": -18.5, "y": 4.5, "z": 44.0}},
+			"position": {"$vec3": {"x": -18.5, "y": 8.5, "z": 44.0}},
 			"h": 3.0, "v": -0.4,
 			"fov": 45.0,
 			"originX": 0}},
@@ -16,7 +16,7 @@
 
 	{"$computedVec3": { "id": "lotsRotation",
 		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-		"code": "{sin(t*0.25)*0.001, t*0.005, 0.00}"}},
+		"code": "{pow(sin(t*0.25), 100)*0.05, t*0.005, 0}"}},
 
 	{"$translate": {"id": "lotsOfCubes",
 		"rotate": "lotsRotation",
