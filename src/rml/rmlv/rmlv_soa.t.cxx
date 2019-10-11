@@ -48,4 +48,33 @@ TEST(Vec4, Shuffles) {
 	auto _4545 = vec4{4,5,4,5};
 	EXPECT_MVEC4_EQ(res, _4545); }
 
+
+TEST(Vec4, Wrap1) {
+	using rmlv::mvec4f;
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{0.0F}).get_x(), 0.0F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{0.999}).get_x(), 0.999F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{1.0F}).get_x(), 1.0F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{1.1F}).get_x(), -0.9F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{20.0F}).get_x(), 0.0F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{-0.5F}).get_x(), -0.5F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{-0.999}).get_x(), -0.999F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{-1.0F}).get_x(), -1.0F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{-1.2F}).get_x(),  0.8F);
+
+	EXPECT_NEAR    (wrap1(mvec4f{-2.1F}).get_x(), -0.1F, 0.000001);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{-1.1F}).get_x(),  0.9F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{-0.1F}).get_x(), -0.1F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{ 0.9F}).get_x(), 0.9F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{ 1.9F}).get_x(),-0.1F);
+	EXPECT_FLOAT_EQ(wrap1(mvec4f{ 2.9F}).get_x(), 0.9F);
+	EXPECT_NEAR    (wrap1(mvec4f{ 3.9F}).get_x(),-0.1F, 0.000001); }
+
+
+TEST(Vec4, SinCos) {
+	using rmlv::mvec4f;
+	for (float x = -10000.0F; x<10000.0F; x+=0.1F) {
+		EXPECT_NEAR(sin(mvec4f(x)).get_x(), std::sinf(x), 0.00250);
+		EXPECT_NEAR(cos(mvec4f(x)).get_x(), std::cosf(x), 0.00250); } }
+
+
 }  // close unnamed namespace

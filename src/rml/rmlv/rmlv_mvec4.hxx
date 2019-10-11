@@ -21,7 +21,6 @@ struct alignas(16) mvec4i {
 	inline mvec4i& operator=(const mvec4i& b) { v = b.v;  return *this; }
 
 	inline static mvec4i zero() { return mvec4i(_mm_setzero_si128()); }
-	static const mvec4i two;
 
 	inline mvec4i& operator+=(const mvec4i& b) { v = _mm_add_epi32(v, b.v); return *this; }
 	inline mvec4i& operator-=(const mvec4i& b) { v = _mm_sub_epi32(v, b.v); return *this; }
@@ -167,8 +166,10 @@ inline mvec4f abs(const mvec4f& a) {
 inline mvec4f sqrt(const mvec4f& a) { return _mm_sqrt_ps(a.v); }
 inline mvec4f rsqrt(const mvec4f& a) { return _mm_rsqrt_ps(a.v); }
 
+/*
 inline mvec4f cross(const mvec4f &a, const mvec4f &b) {
 	return a.yzxw()*b.zxyw() - a.zxyw()*b.yzxw(); }
+*/
 
 inline float hadd(const mvec4f& a) {
 	__m128 r0 = _mm_shuffle_ps(a.v, a.v, _MM_SHUFFLE(0, 3, 2, 1));
@@ -238,12 +239,12 @@ inline mvec4f bits2float(const mvec4i &a) { return _mm_castsi128_ps(a.v); }
 inline int movemask(const mvec4f& a) { return _mm_movemask_ps(a.v); }
 
 
-inline mvec4f saturate(const mvec4f& a) {
+inline mvec4f saturate(mvec4f a) {
 	/*clamp a to the range [0...1.0]*/
 	return vmax(vmin(a, mvec4f::one()), mvec4f::zero()); }
 
 
-inline mvec4f fract(const mvec4f& a) {
+inline mvec4f fract(mvec4f a) {
 	/*fractional part of a*/
 	return a - itof(ftoi_round(a - mvec4f{0.5F})); }
 
@@ -256,13 +257,13 @@ inline mvec4f fract(const mvec4f& a) {
 * i split them into bits and sign so i can save a step when I know that I have
 * a complete bitmask or not
 */
-inline mvec4f selectbits(const mvec4f& a, const mvec4f& b, const mvec4i& mask) {
+inline mvec4f selectbits(mvec4f a, mvec4f b, mvec4i mask) {
 	const mvec4i a2 = andnot(mask, float2bits(a));  // keep bits in a where mask is 0000's
 	const mvec4i b2 = float2bits(b) & mask;  // keep bits in b where mask is 1111's
 	return bits2float(a2 | b2); }
 
 
-inline mvec4f selectbits(const mvec4f& a, const mvec4f& b, const mvec4f& mask) {
+inline mvec4f selectbits(mvec4f a, mvec4f b, mvec4f mask) {
 	return selectbits(a, b, float2bits(mask)); }
 
 
@@ -271,31 +272,31 @@ inline mvec4f selectbits(const mvec4f& a, const mvec4f& b, const mvec4f& mask) {
 //	return _mm_blendv_ps( a.v, b.v, bits2float(mask).v ); }
 
 
-inline mvec4f select_by_sign(const mvec4f& a, const mvec4f& b, const mvec4i& mask) {
+inline mvec4f select_by_sign(mvec4f a, mvec4f b, mvec4i mask) {
 	/*this is _mm_blendv_ps() for SSE2*/
 	const mvec4i newmask(_mm_srai_epi32(mask.v, 31));
 	return selectbits(a, b, newmask); }
 
 
-inline mvec4f select_by_sign(const mvec4f& a, const mvec4f& b, const mvec4f& mask) {
+inline mvec4f select_by_sign(mvec4f a, mvec4f b, mvec4f mask) {
 	const mvec4i newmask(_mm_srai_epi32(float2bits(mask).v, 31));
 	return selectbits(a, b, newmask); }
 
 
-inline mvec4f oneover(const mvec4f& a) {
+inline mvec4f oneover(mvec4f a) {
 	return _mm_rcp_ps(a.v); }
 
 
 //inline vec4 abs( const vec4& a ) { return andnot(signmask,a); }
 
 
-inline mvec4f pow(const mvec4f& x, const mvec4f& y) {
+inline mvec4f pow(mvec4f x, mvec4f y) {
 	return exp2f4(_mm_mul_ps(log2f4(x.v), y.v)); }
 
 
-template<int N> inline mvec4i shl(const mvec4i& x) { return mvec4i(_mm_slli_epi32(x.v, N)); }
-template<int N> inline mvec4i sar(const mvec4i& x) { return mvec4i(_mm_srai_epi32(x.v, N)); }
-template<int N> inline mvec4i shr(const mvec4i& x) { return mvec4i(_mm_srli_epi32(x.v, N)); }
+template<int N> inline mvec4i shl(mvec4i x) { return mvec4i(_mm_slli_epi32(x.v, N)); }
+template<int N> inline mvec4i sar(mvec4i x) { return mvec4i(_mm_srai_epi32(x.v, N)); }
+template<int N> inline mvec4i shr(mvec4i x) { return mvec4i(_mm_srli_epi32(x.v, N)); }
 
 
 /*
@@ -318,7 +319,7 @@ instructions if the inputs are known to fit, and also if they are in the range -
 */
 
 
-inline mvec4f wrap1(const mvec4f& a) {
+inline mvec4f wrap1(mvec4f a) {
 	/*wrap a float to the range -1 ... +1 */
 	const __m128 magic = _mm_set1_ps(25165824.0F); // 0x4bc00000
 	const mvec4f z = a + magic;
@@ -326,7 +327,7 @@ inline mvec4f wrap1(const mvec4f& a) {
 
 
 template<bool high_precision>
-inline mvec4f nick_sin(const mvec4f& x) {
+inline mvec4f nick_sin(mvec4f x) {
 	/*implementation of nick's original -pi...pi version*/
 	const mvec4f B(4 / M_PI);
 	const mvec4f C(-4 / (M_PI * M_PI));
@@ -340,7 +341,7 @@ inline mvec4f nick_sin(const mvec4f& x) {
 	return y; }
 
 
-inline mvec4f sin1hp(const mvec4f& x) {
+inline mvec4f sin1hp(mvec4f x) {
 	/*higher-precision sin(), input must be in the range -1 ... 1 */
 	const mvec4f Q(3.1F);
 	const mvec4f P(3.6F);
@@ -348,12 +349,12 @@ inline mvec4f sin1hp(const mvec4f& x) {
 	return y * (Q + P * abs(y)); }
 
 
-inline mvec4f sin1lp(const mvec4f& x) {
+inline mvec4f sin1lp(mvec4f x) {
 	/*low-precision sin(), input must be in the range -1 ... 1*/
 	return mvec4f{4.0F} * (x - x * abs(x)); }
 
 
-inline mvec4f sin(const mvec4f& x) {
+inline mvec4f sin(mvec4f x) {
 	/*drop-in-sin() replacement
 
 	Args:
@@ -364,7 +365,7 @@ inline mvec4f sin(const mvec4f& x) {
 	return sin1hp(M); }
 
 
-inline mvec4f cos(const mvec4f& x) {
+inline mvec4f cos(mvec4f x) {
 	/*drop-in-cos() replacement
 
 	cos(x) = sin( pi/2 + x)
@@ -375,13 +376,13 @@ inline mvec4f cos(const mvec4f& x) {
 	M = wrap1(M + mvec4f(0.5));		// add 0.5 (PI/2) and wrap
 	return sin1hp(M); }
 
-inline void sincos(const mvec4f& x, mvec4f &os, mvec4f& oc) {
+inline void sincos(mvec4f x, mvec4f &os, mvec4f& oc) {
 	/*sin() & cos(), saving one mul.*/
 	mvec4f M = x * mvec4f(float(1.0 / M_PI));	// scale x to -1...1
 	os = sin1hp(wrap1(M));
 	oc = sin1hp(wrap1(M + mvec4f(0.5))); }
 
-inline mvec4f smoothstep(const mvec4f& a, const mvec4f& b, const mvec4f& t) {
+inline mvec4f smoothstep(mvec4f a, mvec4f b, mvec4f t) {
 	const mvec4f x = saturate((t - a) / (b - a));
 	return x*x * (mvec4f(3) - mvec4f(2) * x); }
 
