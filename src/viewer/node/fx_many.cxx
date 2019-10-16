@@ -21,7 +21,7 @@ namespace {
 
 using namespace rqv;
 
-constexpr int batch = 5000;
+constexpr int batch = 3000;
 
 
 class Impl final : public IGl {
@@ -144,6 +144,7 @@ public:
 		dc.ProjectionMatrix(*pmat);
 		dc.ViewMatrix(*mvmat);
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
+		ptr->magic = 0.222F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
@@ -159,7 +160,7 @@ public:
 		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->magic = 0.888;
+		ptr->magic = 0.888F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);

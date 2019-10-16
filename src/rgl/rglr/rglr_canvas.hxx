@@ -90,6 +90,12 @@ struct QFloat4Canvas {
 		gggg = _mm_load_ps(reinterpret_cast<const float*>(&src->g));
 		bbbb = _mm_load_ps(reinterpret_cast<const float*>(&src->b)); }
 
+	static inline void Load(const rmlv::qfloat4* const src, __m128& rrrr, __m128& gggg, __m128& bbbb, __m128& aaaa) {
+		rrrr = _mm_load_ps(reinterpret_cast<const float*>(&src->r));
+		gggg = _mm_load_ps(reinterpret_cast<const float*>(&src->g));
+		bbbb = _mm_load_ps(reinterpret_cast<const float*>(&src->b));
+		aaaa = _mm_load_ps(reinterpret_cast<const float*>(&src->a)); }
+
 	static inline void Store(__m128 rrrr, __m128 gggg, __m128 bbbb, rmlv::qfloat4* const dst) {
 		_mm_store_ps(reinterpret_cast<float*>(&dst->r), rrrr);
 		_mm_store_ps(reinterpret_cast<float*>(&dst->g), gggg);
@@ -297,33 +303,44 @@ private:
 
 
 struct FloatingPointCanvas {
-	FloatingPointCanvas(
-		PixelToaster::FloatingPointPixel* ptr,
-		const int width,
-		const int height,
-		const int stride = 0
-	) :_ptr(ptr),
-		_width(width),
-		_height(height),
-		_stride(stride == 0 ? width : stride),
-		_aspect(float(width) / float(height)) {}
+	FloatingPointCanvas(PixelToaster::FloatingPointPixel* ptr,
+	                    int width, int height, int stride = 0) :
+		userPtr_(ptr),
+		ptr_(ptr),
+		width_(width),
+		height_(height),
+		stride_(stride == 0 ? width : stride),
+		aspect_(float(width) / float(height)) {}
 
-	FloatingPointCanvas() = default;
+	FloatingPointCanvas() {
+		resize(1, 1); }
 
-	auto data() { return _ptr; }
-	auto cdata() const { return _ptr; }
-	auto width() const { return _width; }
-	auto height() const { return _height; }
-	auto stride() const { return _stride; }
-	auto aspect() const { return _aspect; }
+	void resize(int w, int h) {
+		if (userPtr_ != nullptr) {
+			throw std::runtime_error("can't resize canvas with user ptr"); }
+		buf.reserve(w*h);
+		width_ = w;
+		height_ = h;
+		stride_ = w;
+		aspect_ = (float)w / h;
+		ptr_ = buf.data(); }
+
+	auto data() { return ptr_; }
+	auto cdata() const { return ptr_; }
+	auto width() const { return width_; }
+	auto height() const { return height_; }
+	auto stride() const { return stride_; }
+	auto aspect() const { return aspect_; }
 	rmlg::irect rect() const {
-		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{_width, _height} }; }
+		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{width_, height_} }; }
 private:
-	PixelToaster::FloatingPointPixel * _ptr = nullptr;
-	int _width = 0;
-	int _height = 0;
-	int _stride = 0;
-	float _aspect = 1.0F; };
+	PixelToaster::FloatingPointPixel* userPtr_{nullptr};
+	PixelToaster::FloatingPointPixel* ptr_{nullptr};
+	int width_{0};
+	int height_{0};
+	int stride_{0};
+	float aspect_{1.0F};
+	rcls::vector<PixelToaster::FloatingPointPixel> buf; };
 
 
 }  // namespace rglr

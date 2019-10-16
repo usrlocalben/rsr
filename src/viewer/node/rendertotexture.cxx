@@ -19,8 +19,8 @@ using namespace rqv;
 
 class Impl : public ITexture {
 public:
-	Impl(std::string_view id, InputList inputs, int width, int height, float pa, bool aa)
-		:ITexture(id, std::move(inputs)), width_(width), height_(height), aspect_(pa), enableAA_(aa) {}
+	Impl(std::string_view id, InputList inputs) :
+		ITexture(id, std::move(inputs)) {}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "gpu") {
@@ -42,19 +42,7 @@ public:
 		return ITexture::IsValid(); }
 
 	void Main() override {
-		rclmt::jobsys::Job *renderJob = Render();
-		if (enableAA_) {
-			// internalDepthCanvas_.resize(dim_*2, dim_*2);
-			// internalColorCanvas_.resize(dim_*2, dim_*2);
-			gpuNode_->Dimensions(width_*2, height_*2); }
-		else {
-			// internalDepthCanvas_.resize(dim_, dim_);
-			// internalColorCanvas_.resize(dim_, dim_);
-			gpuNode_->Dimensions(width_, height_); }
-		outputTexture_.resize(width_, height_);
-		gpuNode_->TileDimensions(rmlv::ivec2{ 8, 8 });
-		gpuNode_->Aspect(aspect_);
-		gpuNode_->AddLink(AfterAll(renderJob));
+		gpuNode_->AddLink(AfterAll(Render()));
 		gpuNode_->Run(); }
 
 	rclmt::jobsys::Job* Render() {
@@ -63,15 +51,23 @@ public:
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
-		gpuNode_->DoubleBuffer(true);  // this->double_buffer;
-		gpuNode_->ColorCanvas(&GetColorCanvas());
-		gpuNode_->DepthCanvas(&GetDepthCanvas());
+		auto targetSizeInPx = gpuNode_->GetTargetSize();
+		auto aa = gpuNode_->GetAA();
 		auto& ic = gpuNode_->IC();
-		outCanvas_ = rglr::FloatingPointCanvas(outputTexture_.buf.data(), width_, height_, width_);
-		if (enableAA_) {
-			ic.StoreHalfsize(&outCanvas_); }
+
+		if (aa) {
+			int w = targetSizeInPx.x / 2;
+			int h = targetSizeInPx.y / 2;
+			outputTexture_.resize(w, h);
+			outCanvas_ = rglr::FloatingPointCanvas(outputTexture_.buf.data(), w, h, w);
+			ic.StoreColor(&outCanvas_, /*downsample=*/true); }
 		else {
-			ic.StoreUnswizzled(&outCanvas_); }
+			int w = targetSizeInPx.x;
+			int h = targetSizeInPx.y;
+			outputTexture_.resize(w, h);
+			outCanvas_ = rglr::FloatingPointCanvas(outputTexture_.buf.data(), w, h, w);
+			ic.StoreColor(&outCanvas_, /*downsample=*/false); }
+
 		ic.Finish();
 		auto renderJob = gpuNode_->Render();
 		rclmt::jobsys::add_link(renderJob, PostProcess());
@@ -86,34 +82,12 @@ public:
 		outputTexture_.maybe_make_mipmap();
 		RunLinks(); }
 
-	rglr::QFloatCanvas& GetDepthCanvas() {
-		const int renderWidth = enableAA_ ? width_*2 : width_;
-		const int renderHeight = enableAA_ ? height_*2 : height_;
-		internalDepthCanvas_.resize(renderWidth, renderHeight);
-		return internalDepthCanvas_; }
-
-	rglr::QFloat4Canvas& GetColorCanvas() {
-		const int renderWidth = enableAA_ ? width_*2 : width_;
-		const int renderHeight = enableAA_ ? height_*2 : height_;
-		internalColorCanvas_.resize(renderWidth, renderHeight);
-		return internalColorCanvas_; }
-
 	const rglr::Texture& GetTexture() override {
 		return outputTexture_; }
 
 private:
-	rglr::QFloat4Canvas internalColorCanvas_;
-	rglr::QFloatCanvas internalDepthCanvas_;
-
 	rglr::Texture outputTexture_;
-
 	rglr::FloatingPointCanvas outCanvas_;
-
-	// config
-	int width_{0};
-	int height_{0};
-	float aspect_{1.0};
-	bool enableAA_{false};
 
 	// inputs
 	IGPU* gpuNode_{nullptr}; };
@@ -121,26 +95,8 @@ private:
 
 class Compiler final : public NodeCompiler {
 	void Build() override {
-		using rclx::jv_find;
 		if (!Input("gpu", /*required=*/true)) { return; }
-
-		int width{256};
-		if (auto jv = jv_find(data_, "width", JSON_NUMBER)) {
-			width = static_cast<int>(jv->toNumber()); }
-
-		int height{256};
-		if (auto jv = jv_find(data_, "height", JSON_NUMBER)) {
-			height = static_cast<int>(jv->toNumber()); }
-
-		bool aa{false};
-		if (auto jv = jv_find(data_, "aa", JSON_TRUE)) {
-			aa = true; }
-
-		float pa{1.0F};
-		if (auto jv = jv_find(data_, "aspect", JSON_NUMBER)) {
-			pa = static_cast<float>(jv->toNumber()); }
-
-		out_ = std::make_shared<Impl>(id_, std::move(inputs_), width, height, pa, aa); }};
+		out_ = std::make_shared<Impl>(id_, std::move(inputs_)); }};
 
 
 struct init { init() {

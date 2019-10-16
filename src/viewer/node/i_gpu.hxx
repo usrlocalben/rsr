@@ -11,12 +11,8 @@ namespace rqv {
 class IGPU : public NodeBase {
 public:
 	using NodeBase::NodeBase;
-	virtual auto Dimensions(int x, int y) -> void = 0;
-	virtual auto TileDimensions(rmlv::ivec2 tileDim) -> void = 0;
-	virtual auto Aspect(float aspect) -> void = 0;
-	virtual auto DoubleBuffer(bool value) -> void = 0;
-	virtual auto ColorCanvas(rglr::QFloat4Canvas* ptr) -> void = 0;
-	virtual auto DepthCanvas(rglr::QFloatCanvas* ptr) -> void = 0;
+	virtual auto GetTargetSize() const -> rmlv::ivec2 = 0;
+	virtual auto GetAA() const -> bool = 0;
 	virtual auto IC() -> rglv::GL& = 0;
 	virtual auto Render() -> rclmt::jobsys::Job* = 0; };
 

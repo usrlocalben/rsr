@@ -78,7 +78,7 @@ public:
 			color = colorNode_->Eval(colorSlot_).as_vec3(); }
 		return color; }
 
-	void Render(rglv::GL* dc, int width, int height, float aspect, rclmt::jobsys::Job *link) override {
+	void Render(rglv::GL* dc, rmlv::ivec2 targetSizeInPx, float aspect, rclmt::jobsys::Job *link) override {
 		using namespace rmlm;
 		using namespace rglv;
 		namespace framepool = rclma::framepool;

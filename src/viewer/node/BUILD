@@ -159,7 +159,8 @@ cc_library(
         "//src/viewer:shaders",
         ":base",
         ":i_gpu",
-        ":i_layer", ],
+        ":i_layer",
+        ":i_value", ],
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
@@ -242,6 +243,15 @@ cc_library(
     hdrs = ["i_texture.hxx"],
     deps = [
         "//src/rgl/rglr:texture",
+        ":base",],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
+    name = "i_canvas",
+    srcs = ["i_canvas.cxx"],
+    hdrs = ["i_canvas.hxx"],
+    deps = [
+        "//src/rgl/rglr:canvas",
         ":base",],
     copts = RSR_DEFAULT_COPTS,)
 
@@ -341,8 +351,8 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
-    name = "render",
-    srcs = ["render.cxx"],
+    name = "truecolor",
+    srcs = ["truecolor.cxx"],
     deps = [
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rclx:gason_util",
@@ -353,6 +363,20 @@ cc_library(
         ":base",
         ":i_gpu",
         ":i_output", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
+    name = "buffers",
+    srcs = ["buffers.cxx"],
+    deps = [
+        "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
+        "//src/rgl/rglr:canvas",
+        "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
+        ":base",
+        ":i_canvas",
+        ":i_gpu" ],
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
@@ -406,4 +430,35 @@ cc_library(
         "//src/viewer:compile",
         ":base",
         ":i_value",],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
+    name = "kawase",
+    srcs = ["kawase.cxx"],
+    deps = [
+        "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
+        "//src/rgl/rglr:canvas",
+        "//src/rgl/rglr:kawase",
+        "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
+        ":base",
+        ":i_canvas", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
+    name = "glow",
+    srcs = ["glow.cxx"],
+    deps = [
+        "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
+        "//src/rgl/rglr:algorithm",
+        "//src/rgl/rglr:canvas",
+        "//src/rgl/rglr:canvas_util",
+        "//src/rml/rmlv:soa",
+        "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
+        ":base",
+        ":i_canvas",
+        ":i_output", ],
     copts = RSR_DEFAULT_COPTS,)

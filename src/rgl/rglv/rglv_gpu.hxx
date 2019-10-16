@@ -40,6 +40,8 @@ constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
 
 constexpr auto maxVAOSizeInVertices = 500000L;
 
+extern bool doubleBuffer;
+
 struct ClippedVertex {
 	rmlv::vec4 coord;  // either clip-coord or device-coord
 	uint8_t data[64]; };
@@ -314,7 +316,7 @@ private:
 		if (job != nullptr) {
 			jobsys::move_links(job, finalizeJob); }
 
-		if (!doubleBuffer_) {
+		if (!doubleBuffer) {
 			BinImpl();
 			SwapBuffers(); }
 
@@ -329,7 +331,7 @@ private:
 		for (const auto& item : tileStats_) {
 			int bi = item.tileId;
 			allJobs.push_back(Draw(finalizeJob, bi)); }
-		if (doubleBuffer_) {
+		if (doubleBuffer) {
 			allJobs.push_back(Bin(finalizeJob)); }
 
 		for (auto& job : allJobs) {
@@ -343,7 +345,7 @@ private:
 		self->FinalizeImpl(); }
 	void FinalizeImpl() {
 		//printStatistics(stats1_);
-		if (doubleBuffer_) {
+		if (doubleBuffer) {
 			SwapBuffers(); } }
 
 	void SwapBuffers() {
@@ -389,19 +391,25 @@ private:
 				for (auto& tile : tiles_) {
 					tile.commands0.appendByte(cmd);
 					tile.commands0.appendByte(arg); }}
-			else if (cmd == CMD_STORE_FP32_HALF) {
+			else if (cmd == CMD_STORE_COLOR_HALF_LINEAR_FP) {
 				auto ptr = cs.consumePtr();
 				// printf(" store halfsize colorbuffer @ %p\n", ptr);
 				for (auto& tile : tiles_) {
 					tile.commands0.appendByte(cmd);
 					tile.commands0.appendPtr(ptr); }}
-			else if (cmd == CMD_STORE_FP32) {
+			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_FP) {
 				auto ptr = cs.consumePtr();
 				// printf(" store unswizzled colorbuffer @ %p\n", ptr);
 				for (auto& tile : tiles_) {
 					tile.commands0.appendByte(cmd);
 					tile.commands0.appendPtr(ptr); }}
-			else if (cmd == CMD_STORE_TRUECOLOR) {
+			else if (cmd == CMD_STORE_COLOR_FULL_QUADS_FP) {
+				auto ptr = cs.consumePtr();
+				// printf(" store swizzled colorbuffer @ %p\n", ptr);
+				for (auto& tile : tiles_) {
+					tile.commands0.appendByte(cmd);
+					tile.commands0.appendPtr(ptr); }}
+			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_TC) {
 				auto enableGamma = cs.consumeByte();
 				auto ptr = cs.consumePtr();
 				// printf(" store truecolor @ %p, gamma corrected? %s\n", ptr, (enableGamma?"Yes":"No"));
@@ -498,13 +506,16 @@ private:
 				if ((bits & GL_STENCIL_BUFFER_BIT) != 0) {
 					// XXX not implemented
 					assert(false); }}
-			else if (cmd == CMD_STORE_FP32_HALF) {
-				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				Downsample(cc, *smallcanvas, rect); }
-			else if (cmd == CMD_STORE_FP32) {
-				auto smallcanvas = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
-				Copy(cc, *smallcanvas, rect); }
-			else if (cmd == CMD_STORE_TRUECOLOR) {
+			else if (cmd == CMD_STORE_COLOR_HALF_LINEAR_FP) {
+				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
+				Downsample(cc, *dst, rect); }
+			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_FP) {
+				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
+				Copy(cc, *dst, rect); }
+			else if (cmd == CMD_STORE_COLOR_FULL_QUADS_FP) {
+				auto dst = static_cast<rglr::QFloat4Canvas*>(cs.consumePtr());
+				Copy(cc, *dst, rect); }
+			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_TC) {
 				auto enableGamma = cs.consumeByte();
 				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
 				tile_StoreTrueColor<SHADERS...>(*stateptr, uniformptr, rect, enableGamma, outcanvas);
@@ -529,9 +540,9 @@ private:
 
 		auto& cc = threadColorBufs_[rclmt::jobsys::thread_id];
 		if (enableGamma) {
-			rglr::Filter<PGM, rglr::sRGB>(cc, outcanvas, rect); }
+			rglr::FilterTile<PGM, rglr::sRGB>(cc, outcanvas, rect); }
 		else {
-			rglr::Filter<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
+			rglr::FilterTile<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
 	template <bool INSTANCED, typename INDEX_SOURCE, typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
@@ -938,17 +949,10 @@ private:
 		                !backfacing); }
 
 public:
-	bool DoubleBuffer() const {
-		return doubleBuffer_; }
-	void DoubleBuffer(bool value) {
-		doubleBuffer_ = value; }
 	void ColorCanvas(rglr::QFloat4Canvas* ptr) {}
 	void DepthCanvas(rglr::QFloatCanvas* ptr) {}
 
 private:
-	// configuration
-	bool doubleBuffer_{true};
-
 	const int concurrency_;
 	std::vector<rglr::QFloat4Canvas> threadColorBufs_{};
 	std::vector<rglr::QFloatCanvas>  threadDepthBufs_{};

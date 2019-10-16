@@ -38,31 +38,19 @@ public:
 
 	void Reset() override {
 		IOutput::Reset();
-		doubleBuffer_ = false;
-		tileDim_ = rmlv::ivec2{8, 8};
-		width_ = 0;
-		height_ = 0;
-		outCanvas_ = nullptr;
-		colorCanvas_ = nullptr;
-		smallCanvas_ = nullptr; }
+		outCanvas_ = nullptr; }
 
 	bool IsValid() override {
-		if (colorCanvas_ == nullptr && smallCanvas_ == nullptr && outCanvas_ == nullptr) {
-			std::cerr << "RenderNode(" << get_id() << ") has no output set" << std::endl;
+		if (outCanvas_ == nullptr) {
+			std::cerr << "truecolor(" << get_id() << ") has no output set" << std::endl;
 			return false; }
 		if (gpuNode_ == nullptr) {
-			std::cerr << "RenderNode(" << get_id() << ") has no gpu" << std::endl;
+			std::cerr << "truecolor(" << get_id() << ") has no gpu" << std::endl;
 			return false; }
 		return IOutput::IsValid(); }
 
 	void Main() override {
-		rclmt::jobsys::Job *renderJob = Render();
-		internalDepthCanvas_.resize(width_, height_);
-		internalColorCanvas_.resize(width_, height_);
-		gpuNode_->Dimensions(width_, height_);
-		gpuNode_->TileDimensions(tileDim_);
-		gpuNode_->Aspect(float(width_) / float(height_));
-		gpuNode_->AddLink(AfterAll(renderJob));
+		gpuNode_->AddLink(AfterAll(Render()));
 		gpuNode_->Run(); }
 
 	rclmt::jobsys::Job* Render() override {
@@ -71,74 +59,31 @@ public:
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
-		gpuNode_->DoubleBuffer(doubleBuffer_);
-		gpuNode_->ColorCanvas(GetColorCanvas());
-		gpuNode_->DepthCanvas(GetDepthCanvas());
 		auto& ic = gpuNode_->IC();
-		if (smallCanvas_ != nullptr) {
-			ic.StoreHalfsize(smallCanvas_); }
 		if (outCanvas_ != nullptr) {
 			ic.UseProgram(int(programId_));
-			ic.StoreTrueColor(sRGB_, outCanvas_); }
+			if (gpuNode_->GetAA()) {
+				throw std::runtime_error("truecolor aa not implemented"); }
+			else {
+				ic.StoreColor(outCanvas_, sRGB_); }}
 		ic.Finish();
 		auto renderJob = gpuNode_->Render();
 		AddLinksTo(renderJob);
 		rclmt::jobsys::run(renderJob); }
 
 	void SetOutputCanvas(rglr::TrueColorCanvas* canvas) override {
-		outCanvas_ = canvas;
-		width_ = canvas->width();
-		height_ = canvas->height(); }
+		outCanvas_ = canvas; }
 
-	void SetDoubleBuffer(bool value) override {
-		doubleBuffer_ = value; }
-
-	void SetTileDim(rmlv::ivec2 value) override {
-		tileDim_ = value; }
-
-	void SetColorCanvas(rglr::QFloat4Canvas* canvas) {
-		colorCanvas_ = canvas;
-		width_ = canvas->width();
-		height_ = canvas->height(); }
-
-	void SetSmallCanvas(rglr::FloatingPointCanvas* canvas) {
-		smallCanvas_ = canvas;
-		width_ = canvas->width();
-		height_ = canvas->height(); }
-
-	rglr::QFloatCanvas* GetDepthCanvas() {
-		internalDepthCanvas_.resize(width_, height_);
-		return &internalDepthCanvas_; }
-
-	rglr::QFloat4Canvas* GetColorCanvas() {
-		if (colorCanvas_ != nullptr) {
-			// std::cout << "renderer will use a provided colorcanvas" << std::endl;
-			return colorCanvas_; }
-		// std::cout << "renderer will use its internal colorcanvas" << std::endl;
-		// internalColorCanvas_.resize(width, height);
-		return &internalColorCanvas_; }
-
-	// internal
-	rglr::QFloat4Canvas internalColorCanvas_;
-	rglr::QFloatCanvas internalDepthCanvas_;
-
+private:
 	// static config
 	ShaderProgramId programId_;
 	bool sRGB_;
 
 	// runtime config
 	rglr::TrueColorCanvas* outCanvas_{nullptr};
-	int width_{0};
-	int height_{0};
-	bool doubleBuffer_{false};
-	rmlv::ivec2 tileDim_{8, 8};
 
 	// inputs
-	IGPU* gpuNode_{nullptr};
-
-	// received
-	rglr::QFloat4Canvas* colorCanvas_;
-	rglr::FloatingPointCanvas* smallCanvas_; };
+	IGPU* gpuNode_{nullptr}; };
 
 
 class Compiler final : public NodeCompiler {
@@ -159,7 +104,7 @@ class Compiler final : public NodeCompiler {
 
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$render", [](){ return std::make_unique<Compiler>(); });
+	NodeRegistry::GetInstance().Register("$truecolor", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

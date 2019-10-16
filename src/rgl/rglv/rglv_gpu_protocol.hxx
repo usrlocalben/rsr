@@ -32,14 +32,22 @@ constexpr uint8_t CMD_DRAW_INLINE_INSTANCED = 16;
 
 // buffer commands
 // ptr to floatingpointcanvas
-constexpr uint8_t CMD_STORE_FP32 = 20;
+constexpr uint8_t CMD_STORE_COLOR_FULL_LINEAR_FP = 20;
 
 // ptr to floatingpointcanvas
-constexpr uint8_t CMD_STORE_FP32_HALF = 21;
+constexpr uint8_t CMD_STORE_COLOR_HALF_LINEAR_FP = 21;
 
 // byte bool enable/disable srgb, ptr to truecolorcanvas
-constexpr uint8_t CMD_STORE_TRUECOLOR = 22;
+constexpr uint8_t CMD_STORE_COLOR_FULL_LINEAR_TC = 22;
 
+// ptr to qfloat4canvas
+constexpr uint8_t CMD_STORE_COLOR_FULL_QUADS_FP = 23;
+
+// ptr to qfloatcanvas
+constexpr uint8_t CMD_STORE_DEPTH_FULL_QUADS_FP = 24;
+
+// ptr to floatcanvas?
+constexpr uint8_t CMD_STORE_DEPTH_FULL_LINEAR_FP = 25;
 
 // internal use below this point
 constexpr uint8_t CMD_CLIPPED_TRI = 100;

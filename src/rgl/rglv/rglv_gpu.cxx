@@ -3,7 +3,13 @@
 namespace rqdq {
 namespace rglv {
 
-int BaseProgram::id = 0;
+/**
+ * global toggle for double-buffer operation of _all_ gpu
+ * instances.
+ *
+ * may only be updated when all gpu instances are idle.
+ */
+bool doubleBuffer{true};
 
 
 }  // namespace rglv

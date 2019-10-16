@@ -1,8 +1,18 @@
 [
-	{"$render": { "id": "nRender",
-		"sRGB": false,
-		"program": "IQ",
-		"gpu": {"$gpu": {"layers": ["mainLayer"]}}}},
+	{"$glow": { "id": "root",
+		"sRGB": true,
+		"image": "main:color",
+		"blur": {"$kawase": {
+			"intensity": 2,
+			"taskSize": 16,
+			"input": "main:half"}}}},
+
+	{"$buffers": { "id": "main",
+		"color": true,
+		"half": true,
+		"gpu": {"$gpu": {
+			"targetSize": "globals:windowSize",
+			"layers": ["mainLayer"]}}}},
 
 	{"$layer": { "id": "mainLayer",
 		"color": {"$computedVec3": {

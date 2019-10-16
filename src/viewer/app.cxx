@@ -23,6 +23,7 @@
 #include "src/rgl/rglr/rglr_profont.hxx"
 #include "src/rgl/rglr/rglr_texture_store.hxx"
 #include "src/rgl/rglv/rglv_camera.hxx"
+#include "src/rgl/rglv/rglv_gpu.hxx"
 #include "src/rgl/rglv/rglv_material.hxx"
 #include "src/rgl/rglv/rglv_mesh_store.hxx"
 #include "src/rml/rmls/rmls_bench.hxx"
@@ -247,9 +248,9 @@ public:
 
 				// update globals
 				globalsNode_->Upsert("wallclock", isPaused_ ? float(0) : float(wallClock_.time()));
-				globalsNode_->Upsert("displayWidth", float(cur_mode.width_in_pixels));
-				globalsNode_->Upsert("displayHeight", float(cur_mode.height_in_pixels));
-				globalsNode_->Upsert("displayAspect", float(cur_mode.width_in_pixels) / float(cur_mode.height_in_pixels));
+				globalsNode_->Upsert("windowSize", rmlv::vec2(cur_mode.width_in_pixels, cur_mode.height_in_pixels));
+				globalsNode_->Upsert("tileSize", rmlv::vec2(tile_dim.x, tile_dim.y));
+				globalsNode_->Upsert("windowAspect", float(cur_mode.width_in_pixels) / float(cur_mode.height_in_pixels));
 
 				ComputeAndRenderFrame(canvas);
 				if (nice_) { jobsys::work_end();}
@@ -330,7 +331,7 @@ private:
 			runFullScreen_ = !runFullScreen_;
 			break;
 		case Key::G:
-			doubleBuffer_ = !doubleBuffer_;
+			rglv::doubleBuffer = !rglv::doubleBuffer;
 			break;
 		case Key::N:
 			mouseCaptured_ = !mouseCaptured_;
@@ -535,7 +536,7 @@ private:
 			display_.zoom(-1.0F); }}  // auto-scale based on windows' scaling factor
 
 	void ComputeAndRenderFrame(TrueColorCanvas canvas) {
-		const std::string_view selector{"nRender"};
+		const std::string_view selector{"root"};
 
 		const auto match = rclr::find_if(nodes_, [=](const auto& node) { return node->get_id() == selector; });
 		if (match == end(nodes_)) {
@@ -552,8 +553,6 @@ private:
 			n->Reset(); }
 		ComputeIndegreesFrom(node);
 		node->set_indegreeWaitCnt(1);
-		node->SetTileDim(tile_dim);
-		node->SetDoubleBuffer(doubleBuffer_);
 		node->SetOutputCanvas(&canvas);
 		node->AddLink(rootJob);
 		node->Run();
@@ -616,7 +615,6 @@ private:
 	bool show_stats = false;
 	DisplayMode cur_mode{ 0, 0 };
 	DisplayMode change_mode = modelist[3];
-	bool doubleBuffer_ = true;
 	bool runningFullScreen_ = false;
 	bool show_mode_list = false;
 	bool keys_shifted = false;

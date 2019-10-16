@@ -58,12 +58,12 @@ public:
 			return rmlv::vec3{ 0.0F }; }
 		return layerNode->GetBackgroundColor(); }
 
-	void Render(rglv::GL* dc, int width, int height, float aspect, rclmt::jobsys::Job *link) override {
+	void Render(rglv::GL* dc, rmlv::ivec2 targetSizeInPx, float aspect, rclmt::jobsys::Job *link) override {
 		auto layerNode = GetSelectedLayer();
 		if (layerNode == nullptr) {
 			rclmt::jobsys::run(link); }
 		else {
-			layerNode->Render(dc, width, height, aspect, link); }}
+			layerNode->Render(dc, targetSizeInPx, aspect, link); }}
 
 protected:
 	void AddDeps() override {

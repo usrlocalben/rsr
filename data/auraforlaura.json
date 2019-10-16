@@ -1,14 +1,17 @@
 [
-	{"$render": { "id": "nRender",
+	{"$truecolor": { "id": "root",
 		"sRGB": true,
 		"program": "Default",
-		"gpu": {"$gpu": {"layers": ["lAmy", "lEffects"]}}}},
+		"gpu": {"$gpu": {
+			"targetSize": "globals:windowSize",
+			"layers": ["lAmy", "lEffects", "nPIPLayer"]
+		}}}},
 
 	{"$layer": { "id": "lAmy",
 		"camera": {"$orthographic": {}},
 		"color": "amyBackgroundColor",
 		"gl": [ "nAmy" ]}},
-	
+
 	{"$layerSelect": {"id": "chooser",
 		"selector": {"$float": {"x": 1}},
 		"layers": ["nPIPLayer", "lEffects"]}},
@@ -28,7 +31,7 @@
 	{"$layer": { "id": "lCarpet",
 		"camera": "uiCamera",
 		"gl": [ "nCarpet" ]}},
-	
+
 	{"$fxCarpet": { "id": "nCarpet",
 		"material": "mAmy",
 		"freq": {"$computedVec3": {
@@ -43,12 +46,19 @@
 		"h": 3.14, "v": 0,
 		"fov": 55.0}},
 
-	{"$renderToTexture": {"id": "texRTT", "gpu": "nGPU2", "width": 256, "height": 256, "aa": true, "aspect": 1.666}},
+	{"$renderToTexture": {"id": "texRTT",
+		"gpu": {"$gpu": {
+			"targetSize": {"$vec2": {"x": 64, "y": 64}},
+			"aspect": {"$float": {"x": 1.6666}},
+			"aa": true,
+			"layers": [ "nfoo" ]}}}},
+
 	{"$material": {"id": "mTest", "program": "Amy", "filter": false, "texture0": "texRTT"}},
 
 	{"$layer": { "id": "nPIPLayer",
 		"camera": {"$orthographic": {}},
 		"gl": ["npipborder", "npip"]}},
+
 	{"$fxXYQuad": { "id": "npipborder",
 		"material": "mBlack",
 		"leftTop": {"$vec2": {"x": 0.09, "y": -0.09}},
@@ -60,14 +70,10 @@
 		"rightBottom": {"$vec2": {"x": 0.9, "y": -0.9}},
 		"z": {"$float": {"x": 0.9}}}},
 
-	{"$gpu": { "id": "nGPU2",
-		"color": {"$float": {"x": 0.333}},
-		"layers": [ "nfoo" ]}},
 	{"$layer": { "id": "nfoo",
 		"color": {"$float": {"x": 0.333}},
 		"camera": "uiCamera",
 		"gl": [ "nField" ]}},
-
 
 	{"$group": {"id": "nGeo", "gl": [ "nAmy" ]}},
 	{"$fxXYQuad": { "id": "nAmy",
@@ -182,6 +188,6 @@
 	{"$vec3": {"id": "norotator", "x": 0, "y": 0, "z": 0}},
 	{"$computedVec3": { "id": "fieldrotator",
 		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-		"code": "{t*0.1, sin(t*0.41)*0.333, sin(t*0.222)*0.3}"}},
+		"code": "{t*0.1, sin(t*0.41)*0.333, sin(t*0.222)*0.3}"}}
 
 ]

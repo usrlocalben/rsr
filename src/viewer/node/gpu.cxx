@@ -15,6 +15,7 @@
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/i_gpu.hxx"
 #include "src/viewer/node/i_layer.hxx"
+#include "src/viewer/node/i_value.hxx"
 #include "src/viewer/shaders.hxx"
 
 namespace rqdq {
@@ -29,7 +30,10 @@ using GPU = rglv::GPU<rglv::BaseProgram, WireframeProgram, IQPostProgram, Envmap
 
 class GPUNode : public IGPU {
 public:
-	GPUNode(std::string_view id, InputList inputs) : IGPU(id, inputs), gpu_(jobsys::thread_count) {}
+	GPUNode(std::string_view id, InputList inputs, bool aa) :
+		IGPU(id, inputs),
+		gpu_(jobsys::thread_count),
+		aa_(aa) {}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "layer") {
@@ -39,26 +43,63 @@ public:
 				return false; }
 			layers_.push_back(tmp);
 			return true; }
+		if (attr == "targetSize") {
+			auto tmp = dynamic_cast<IValue*>(other);
+			if (tmp == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			targetSizeNode_ = tmp;
+			targetSizeSlot_ = slot;
+			return true; }
+		if (attr == "tileSize") {
+			auto tmp = dynamic_cast<IValue*>(other);
+			if (tmp == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			tileSizeNode_ = tmp;
+			tileSizeSlot_ = slot;
+			return true; }
+		if (attr == "aspect") {
+			auto tmp = dynamic_cast<IValue*>(other);
+			if (tmp == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			aspectNode_ = tmp;
+			aspectSlot_ = slot;
+			return true; }
 		return IGPU::Connect(attr, other, slot); }
 
 	void AddDeps() override {
 		IGPU::AddDeps();
 		for (auto node : layers_) {
-			AddDep(node); }}
+			AddDep(node); }
+		AddDep(targetSizeNode_);
+		AddDep(tileSizeNode_);
+		AddDep(aspectNode_); }
 
 	void Reset() override {
-		NodeBase::Reset();
-		width_ = {};
-		height_ = {};
-		tileDim_ = {}; }
+		NodeBase::Reset(); }
 
 	void Main() override {
 		using rmlv::ivec2, rmlv::vec3, rmlv::vec4;
 
-		const int targetWidth = width_.value_or(256);
-		const int targetHeight = height_.value_or(256);
-		const ivec2 td = tileDim_.value_or(ivec2{8, 8});
-		gpu_.Reset(ivec2{ targetWidth, targetHeight }, td);
+		targetSizeInPx_ = rmlv::ivec2{ 256, 256 };
+		if (targetSizeNode_ != nullptr) {
+			auto value = targetSizeNode_->Eval(targetSizeSlot_).as_vec2();
+			targetSizeInPx_ = rmlv::ivec2{ (int)value.x, (int)value.y }; }
+		if (aa_) {
+			targetSizeInPx_ = targetSizeInPx_ * 2; }
+
+		tileSizeInBlocks_ = rmlv::ivec2{ 8, 8 };
+		if (tileSizeNode_ != nullptr) {
+			auto value = tileSizeNode_->Eval(tileSizeSlot_).as_vec2();
+			tileSizeInBlocks_ = ivec2{ (int)value.x, (int)value.y }; }
+
+		aspect_ = float(targetSizeInPx_.x) / targetSizeInPx_.y;
+		if (aspectNode_ != nullptr) {
+			aspect_ = aspectNode_->Eval(aspectSlot_).as_float(); }
+
+		gpu_.Reset(targetSizeInPx_, tileSizeInBlocks_);
 		auto& ic = gpu_.IC();
 
 		auto backgroundColor = vec3{ 0, 0, 0 };
@@ -70,25 +111,13 @@ public:
 		ic.Clear(rglv::GL_COLOR_BUFFER_BIT); //|rglv::GL_DEPTH_BUFFER_BIT);
 
 		if (layers_.empty()) {
-			jobsys::Job *postJob = Post();
-			AddLinksTo(postJob);
-			jobsys::run(postJob);
-			return; }
-
-		jobsys::Job *drawJob = Draw();
-		for (auto layer : layers_) {
-			layer->AddLink(AfterAll(drawJob)); }
-		for (auto layer : layers_) {
-			layer->Run(); } }
-
-	void Dimensions(int x, int y) override {
-		width_ = x; height_ = y; }
-
-	void TileDimensions(rmlv::ivec2 tileDim) override {
-		tileDim_ = tileDim; }
-
-	void Aspect(float aspect) override {
-		aspect_ = aspect; }
+			RunLinks(); }
+		else {
+			jobsys::Job *drawJob = Draw();
+			for (auto layer : layers_) {
+				layer->AddLink(AfterAll(drawJob)); }
+			for (auto layer : layers_) {
+				layer->Run(); } }}
 
 	rclmt::jobsys::Job* Draw() {
 		return rclmt::jobsys::make_job(GPUNode::DrawJmp, std::tuple{this}); }
@@ -96,15 +125,11 @@ public:
 		auto& [self] = *data;
 		self->DrawImpl(); }
 	void DrawImpl() {
-		const int targetWidth = width_.value_or(256);
-		const int targetHeight = height_.value_or(256);
-		const float targetAspect = aspect_.value_or(float(targetWidth) / float(targetHeight));
-
 		pcnt_ = layers_.size();
 		jobsys::Job *postJob = Post();
 		AddLinksTo(postJob);
 		for (auto layer : layers_) {
-			layer->Render(&gpu_.IC(), targetWidth, targetHeight, targetAspect, jobsys::make_job(GPUNode::AllThen, std::tuple{&pcnt_, postJob})); } }
+			layer->Render(&gpu_.IC(), targetSizeInPx_, aspect_, jobsys::make_job(GPUNode::AllThen, std::tuple{&pcnt_, postJob})); } }
 
 	static void AllThen(rclmt::jobsys::Job* job, unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
@@ -120,35 +145,43 @@ public:
 		self->Post(); }
 	void PostImpl() {}
 
-	void DoubleBuffer(bool value) override {
-		gpu_.DoubleBuffer(value); }
-
-	void ColorCanvas(rglr::QFloat4Canvas* ptr) override {
-		gpu_.ColorCanvas(ptr); }
-
-	void DepthCanvas(rglr::QFloatCanvas* ptr) override {
-		gpu_.DepthCanvas(ptr); }
-
 	rglv::GL& IC() override {
 		return gpu_.IC(); }
 
 	rclmt::jobsys::Job* Render() override {
 		return gpu_.Run(); }
 
+	/**
+	 * only valid after Main()!
+	 */
+	rmlv::ivec2 GetTargetSize() const override {
+		return targetSizeInPx_; }
+
+	bool GetAA() const override {
+		return aa_; }
+
 private:
 	// internal
 	GPU gpu_;
+
+	// static
+	const bool aa_;
 
 	std::atomic<int> pcnt_;  // all_then counter
 
 	// inputs
 	std::vector<ILayer*> layers_;
+	IValue* targetSizeNode_{nullptr};
+	std::string targetSizeSlot_{};
+	IValue* tileSizeNode_{nullptr};
+	std::string tileSizeSlot_{};
+	IValue* aspectNode_{nullptr};
+	std::string aspectSlot_{};
 
 	// received
-	std::optional<int> width_;
-	std::optional<int> height_;
-	std::optional<float> aspect_;
-	std::optional<rmlv::ivec2> tileDim_; };
+	rmlv::ivec2 targetSizeInPx_;
+	rmlv::ivec2 tileSizeInBlocks_;
+	float aspect_; };
 
 
 class Compiler final : public NodeCompiler {
@@ -158,7 +191,18 @@ class Compiler final : public NodeCompiler {
 				if (item->value.getTag() == JSON_STRING) {
 					inputs_.emplace_back("layer", item->value.toString()); }}}
 
-		out_ = std::make_shared<GPUNode>(id_, std::move(inputs_)); }};
+		bool aa{false};
+		if (auto jv = rclx::jv_find(data_, "aa", JSON_TRUE)) {
+			aa = true; }
+
+		if (!Input("tileSize", /*required=*/true)) {
+			inputs_.emplace_back("tileSize", "globals:tileSize"); }
+
+		if (!Input("targetSize", /*required=*/true)) { return; }
+
+		Input("aspect", /*required=*/false);
+
+		out_ = std::make_shared<GPUNode>(id_, std::move(inputs_), aa); }};
 
 
 struct init { init() {

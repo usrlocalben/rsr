@@ -194,9 +194,10 @@ public:
 	void DrawElementsInstanced(int mode, int count, int type, const uint16_t* indices, int instanceCnt);
 	void DrawArraysInstanced(int mode, int start, int count, int instanceCnt);
 	void Clear(int bits);
-	void StoreHalfsize(rglr::FloatingPointCanvas *dst);
-	void StoreUnswizzled(rglr::FloatingPointCanvas *dst);
-	void StoreTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst);
+	void StoreColor(rglr::FloatingPointCanvas *dst, bool downsample);
+	void StoreColor(rglr::QFloat4Canvas *dst);
+	void StoreColor(rglr::TrueColorCanvas *dst, bool enableGammaCorrection);
+	// void StoreDepth(rglr::QFloatCanvas *dst);
 	void Finish() {}
 	void Reset();
 

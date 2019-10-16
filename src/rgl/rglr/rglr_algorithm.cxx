@@ -79,7 +79,7 @@ void Downsample(const QFloat4Canvas& src, FloatingPointCanvas& dst, const rmlg::
 	const int dstStride = dst.stride();
 	const int srcStride = src.stride2();
 
-	auto dsty = dst.data() + (rect.top.y>>1)*dstStride + (rect.left.x>>1);
+	auto dsty = dst.data() + rect.top.y/2*dstStride + rect.left.x/2;
 	auto srcy = src.cdata();
 	for (int y=rect.top.y; y<rect.bottom.y; y+=2, dsty+=dstStride, srcy+=srcStride) {
 		auto dstpx = dsty;
@@ -122,41 +122,38 @@ void Downsample(const QShort3Canvas& src, FloatingPointCanvas& dst, const rmlg::
 
 
 void Copy(const QFloat4Canvas& src, FloatingPointCanvas& dst, const rmlg::irect rect) {
-	auto dstRowAddr = &dst.data()[rect.top.y*dst.stride()];
-	auto srcRowAddr = src.cdata();
+	auto dstRow = &dst.data()[rect.top.y*dst.stride() + rect.left.x];
+	auto srcRow = src.cdata();
 
 	for (int y = rect.top.y; y < rect.bottom.y; y += 2) {
-
-		auto dstAddrR1 = &dstRowAddr[rect.left.x];
-		auto dstAddrR2 = dstAddrR1 + dst.stride();
-		auto srcAddr = srcRowAddr;
+		auto dstXr1 = dstRow;
+		auto dstXr2 = dstRow + dst.stride();
+		auto srcX   = srcRow;
 
 		for (int x = rect.left.x; x < rect.right.x; x += 4) {
-			// BEGIN process 4x2 pixels (2 quads)
 			__m128 l0, l1, l2, l3 = _mm_setzero_ps();
 			__m128 r0, r1, r2, r3 = _mm_setzero_ps();
-			QFloat4Canvas::Load(srcAddr,   l0, l1, l2);
-			QFloat4Canvas::Load(srcAddr+1, r0, r1, r2);
+			QFloat4Canvas::Load(srcX,   l0, l1, l2);
+			QFloat4Canvas::Load(srcX+1, r0, r1, r2);
 			_MM_TRANSPOSE4_PS(l0, l1, l2, l3);
 			_MM_TRANSPOSE4_PS(r0, r1, r2, r3);
 
-			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR1[0]), l0);
-			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR1[1]), l1);
-			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR1[2]), r0);
-			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR1[3]), r1);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstXr1[0]), l0);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstXr1[1]), l1);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstXr1[2]), r0);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstXr1[3]), r1);
 
-			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR2[0]), l2);
-			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR2[1]), l3);
-			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR2[2]), r2);
-			_mm_stream_ps(reinterpret_cast<float*>(&dstAddrR2[3]), r3);
-			//  END  process 4x2 pixels (2 quads)
+			_mm_stream_ps(reinterpret_cast<float*>(&dstXr2[0]), l2);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstXr2[1]), l3);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstXr2[2]), r2);
+			_mm_stream_ps(reinterpret_cast<float*>(&dstXr2[3]), r3);
 
-			dstAddrR1 += 4;
-			dstAddrR2 += 4;
-			srcAddr += 2; }
+			dstXr1 += 4;
+			dstXr2 += 4;
+			srcX += 2; }
 
-		dstRowAddr += dst.stride() * 2;
-		srcRowAddr += src.stride2(); }}
+		dstRow += dst.stride() * 2;
+		srcRow += src.stride2(); }}
 
 
 void Copy(const QShort3Canvas& src, FloatingPointCanvas& dst, const rmlg::irect rect) {
@@ -194,6 +191,31 @@ void Copy(const QShort3Canvas& src, FloatingPointCanvas& dst, const rmlg::irect 
 			srcAddr += 2; }
 
 		dstRowAddr += dst.stride() * 2;
+		srcRowAddr += src.stride2(); }}
+
+
+void Copy(const QFloat4Canvas& src, QFloat4Canvas& dst, const rmlg::irect rect) {
+	auto dstRowAddr = &dst.data()[rect.top.y/2*dst.stride2()];
+	auto srcRowAddr = src.cdata();
+
+	for (int y = rect.top.y; y < rect.bottom.y; y += 2) {
+
+		auto dstAddr = &dstRowAddr[rect.left.x/2];
+		auto srcAddr = srcRowAddr;
+
+		for (int x = rect.left.x; x < rect.right.x; x += 2) {
+			__m128 l0, l1, l2, l3;
+			QFloat4Canvas::Load(srcAddr, l0, l1, l2, l3);
+
+			_mm_stream_ps(reinterpret_cast<float*>(&(dstAddr->x.v)), l0);
+			_mm_stream_ps(reinterpret_cast<float*>(&(dstAddr->y.v)), l1);
+			_mm_stream_ps(reinterpret_cast<float*>(&(dstAddr->z.v)), l2);
+			_mm_stream_ps(reinterpret_cast<float*>(&(dstAddr->w.v)), l3);
+
+			dstAddr++;
+			srcAddr++; }
+
+		dstRowAddr += dst.stride2();
 		srcRowAddr += src.stride2(); }}
 
 

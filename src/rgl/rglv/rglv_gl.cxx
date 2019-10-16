@@ -59,23 +59,34 @@ void GL::Clear(const int bits) {
 	commands_.appendByte(bits); }
 
 
-void GL::StoreHalfsize(rglr::FloatingPointCanvas *dst) {
+void GL::StoreColor(rglr::FloatingPointCanvas *dst, bool downsample) {
 	MaybeUpdateState();
-	commands_.appendByte(CMD_STORE_FP32_HALF);
+	if (downsample) {
+		commands_.appendByte(CMD_STORE_COLOR_HALF_LINEAR_FP); }
+	else {
+		commands_.appendByte(CMD_STORE_COLOR_FULL_LINEAR_FP); }
 	commands_.appendPtr(dst); }
 
 
-void GL::StoreUnswizzled(rglr::FloatingPointCanvas *dst) {
+void GL::StoreColor(rglr::QFloat4Canvas* dst) {
 	MaybeUpdateState();
-	commands_.appendByte(CMD_STORE_FP32);
+	commands_.appendByte(CMD_STORE_COLOR_FULL_QUADS_FP);
 	commands_.appendPtr(dst); }
 
 
-void GL::StoreTrueColor(bool enableGammaCorrection, rglr::TrueColorCanvas* dst) {
+void GL::StoreColor(rglr::TrueColorCanvas* dst, bool enableGammaCorrection) {
 	MaybeUpdateState();
-	commands_.appendByte(CMD_STORE_TRUECOLOR);
+	commands_.appendByte(CMD_STORE_COLOR_FULL_LINEAR_TC);
 	commands_.appendByte(static_cast<uint8_t>(enableGammaCorrection));
 	commands_.appendPtr(dst); }
+
+
+/*
+void GL::StoreDepth(rglr::QFloatCanvas* dst) {
+	MaybeUpdatestate();
+	commands_.appendByte(CMD_STORE_DEPTH_FULL_QUADS_FP);
+	commands_.appendPtr(dst); }
+*/
 
 
 void GL::Reset() {

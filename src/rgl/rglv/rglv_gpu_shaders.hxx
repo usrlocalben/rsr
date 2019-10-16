@@ -19,7 +19,7 @@ struct Matrices {
 
 
 struct BaseProgram {
-	static int id;
+	static constexpr int id = 0;
 
 	struct UniformsSD {};
 	struct UniformsMD {
