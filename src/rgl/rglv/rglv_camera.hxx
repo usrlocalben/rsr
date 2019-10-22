@@ -26,48 +26,47 @@ public:
 	 * upside-down
 	 */
 	void onMouseMove(rmlv::vec2 delta) {
-		d_angle += d_mouse_speed * delta;
+		angleInRadians_ += mouseSpeedMagic_ * delta;
 		float halfPi{ rmlv::M_PI / 2.0F };
-		d_angle.y = std::clamp(d_angle.y, -halfPi, halfPi); }
+		angleInRadians_.y = std::clamp(angleInRadians_.y, -halfPi, halfPi); }
 
 public:
-	rmlm::mat4 getMatrix() const {
-		auto dir = makeDirectionVector();
-		auto right = makeRightVector();
+	rmlm::mat4 ViewMatrix() const {
+		auto dir = DirectionVector();
+		auto right = RightVector();
 		auto up = cross(right, dir);
-		return look_at(d_position, d_position + dir, up); }
+		return LookAt(eyePosition_, eyePosition_ + dir, up); }
 
-	void moveForward()  { d_position += makeDirectionVector(); }
-	void moveBackward() { d_position -= makeDirectionVector(); }
-	void moveLeft()     { d_position -= makeRightVector(); }
-	void moveRight()    { d_position += makeRightVector(); }
-	void moveUp()       { d_position += rmlv::vec3{ 0, 0.5F, 0 }; }
-	void moveDown()     { d_position -= rmlv::vec3{ 0, 0.5F, 0 }; }
+	void moveForward()  { eyePosition_ += DirectionVector(); }
+	void moveBackward() { eyePosition_ -= DirectionVector(); }
+	void moveLeft()     { eyePosition_ -= RightVector(); }
+	void moveRight()    { eyePosition_ += RightVector(); }
+	void moveUp()       { eyePosition_ += rmlv::vec3{ 0, 0.5F, 0 }; }
+	void moveDown()     { eyePosition_ -= rmlv::vec3{ 0, 0.5F, 0 }; }
 
-	float getFieldOfView() const { return d_field_of_view; }
-	void adjustZoom(const int ticks) { d_field_of_view += float(ticks); }
+	float FieldOfView() const { return fieldOfViewInDegrees_; }
+	void Zoom(int ticks) { fieldOfViewInDegrees_ += float(ticks); }
 
-	void print() {
-		std::cout << "position=" << d_position << ", angle=" << d_angle << ", fov=" << d_field_of_view << std::endl; }
+	void Print() const {
+		std::cout << "<HandyCam eye=" << eyePosition_ << ", angle=" << angleInRadians_ << ", fov=" << fieldOfViewInDegrees_ << ">"; }
 
 private:
-	rmlv::vec3 makeDirectionVector() const {
-		auto x = cos(d_angle.y) * sin(d_angle.x);
-		auto y = sin(d_angle.y);
-		auto z = cos(d_angle.y) * cos(d_angle.x);
+	rmlv::vec3 DirectionVector() const {
+		auto x = cos(angleInRadians_.y) * sin(angleInRadians_.x);
+		auto y = sin(angleInRadians_.y);
+		auto z = cos(angleInRadians_.y) * cos(angleInRadians_.x);
 		return rmlv::vec3{ x, y, z }; }
 
-	rmlv::vec3 makeRightVector() const {
-		auto x = sin(d_angle.x - 3.14F / 2.0F);
+	rmlv::vec3 RightVector() const {
+		auto x = sin(angleInRadians_.x - 3.14F / 2.0F);
 		auto y = 0.0F;
-		auto z = cos(d_angle.x - 3.14F / 2.0F);
+		auto z = cos(angleInRadians_.x - 3.14F / 2.0F);
 		return rmlv::vec3{ x, y, z }; }
 
-	rmlv::vec3 d_position{0,0,5};
-	rmlv::vec2 d_angle{3.14, 0};
-	double d_field_of_view{45.0};
-	double d_mouse_speed{0.010};
-	};
+	const double mouseSpeedMagic_{0.010};
+	rmlv::vec3 eyePosition_{ 0, 0, 5 };
+	rmlv::vec2 angleInRadians_{ 3.14, 0 };
+	double fieldOfViewInDegrees_{ 45.0 }; };
 
 
 }  // namespace rglv

@@ -10,8 +10,8 @@ namespace rqv {
 class ICamera : public NodeBase {
 public:
 	using NodeBase::NodeBase;
-	virtual auto GetProjectionMatrix(float aspect) const -> rmlm::mat4 = 0;
-	virtual auto GetModelViewMatrix() const -> rmlm::mat4 = 0; };
+	virtual auto ProjectionMatrix(float aspect) const -> rmlm::mat4 = 0;
+	virtual auto ViewMatrix() const -> rmlm::mat4 = 0; };
 
 
 }  // namespace rqv

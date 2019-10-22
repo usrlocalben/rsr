@@ -14,10 +14,10 @@ using namespace rqv;
 class Impl final : public ICamera {
 public:
 	using ICamera::ICamera;
-	rmlm::mat4 GetProjectionMatrix(float aspect) const override {
-		return rglv::make_glOrtho(-1.0F, 1.0F, -1.0F, 1.0F, 1.0F, -1.0F); }
+	rmlm::mat4 ProjectionMatrix(float aspect) const override {
+		return rglv::Orthographic(-1.0F, 1.0F, -1.0F, 1.0F, 1.0F, -1.0F); }
 
-	rmlm::mat4 GetModelViewMatrix() const override {
+	rmlm::mat4 ViewMatrix() const override {
 		return rmlm::mat4::ident(); }};
 
 

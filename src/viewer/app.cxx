@@ -306,7 +306,7 @@ private:
 			show_shader_threads = !show_shader_threads;
 			break;
 		case Key::P:
-			camera_.print();
+			camera_.Print(); cout << "\n";
 			isPaused_= !isPaused_;
 			break;
 		case Key::W: camera_.moveForward(); break;
@@ -389,7 +389,7 @@ private:
 
 	void onMouseWheel(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse, short wheel_amount) override {
 		int ticks = wheel_amount / 120;
-		camera_.adjustZoom(ticks); }
+		camera_.Zoom(ticks); }
 
 	void DrawUI(struct TrueColorCanvas& canvas, double renderTimeInMillis, double frameTimeInMillis) {
 		if (show_mode_list) {

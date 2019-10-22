@@ -86,8 +86,8 @@ public:
 		mat4* pmat = reinterpret_cast<mat4*>(framepool::Allocate(64));
 		mat4* mvmat = reinterpret_cast<mat4*>(framepool::Allocate(64));
 		if (cameraNode_ != nullptr) {
-			*pmat = cameraNode_->GetProjectionMatrix(aspect);
-			*mvmat = cameraNode_->GetModelViewMatrix(); }
+			*pmat = cameraNode_->ProjectionMatrix(aspect);
+			*mvmat = cameraNode_->ViewMatrix(); }
 		else {
 			*pmat = mat4::ident();
 			*mvmat = mat4::ident(); }

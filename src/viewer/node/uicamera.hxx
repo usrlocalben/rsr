@@ -11,8 +11,8 @@ namespace rqv {
 class UICamera : public ICamera {
 public:
 	UICamera(std::string_view id, InputList inputs, const class rglv::HandyCam& hc);
-	rmlm::mat4 GetProjectionMatrix(float aspect) const override;
-	rmlm::mat4 GetModelViewMatrix() const override;
+	rmlm::mat4 ProjectionMatrix(float aspect) const override;
+	rmlm::mat4 ViewMatrix() const override;
 
 private:
 	const class rglv::HandyCam& hc_; };

@@ -13,13 +13,12 @@ UICamera::UICamera(std::string_view id, InputList inputs, const rglv::HandyCam& 
 	:ICamera(id, std::move(inputs)), hc_(hc) {}
 
 
-rmlm::mat4 UICamera::GetProjectionMatrix(float aspect) const {
-	auto m = rglv::make_gluPerspective(hc_.getFieldOfView(), aspect, 1, 1000);
-	return m; }
+rmlm::mat4 UICamera::ProjectionMatrix(float aspect) const {
+	return rglv::Perspective2(hc_.FieldOfView(), aspect, 1, 1000); }
 
 
-rmlm::mat4 UICamera::GetModelViewMatrix() const {
-	return hc_.getMatrix(); }
+rmlm::mat4 UICamera::ViewMatrix() const {
+	return hc_.ViewMatrix(); }
 
 
 }  // namespace rqv

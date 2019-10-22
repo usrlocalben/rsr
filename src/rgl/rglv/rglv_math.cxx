@@ -11,7 +11,7 @@ using vec3 = rqdq::rmlv::vec3;
 using vec4 = rqdq::rmlv::vec4;
 
 
-mat4 mat4_look_from_to(const vec4& from, const vec4& to) {
+mat4 LookFromTo(vec4 from, vec4 to) {
 	vec4 up;
 	vec4 right;
 
@@ -59,8 +59,11 @@ mat4 mat4_look_from_to(const vec4& from, const vec4& to) {
 	return mrot * mpos; }
 
 
-mat4 look_at(vec3 pos, vec3 center, vec3 up) {
-	auto forward = normalize(center - pos);
+/**
+ * gluLookAt
+ */
+mat4 LookAt(vec3 eye, vec3 center, vec3 up) {
+	auto forward = normalize(center - eye);
 	auto side = normalize(cross(forward, up));
 	auto up2 = cross(side, forward);
 
@@ -70,13 +73,84 @@ mat4 look_at(vec3 pos, vec3 center, vec3 up) {
 		-forward.x, -forward.y, -forward.z, 0,
 		0, 0, 0, 1};
 
-	mat4 mpos = mat4{
-		1, 0, 0, -pos.x,
-		0, 1, 0, -pos.y,
-		0, 0, 1, -pos.z,
+	mat4 mEye = mat4{
+		1, 0, 0, -eye.x,
+		0, 1, 0, -eye.y,
+		0, 0, 1, -eye.z,
 		0, 0, 0, 1};
 
-	return mrot * mpos; }
+	return mrot * mEye; }
+
+
+/**
+ * glFrustum matrix
+ */
+rmlm::mat4 Perspective(float l, float r, float b, float t, float n, float f) {
+	/*standard opengl perspective transform*/
+	return rmlm::mat4{
+	    (2*n)/(r-l),      0,         (r+l)/(r-l),        0,
+	         0,      (2*n)/(t-b),    (t+b)/(t-b),        0,
+	         0,           0,      -((f+n)/(f-n)),  -((2*f*n)/(f-n)),
+	         0,           0,            -1,              0            };}
+
+
+/**
+ * gluPerspective matrix
+ */
+rmlm::mat4 Perspective2(float fovy, float aspect, float znear, float zfar) {
+	auto h = float(tan((fovy / 2) / 180 * rmlv::M_PI) * znear);
+	auto w = float(h * aspect);
+	return Perspective(-w, w, -h, h, znear, zfar); }
+
+
+/**
+ * glOrtho matrix
+ */
+rmlm::mat4 Orthographic(float l, float r, float b, float t, float n, float f) {
+	/*standard opengl orthographic transform*/
+	return rmlm::mat4{
+	 	   2/(r-l),   0,        0,      -((r+l)/(r-l)),
+	         0,    2/(t-b),     0,      -((t+b)/(t-b)),
+	         0,       0,    -2/(f-n),   -((f+n)/(f-n)),
+	         0,       0,        0,            1         };}
+
+
+/**
+ * perspective transform with infinite far clip distance
+ * from the paper
+ * "Practical and Robust Stenciled Shadow Volumes for Hardware-Accelerated Rendering" (2002, nvidia)
+ */
+rmlm::mat4 InfinitePerspective(float left, float right, float bottom, float top, float near, float far) {
+	return rmlm::mat4(
+		(2*near)/(right-left)           ,0           , (right+left)/(right-left)            ,0
+		         ,0           ,(2*near)/(top-bottom) , (top+bottom)/(top-bottom)            ,0
+		         ,0                     ,0                       ,-1                     ,-2*near
+		         ,0                     ,0                       ,-1                        ,0     ); }
+
+
+/*
+rmlm::mat4 make_device_matrix(const int width, const int height) {
+	rmlm::mat4 yFix{
+		1,  0,  0,  0,
+		0, -1,  0,  0,
+		0,  0,  1,  0,
+		0,  0,  0,  1};
+
+	rmlm::mat4 scale{
+		width/2.0F,      0,              0,          0,
+		     0,    height/2.0F,          0,          0,
+		     0,          0,            1.0F,         0, ///zfar-znear, // 0,
+		     0,          0,              0,        1.0F};
+
+	rmlm::mat4 origin{
+		1.0F,         0,         0,  width /2.0F,
+		  0,        1.0F,        0,  height/2.0F,
+		  0,          0,       1.0F,       0,
+		  0,          0,         0,      1.0F };
+
+	//md = mat4_mul(origin, mat4_mul(scale, yFix));
+	return origin * (scale * yFix); }
+*/
 
 
 }  // namespace rglv

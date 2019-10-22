@@ -31,17 +31,17 @@ public:
 			return true; }
 		return ICamera::Connect(attr, other, slot); }
 
-	rmlm::mat4 GetProjectionMatrix(float aspect) const override {
-		rmlm::mat4 m = rglv::make_gluPerspective(fov, aspect, 1, 1000);
+	rmlm::mat4 ProjectionMatrix(float aspect) const override {
+		rmlm::mat4 m = rglv::Perspective2(fov, aspect, 1, 1000);
 		m = rmlm::mat4::translate(origin.x, origin.y, 0) * m;
 		return m; }
 
-	rmlm::mat4 GetModelViewMatrix() const override {
+	rmlm::mat4 ViewMatrix() const override {
 		rmlv::vec3 position = positionNode_->Eval(positionSlot_).as_vec3();
 		rmlv::vec3 dir = MakeDir();
 		rmlv::vec3 right = MakeRight();
 		rmlv::vec3 up = cross(right, dir);
-		return rglv::look_at(position, position + dir, up); }
+		return rglv::LookAt(position, position + dir, up); }
 
 private:
 	rmlv::vec3 MakeDir() const {
