@@ -87,5 +87,49 @@ public:
 		d_head -= many; } };
 
 
+class FastPackedReader {
+	// uint8_t* const base_;
+	uint8_t* tail_;
+	// const uint8_t* const end_;
+public:
+	FastPackedReader(uint8_t* begin) : //, uint8_t* end) :
+		tail_(begin) {}
+		// end_(end) {}
+
+private:
+	template<int MANY>
+	inline uint8_t *Consume() {
+		auto ptr = tail_;
+		tail_ += MANY;
+		return ptr; }
+
+	inline uint8_t *Peek() const {
+		return tail_; }
+
+public:
+	// inline bool Eof()  const { return tail_ == end_; }
+	// inline int  Size() const { return end_ - base_; }
+
+	inline auto ConsumeByte() {
+		return *reinterpret_cast<uint8_t*>(Consume<sizeof(uint8_t)>()); }
+	inline auto ConsumeUShort() {
+		return *reinterpret_cast<uint16_t*>(Consume<sizeof(uint16_t)>()); }
+	inline auto ConsumeInt() {
+		return *reinterpret_cast<int*>(Consume<sizeof(int)>()); }
+	inline auto ConsumeFloat() {
+		return *reinterpret_cast<float*>(Consume<sizeof(float)>()); }
+	inline auto ConsumePtr() {
+		return *reinterpret_cast<void**>(Consume<sizeof(void*)>()); }
+	inline auto ConsumeVec4() {
+		auto x = ConsumeFloat();
+		auto y = ConsumeFloat();
+		auto z = ConsumeFloat();
+		auto w = ConsumeFloat();
+		return rmlv::vec4{ x, y, z, w }; }
+
+	inline auto PeekUShort() const {
+		return *reinterpret_cast<uint16_t*>(Peek()); } };
+
+
 }  // namespace rglv
 }  // namespace rqdq
