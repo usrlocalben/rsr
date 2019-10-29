@@ -40,6 +40,8 @@ constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
 
 constexpr auto maxVAOSizeInVertices = 500000L;
 
+constexpr auto kMaxSizeInBytes = 100000L;
+
 extern bool doubleBuffer;
 
 struct ClippedVertex {
@@ -204,29 +206,6 @@ struct TileStat {
 	int cost; };
 
 
-struct Tile {
-	Tile(const int id, const rmlg::irect& rect) :
-		id(id),
-		rect(rect) {}
-
-	void Reset() {
-		commands0.reset(); }
-
-	const int id;
-	const rmlg::irect rect;
-	int threadId;
-	FastPackedStream commands0;
-	char padding[64 - sizeof(FastPackedStream)];  // prevent false-sharing
-	FastPackedStream commands1; };
-
-
-/*
- * use the command list length as an approximate compute cost
- */
-inline int RenderCost(const Tile& tile) {
-	return int(tile.commands1.size()); }
-
-
 inline void PrintStatistics(const GPUStats& stats) {
 	fmt::printf("tiles: % 4d   commands: % 4d   states: % 4d\n", stats.totalTiles, stats.totalCommands, stats.totalStates);
 	fmt::printf("command bytes: %d\n", stats.totalCommandBytes);
@@ -261,8 +240,8 @@ public:
 
 	void Reset(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks) {
 		SetSize(newBufferDimensionsInPixels, newTileDimensionsInBlocks);
-		for (auto& tile : tiles_) {
-			tile.Reset(); }
+		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+			tilesHead_[t] = WriteRange(t).first; }
 		clippedVertexBuffer0_.clear();
 		stats0_ = GPUStats{};
 		IC().Reset(); }
@@ -292,8 +271,17 @@ private:
 			threadColorBufs_[ti].resize(tileDimensionsInPixels_.x, tileDimensionsInPixels_.y);
 			threadDepthBufs_[ti].resize(tileDimensionsInPixels_.x, tileDimensionsInPixels_.y); }
 
-		tiles_.clear();
-		int seq = 0;
+		int numTiles = bufferDimensionsInTiles_.x * bufferDimensionsInTiles_.y;
+		tilesThreadId_.clear();
+		tilesThreadId_.resize(numTiles, 0);
+
+		tilesMem0_.reserve(kMaxSizeInBytes * numTiles);
+		tilesMem1_.reserve(kMaxSizeInBytes * numTiles);
+
+		tilesRect_.clear();
+		tilesHead_.clear();
+		tilesMark_.clear();
+		int tid = 0;
 		for (int ty=0; ty<bufferDimensionsInTiles_.y; ++ty) {
 			for (int tx=0; tx<bufferDimensionsInTiles_.x; ++tx) {
 				auto left = tx * tileDimensionsInPixels_.x;
@@ -301,7 +289,12 @@ private:
 				auto right = min(left + tileDimensionsInPixels_.x, bufferDimensionsInPixels_.x);
 				auto bottom = min(top + tileDimensionsInPixels_.y, bufferDimensionsInPixels_.y);
 				rmlg::irect bbox{ {left, top}, {right, bottom} };
-				tiles_.push_back(Tile{seq++, bbox}); }}}
+				tilesRect_.emplace_back(bbox);
+				tilesHead_.emplace_back(WriteRange(tid).first);
+				tilesMark_.emplace_back(nullptr);
+				tilesMem1_[kMaxSizeInBytes * tid] = CMD_EOF;
+				++tid; }}}
+
 
 public:
 	auto Run() {
@@ -322,8 +315,8 @@ private:
 
 		// sort tiles by their estimated cost before queueing
 		tileStats_.clear();
-		for (int bi = 0; bi < tiles_.size(); ++bi) {
-			tileStats_.push_back({ bi, RenderCost(tiles_[bi]) }); }
+		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+			tileStats_.push_back({ t, RenderCost(t) }); }
 		rclr::sort(tileStats_, [](auto a, auto b) { return a.cost > b.cost; });
 		//std::rotate(tileStats_.begin(), tileStats_.begin() + 1, tileStats_.end())
 
@@ -350,8 +343,7 @@ private:
 
 	void SwapBuffers() {
 		// double-buffer swap
-		for (auto& tile : tiles_) {
-			std::swap(tile.commands0, tile.commands1); }
+		std::swap(tilesMem0_, tilesMem1_);
 		std::swap(clippedVertexBuffer0_, clippedVertexBuffer1_);
 		std::swap(stats0_, stats1_);
 		userIC_ = (userIC_+1) & 0x01; }
@@ -371,52 +363,57 @@ private:
 		binState = nullptr;
 		binUniforms = nullptr;
 		auto& cs = IC().commands_;
+		cs.appendByte(CMD_EOF);
 		int totalCommands = 0;
-		while (!cs.eof()) {
+		while (1) {
 			totalCommands += 1;
 			auto cmd = cs.consumeByte();
 			// printf("cmd %02x %d:", cmd, cmd);
-			if (cmd == CMD_STATE) {
+			if (cmd == CMD_EOF) {
+				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+					AppendByte(t, cmd); }
+				break; }
+			else if (cmd == CMD_STATE) {
 				binState = static_cast<GLState*>(cs.consumePtr());
 				binUniforms = IC().GetUniformBufferAddr(binState->uniformsOfs);
 				// printf(" state is now at %p\n", binState);
-				for (auto& tile : tiles_) {
-					tile.commands0.appendByte(cmd);
-					tile.commands0.appendPtr(binState);
-					tile.commands0.appendPtr(binUniforms); }}
+				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+					AppendByte(t, cmd);
+					AppendPtr(t, binState);
+					AppendPtr(t, binUniforms); }}
 			else if (cmd == CMD_CLEAR) {
 				auto arg = cs.consumeByte();
 				// printf(" clear with color ");
 				// std::cout << color << std::endl;
-				for (auto& tile : tiles_) {
-					tile.commands0.appendByte(cmd);
-					tile.commands0.appendByte(arg); }}
+				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+					AppendByte(t, cmd);
+					AppendByte(t, arg); }}
 			else if (cmd == CMD_STORE_COLOR_HALF_LINEAR_FP) {
 				auto ptr = cs.consumePtr();
 				// printf(" store halfsize colorbuffer @ %p\n", ptr);
-				for (auto& tile : tiles_) {
-					tile.commands0.appendByte(cmd);
-					tile.commands0.appendPtr(ptr); }}
+				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+					AppendByte(t, cmd);
+					AppendPtr(t, ptr); }}
 			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_FP) {
 				auto ptr = cs.consumePtr();
 				// printf(" store unswizzled colorbuffer @ %p\n", ptr);
-				for (auto& tile : tiles_) {
-					tile.commands0.appendByte(cmd);
-					tile.commands0.appendPtr(ptr); }}
+				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+					AppendByte(t, cmd);
+					AppendPtr(t, ptr); }}
 			else if (cmd == CMD_STORE_COLOR_FULL_QUADS_FP) {
 				auto ptr = cs.consumePtr();
 				// printf(" store swizzled colorbuffer @ %p\n", ptr);
-				for (auto& tile : tiles_) {
-					tile.commands0.appendByte(cmd);
-					tile.commands0.appendPtr(ptr); }}
+				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+					AppendByte(t, cmd);
+					AppendPtr(t, ptr); }}
 			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_TC) {
 				auto enableGamma = cs.consumeByte();
 				auto ptr = cs.consumePtr();
 				// printf(" store truecolor @ %p, gamma corrected? %s\n", ptr, (enableGamma?"Yes":"No"));
-				for (auto& tile : tiles_) {
-					tile.commands0.appendByte(cmd);
-					tile.commands0.appendByte(enableGamma);
-					tile.commands0.appendPtr(ptr); }}
+				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+					AppendByte(t, cmd);
+					AppendByte(t, enableGamma);
+					AppendPtr(t, ptr); }}
 			else if (cmd == CMD_DRAW_ARRAYS) {
 				//auto flags = cs.consumeByte();
 				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -462,12 +459,12 @@ private:
 		int total_ = 0;
 		int min_ = 0x7fffffff;
 		int max_ = 0;
-		for (auto& tile : tiles_) {
-			const auto thisTileBytes = tile.commands0.size();
+		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+			const int thisTileBytes = tilesHead_[t] - WriteRange(t).first;
 			total_ += thisTileBytes;
 			min_ = std::min(min_, thisTileBytes);
 			max_ = std::max(max_, thisTileBytes); }
-		stats0_.totalTiles = tiles_.size();
+		stats0_.totalTiles = tilesHead_.size();
 		stats0_.totalCommands = totalCommands;
 		// stats0_.totalStates = IC().d_si;
 		stats0_.totalCommandBytes = cs.size();
@@ -481,23 +478,28 @@ private:
 		auto&[self, tileId] = *data;
 		self->DrawImpl(tid, tileId); }
 	void DrawImpl(const unsigned tid, const int tileIdx) {
-		const auto& rect = tiles_[tileIdx].rect;
-		auto& cs = tiles_[tileIdx].commands1;
-		tiles_[tileIdx].threadId = tid;
+		const auto rect = tilesRect_[tileIdx];
+		tilesThreadId_[tileIdx] = tid;
+
+		FastPackedReader cs{ ReadRange(tileIdx).first };
+		int cmdCnt = 0;
 
 		auto& dc = threadDepthBufs_[rclmt::jobsys::thread_id];
 		auto& cc = threadColorBufs_[rclmt::jobsys::thread_id];
 
 		const GLState* stateptr = nullptr;
 		const void* uniformptr = nullptr;
-		while (!cs.eof()) {
-			auto cmd = cs.consumeByte();
+		while (1) {
+			++cmdCnt;
+			auto cmd = cs.ConsumeByte();
 			// fmt::printf("tile(%d) cmd(%02x, %d)\n", tileIdx, cmd, cmd);
-			if (cmd == CMD_STATE) {
-				stateptr = static_cast<const GLState*>(cs.consumePtr());
-				uniformptr = cs.consumePtr(); }
+			if (cmd == CMD_EOF) {
+				break; }
+			else if (cmd == CMD_STATE) {
+				stateptr = static_cast<const GLState*>(cs.ConsumePtr());
+				uniformptr = cs.ConsumePtr(); }
 			else if (cmd == CMD_CLEAR) {
-				int bits = cs.consumeByte();
+				int bits = cs.ConsumeByte();
 				if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
 					// std::cout << "clearing to " << color << std::endl;
 					Fill(cc, stateptr->clearColor, rect); }
@@ -507,26 +509,26 @@ private:
 					// XXX not implemented
 					assert(false); }}
 			else if (cmd == CMD_STORE_COLOR_HALF_LINEAR_FP) {
-				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
+				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
 				Downsample(cc, *dst, rect); }
 			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_FP) {
-				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.consumePtr());
+				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
 				Copy(cc, *dst, rect); }
 			else if (cmd == CMD_STORE_COLOR_FULL_QUADS_FP) {
-				auto dst = static_cast<rglr::QFloat4Canvas*>(cs.consumePtr());
+				auto dst = static_cast<rglr::QFloat4Canvas*>(cs.ConsumePtr());
 				Copy(cc, *dst, rect); }
 			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_TC) {
-				auto enableGamma = cs.consumeByte();
-				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.consumePtr());
+				auto enableGamma = cs.ConsumeByte();
+				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.ConsumePtr());
 				tile_StoreTrueColor<SHADERS...>(*stateptr, uniformptr, rect, enableGamma, outcanvas);
 				// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
 				}
 			else if (cmd == CMD_CLIPPED_TRI) {
-				tile_DrawClipped<SHADERS...>(*stateptr, uniformptr, rect, cs); }
+				tile_DrawClipped<SHADERS...>(*stateptr, uniformptr, rect, tileIdx, cs); }
 			else if (cmd == CMD_DRAW_INLINE) {
-				tile_DrawElements<false, SHADERS...>(*stateptr, uniformptr, rect, cs); }
+				tile_DrawElements<false, SHADERS...>(*stateptr, uniformptr, rect, tileIdx, cs); }
 			else if (cmd == CMD_DRAW_INLINE_INSTANCED) {
-				tile_DrawElements<true, SHADERS...>(*stateptr, uniformptr, rect, cs); }}}
+				tile_DrawElements<true, SHADERS...>(*stateptr, uniformptr, rect, tileIdx, cs); }}}
 
 	template <typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
@@ -571,12 +573,10 @@ private:
 			// XXX could use constexpr instead of template param?
 			assert(instanceCnt == 1); }
 
-		for (auto& tile : tiles_) {
-			if (INSTANCED) {
-				tile.commands0.appendByte(CMD_DRAW_INLINE_INSTANCED); }
-			else {
-				tile.commands0.appendByte(CMD_DRAW_INLINE); }
-			tile.commands0.mark1(); }
+		const auto cmd = INSTANCED ? CMD_DRAW_INLINE_INSTANCED : CMD_DRAW_INLINE;
+		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+			AppendByte(t, cmd);
+			Mark(t); }
 
 		for (int iid=0; iid<instanceCnt; ++iid) {
 			if (INSTANCED) {
@@ -639,34 +639,34 @@ private:
 						stats0_.totalTrianglesCulled++;
 						continue; }}
 
-				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&i0, &i1, &i2, &iid](auto& tile) {
+				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&](int t) {
 					if (INSTANCED) {
-						tile.commands0.appendUShort(iid); }
-					tile.commands0.appendUShort(i0);  // also includes backfacing flag
-					tile.commands0.appendUShort(i1);
-					tile.commands0.appendUShort(i2); });}
+						AppendUShort(t, iid);}
+					AppendUShort(t, i0);  // also includes backfacing flag
+					AppendUShort(t, i1);
+					AppendUShort(t, i2); }); }
 
 			}  // instance loop
 
-		for (auto & tile : tiles_) {
-			if (tile.commands0.touched1()) {
-				tile.commands0.appendUShort(0xffff);}
+		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+			if (Touched(t)) {
+				AppendUShort(t, 0xffff); }
 			else {
 				// remove the command from any tiles
 				// that weren't covered by this draw
-				tile.commands0.unappend(1); }}
+				Unappend(t, 1); }}
 
 		stats0_.totalTrianglesClipped = clipQueue_.size();
 		if (!clipQueue_.empty()) {
 			bin_DrawElementsClipped<INSTANCED, PGM>(state); }}
 
 	template <bool INSTANCED, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {}
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {}
 
 	template<bool INSTANCED, typename PGM, typename ...PGMs>
-	void tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {
+	void tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {
 		if (state.programId != PGM::id) {
-			return tile_DrawElements<INSTANCED, PGMs...>(state, uniformsPtr, rect, cs); }
+			return tile_DrawElements<INSTANCED, PGMs...>(state, uniformsPtr, rect, tileIdx, cs); }
 
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
@@ -726,13 +726,13 @@ private:
 
 		int loadedInstanceId;
 		if (INSTANCED) {
-			loadedInstanceId = cs.peekUShort();
+			loadedInstanceId = cs.PeekUShort();
 			loader.LoadInstance(loadedInstanceId, vertex[0]);
 			loader.LoadInstance(loadedInstanceId, vertex[1]);
 			loader.LoadInstance(loadedInstanceId, vertex[2]); }
 
 		while (1) {
-			uint16_t firstWord = cs.consumeUShort();
+			uint16_t firstWord = cs.ConsumeUShort();
 			if (firstWord == 0xffff) {
 				flush();
 				break; }
@@ -749,11 +749,11 @@ private:
 			{
 				uint16_t tmp;
 				if (INSTANCED) {
-					tmp = cs.consumeUShort(); }
+					tmp = cs.ConsumeUShort(); }
 				else {
 					tmp = firstWord; }
-				const uint16_t i1 = cs.consumeUShort();
-				const uint16_t i2 = cs.consumeUShort();
+				const uint16_t i1 = cs.ConsumeUShort();
+				const uint16_t i2 = cs.ConsumeUShort();
 				backfacing = tmp & 0x8000;
 				const uint16_t i0 = tmp & 0x7fff;
 				loader.LoadLane(i0, li, vertex[0]);
@@ -867,13 +867,13 @@ private:
 			int bi = clippedVertexBuffer0_.size();
 			for (int vi=1; vi<clipA_.size() - 1; ++vi) {
 				int i0{0}, i1{vi}, i2{vi+1};
-				ForEachCoveredTile(clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](auto& tile) {
+				ForEachCoveredTile(clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](int t) {
 					if (clippedVertexBuffer0_.size() == bi) {
 						std::copy(begin(clipA_), end(clipA_), back_inserter(clippedVertexBuffer0_)); }
-					tile.commands0.appendByte(CMD_CLIPPED_TRI);
-					tile.commands0.appendUShort((bi+i0) | (backfacing ? 0x8000 : 0));
-					tile.commands0.appendUShort(bi + i1);
-					tile.commands0.appendUShort(bi + i2); });}}}
+					AppendByte(t, CMD_CLIPPED_TRI);
+					AppendUShort(t, (bi+i0) | (backfacing ? 0x8000 : 0));
+					AppendUShort(t, bi+i1);
+					AppendUShort(t, bi+i2); }); }}}
 
 	template <typename FUNC>
 	void ForEachCoveredTile(const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
@@ -890,21 +890,19 @@ private:
 		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
 		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
 
-		int ofs = topLeft.y * bufferDimensionsInTiles_.x + topLeft.x;
-		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty) {
-			int ofsX = ofs;
+		int stride = bufferDimensionsInTiles_.x;
+		int tidRow = topLeft.y * stride;
+		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
 			for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
-				auto& tile = tiles_[ofsX++];
-				func(tile); }
-			ofs += bufferDimensionsInTiles_.x; }};
+				func(tidRow + tx); }}}
 
 	template <typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {}
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {}
 
 	template <typename PGM, typename ...PGMs>
-	void tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, FastPackedStream& cs) {
+	void tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {
 		if (state.programId != PGM::id) {
-			return tile_DrawClipped<PGMs...>(state, uniformsPtr, rect, cs); }
+			return tile_DrawClipped<PGMs...>(state, uniformsPtr, rect, tileIdx, cs); }
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 
@@ -915,11 +913,11 @@ private:
 		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
 
-		const auto tmp = cs.consumeUShort();
+		const auto tmp = cs.ConsumeUShort();
 		const bool backfacing = (tmp & 0x8000) != 0;
 		const auto i0 = tmp & 0x7fff;
-		const auto i1 = cs.consumeUShort();
-		const auto i2 = cs.consumeUShort();
+		const auto i1 = cs.ConsumeUShort();
+		const auto i2 = cs.ConsumeUShort();
 
 		vec4 dev0 = clippedVertexBuffer1_[i0].coord;
 		vec4 dev1 = clippedVertexBuffer1_[i1].coord;
@@ -948,6 +946,57 @@ private:
 		                int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
 		                !backfacing); }
 
+	template<int MANY>
+	uint8_t* alloc(int t) {
+		auto pos = tilesHead_[t];
+		tilesHead_[t] += MANY;
+		// XXX assert(tilesHead_[t] < kMaxSizeInBytes);
+		return pos; }
+	void AppendByte(int t, uint8_t a) {
+		*reinterpret_cast<uint8_t*>(alloc<sizeof(uint8_t)>(t)) = a; }
+	void AppendUShort(int t, uint16_t a) {
+		*reinterpret_cast<uint16_t*>(alloc<sizeof(uint16_t)>(t)) = a; }
+	void AppendInt(int t, int a) {
+		*reinterpret_cast<int*>(alloc<sizeof(int)>(t)) = a; }
+	void AppendFloat(int t, float a) {
+		*reinterpret_cast<float*>(alloc<sizeof(float)>(t)) = a; }
+	void AppendPtr(int t, const void * const a) {
+		*reinterpret_cast<const void**>(alloc<sizeof(void*)>(t)) = a; }
+	void AppendVec4(int t, rmlv::vec4 a) {
+		AppendFloat(t, a.x);
+		AppendFloat(t, a.y);
+		AppendFloat(t, a.z);
+		AppendFloat(t, a.w); }
+
+	auto Unappend(int t, int many) {
+		tilesHead_[t] -= many; }
+
+	auto Mark(int t) {
+		tilesMark_[t] = tilesHead_[t]; }
+
+	bool Touched(int t) const {
+		return tilesMark_[t] != tilesHead_[t]; }
+
+	/* XXX bool Eof(int t) const {
+		return tilesTail_[t*16] == tilesHead_[t]; }*/
+
+	/*
+	 * use the command list length as an approximate compute cost
+	 */
+	inline int RenderCost(int t) const {
+		auto begin = WriteRange(t).first;
+		return tilesHead_[t] - begin; }
+
+	std::pair<uint8_t*, uint8_t*> WriteRange(int t) const {
+		uint8_t* begin = const_cast<uint8_t*>(tilesMem0_.data()) + t*kMaxSizeInBytes;
+		uint8_t* end = begin + kMaxSizeInBytes;
+		return { begin, end }; }
+
+	std::pair<uint8_t*, uint8_t*> ReadRange(int t) const {
+		uint8_t* begin = const_cast<uint8_t*>(tilesMem1_.data()) + t*kMaxSizeInBytes;
+		uint8_t* end = begin + kMaxSizeInBytes;
+		return { begin, end }; }
+
 public:
 	void ColorCanvas(rglr::QFloat4Canvas* ptr) {}
 	void DepthCanvas(rglr::QFloatCanvas* ptr) {}
@@ -958,7 +1007,12 @@ private:
 	std::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
 
 	// tile/bin collection
-	std::vector<Tile> tiles_;
+	std::vector<int> tilesThreadId_;
+	std::vector<rmlg::irect> tilesRect_;
+	std::vector<uint8_t*> tilesHead_;
+	std::vector<uint8_t*> tilesMark_;
+	std::vector<uint8_t> tilesMem0_;
+	std::vector<uint8_t> tilesMem1_;
 	std::vector<TileStat> tileStats_;
 
 	// render target parameters
