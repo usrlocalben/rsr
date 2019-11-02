@@ -52,6 +52,12 @@ struct qfloat2 {
 		_mm_store_ps(reinterpret_cast<float*>(&dst[0]), v0);
 		_mm_store_ps(reinterpret_cast<float*>(&dst[2]), v1); }
 
+	inline void streamTo(float* xdst, float *ydst) {
+		__m128 v0 = _mm_unpacklo_ps(x.v, y.v);  // x0 y0 x1 y1
+		__m128 v1 = _mm_unpackhi_ps(x.v, y.v);  // x2 y2 x3 y3
+		_mm_stream_ps(xdst, x.v);
+		_mm_stream_ps(ydst, y.v); }
+
 	union {
 		struct { mvec4f x, y; };
 		struct { mvec4f s, t; };

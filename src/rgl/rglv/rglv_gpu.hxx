@@ -583,7 +583,8 @@ private:
 				loader.LoadInstance(iid, vertex); }
 
 			clipFlagBuffer_.clear();
-			devCoordBuffer_.clear();
+			devCoordXBuffer_.clear();
+			devCoordYBuffer_.clear();
 
 			const auto siz = loader.Size();
 			// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
@@ -599,7 +600,8 @@ private:
 				store_bytes(clipFlagBuffer_.alloc<4>(), flags);
 
 				auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
-				devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
+				devCoord.streamTo(devCoordXBuffer_.alloc<4>(),
+				                  devCoordYBuffer_.alloc<4>()); }
 
 			for (int ti=0; ti<count; ti+=3) {
 				stats0_.totalTrianglesSubmitted++;
@@ -621,9 +623,9 @@ private:
 					clipQueue_.push_back({ iid, i0, i1, i2 });
 					continue; }
 
-				auto devCoord0 = devCoordBuffer_[i0];
-				auto devCoord1 = devCoordBuffer_[i1];
-				auto devCoord2 = devCoordBuffer_[i2];
+				auto devCoord0 = rmlv::vec2{ devCoordXBuffer_[i0], devCoordYBuffer_[i0] };
+				auto devCoord1 = rmlv::vec2{ devCoordXBuffer_[i1], devCoordYBuffer_[i1] };
+				auto devCoord2 = rmlv::vec2{ devCoordXBuffer_[i2], devCoordYBuffer_[i2] };
 
 				// handle backfacing tris and culling
 				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
@@ -981,7 +983,8 @@ private:
 	const GLState* binState{nullptr};
 	const void* binUniforms{nullptr};
 	SubStack<uint8_t, maxVAOSizeInVertices> clipFlagBuffer_;
-	SubStack<rmlv::vec2, maxVAOSizeInVertices> devCoordBuffer_;
+	SubStack<float, maxVAOSizeInVertices> devCoordXBuffer_;
+	SubStack<float, maxVAOSizeInVertices> devCoordYBuffer_;
 	rcls::vector<std::array<int, 4>> clipQueue_;
 	rcls::vector<ClippedVertex> clipA_;
 	rcls::vector<ClippedVertex> clipB_;
