@@ -38,8 +38,6 @@ namespace rglv {
 
 constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
 
-constexpr auto maxVAOSizeInVertices = 500000L;
-
 extern bool doubleBuffer;
 
 struct ClippedVertex {
@@ -583,8 +581,8 @@ private:
 				store_bytes(clipFlagBuffer_.data() + vi, flags);
 
 				auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
-				devCoord.streamTo(devCoordXBuffer_.data() + vi,
-				                  devCoordYBuffer_.data() + vi); }
+				devCoord.template store<false>(devCoordXBuffer_.data() + vi,
+				                               devCoordYBuffer_.data() + vi); }
 
 			for (int ti=0; ti<count; ti+=3) {
 				stats0_.totalTrianglesSubmitted++;

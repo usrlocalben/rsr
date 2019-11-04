@@ -39,24 +39,34 @@ struct qfloat2 {
 	inline qfloat2& operator*=(const qfloat2& rhs) { x *= rhs.x;  y *= rhs.y;  return *this; }
 	inline qfloat2& operator/=(const qfloat2& rhs) { x /= rhs.x;  y /= rhs.y;  return *this; }
 
-	inline vec2 lane(const int li) {
+	inline vec2 lane(const int li) const {
 		return vec2{ x.lane[li], y.lane[li] }; }
 
 	inline void setLane(const int li, const vec2 a) {
 		x.lane[li] = a.x;
 		y.lane[li] = a.y; }
 
-	inline void copyTo(vec2* dst) {
+	template <bool STREAMING>
+	void store(vec2* dst) const {
 		__m128 v0 = _mm_unpacklo_ps(x.v, y.v);  // x0 y0 x1 y1
 		__m128 v1 = _mm_unpackhi_ps(x.v, y.v);  // x2 y2 x3 y3
-		_mm_store_ps(reinterpret_cast<float*>(&dst[0]), v0);
-		_mm_store_ps(reinterpret_cast<float*>(&dst[2]), v1); }
+		if (STREAMING) {
+			_mm_stream_ps(reinterpret_cast<float*>(&dst[0]), v0);
+			_mm_stream_ps(reinterpret_cast<float*>(&dst[2]), v1); }
+		else {
+			_mm_store_ps(reinterpret_cast<float*>(&dst[0]), v0);
+			_mm_store_ps(reinterpret_cast<float*>(&dst[2]), v1); }}
 
-	inline void streamTo(float* xdst, float *ydst) {
+	template <bool STREAMING>
+	void store(float* xdst, float *ydst) const {
 		__m128 v0 = _mm_unpacklo_ps(x.v, y.v);  // x0 y0 x1 y1
 		__m128 v1 = _mm_unpackhi_ps(x.v, y.v);  // x2 y2 x3 y3
-		_mm_stream_ps(xdst, x.v);
-		_mm_stream_ps(ydst, y.v); }
+		if (STREAMING) {
+			_mm_stream_ps(xdst, x.v);
+			_mm_stream_ps(ydst, y.v); }
+		else {
+			_mm_store_ps(xdst, x.v);
+			_mm_store_ps(ydst, y.v); }}
 
 	union {
 		struct { mvec4f x, y; };
