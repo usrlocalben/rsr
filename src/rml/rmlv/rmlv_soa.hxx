@@ -18,6 +18,7 @@ struct qfloat2 {
 	inline qfloat2(const vec2& a) noexcept :x(a.x), y(a.y) {}
 	inline qfloat2(const mvec4f& a) noexcept :x(a.xxxx()), y(a.yyyy()) {}
 	inline qfloat2(const qfloat2&) = default;
+	inline qfloat2(ivec2 a) noexcept :x(float(a.x)), y(float(a.y)) {}
 	inline qfloat2(qfloat2&&) = default;
 	qfloat2& operator=(const qfloat2&) = default;
 	qfloat2& operator=(qfloat2&&) = default;

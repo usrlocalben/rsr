@@ -245,6 +245,9 @@ inline vec2 mix(vec2 a, vec2 b, float t) { return (1.0F - t)*a + t*b; }
 inline vec3 mix(vec3 a, vec3 b, float t) { return (1.0F - t)*a + t*b; }
 inline vec4 mix(vec4 a, vec4 b, float t) { return (1.0F - t)*a + t*b; }
 
+// area
+inline int Area(ivec2 a) { return a.x * a.y; }
+inline float Area(vec2 a) { return a.x * a.y; }
 
 // dot
 inline float dot(vec2 a, vec2 b) { return a.x*b.x + a.y*b.y; }

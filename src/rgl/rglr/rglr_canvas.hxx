@@ -41,12 +41,15 @@ struct QFloatCanvas {
 			return 1.0F; }
 		return float(_width) / float(_height); }
 
-	void resize(const int width, const int height) {
+	void resize(int width, int height) {
 		buffer.reserve(width * height / 4);
 		_ptr = buffer.data();
 		_width = width;
 		_height = height;
 		_stride2 = width / 2; }
+
+	void resize(rmlv::ivec2 dim) {
+		resize(dim.x, dim.y); }
 
 private:
 	rcls::vector<rmlv::qfloat> buffer;
@@ -78,12 +81,15 @@ struct QFloat4Canvas {
 			return 1.0F; }
 		return float(_width) / float(_height); }
 
-	void resize(const int width, const int height) {
+	void resize(int width, int height) {
 		buffer.reserve(width * height / 4);
 		_ptr = buffer.data();
 		_width = width;
 		_height = height;
 		_stride2 = width / 2; }
+
+	void resize(rmlv::ivec2 dim) {
+		resize(dim.x, dim.y); }
 
 	static inline void Load(const rmlv::qfloat4* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
 		rrrr = _mm_load_ps(reinterpret_cast<const float*>(&src->r));
@@ -174,12 +180,15 @@ struct QShort3Canvas {
 			return 1.0F; }
 		return float(width_) / float(height_); }
 
-	void resize(const int width, const int height) {
+	void resize(int width, int height) {
 		buffer_.reserve(width * height / 4);
 		ptr_ = buffer_.data();
 		width_ = width;
 		height_ = height;
 		stride2_ = width / 2; }
+
+	void resize(rmlv::ivec2 dim) {
+		resize(dim.x, dim.y); }
 
 	static inline void Load(const QShort3* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
 		const __m128 factor = _mm_set1_ps(1.0F / scale);
@@ -235,12 +244,15 @@ struct QShort4Canvas {
 			return 1.0F; }
 		return float(width_) / float(height_); }
 
-	void resize(const int width, const int height) {
+	void resize(int width, int height) {
 		buffer_.reserve(width * height / 4);
 		ptr_ = buffer_.data();
 		width_ = width;
 		height_ = height;
 		stride2_ = width / 2; }
+
+	void resize(rmlv::ivec2 dim) {
+		resize(dim.x, dim.y); }
 
 	static inline void Load(const QShort4* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
 		const __m128 factor = _mm_set1_ps(1.0F / scale);
@@ -324,6 +336,9 @@ struct FloatingPointCanvas {
 		stride_ = w;
 		aspect_ = (float)w / h;
 		ptr_ = buf.data(); }
+
+	void resize(rmlv::ivec2 dim) {
+		resize(dim.x, dim.y); }
 
 	auto data() { return ptr_; }
 	auto cdata() const { return ptr_; }

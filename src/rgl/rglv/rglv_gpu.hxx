@@ -36,7 +36,7 @@
 namespace rqdq {
 namespace rglv {
 
-constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
+constexpr auto kBlockDimensionsInPixels = rmlv::ivec2{8, 8};
 
 constexpr auto kMaxSizeInBytes = 100000L;
 
@@ -45,6 +45,14 @@ extern bool doubleBuffer;
 struct ClippedVertex {
 	rmlv::vec4 coord;  // either clip-coord or device-coord
 	uint8_t data[64]; };
+
+
+struct ThreadStat {
+	std::vector<int> tiles;
+	uint8_t padding[64 - sizeof(std::vector<int>)];
+
+	void Reset() {
+		tiles.clear(); } };
 
 
 struct GPUStats {
@@ -217,7 +225,8 @@ public:
 	GPU(int concurrency) :
 		concurrency_(concurrency),
 		threadColorBufs_(concurrency),
-		threadDepthBufs_(concurrency) {}
+		threadDepthBufs_(concurrency),
+		threadStats_(concurrency) {}
 
 	void Reset(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks) {
 		SetSize(newBufferDimensionsInPixels, newTileDimensionsInBlocks);
@@ -237,45 +246,43 @@ public:
 			tileDimensionsInBlocks_ = newTileDimensionsInBlocks;
 			deviceScale_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
 			                             -bufferDimensionsInPixels_.y/2 );
-			deviceOffset_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
-			                               bufferDimensionsInPixels_.y/2 );
+			deviceOffset_ = rmlv::qfloat2( bufferDimensionsInPixels_ / 2 );
 			Retile(); }}
 
 private:
 	void Retile() {
 		using rmlv::ivec2;
 		using std::min, std::max;
-		tileDimensionsInPixels_ = tileDimensionsInBlocks_ * blockDimensionsInPixels;
+		tileDimensionsInPixels_ = tileDimensionsInBlocks_ * kBlockDimensionsInPixels;
 		bufferDimensionsInTiles_ = (bufferDimensionsInPixels_ + (tileDimensionsInPixels_ - ivec2{1, 1})) / tileDimensionsInPixels_;
 
 		for (int ti=0; ti<concurrency_; ++ti) {
-			threadColorBufs_[ti].resize(tileDimensionsInPixels_.x, tileDimensionsInPixels_.y);
-			threadDepthBufs_[ti].resize(tileDimensionsInPixels_.x, tileDimensionsInPixels_.y); }
+			threadStats_[ti].Reset();
+			threadColorBufs_[ti].resize(tileDimensionsInPixels_);
+			threadDepthBufs_[ti].resize(tileDimensionsInPixels_); }
 
-		int numTiles = bufferDimensionsInTiles_.x * bufferDimensionsInTiles_.y;
-		tilesThreadId_.clear();
-		tilesThreadId_.resize(numTiles, 0);
+		auto areaInTiles = Area(bufferDimensionsInTiles_);
 
-		tilesMem0_.reserve(kMaxSizeInBytes * numTiles);
-		tilesMem1_.reserve(kMaxSizeInBytes * numTiles);
-
-		tilesRect_.clear();
+		tilesMem0_.reserve(kMaxSizeInBytes * areaInTiles);
+		tilesMem1_.reserve(kMaxSizeInBytes * areaInTiles);
 		tilesHead_.clear();
+		tilesHead_.resize(areaInTiles, nullptr);
 		tilesMark_.clear();
-		int tid = 0;
-		for (int ty=0; ty<bufferDimensionsInTiles_.y; ++ty) {
-			for (int tx=0; tx<bufferDimensionsInTiles_.x; ++tx) {
-				auto left = tx * tileDimensionsInPixels_.x;
-				auto top = ty * tileDimensionsInPixels_.y;
-				auto right = min(left + tileDimensionsInPixels_.x, bufferDimensionsInPixels_.x);
-				auto bottom = min(top + tileDimensionsInPixels_.y, bufferDimensionsInPixels_.y);
-				rmlg::irect bbox{ {left, top}, {right, bottom} };
-				tilesRect_.emplace_back(bbox);
-				tilesHead_.emplace_back(WriteRange(tid).first);
-				tilesMark_.emplace_back(nullptr);
-				tilesMem1_[kMaxSizeInBytes * tid] = CMD_EOF;
-				++tid; }}}
+		tilesMark_.resize(areaInTiles, nullptr);
 
+		int tid{0};
+		for (int ti{0}; ti<areaInTiles; ++ti) {
+			tilesHead_[ti] = WriteRange(ti).first;
+			tilesMem1_[ti * kMaxSizeInBytes] = CMD_EOF; }}
+
+	rmlg::irect TileRect(int idx) const {
+		auto ty = idx / bufferDimensionsInTiles_.x;
+		auto tx = idx % bufferDimensionsInTiles_.x;
+		auto tpos = rmlv::ivec2{ tx, ty };
+		auto ltpx = tpos * tileDimensionsInPixels_;
+		auto rbpx = ltpx + tileDimensionsInPixels_;
+		rbpx = vmin(rbpx, bufferDimensionsInPixels_);  // clip against screen edge
+		return { ltpx, rbpx }; }
 
 public:
 	auto Run() {
@@ -299,7 +306,7 @@ private:
 		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
 			tileStats_.push_back({ t, RenderCost(t) }); }
 		rclr::sort(tileStats_, [](auto a, auto b) { return a.cost > b.cost; });
-		//std::rotate(tileStats_.begin(), tileStats_.begin() + 1, tileStats_.end())
+		// std::rotate(tileStats_.begin(), tileStats_.begin() + 1, tileStats_.end())
 
 		std::vector<rclmt::jobsys::Job*> allJobs;
 		for (const auto& item : tileStats_) {
@@ -351,50 +358,50 @@ private:
 			auto cmd = cs.consumeByte();
 			// printf("cmd %02x %d:", cmd, cmd);
 			if (cmd == CMD_EOF) {
-				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-					AppendByte(t, cmd); }
+				for (auto& h : tilesHead_) {
+					AppendByte(&h, cmd); }
 				break; }
 			else if (cmd == CMD_STATE) {
 				binState = static_cast<GLState*>(cs.consumePtr());
 				binUniforms = IC().GetUniformBufferAddr(binState->uniformsOfs);
 				// printf(" state is now at %p\n", binState);
-				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-					AppendByte(t, cmd);
-					AppendPtr(t, binState);
-					AppendPtr(t, binUniforms); }}
+				for (auto& h : tilesHead_) {
+					AppendByte(&h, cmd);
+					AppendPtr(&h, binState);
+					AppendPtr(&h, binUniforms); }}
 			else if (cmd == CMD_CLEAR) {
 				auto arg = cs.consumeByte();
 				// printf(" clear with color ");
 				// std::cout << color << std::endl;
-				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-					AppendByte(t, cmd);
-					AppendByte(t, arg); }}
+				for (auto& h : tilesHead_) {
+					AppendByte(&h, cmd);
+					AppendByte(&h, arg); }}
 			else if (cmd == CMD_STORE_COLOR_HALF_LINEAR_FP) {
 				auto ptr = cs.consumePtr();
 				// printf(" store halfsize colorbuffer @ %p\n", ptr);
-				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-					AppendByte(t, cmd);
-					AppendPtr(t, ptr); }}
+				for (auto& h : tilesHead_) {
+					AppendByte(&h, cmd);
+					AppendPtr(&h, ptr); }}
 			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_FP) {
 				auto ptr = cs.consumePtr();
 				// printf(" store unswizzled colorbuffer @ %p\n", ptr);
-				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-					AppendByte(t, cmd);
-					AppendPtr(t, ptr); }}
+				for (auto& h : tilesHead_) {
+					AppendByte(&h, cmd);
+					AppendPtr(&h, ptr); }}
 			else if (cmd == CMD_STORE_COLOR_FULL_QUADS_FP) {
 				auto ptr = cs.consumePtr();
 				// printf(" store swizzled colorbuffer @ %p\n", ptr);
-				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-					AppendByte(t, cmd);
-					AppendPtr(t, ptr); }}
+				for (auto& h : tilesHead_) {
+					AppendByte(&h, cmd);
+					AppendPtr(&h, ptr); }}
 			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_TC) {
 				auto enableGamma = cs.consumeByte();
 				auto ptr = cs.consumePtr();
 				// printf(" store truecolor @ %p, gamma corrected? %s\n", ptr, (enableGamma?"Yes":"No"));
-				for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-					AppendByte(t, cmd);
-					AppendByte(t, enableGamma);
-					AppendPtr(t, ptr); }}
+				for (auto& h : tilesHead_) {
+					AppendByte(&h, cmd);
+					AppendByte(&h, enableGamma);
+					AppendPtr(&h, ptr); }}
 			else if (cmd == CMD_DRAW_ARRAYS) {
 				//auto flags = cs.consumeByte();
 				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -459,8 +466,8 @@ private:
 		auto&[self, tileId] = *data;
 		self->DrawImpl(tid, tileId); }
 	void DrawImpl(const unsigned tid, const int tileIdx) {
-		const auto rect = tilesRect_[tileIdx];
-		tilesThreadId_[tileIdx] = tid;
+		const auto rect = TileRect(tileIdx);
+		threadStats_[tid].tiles.emplace_back(tileIdx);
 
 		FastPackedReader cs{ ReadRange(tileIdx).first };
 		int cmdCnt = 0;
@@ -559,9 +566,9 @@ private:
 			assert(instanceCnt == 1); }
 
 		const auto cmd = INSTANCED ? CMD_DRAW_INLINE_INSTANCED : CMD_DRAW_INLINE;
-		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-			AppendByte(t, cmd);
-			Mark(t); }
+		for (auto& h : tilesHead_) {
+			AppendByte(&h, cmd);
+			Mark(&h); }
 
 		for (int iid=0; iid<instanceCnt; ++iid) {
 			if (INSTANCED) {
@@ -604,12 +611,12 @@ private:
 					clipQueue_.push_back({ iid, i0, i1, i2 });
 					continue; }
 
-				auto devCoord0 = rmlv::vec2{ devCoordXBuffer_.data()[i0], devCoordYBuffer_.data()[i0] };
-				auto devCoord1 = rmlv::vec2{ devCoordXBuffer_.data()[i1], devCoordYBuffer_.data()[i1] };
-				auto devCoord2 = rmlv::vec2{ devCoordXBuffer_.data()[i2], devCoordYBuffer_.data()[i2] };
+				auto dc0 = rmlv::vec2{ devCoordXBuffer_.data()[i0], devCoordYBuffer_.data()[i0] };
+				auto dc1 = rmlv::vec2{ devCoordXBuffer_.data()[i1], devCoordYBuffer_.data()[i1] };
+				auto dc2 = rmlv::vec2{ devCoordXBuffer_.data()[i2], devCoordYBuffer_.data()[i2] };
 
 				// handle backfacing tris and culling
-				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
+				const bool backfacing = rmlg::triangle2Area(dc0, dc1, dc2) < 0;
 				if (backfacing) {
 					if (cullingEnabled && cullFace == GL_BACK) {
 						stats0_.totalTrianglesCulled++;
@@ -622,22 +629,22 @@ private:
 						stats0_.totalTrianglesCulled++;
 						continue; }}
 
-				ForEachCoveredTile(devCoord0, devCoord1, devCoord2, [&](int t) {
+				ForEachCoveredTile(dc0, dc1, dc2, [&](uint8_t** th) {
 					if (INSTANCED) {
-						AppendUShort(t, iid);}
-					AppendUShort(t, i0);  // also includes backfacing flag
-					AppendUShort(t, i1);
-					AppendUShort(t, i2); }); }
+						AppendUShort(th, iid);}
+					AppendUShort(th, i0);  // also includes backfacing flag
+					AppendUShort(th, i1);
+					AppendUShort(th, i2); }); }
 
 			}  // instance loop
 
-		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-			if (Touched(t)) {
-				AppendUShort(t, 0xffff); }
+		for (auto& h : tilesHead_) {
+			if (Touched(&h)) {
+				AppendUShort(&h, 0xffff); }
 			else {
 				// remove the command from any tiles
 				// that weren't covered by this draw
-				Unappend(t, 1); }}
+				Unappend(&h, 1); }}
 
 		stats0_.totalTrianglesClipped = clipQueue_.size();
 		if (!clipQueue_.empty()) {
@@ -657,11 +664,11 @@ private:
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat4;
 		using std::array, std::swap;
 
-		typename PGM::Loader loader( state.buffers, state.bufferFormat );
+		auto loader = typename PGM::Loader{ state.buffers, state.bufferFormat };
 
 		auto& cbc = threadColorBufs_[rclmt::jobsys::thread_id];
 		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
-		const int target_height = cbc.height();
+		const int targetHeightInPixels_ = cbc.height();
 
 		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
@@ -673,10 +680,9 @@ private:
 		array<typename PGM::VertexInput, 3> vertex;
 		array<typename PGM::VertexOutputMD, 3> computed;
 		array<qfloat4, 3> devCoord;
-		array<mvec4i, 3>  fx;
-		array<mvec4i, 3>  fy;
-		bool backfacing;
-		int li = 0;  // sse lane being loaded
+		array<mvec4i, 3> fx, fy;
+		bool backfacing[4];
+		int li{0};  // sse lane being loaded
 
 		auto flush = [&]() {
 			for (int i=0; i<3; ++i) {
@@ -688,7 +694,7 @@ private:
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				TriangleProgram<sampler, PGM, rglr::BlendProgram::Set> rasterizerProgram{
+				auto rasterizerProgram = TriangleProgram<sampler, PGM, rglr::BlendProgram::Set>{
 					tu0, tu1,
 					cbc, dbc,
 					rect.left.x, rect.top.y,
@@ -699,10 +705,10 @@ private:
 					computed[0].Lane(ti),
 					computed[1].Lane(ti),
 					computed[2].Lane(ti) };
-				TriangleRasterizer rasterizesr(rasterizerProgram, rect, target_height);
-				rasterizesr.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
-				                 fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
-				                 !backfacing); }
+				auto rasterizer = TriangleRasterizer{rasterizerProgram, rect, targetHeightInPixels_};
+				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
+				                fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
+				                !backfacing[ti]); }
 
 			// reset the SIMD lane counter
 			li = 0; };
@@ -717,7 +723,6 @@ private:
 		while (1) {
 			uint16_t firstWord = cs.ConsumeUShort();
 			if (firstWord == 0xffff) {
-				flush();
 				break; }
 
 			if (INSTANCED) {
@@ -729,26 +734,23 @@ private:
 					loader.LoadInstance(iid, vertex[1]);
 					loader.LoadInstance(iid, vertex[2]); }}
 
-			{
-				uint16_t tmp;
-				if (INSTANCED) {
-					tmp = cs.ConsumeUShort(); }
-				else {
-					tmp = firstWord; }
-				const uint16_t i1 = cs.ConsumeUShort();
-				const uint16_t i2 = cs.ConsumeUShort();
-				backfacing = tmp & 0x8000;
-				const uint16_t i0 = tmp & 0x7fff;
-				loader.LoadLane(i0, li, vertex[0]);
-				loader.LoadLane(i1, li, vertex[1]);
-				loader.LoadLane(i2, li, vertex[2]);
-				li += 1; }
+			uint16_t tmp;
+			if (INSTANCED) {
+				tmp = cs.ConsumeUShort(); }
+			else {
+				tmp = firstWord; }
+			const uint16_t i1 = cs.ConsumeUShort();
+			const uint16_t i2 = cs.ConsumeUShort();
+			backfacing[li] = tmp & 0x8000;
+			const uint16_t i0 = tmp & 0x7fff;
+			loader.LoadLane(i0, li, vertex[0]);
+			loader.LoadLane(i1, li, vertex[1]);
+			loader.LoadLane(i2, li, vertex[2]);
+			++li;
 
 			if (li == 4) {
 				flush(); }}
-
-
-		}  // func
+		flush(); }
 
 	template <bool INSTANCED, typename PGM>
 	void bin_DrawElementsClipped(const GLState& state) {
@@ -850,13 +852,13 @@ private:
 			int bi = clippedVertexBuffer0_.size();
 			for (int vi=1; vi<clipA_.size() - 1; ++vi) {
 				int i0{0}, i1{vi}, i2{vi+1};
-				ForEachCoveredTile(clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](int t) {
+				ForEachCoveredTile(clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](uint8_t** th) {
 					if (clippedVertexBuffer0_.size() == bi) {
 						std::copy(begin(clipA_), end(clipA_), back_inserter(clippedVertexBuffer0_)); }
-					AppendByte(t, CMD_CLIPPED_TRI);
-					AppendUShort(t, (bi+i0) | (backfacing ? 0x8000 : 0));
-					AppendUShort(t, bi+i1);
-					AppendUShort(t, bi+i2); }); }}}
+					AppendByte(th, CMD_CLIPPED_TRI);
+					AppendUShort(th, (bi+i0) | (backfacing ? 0x8000 : 0));
+					AppendUShort(th, bi+i1);
+					AppendUShort(th, bi+i2); }); }}}
 
 	template <typename FUNC>
 	void ForEachCoveredTile(const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
@@ -877,7 +879,7 @@ private:
 		int tidRow = topLeft.y * stride;
 		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
 			for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
-				func(tidRow + tx); }}}
+				func(&tilesHead_[tidRow + tx]); }}}
 
 	template <typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {}
@@ -891,7 +893,7 @@ private:
 
 		auto& cbc = threadColorBufs_[rclmt::jobsys::thread_id];
 		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
-		const int target_height = cbc.height();
+		const int targetHeightInPixels_ = cbc.height();
 
 		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
@@ -913,7 +915,7 @@ private:
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		TriangleProgram<sampler, PGM, rglr::BlendProgram::Set> rasterizerProgram{
+		auto rasterizerProgram = TriangleProgram<sampler, PGM, rglr::BlendProgram::Set>{
 			tu0, tu1,
 			cbc, dbc,
 			rect.left.x, rect.top.y,
@@ -924,41 +926,37 @@ private:
 			data0,
 			data1,
 			data2 };
-		TriangleRasterizer rasterizer(rasterizerProgram, rect, target_height);
+		auto rasterizer = TriangleRasterizer{rasterizerProgram, rect, targetHeightInPixels_};
 		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
 		                int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
 		                !backfacing); }
 
-	template<int MANY>
-	uint8_t* alloc(int t) {
-		auto pos = tilesHead_[t];
-		tilesHead_[t] += MANY;
-		// XXX assert(tilesHead_[t] < kMaxSizeInBytes);
-		return pos; }
-	void AppendByte(int t, uint8_t a) {
-		*reinterpret_cast<uint8_t*>(alloc<sizeof(uint8_t)>(t)) = a; }
-	void AppendUShort(int t, uint16_t a) {
-		*reinterpret_cast<uint16_t*>(alloc<sizeof(uint16_t)>(t)) = a; }
-	void AppendInt(int t, int a) {
-		*reinterpret_cast<int*>(alloc<sizeof(int)>(t)) = a; }
-	void AppendFloat(int t, float a) {
-		*reinterpret_cast<float*>(alloc<sizeof(float)>(t)) = a; }
-	void AppendPtr(int t, const void * const a) {
-		*reinterpret_cast<const void**>(alloc<sizeof(void*)>(t)) = a; }
-	void AppendVec4(int t, rmlv::vec4 a) {
-		AppendFloat(t, a.x);
-		AppendFloat(t, a.y);
-		AppendFloat(t, a.z);
-		AppendFloat(t, a.w); }
+	void AppendByte(uint8_t** h, uint8_t a) {
+		*reinterpret_cast<uint8_t*>(*h) = a; *h += sizeof(uint8_t); }
+	void AppendUShort(uint8_t** h, uint16_t a) {
+		*reinterpret_cast<uint16_t*>(*h) = a; *h += sizeof(uint16_t); }
+	void AppendInt(uint8_t** h, int a) {
+		*reinterpret_cast<int*>(*h) = a; *h += sizeof(int); }
+	void AppendFloat(uint8_t** h, float a) {
+		*reinterpret_cast<float*>(*h) = a;  *h += sizeof(float); }
+	void AppendPtr(uint8_t** h, const void* a) {
+		*reinterpret_cast<const void**>(*h) = a;  *h += sizeof(void*); }
+	void AppendVec4(uint8_t** h, rmlv::vec4 a) {
+		AppendFloat(h, a.x);
+		AppendFloat(h, a.y);
+		AppendFloat(h, a.z);
+		AppendFloat(h, a.w); }
 
-	auto Unappend(int t, int many) {
-		tilesHead_[t] -= many; }
+	auto Unappend(uint8_t** h, int many) {
+		*h -= many; }
 
-	auto Mark(int t) {
-		tilesMark_[t] = tilesHead_[t]; }
+	auto Mark(uint8_t** h) {
+		int dist = h - tilesHead_.data();
+		tilesMark_[dist] = *h; }
 
-	bool Touched(int t) const {
-		return tilesMark_[t] != tilesHead_[t]; }
+	bool Touched(uint8_t** h) const {
+		int dist = h - tilesHead_.data();
+		return tilesMark_[dist] != *h; }
 
 	/* XXX bool Eof(int t) const {
 		return tilesTail_[t*16] == tilesHead_[t]; }*/
@@ -980,18 +978,13 @@ private:
 		uint8_t* end = begin + kMaxSizeInBytes;
 		return { begin, end }; }
 
-public:
-	void ColorCanvas(rglr::QFloat4Canvas* ptr) {}
-	void DepthCanvas(rglr::QFloatCanvas* ptr) {}
-
 private:
 	const int concurrency_;
 	rcls::vector<rglr::QFloat4Canvas> threadColorBufs_{};
 	rcls::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
+	std::vector<ThreadStat> threadStats_;
 
 	// tile/bin collection
-	std::vector<int> tilesThreadId_;
-	std::vector<rmlg::irect> tilesRect_;
 	std::vector<uint8_t*> tilesHead_;
 	std::vector<uint8_t*> tilesMark_;
 	std::vector<uint8_t> tilesMem0_;
