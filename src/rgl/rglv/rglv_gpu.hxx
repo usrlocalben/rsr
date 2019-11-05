@@ -38,8 +38,6 @@ namespace rglv {
 
 constexpr auto blockDimensionsInPixels = rmlv::ivec2{8, 8};
 
-constexpr auto maxVAOSizeInVertices = 500000L;
-
 constexpr auto kMaxSizeInBytes = 100000L;
 
 extern bool doubleBuffer;
@@ -211,23 +209,6 @@ inline void PrintStatistics(const GPUStats& stats) {
 	fmt::printf("command bytes: %d\n", stats.totalCommandBytes);
 	fmt::printf("tile bytes total: %d, min: %d, max: %d\n", stats.totalTileCommandBytes, stats.minTileCommandBytes, stats.maxTileCommandBytes);
 	fmt::printf("triangles submitted: %d, culled: %d, clipped: %d, drawn: %d\n", stats.totalTrianglesSubmitted, stats.totalTrianglesCulled, stats.totalTrianglesClipped, stats.totalTrianglesDrawn); }
-
-
-template <typename T, int SZ>
-struct SubStack {
-	alignas(32) std::array<T, SZ> buffer;
-	int sp = 0;
-
-	template <int MANY>
-	T* alloc() {
-		auto ptr = &buffer[sp];
-		sp += MANY;
-		return ptr; }
-
-	T operator[](int idx) const {
-		return buffer[idx]; }
-
-	void clear() { sp = 0; } };
 
 
 template<typename ...SHADERS>
@@ -567,6 +548,10 @@ private:
 		typename PGM::VertexInput vertex;
 
 		clipQueue_.clear();
+		int siz = (loader.Size() + 3) & (~0x3);
+		clipFlagBuffer_.reserve(siz);
+		devCoordXBuffer_.reserve(siz);
+		devCoordYBuffer_.reserve(siz);
 
 		if (!INSTANCED) {
 			// coding error if this is not true
@@ -582,9 +567,6 @@ private:
 			if (INSTANCED) {
 				loader.LoadInstance(iid, vertex); }
 
-			clipFlagBuffer_.clear();
-			devCoordBuffer_.clear();
-
 			const auto siz = loader.Size();
 			// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
 
@@ -596,10 +578,11 @@ private:
 				PGM::ShadeVertex(matrices, uniforms, vertex, coord, unused);
 
 				auto flags = frustum.Test(coord);
-				store_bytes(clipFlagBuffer_.alloc<4>(), flags);
+				store_bytes(clipFlagBuffer_.data() + vi, flags);
 
 				auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
-				devCoord.copyTo(devCoordBuffer_.alloc<4>()); }
+				devCoord.template store<false>(devCoordXBuffer_.data() + vi,
+				                               devCoordYBuffer_.data() + vi); }
 
 			for (int ti=0; ti<count; ti+=3) {
 				stats0_.totalTrianglesSubmitted++;
@@ -609,9 +592,9 @@ private:
 				uint16_t i2 = indexSource(ti+2);
 
 				// check for triangles that need clipping
-				const auto cf0 = clipFlagBuffer_[i0];
-				const auto cf1 = clipFlagBuffer_[i1];
-				const auto cf2 = clipFlagBuffer_[i2];
+				const auto cf0 = clipFlagBuffer_.data()[i0];
+				const auto cf1 = clipFlagBuffer_.data()[i1];
+				const auto cf2 = clipFlagBuffer_.data()[i2];
 				if (cf0 | cf1 | cf2) {
 					if (cf0 & cf1 & cf2) {
 						// all points outside of at least one plane
@@ -621,9 +604,9 @@ private:
 					clipQueue_.push_back({ iid, i0, i1, i2 });
 					continue; }
 
-				auto devCoord0 = devCoordBuffer_[i0];
-				auto devCoord1 = devCoordBuffer_[i1];
-				auto devCoord2 = devCoordBuffer_[i2];
+				auto devCoord0 = rmlv::vec2{ devCoordXBuffer_.data()[i0], devCoordYBuffer_.data()[i0] };
+				auto devCoord1 = rmlv::vec2{ devCoordXBuffer_.data()[i1], devCoordYBuffer_.data()[i1] };
+				auto devCoord2 = rmlv::vec2{ devCoordXBuffer_.data()[i2], devCoordYBuffer_.data()[i2] };
 
 				// handle backfacing tris and culling
 				const bool backfacing = rmlg::triangle2Area(devCoord0, devCoord1, devCoord2) < 0;
@@ -1003,8 +986,8 @@ public:
 
 private:
 	const int concurrency_;
-	std::vector<rglr::QFloat4Canvas> threadColorBufs_{};
-	std::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
+	rcls::vector<rglr::QFloat4Canvas> threadColorBufs_{};
+	rcls::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
 
 	// tile/bin collection
 	std::vector<int> tilesThreadId_;
@@ -1034,8 +1017,9 @@ private:
 	// buffers used during binning and clipping
 	const GLState* binState{nullptr};
 	const void* binUniforms{nullptr};
-	SubStack<uint8_t, maxVAOSizeInVertices> clipFlagBuffer_;
-	SubStack<rmlv::vec2, maxVAOSizeInVertices> devCoordBuffer_;
+	rcls::vector<uint8_t> clipFlagBuffer_{};
+	rcls::vector<float> devCoordXBuffer_{};
+	rcls::vector<float> devCoordYBuffer_{};
 	rcls::vector<std::array<int, 4>> clipQueue_;
 	rcls::vector<ClippedVertex> clipA_;
 	rcls::vector<ClippedVertex> clipB_;
