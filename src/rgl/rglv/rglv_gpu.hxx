@@ -849,19 +849,18 @@ private:
 				reverse(begin(clipA_), end(clipA_)); }
 
 			// phase 3: project, convert to triangles and add to bins
-			int bi = clippedVertexBuffer0_.size();
+			const auto bi = static_cast<int>(clippedVertexBuffer0_.size());
+			std::copy(begin(clipA_), end(clipA_), back_inserter(clippedVertexBuffer0_));
 			for (int vi=1; vi<clipA_.size() - 1; ++vi) {
 				int i0{0}, i1{vi}, i2{vi+1};
 				ForEachCoveredTile(clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](uint8_t** th) {
-					if (clippedVertexBuffer0_.size() == bi) {
-						std::copy(begin(clipA_), end(clipA_), back_inserter(clippedVertexBuffer0_)); }
 					AppendByte(th, CMD_CLIPPED_TRI);
 					AppendUShort(th, (bi+i0) | (backfacing ? 0x8000 : 0));
 					AppendUShort(th, bi+i1);
 					AppendUShort(th, bi+i2); }); }}}
 
 	template <typename FUNC>
-	void ForEachCoveredTile(const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
+	int ForEachCoveredTile(const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
 		using std::min, std::max, rmlv::ivec2;
 		const ivec2 idev0{ dc0 };
 		const ivec2 idev1{ dc1 };
@@ -877,9 +876,12 @@ private:
 
 		int stride = bufferDimensionsInTiles_.x;
 		int tidRow = topLeft.y * stride;
+		int hits{0};
 		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
 			for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
-				func(&tilesHead_[tidRow + tx]); }}}
+				++hits;
+				func(&tilesHead_[tidRow + tx]); }}
+		return hits; }
 
 	template <typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {}
