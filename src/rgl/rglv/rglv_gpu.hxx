@@ -620,10 +620,7 @@ private:
 				if (backfacing) {
 					if (cullingEnabled && cullFace == GL_BACK) {
 						stats0_.totalTrianglesCulled++;
-						continue; }
-					// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
-					swap(i0, i2);
-					i0 |= 0x8000; }  // add backfacing flag
+						continue; }}
 				else {
 					if (cullingEnabled && cullFace == GL_FRONT) {
 						stats0_.totalTrianglesCulled++;
@@ -632,7 +629,7 @@ private:
 				ForEachCoveredTile(dc0, dc1, dc2, [&](uint8_t** th) {
 					if (INSTANCED) {
 						AppendUShort(th, iid);}
-					AppendUShort(th, i0);  // also includes backfacing flag
+					AppendUShort(th, i0);
 					AppendUShort(th, i1);
 					AppendUShort(th, i2); }); }
 
@@ -681,7 +678,6 @@ private:
 		array<typename PGM::VertexOutputMD, 3> computed;
 		array<qfloat4, 3> devCoord;
 		array<mvec4i, 3> fx, fy;
-		bool backfacing[4];
 		int li{0};  // sse lane being loaded
 
 		auto flush = [&]() {
@@ -692,23 +688,34 @@ private:
 				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale_.x + deviceOffset_.x));
 				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale_.y + deviceOffset_.y)); }
 
+			const auto d20 = devCoord[2].xy() - devCoord[0].xy();
+			const auto d10 = devCoord[1].xy() - devCoord[0].xy();
+			const auto area2 = d20.x*d10.y - d20.y*d10.x;
+			const auto frontfacing = movemask(area2);
+
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
+				bool ff = (frontfacing & (1<<ti)) > 0;
+
+				int i0=0, i1=1, i2=2;
+				if (!ff) {
+					std::swap(i0, i2); }
+
 				auto rasterizerProgram = TriangleProgram<sampler, PGM, rglr::BlendProgram::Set>{
 					tu0, tu1,
 					cbc, dbc,
 					rect.left.x, rect.top.y,
 					matrices,
 					uniforms,
-					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
-					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
-					computed[0].Lane(ti),
-					computed[1].Lane(ti),
-					computed[2].Lane(ti) };
+					VertexFloat1{ devCoord[i0].w.lane[ti], devCoord[i1].w.lane[ti], devCoord[i2].w.lane[ti] },
+					VertexFloat1{ devCoord[i0].z.lane[ti], devCoord[i1].z.lane[ti], devCoord[i2].z.lane[ti] },
+					computed[i0].Lane(ti),
+					computed[i1].Lane(ti),
+					computed[i2].Lane(ti) };
 				auto rasterizer = TriangleRasterizer{rasterizerProgram, rect, targetHeightInPixels_};
-				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
-				                fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
-				                !backfacing[ti]); }
+				rasterizer.Draw(fx[i0].si[ti], fx[i1].si[ti], fx[i2].si[ti],
+				                fy[i0].si[ti], fy[i1].si[ti], fy[i2].si[ti],
+				                ff); }
 
 			// reset the SIMD lane counter
 			li = 0; };
@@ -739,10 +746,9 @@ private:
 				tmp = cs.ConsumeUShort(); }
 			else {
 				tmp = firstWord; }
+			const uint16_t i0 = tmp;
 			const uint16_t i1 = cs.ConsumeUShort();
 			const uint16_t i2 = cs.ConsumeUShort();
-			backfacing[li] = tmp & 0x8000;
-			const uint16_t i0 = tmp & 0x7fff;
 			loader.LoadLane(i0, li, vertex[0]);
 			loader.LoadLane(i1, li, vertex[1]);
 			loader.LoadLane(i2, li, vertex[2]);
