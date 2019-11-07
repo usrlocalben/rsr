@@ -92,7 +92,7 @@ struct Surface {
 	rmlv::mvec4f sample(rmlv::qfloat3 pos) const {
 		using rmlv::mvec4f;
 		auto T = mvec4f{ timeInSeconds_ };
-		auto distort = mvec4f{0.30F} * sin(5.0F*(pos.x + T / 4.0F))* sin(2.0F*(pos.y + (T / 1.33F))); // *sin(50.0*sz);
+		auto distort = mvec4f{0.60F} * sin(5.0F*(pos.x + T / 4.0F))* sin(2.0F*(pos.y + (T / 1.33F))); // *sin(50.0*sz);
 		//return sdSphere(pos, 3.0f); }
 		return sdSphere(pos, 3.0F) + (distort * sin(T / 2.0F) + 1.0F); }
 
@@ -232,22 +232,16 @@ private:
 		if (abs(D)*0.5F > R) {
 			return; }
 
-	/*	auto fillSlice = [&](){
-			float sz = block.leftTopBack.z;
-			for (int iz=0; iz<dim+1; iz++, sz += delta) {
-				qfloat3 vpos{ block.leftTopBack.x, sy, sz };
-				vpos.x += mvec4f{ 0, delta, delta * 2, delta * 3 };
-				for (int ix = 0; ix<dim+1; ix+=4, vpos += vdelta) {
-					auto distance = field_.sample(vpos);
-					_mm_storeu_ps(&(buf[bot][iz*stride + ix]), distance.v); }}};*/
-
 		auto fillSlice = [&](){
 			float sz = block.leftTopBack.z;
-			for (int iz=0; iz<dim+1; iz++, sz += delta) {
-				vec3 pos{ block.leftTopBack.x, sy, sz };
-				for (int ix = 0; ix<dim+1; ix+=1, pos.x += delta) {
-					auto distance = field_.sample(pos);
-					buf[bot][iz*stride + ix] = distance; }}};
+			mvec4f fooZ{ block.leftTopBack.z };
+			mvec4f fooY{ sy };
+			for (int iz=0; iz<dim+1; iz++, fooZ += delta) {
+				mvec4f fooX{ block.leftTopBack.x };
+				fooX += mvec4f{ 0, delta, delta*2, delta*3 };
+				for (int ix{0}; ix<dim+1; ix+=4, fooX+=vdelta) {
+					auto distance = field_.sample({ fooX, fooY, fooZ });
+					_mm_storeu_ps(&(buf[bot][iz*stride + ix]), distance.v); }}};
 
 		fillSlice(); // load the first slice
 		sy -= delta;

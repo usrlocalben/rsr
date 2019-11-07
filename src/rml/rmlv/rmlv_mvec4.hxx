@@ -318,12 +318,19 @@ These functions can be combined or decomposed to optimize a few
 instructions if the inputs are known to fit, and also if they are in the range -1 ... +1
 */
 
+// clang's optimizer is too smart for this
+// inline mvec4f wrap1(mvec4f a) {
+// 	/*wrap a float to the range -1 ... +1 */
+// 	const __m128 magic = _mm_set1_ps(25165824.0F); // 0x4bc00000
+// 	const mvec4f z = a + magic;
+// 	return a - (z - magic); }
 
 inline mvec4f wrap1(mvec4f a) {
 	/*wrap a float to the range -1 ... +1 */
-	const __m128 magic = _mm_set1_ps(25165824.0F); // 0x4bc00000
-	const mvec4f z = a + magic;
-	return a - (z - magic); }
+	auto whole = ftoi(a);
+	a = a - itof(whole);
+	auto oddBit = shl<31>(whole);
+	return _mm_xor_ps(a.v, bits2float(oddBit).v); }
 
 
 template<bool high_precision>
