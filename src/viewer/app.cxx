@@ -400,7 +400,7 @@ private:
 				ss << idx << ": " << mode.width_in_pixels << "x" << mode.height_in_pixels;
 				if (cur_mode == mode) {
 					ss << " (current)"; }
-				pp.write(ss.str(), 16, top, canvas);
+				pp_.write(ss.str(), 16, top, canvas);
 				top += 10;
 				idx += 1; } }
 
@@ -419,7 +419,7 @@ private:
 				measurementSamples_.push_back(renderTimeInMillis);
 				stringstream ss;
 				ss << "measuring, " << measurementSamples_.size() << " / " << MEASUREMENT_SAMPLESIZE_IN_FRAMES;
-				pp.write(ss.str(), 16, 100, canvas); } }
+				pp_.write(ss.str(), 16, 100, canvas); } }
 
 		if (start_scanning) {
 			scanning = true;
@@ -439,13 +439,13 @@ private:
 				int top = 100;
 				stringstream ss;
 				ss << "probing for fastest tile dimensions: " << (((tile_dim.y - 1) * 16) + tile_dim.x - 1) << " / " << (16 * 16) << "   ";
-				pp.write(ss.str(), 16, top, canvas);  top += 10;
+				pp_.write(ss.str(), 16, top, canvas);  top += 10;
 				ss.str("");
 				ss << "                     fastest so far: " << scan_min_dim.x << "x" << scan_min_dim.y << "   ";
-				pp.write(ss.str(), 16, top, canvas);  top += 10;
+				pp_.write(ss.str(), 16, top, canvas);  top += 10;
 				ss.str("");
 				ss << "          press s to stop            ";
-				pp.write(ss.str(), 16, top, canvas);  top += 10; }
+				pp_.write(ss.str(), 16, top, canvas);  top += 10; }
 			if (measurementSamples_.size() == SCAN_SAMPLESIZE_IN_FRAMES) {
 				last_stats = calc_stat(std::vector<double>(begin(measurementSamples_) + 60, end(measurementSamples_)), MEASUREMENT_DISCARD);
 				measurementSamples_.clear();
@@ -465,7 +465,7 @@ private:
 		if (debug_mode) {
 			double fps = 1.0 / (frameTimeInMillis / 1000.0);
 			auto s = fmt::sprintf("% 6.2f ms, fps: %.0f", renderTimeInMillis, fps);
-			pp.write(s, 16, 16, canvas); }
+			pp_.write(s, 16, 16, canvas); }
 
 		if (debug_mode) {
 			stringstream ss;
@@ -474,23 +474,23 @@ private:
 			ss << "visu scale: " << vis_scale;
 			if (isPaused_) {
 				ss << "   PAUSED"; }
-			pp.write(ss.str(), 16, 27, canvas); }
+			pp_.write(ss.str(), 16, 27, canvas); }
 
 		if (debug_mode) {
 			stringstream ss;
 			ss << "F1 debug         l  toggle srgb   [&] tile size    ,&. vis scale       ";
-			pp.write(ss.str(), 16, -32, canvas);
+			pp_.write(ss.str(), 16, -32, canvas);
 			ss.str("");
 			ss << " p toggle pause  m  change mode    r  measure       n  wasd capture    ";
-			pp.write(ss.str(), 16, -42, canvas);
+			pp_.write(ss.str(), 16, -42, canvas);
 			ss.str("");
 			ss << " f fullscreen   F2  show tiles     g  dblbuf        shift -&+ grid size";
-			pp.write(ss.str(), 16, -52, canvas); }
+			pp_.write(ss.str(), 16, -52, canvas); }
 		else if (runtimeInFrames_ < (5 * 60)) {
 			stringstream ss;
 			int top = canvas.height() - 11;
 			ss << "F1 debug";
-			pp.write(ss.str(), 0, top, canvas); }
+			pp_.write(ss.str(), 0, top, canvas); }
 
 		if (debug_mode) {
 			render_jobsys(20, 40, float(vis_scale), canvas); }
@@ -498,7 +498,7 @@ private:
 		if (debug_mode && show_stats) {
 			using fmt::format_to, fmt::to_string;
 			int top = canvas.height() / 2;
-			pp.write("   min    25th     med    75th     max    mean    sdev", 32, top, canvas);
+			pp_.write("   min    25th     med    75th     max    mean    sdev", 32, top, canvas);
 			top += 10;
 			fmt::memory_buffer out;
 			format_to(out, "{: 6.2f}  ", last_stats._min);
@@ -508,9 +508,9 @@ private:
 			format_to(out, "{: 6.2f}  ", last_stats._max);
 			format_to(out, "{: 6.2f}  ", last_stats._mean);
 			format_to(out, "{: 6.2f}  ", last_stats._sdev);
-			pp.write(to_string(out), 32, top, canvas);
+			pp_.write(to_string(out), 32, top, canvas);
 			top += 10;
-			pp.write(string("press C to clear"), 32, top, canvas); } }
+			pp_.write(string("press C to clear"), 32, top, canvas); } }
 
 	void PrepareBuiltInNodes() {
 		globalsNode_ = make_shared<MultiValueNode>("globals", InputList());
@@ -580,7 +580,7 @@ private:
 	rglv::MeshStore meshStore_;
 	MaterialStore materialStore_;
 	TextureStore textureStore_;
-	ProPrinter pp;
+	ProPrinter pp_;
 	PixelToaster::Timer interFrameTimer_;
 	PixelToaster::Timer renderTimer_;
 	PixelToaster::Timer wallClock_;
