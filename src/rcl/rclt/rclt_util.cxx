@@ -57,6 +57,24 @@ std::vector<std::string> Split(const std::string& str, char ch) {
 	return items; }
 
 
+void Split(const std::string& str, char ch, std::vector<std::string>& out) {
+	std::vector<std::string> items;
+	std::string src(str);
+	auto nextmatch = src.find(ch);
+	int cnt{0};
+	while (true) {
+		auto item = src.substr(0, nextmatch);
+		if (cnt < out.size()) {
+			out[cnt].assign(src.substr(0, nextmatch)); }
+		else {
+			out.emplace_back().assign(src.substr(0, nextmatch)); }
+		++cnt;
+		if (nextmatch == std::string::npos) { break; }
+		src = src.substr(nextmatch + 1);
+		nextmatch = src.find(ch); }
+	out.resize(cnt); }
+
+
 bool ConsumePrefix(std::string& str, const std::string& prefix) {
 	if (str.compare(0, prefix.length(), prefix) == 0) {
 		str.erase(0, prefix.length());
