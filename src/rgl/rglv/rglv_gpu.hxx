@@ -263,8 +263,8 @@ private:
 
 		auto areaInTiles = Area(bufferDimensionsInTiles_);
 
-		tilesMem0_.reserve(kMaxSizeInBytes * areaInTiles);
-		tilesMem1_.reserve(kMaxSizeInBytes * areaInTiles);
+		tilesMem0_.resize(kMaxSizeInBytes * areaInTiles);
+		tilesMem1_.resize(kMaxSizeInBytes * areaInTiles);
 		tilesHead_.clear();
 		tilesHead_.resize(areaInTiles, nullptr);
 		tilesMark_.clear();
