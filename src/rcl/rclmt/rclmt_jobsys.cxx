@@ -128,7 +128,7 @@ inline bool is_empty_job(const Job* const job) {
 	return job == nullptr; }
 
 
-inline bool has_job_completed(const Job* const job) {
+bool has_job_completed(const Job* const job) {
 	return job->unfinished_jobs == 0; }
 
 

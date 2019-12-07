@@ -100,6 +100,7 @@ extern thread_local int thread_id;
 extern int thread_count;
 extern std::vector<std::vector<struct JobStat>> telemetry_stores;
 
+bool has_job_completed(const Job* const);
 void run(Job* job);
 void wait(const Job* job);
 void init(int threads);
