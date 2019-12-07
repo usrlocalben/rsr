@@ -1,3 +1,5 @@
+# fmt-6.0.0
+
 load("//:copts.bzl", "RSR_DEFAULT_COPTS")
 
 package(default_visibility = ["//visibility:public"])
