@@ -20,7 +20,7 @@ using namespace rmlm;
 using namespace rmlv;
 
 TEST(Mat4, IdentityMultiplyGivesIdentity) {
-	mat4 m = mat4::ident();
+	mat4 m = mat4::identity();
 	vec4 a{ 3, 4, 5, 6 };
 	auto result = m * a;
 	auto expected = vec4{3,4,5,6};

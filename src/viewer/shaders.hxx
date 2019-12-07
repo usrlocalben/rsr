@@ -11,6 +11,7 @@
 #include "src/rgl/rglv/rglv_triangle.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/rml/rmlm/rmlm_soa.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
@@ -138,17 +139,17 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& out) {
 
-		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, v.position);
+		rmlv::qfloat4 position = gl_ModelViewMatrix * v.position;
 		rmlv::qfloat3 e = normalize(position.xyz());
 		rmlv::qfloat4 vn = mix(v.smoothNormal, v.faceNormal, 0.0F); // in_uniform.roughness);
-		rmlv::qfloat3 n = normalize(mul(gl_NormalMatrix, vn).xyz());
+		rmlv::qfloat3 n = normalize(mul_w0(gl_NormalMatrix, vn));
 		rmlv::qfloat3 r = rglv::reflect(e, n);
 
 		rmlv::qfloat m = rmlv::qfloat{2.0F} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0F)*(r.z + 1.0F)));
 		rmlv::qfloat uu = r.x / m + 0.5F;
 		rmlv::qfloat vv = r.y / m + 0.5F;
 		out.envmapUV = { uu, vv };
-		gl_Position = mul(gl_ModelViewProjectionMatrix, v.position); }
+		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
@@ -216,7 +217,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs) {
 		outs.uv = v.uv.xyz();
-		gl_Position = mul(gl_ModelViewProjectionMatrix, v.position); }
+		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
@@ -293,17 +294,17 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs) {
 
-		rmlv::qfloat4 position = mul(gl_ModelViewMatrix, v.position);
+		rmlv::qfloat4 position = gl_ModelViewMatrix * v.position;
 		rmlv::qfloat3 e = normalize(position.xyz());
 		auto sn = normalize(v.smoothNormal);
-		rmlv::qfloat3 n = normalize(mul(gl_NormalMatrix, sn).xyz());
+		rmlv::qfloat3 n = normalize(mul_w0(gl_NormalMatrix, sn));
 		rmlv::qfloat3 r = rglv::reflect(e, n);
 
 		rmlv::qfloat m = rmlv::qfloat{2.0F} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0F)*(r.z + 1.0F)));
 		rmlv::qfloat uu = r.x / m + 0.5F;
 		rmlv::qfloat vv = r.y / m + 0.5F;
 		outs.envmapUV = { uu, vv, 0 };
-		gl_Position = mul(gl_ModelViewProjectionMatrix, v.position); }
+		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
@@ -350,7 +351,7 @@ struct ManyProgram final : public rglv::BaseProgram {
 			assert(buffers[1] != nullptr); }
 		int Size() const { return vbo_.size(); }
 		void LoadInstance(int id, VertexInput& vi) {
-			vi.imat = mats_[id]; } //rmlm::mat4::ident(); } //mats_[id]; }
+			vi.imat = rmlm::qmat4{ mats_[id] }; }
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.position = vbo_.a0.loadxyz1(idx);
 			vi.normal   = vbo_.a1.loadxyz0(idx);
@@ -387,9 +388,9 @@ struct ManyProgram final : public rglv::BaseProgram {
 		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs) {
-		rmlv::qfloat4 p1 = mul(v.imat, v.position);
+		rmlv::qfloat4 p1 = v.imat * v.position;
 		outs.uv = v.uv;
-		gl_Position = mul(gl_ModelViewProjectionMatrix, p1); }
+		gl_Position = gl_ModelViewProjectionMatrix * p1; }
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(

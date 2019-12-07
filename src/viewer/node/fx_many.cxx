@@ -49,7 +49,7 @@ public:
 		offset = 2.5F;
 		for (int i=0; i<batch; ++i) {
 			mat4& M = mats_.emplace_back();
-			M = mat4::ident(); 
+			M = mat4{1.0F};
 
 			float angle = i / float(batch) * 3.1415926F * 2;
 			float displacement;
@@ -71,7 +71,7 @@ public:
 		offset = 4.5F;
 		for (int i=0; i<batch; ++i) {
 			mat4& M = mats_.emplace_back();
-			M = mat4::ident(); 
+			M = mat4{1.0F};
 
 			float angle = i / float(batch) * 3.1415926F * 2;
 			float displacement;
@@ -93,7 +93,7 @@ public:
 		offset = 10.0F;
 		for (int i=0; i<batch; ++i) {
 			mat4& M = mats_.emplace_back();
-			M = mat4::ident(); 
+			M = mat4{1.0F};
 
 			float angle = i / float(batch) * 3.1415926F * 2;
 			float displacement;

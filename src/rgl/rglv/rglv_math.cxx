@@ -3,6 +3,8 @@
 #include "src/rml/rmlv/rmlv_vec.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 
+#include <cassert>
+
 namespace rqdq {
 namespace rglv {
 

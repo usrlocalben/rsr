@@ -4,7 +4,7 @@
 #include "src/rgl/rglv/rglv_gpu_protocol.hxx"
 #include "src/rgl/rglv/rglv_interpolate.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
-#include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/rml/rmlm/rmlm_soa.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
@@ -63,7 +63,7 @@ struct BaseProgram {
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs
 		) {
-		gl_Position = rmlm::mul(m.vpm, v.a0); }
+		gl_Position = m.vpm * v.a0; }
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
@@ -78,7 +78,7 @@ struct BaseProgram {
 		const rmlv::qfloat& gl_FragDepth,
 		rmlv::qfloat4& gl_FragColor
 		) {
-		gl_FragColor = rmlv::mvec4f::one(); }
+		gl_FragColor = rmlv::mvec4f{1.0F}; }
 
 	inline static rmlv::qfloat3 ShadeCanvas(
 		rmlv::qfloat2 gl_FragCoord,

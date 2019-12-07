@@ -89,8 +89,8 @@ public:
 			*pmat = cameraNode_->ProjectionMatrix(aspect);
 			*mvmat = cameraNode_->ViewMatrix(); }
 		else {
-			*pmat = mat4::ident();
-			*mvmat = mat4::ident(); }
+			*pmat = mat4{1};
+			*mvmat = mat4{1}; }
 
 		for (auto gl : gls_) {
 			gl->Draw(dc, pmat, mvmat, nullptr, 0);}

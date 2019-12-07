@@ -158,7 +158,7 @@ struct TestShaderBase {
 		// outputs
 		rmlv::qfloat4& gl_FragColor
 		) {
-		gl_FragColor = rmlv::mvec4f::one(); }};
+		gl_FragColor = rmlv::mvec4f{1.0F}; }};
 
 
 struct DebugWithFragCoord final : public TestShaderBase {

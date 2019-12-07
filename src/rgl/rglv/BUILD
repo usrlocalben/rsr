@@ -41,6 +41,7 @@ cc_library(
         "//src/rml/rmlg:irect",
         "//src/rml/rmlg:triangle",
         "//src/rml/rmlm:mat4",
+        "//src/rml/rmlm:soa",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
         ":fragment",
@@ -268,7 +269,7 @@ cc_library(
     srcs = ["rglv_gpu_shaders.cxx"],
     hdrs = ["rglv_gpu_shaders.hxx"],
     deps = [
-        "//src/rml/rmlm:mat4",
+        "//src/rml/rmlm:soa",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
         ":gpu_protocol",

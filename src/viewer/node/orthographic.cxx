@@ -18,7 +18,7 @@ public:
 		return rglv::Orthographic(-1.0F, 1.0F, -1.0F, 1.0F, 1.0F, -1.0F); }
 
 	rmlm::mat4 ViewMatrix() const override {
-		return rmlm::mat4::ident(); }};
+		return rmlm::mat4{1}; }};
 
 
 class Compiler final : public NodeCompiler {

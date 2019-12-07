@@ -179,6 +179,7 @@ cc_library(
         "//src/rgl/rglv:triangle",
         "//src/rgl/rglv:vao",
         "//src/rml/rmlm:mat4",
+        "//src/rml/rmlm:soa",
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec", ],
     copts = RSR_DEFAULT_COPTS,)

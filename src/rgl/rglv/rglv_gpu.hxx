@@ -28,6 +28,7 @@
 #include "src/rml/rmlg/rmlg_irect.hxx"
 #include "src/rml/rmlg/rmlg_triangle.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/rml/rmlm/rmlm_soa.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
@@ -71,10 +72,10 @@ struct GPUStats {
 
 inline Matrices MakeMatrices(const GLState& s) {
 	Matrices m;
-	m.vm = s.viewMatrix;
-	m.pm = s.projectionMatrix;
-	m.nm = transpose(inverse(s.viewMatrix));
-	m.vpm = s.projectionMatrix * s.viewMatrix;
+	m.vm = rmlm::qmat4{ s.viewMatrix };
+	m.pm = rmlm::qmat4{ s.projectionMatrix };
+	m.nm = rmlm::qmat4{ transpose(inverse(s.viewMatrix)) };
+	m.vpm = rmlm::qmat4{ s.projectionMatrix * s.viewMatrix };
 	return m; }
 
 

@@ -1,127 +1,167 @@
 #pragma once
-#include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
+#include <array>
 #include <cmath>
-#include <cstring>
-#include <cassert>
-#include <intrin.h>
-
 
 namespace rqdq {
 namespace rmlm {
 
-
 struct alignas(64) mat4 {
-	inline mat4() = default;
-	inline mat4(
-		float a00, float a01, float a02, float a03,
-		float a10, float a11, float a12, float a13,
-		float a20, float a21, float a22, float a23,
-		float a30, float a31, float a32, float a33) noexcept :ff({ {
-				a00, a10, a20, a30, a01, a11, a21, a31, a02, a12, a22, a32, a03, a13, a23, a33} }) {}
-
-	inline mat4(std::array<float, 16> src) :ff(std::move(src)) {}
-
-	void print();
-
-	static inline mat4 ident() {
-		return mat4{
-			1, 0, 0, 0,
-			0, 1, 0, 0,
-			0, 0, 1, 0,
-			0, 0, 0, 1 }; }
-
-	static inline mat4 scale(rmlv::vec3 a) {
-		return mat4{
-			a.x, 0, 0, 0,
-			0, a.y, 0, 0,
-			0, 0, a.z, 0,
-			0, 0, 0, 1 }; }
-
-	static inline mat4 scale(rmlv::vec4 a) {
-		return mat4{
-			a.x, 0, 0, 0,
-			0, a.y, 0, 0,
-			0, 0, a.z, 0,
-			0, 0, 0, 1 }; }
-
-	static inline mat4 scale(float x, float y, float z) {
-		return mat4{
-			x, 0, 0, 0,
-			0, y, 0, 0,
-			0, 0, z, 0,
-			0, 0, 0, 1 }; }
-
-	static inline mat4 translate(rmlv::vec4 a) {
-		assert(rmlv::almost_equal(a.w, 1.0F));
-		return mat4{
-			1, 0, 0, a.x,
-			0, 1, 0, a.y,
-			0, 0, 1, a.z,
-			0, 0, 0, 1 }; }
-
-	static inline mat4 translate(rmlv::vec3 a) {
-		return mat4{
-			1, 0, 0, a.x,
-			0, 1, 0, a.y,
-			0, 0, 1, a.z,
-			0, 0, 0, 1 }; }
-
-	static inline mat4 translate(float x, float y, float z) {
-		return mat4{
-			1, 0, 0, x,
-			0, 1, 0, y,
-			0, 0, 1, z,
-			0, 0, 0, 1 }; }
-
-	static inline mat4 rotate(const float theta, const float x, const float y, const float z) {
-		/*glRotate() matrix*/
-		const float s = sin(theta);
-		const float c = cos(theta);
-		const float t = 1.0F - c;
-
-		const float tx = t * x;
-		const float ty = t * y;
-		const float tz = t * z;
-
-		const float sz = s * z;
-		const float sy = s * y;
-		const float sx = s * x;
-
-		return mat4{
-			tx*x + c,  tx*y - sz, tx*z + sy, 0,
-			tx*y + sz, ty*y + c,  ty*z - sx, 0,
-			tx*z - sy, ty*z + sx, tz*z + c,  0,
-			0,         0,         0,         1 }; }
-
-	static inline mat4 rotate(const float theta, rmlv::vec3 a) {
-		/*glRotate() matrix*/
-		const float s = sin(theta);
-		const float c = cos(theta);
-		const float t = 1.0F - c;
-
-		const float tx = t * a.x;
-		const float ty = t * a.y;
-		const float tz = t * a.z;
-
-		const float sz = s * a.z;
-		const float sy = s * a.y;
-		const float sx = s * a.x;
-
-		return mat4{
-			tx*a.x + c,  tx*a.y - sz, tx*a.z + sy, 0,
-			tx*a.y + sz, ty*a.y + c,  ty*a.z - sx, 0,
-			tx*a.z - sy, ty*a.z + sx, tz*a.z + c,  0,
-			0,         0,         0,         1 }; }
-
 	union {
 		float cr[4][4]; // col,row
 		std::array<float, 16> ff; };
-	};
+
+	mat4() = default;
+	explicit mat4(float scale) noexcept;
+	mat4(float a00, float a01, float a02, float a03,
+	     float a10, float a11, float a12, float a13,
+	     float a20, float a21, float a22, float a23,
+	     float a30, float a31, float a32, float a33) noexcept;
+	explicit mat4(std::array<float, 16> src) noexcept;
+
+	static auto identity() -> mat4;
+
+	static auto scale(float) -> mat4;
+	static auto scale(float x, float y, float z=1) -> mat4;
+	static auto scale(rmlv::vec2) -> mat4;
+	static auto scale(rmlv::vec3) -> mat4;
+	static auto scale(rmlv::vec4) -> mat4;
+
+	static auto translate(float x, float y, float z=0) -> mat4;
+	static auto translate(rmlv::vec2) -> mat4;
+	static auto translate(rmlv::vec3) -> mat4;
+	static auto translate(rmlv::vec4) -> mat4;
+
+	static auto rotate(float theta, float x, float y, float z) -> mat4;
+	static auto rotate(float theta, rmlv::vec3) -> mat4;
+	static auto rotate(float theta) -> mat4; };
+	
+
+auto print(std::ostream&, const mat4&) -> void;
+auto inverse(mat4) -> mat4;
+auto transpose(mat4) -> mat4;
+
+auto operator*(const mat4&, const rmlv::vec4&) -> rmlv::vec4;
+auto operator*(const mat4&, const mat4&) -> mat4;
 
 
-inline mat4 transpose(mat4 m) {
+inline
+mat4::mat4(float s) noexcept :
+	ff({ { s, 0, 0, 0,
+	       0, s, 0, 0,
+	       0, 0, s, 0,
+	       0, 0, 0, 1 } }) {}
+
+
+inline
+mat4::mat4(float a00, float a01, float a02, float a03,
+           float a10, float a11, float a12, float a13,
+           float a20, float a21, float a22, float a23,
+           float a30, float a31, float a32, float a33) noexcept :
+	ff({ { a00, a10, a20, a30,
+	       a01, a11, a21, a31,
+	       a02, a12, a22, a32,
+	       a03, a13, a23, a33 } }) {}
+
+
+inline
+mat4::mat4(std::array<float, 16> src) noexcept :
+	ff(std::move(src)) {}
+
+
+inline
+auto mat4::scale(float x, float y, float z) -> mat4 {
+	return {
+		x, 0, 0, 0,
+		0, y, 0, 0,
+		0, 0, z, 0,
+		0, 0, 0, 1 }; }
+
+
+inline
+auto mat4::scale(float s) -> mat4 {
+	return mat4::scale(s, s, s); }
+
+
+inline
+auto mat4::scale(rmlv::vec2 v) -> mat4 {
+	return mat4::scale(v.x, v.y, 1); }
+
+
+inline
+auto mat4::scale(rmlv::vec3 v) -> mat4 {
+	return mat4::scale(v.x, v.y, v.z); }
+
+
+inline
+auto mat4::scale(rmlv::vec4 v) -> mat4 {
+	return mat4::scale(v.x, v.y, v.z); }
+
+
+inline
+auto mat4::identity() -> mat4 {
+	return mat4::scale(1); }
+
+
+inline
+auto mat4::translate(float x, float y, float z) -> mat4 {
+	return mat4{
+		1, 0, 0, x,
+		0, 1, 0, y,
+		0, 0, 1, z,
+		0, 0, 0, 1 }; }
+
+
+inline
+auto mat4::translate(rmlv::vec2 v) -> mat4 {
+	return mat4::translate(v.x, v.y, 1); }
+
+
+inline
+auto mat4::translate(rmlv::vec3 v) -> mat4 {
+	return mat4::translate(v.x, v.y, v.z); }
+
+
+inline
+auto mat4::translate(rmlv::vec4 v) -> mat4 {
+	return mat4::translate(v.x, v.y, v.z); }
+
+
+inline
+auto mat4::rotate(float theta, float x, float y, float z) -> mat4 {
+	/*glRotate() matrix*/
+	const float s = sin(theta);
+	const float c = cos(theta);
+	const float t = 1.0F - c;
+
+	const float tx = t * x;
+	const float ty = t * y;
+	const float tz = t * z;
+
+	const float sz = s * z;
+	const float sy = s * y;
+	const float sx = s * x;
+
+	return mat4{
+		tx*x + c,  tx*y - sz, tx*z + sy, 0,
+		tx*y + sz, ty*y + c,  ty*z - sx, 0,
+		tx*z - sy, ty*z + sx, tz*z + c,  0,
+		0,         0,         0,         1 }; }
+
+
+inline
+auto mat4::rotate(float theta) -> mat4 {
+	return mat4::rotate(theta, 0, 0, 1); }
+
+
+inline
+auto mat4::rotate(float theta, rmlv::vec3 a) -> mat4 {
+	return mat4::rotate(theta, a.x, a.y, a.z); }
+
+
+inline
+auto transpose(mat4 m) -> mat4 {
 	return mat4{
 		m.ff[ 0], m.ff[ 1], m.ff[ 2], m.ff[ 3],
 		m.ff[ 4], m.ff[ 5], m.ff[ 6], m.ff[ 7],
@@ -129,10 +169,8 @@ inline mat4 transpose(mat4 m) {
 		m.ff[12], m.ff[13], m.ff[14], m.ff[15] }; }
 
 
-mat4 inverse(mat4 src);
-
-
-inline rmlv::vec4 operator*(const mat4 a, rmlv::vec4 b) {
+inline
+auto operator*(const mat4& a, const rmlv::vec4& b) -> rmlv::vec4 {
 	return rmlv::vec4{
 		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z + a.ff[12]*b.w,
 		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z + a.ff[13]*b.w,
@@ -141,113 +179,18 @@ inline rmlv::vec4 operator*(const mat4 a, rmlv::vec4 b) {
 		}; }
 
 
-inline mat4 operator*(const mat4& lhs, const mat4& rhs) {
-	mat4 r;
-	for (int row = 0; row < 4; row++) {
-		for (int col = 0; col < 4; col++) {
-			float ax = 0;
-			for (int n = 0; n < 4; n++) {
-				ax += lhs.cr[n][row] * rhs.cr[col][n]; }
-			r.cr[col][row] = ax; }}
-	return r; }
-
-
-inline rmlv::vec4 mul_w1(const mat4& a, const rmlv::vec4& b) {
-	assert(rmlv::almost_equal(b.w, 1.0F));
-	return rmlv::vec4{
-		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z + a.ff[12],
-		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z + a.ff[13],
-		a.ff[2]*b.x + a.ff[6]*b.y + a.ff[10]*b.z + a.ff[14],
-		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z + a.ff[15] }; }
-
-
-inline rmlv::vec4 mul_w1(const mat4& a, const rmlv::vec3& b) {
-	return rmlv::vec4{
-		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z + a.ff[12],
-		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z + a.ff[13],
-		a.ff[2]*b.x + a.ff[6]*b.y + a.ff[10]*b.z + a.ff[14],
-		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z + a.ff[15] }; }
-
-
-inline rmlv::vec4 mul_w0(const mat4& a, const rmlv::vec4& b) {
-	assert(rmlv::almost_equal(b.w, 0.0F));
-	return rmlv::vec4{
-		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z,
-		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z,
-		a.ff[2]*b.x + a.ff[6]*b.y + a.ff[10]*b.z,
-		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z }; }
-
-
-inline rmlv::vec4 mul_w0(const mat4& a, const rmlv::vec3& b) {
-	return rmlv::vec4{
-		a.ff[0]*b.x + a.ff[4]*b.y + a.ff[ 8]*b.z,
-		a.ff[1]*b.x + a.ff[5]*b.y + a.ff[ 9]*b.z,
-		a.ff[2]*b.x + a.ff[6]*b.y + a.ff[10]*b.z,
-		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z }; }
-
-
-constexpr int kMaxStackDepth = 16;
-
-
-class Mat4Stack {
-public:
-	Mat4Stack() = default;
-	void push() {
-		assert(d_sp + 1 < kMaxStackDepth);
-		d_stack[d_sp + 1] = d_stack[d_sp];
-		d_sp += 1; }
-	void pop() {
-		assert(d_sp > 0);
-		d_sp--; }
-	const mat4& top() const {
-		return d_stack[d_sp]; }
-	void clear() {
-		d_sp = 0; }
-	void mul(const mat4& m) {
-		d_stack[d_sp] = d_stack[d_sp] * m; }
-	void load(const mat4& m) {
-		d_stack[d_sp] = m; }
-	void reset() {
-		d_sp = 0;
-		load(mat4::ident()); }
-private:
-	std::array<mat4, kMaxStackDepth> d_stack;
-	int d_sp{0}; };
-
-
-struct qmat4 {
-	qmat4() = default;
-	qmat4(const mat4& m) :f({ {
-		/*these are transposed, the indices match openGL*/
-		rmlv::mvec4f{m.ff[0x00]}, rmlv::mvec4f{m.ff[0x01]}, rmlv::mvec4f{m.ff[0x02]}, rmlv::mvec4f{m.ff[0x03]},
-		rmlv::mvec4f{m.ff[0x04]}, rmlv::mvec4f{m.ff[0x05]}, rmlv::mvec4f{m.ff[0x06]}, rmlv::mvec4f{m.ff[0x07]},
-		rmlv::mvec4f{m.ff[0x08]}, rmlv::mvec4f{m.ff[0x09]}, rmlv::mvec4f{m.ff[0x0a]}, rmlv::mvec4f{m.ff[0x0b]},
-		rmlv::mvec4f{m.ff[0x0c]}, rmlv::mvec4f{m.ff[0x0d]}, rmlv::mvec4f{m.ff[0x0e]}, rmlv::mvec4f{m.ff[0x0f]} } }) {}
-
-	std::array<rmlv::mvec4f, 16> f; };
-
-
-inline rmlv::qfloat4 mul_w1(const qmat4& a, const rmlv::qfloat3& b) {
-	return rmlv::qfloat4{
-		a.f[0]*b.x + a.f[4]*b.y + a.f[ 8]*b.z + a.f[12],
-		a.f[1]*b.x + a.f[5]*b.y + a.f[ 9]*b.z + a.f[13],
-		a.f[2]*b.x + a.f[6]*b.y + a.f[10]*b.z + a.f[14],
-		a.f[3]*b.x + a.f[7]*b.y + a.f[11]*b.z + a.f[15] }; }
-
-
-inline rmlv::qfloat4 mul(const qmat4& a, const rmlv::qfloat4& b) {
-	return rmlv::qfloat4{
-		a.f[0]*b.x + a.f[4]*b.y + a.f[ 8]*b.z + a.f[12]*b.w,
-		a.f[1]*b.x + a.f[5]*b.y + a.f[ 9]*b.z + a.f[13]*b.w,
-		a.f[2]*b.x + a.f[6]*b.y + a.f[10]*b.z + a.f[14]*b.w,
-		a.f[3]*b.x + a.f[7]*b.y + a.f[11]*b.z + a.f[15]*b.w }; }
-
-
-inline rmlv::qfloat3 mul_w0(const qmat4& a, const rmlv::qfloat3& b) {
-	return rmlv::qfloat3{
-		a.f[0]*b.x + a.f[4]*b.y + a.f[ 8]*b.z,
-		a.f[1]*b.x + a.f[5]*b.y + a.f[ 9]*b.z,
-		a.f[2]*b.x + a.f[6]*b.y + a.f[10]*b.z }; }
+inline
+auto operator*(const mat4& lhs, const mat4& rhs) -> mat4 {
+	mat4 out;
+	for (int leftRow{0}; leftRow<4; ++leftRow) {
+		for (int rightCol{0}; rightCol<4; ++rightCol) {
+			float ax;
+			ax  = lhs.cr[0][leftRow] * rhs.cr[rightCol][0];
+			ax += lhs.cr[1][leftRow] * rhs.cr[rightCol][1];
+			ax += lhs.cr[2][leftRow] * rhs.cr[rightCol][2];
+			ax += lhs.cr[3][leftRow] * rhs.cr[rightCol][3];
+			out.cr[rightCol][leftRow] = ax; }}
+	return out; }
 
 
 }  // namespace rmlm

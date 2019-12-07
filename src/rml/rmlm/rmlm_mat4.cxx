@@ -5,7 +5,7 @@
 
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include "3rdparty/fmt/include/fmt/printf.h"
+#include "3rdparty/fmt/include/fmt/ostream.h"
 
 namespace rqdq {
 namespace rmlm {
@@ -13,11 +13,11 @@ namespace rmlm {
 using rmlv::vec3;
 using rmlv::vec4;
 
-void mat4::print() {
-	fmt::printf("[% 11.4f,% 11.4f,% 11.4f,% 11.4f]\n", cr[0][0], cr[1][0], cr[2][0], cr[3][0]);
-	fmt::printf("[% 11.4f,% 11.4f,% 11.4f,% 11.4f]\n", cr[0][1], cr[1][1], cr[2][1], cr[3][1]);
-	fmt::printf("[% 11.4f,% 11.4f,% 11.4f,% 11.4f]\n", cr[0][2], cr[1][2], cr[2][2], cr[3][2]);
-	fmt::printf("[% 11.4f,% 11.4f,% 11.4f,% 11.4f]\n", cr[0][3], cr[1][3], cr[2][3], cr[3][3]); }
+void print(std::ostream& s, const mat4& m) {
+	fmt::print(s, "/{:11.4f},{:11.4f},{:11.4f},{:11.4f}\\\n", m.cr[0][0], m.cr[1][0], m.cr[2][0], m.cr[3][0]);
+	fmt::print(s, "|{:11.4f},{:11.4f},{:11.4f},{:11.4f}|\n",  m.cr[0][1], m.cr[1][1], m.cr[2][1], m.cr[3][1]);
+	fmt::print(s, "|{:11.4f},{:11.4f},{:11.4f},{:11.4f}|\n",  m.cr[0][2], m.cr[1][2], m.cr[2][2], m.cr[3][2]);
+	fmt::print(s, "\\{:11.4f},{:11.4f},{:11.4f},{:11.4f}/\n", m.cr[0][3], m.cr[1][3], m.cr[2][3], m.cr[3][3]); }
 
 
 mat4 inverse(const mat4 src) {

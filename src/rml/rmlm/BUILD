@@ -9,10 +9,8 @@ cc_library(
     deps = [
         "//3rdparty/fmt",
         "//src/rml/rmlv:vec",
-        "//src/rml/rmlv:soa",
-        ],
-    copts = RSR_DEFAULT_COPTS,
-    )
+        "//src/rml/rmlv:soa", ],
+    copts = RSR_DEFAULT_COPTS,)
 
 cc_test(
     name = "mat4_unittest",
@@ -20,7 +18,22 @@ cc_test(
     deps = [
         "//3rdparty/googletest:gtest_main",
         "//src/rml/rmlv:vec",
-        ":mat4",
-        ],
-    copts = RSR_DEFAULT_COPTS,
-    )
+        ":mat4", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
+    name = "soa",
+    srcs = ["rmlm_soa.cxx"],
+    hdrs = ["rmlm_soa.hxx"],
+    deps = [
+        "//src/rml/rmlv:mvec4",
+        "//src/rml/rmlv:soa",
+        ":mat4", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
+    name = "matrixstack",
+    srcs = ["rmlm_matrixstack.cxx"],
+    hdrs = ["rmlm_matrixstack.hxx"],
+    deps = [],
+    copts = RSR_DEFAULT_COPTS,)
