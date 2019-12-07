@@ -53,8 +53,8 @@ public:
 		:IValue(id, std::move(inputs)) {
 
 		// initialize a ComputedNodeState for each thread
-		for (int threadNum=0; threadNum<jobsys::thread_count; threadNum++) {
-			cache_.emplace_back();
+		for (int threadNum=0; threadNum<jobsys::numThreads; threadNum++) {
+			cache_pt_.emplace_back();
 
 			auto td = std::make_unique<ComputedNodeState>();
 			auto& computedInputs = td->computedInputs;
@@ -94,13 +94,13 @@ public:
 					break; }}
 			expression.register_symbol_table(symbolTable);
 			parser.compile(code, expression);
-			state_.push_back(move(td)); }}
+			state_pt_.push_back(move(td)); }}
 
 	// NodeBase
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		bool connected = false;
 		// apply the same connections for all threads
-		for (auto& td : state_) {
+		for (auto& td : state_pt_) {
 			for (auto& computed_input : td->computedInputs) {
 				if (computed_input.name == attr) {
 					computed_input.sourceNode = dynamic_cast<IValue*>(other);
@@ -114,14 +114,14 @@ public:
 		return IValue::Connect(attr, other, slot); }
 
 	void Reset() override {
-		for (auto& cache : cache_) {
+		for (auto& cache : cache_pt_) {
 			cache.clear(); }}
 
 	// IValue
 	NamedValue Eval(std::string_view name) override {
 		rmlv::vec3 result;
-		auto& td = state_[jobsys::thread_id];
-		auto& cache = cache_[jobsys::thread_id];
+		auto& td = state_pt_[jobsys::threadId];
+		auto& cache = cache_pt_[jobsys::threadId];
 		auto& computedInputs = td->computedInputs;
 		auto& expression = td->expression;
 
@@ -186,8 +186,8 @@ public:
 		return out; }
 
 private:
-	std::vector<std::unique_ptr<ComputedNodeState>> state_;
-	std::vector<std::unordered_map<std::string, NamedValue>> cache_; };
+	std::vector<std::unique_ptr<ComputedNodeState>> state_pt_;
+	std::vector<std::unordered_map<std::string, NamedValue>> cache_pt_; };
 
 
 class Compiler final : public NodeCompiler {

@@ -473,8 +473,8 @@ private:
 		FastPackedReader cs{ ReadRange(tileIdx).first };
 		int cmdCnt = 0;
 
-		auto& dc = threadDepthBufs_[rclmt::jobsys::thread_id];
-		auto& cc = threadColorBufs_[rclmt::jobsys::thread_id];
+		auto& dc = threadDepthBufs_[rclmt::jobsys::threadId];
+		auto& cc = threadColorBufs_[rclmt::jobsys::threadId];
 
 		const GLState* stateptr = nullptr;
 		const void* uniformptr = nullptr;
@@ -529,7 +529,7 @@ private:
 
 		// XXX add support for uniforms in stream-out shader
 
-		auto& cc = threadColorBufs_[rclmt::jobsys::thread_id];
+		auto& cc = threadColorBufs_[rclmt::jobsys::threadId];
 		if (enableGamma) {
 			rglr::FilterTile<PGM, rglr::sRGB>(cc, outcanvas, rect); }
 		else {
@@ -667,8 +667,8 @@ private:
 
 		auto loader = typename PGM::Loader{ state.buffers, state.bufferFormat };
 
-		auto& cbc = threadColorBufs_[rclmt::jobsys::thread_id];
-		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
+		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
+		auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
 		const int targetHeightInPixels_ = cbc.height();
 
 		const auto matrices = MakeMatrices(state);
@@ -894,8 +894,8 @@ private:
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 
-		auto& cbc = threadColorBufs_[rclmt::jobsys::thread_id];
-		auto& dbc = threadDepthBufs_[rclmt::jobsys::thread_id];
+		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
+		auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
 		const int targetHeightInPixels_ = cbc.height();
 
 		const auto matrices = MakeMatrices(state);

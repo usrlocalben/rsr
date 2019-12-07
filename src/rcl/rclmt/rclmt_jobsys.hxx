@@ -1,182 +1,152 @@
 #pragma once
 #include <atomic>
-#include <cassert>
 #include <vector>
+
+#define member_size(type, member) sizeof(((type*)0)->member)
 
 namespace rqdq {
 namespace rclmt {
 
 namespace jobsys {
 
-#define member_size(type, member) sizeof(((type*)0)->member)
+constexpr auto kDesiredJobSizeInBytes = 128L;
 
-constexpr int DESIRED_JOB_SIZE_IN_BYTES = 128U;
-constexpr int NUMBER_OF_JOBS = 65536;
-constexpr int MASK = NUMBER_OF_JOBS - 1U;
-constexpr int MAX_LINK = 4U;
+constexpr auto kBacklogSizeInJobs = 8192L;
 
-using JobFunction = void (*)(struct Job *, const int, const void *);
+constexpr auto kMaxLinks = 4L;
 
+using JobFunction = void (*)(struct Job*, int, const void*);
 
+#pragma pack(1)
 struct Job {
 	JobFunction function;
 	Job* parent;
-	std::atomic<int32_t> unfinished_jobs;
-	int32_t generation;
-	// currently 68 bytes
-	char data[DESIRED_JOB_SIZE_IN_BYTES - (sizeof(JobFunction) +
-	                                       sizeof(Job*) +
-	                                       sizeof(std::atomic<int>) +
-	                                       sizeof(int) +
-	                                       sizeof(int) +
-	                                       (sizeof(Job*) * MAX_LINK))];
-	std::atomic<int32_t> link_count;
-	Job* link[MAX_LINK];
-	};
+	std::atomic<int32_t> numPending;
 
-static_assert(sizeof(Job) == DESIRED_JOB_SIZE_IN_BYTES, "unexpected sizeof(Job)");
+	// 75 bytes on windows x64
+	char data[kDesiredJobSizeInBytes - (sizeof(JobFunction) +
+	                                    sizeof(Job*) +
+	                                    sizeof(std::atomic<int32_t>) +
+	                                    sizeof(std::atomic<int8_t>) +
+	                                    (sizeof(Job*) * kMaxLinks))];
 
-struct JobStat {
-	double start_time;
-	double end_time;
-	uint32_t raw;
-	};
+	std::atomic<int8_t> numLinks;
+	Job* link[kMaxLinks]; };
+#pragma pack()
 
+static_assert(sizeof(Job) == kDesiredJobSizeInBytes, "unexpected sizeof(Job)");
 
-class Queue {
-public:
-	Queue() :top(0), bottom(0) {}
+extern thread_local int threadId;
 
-	void push(Job* job) {
-		auto b = bottom.load(std::memory_order_relaxed);
-		jobs[b & MASK] = job;
-		bottom.store(b + 1, std::memory_order_release); }
+extern int numThreads;
 
-	Job* pop() {
-		auto b = bottom.load(std::memory_order_relaxed) - 1;
-		bottom.exchange(b);
-		auto t = top.load(std::memory_order_relaxed);
-		if (t <= b) {
-			// non-empty queue
-			Job* job = jobs[b & MASK];
-			if (t != b) {
-				// still more than one item left in the queue
-				return job; }
+extern bool telemetryEnabled;
 
-			// this is the last item in the queue
-			long tmp = t;
-			if (!top.compare_exchange_weak(tmp, t + 1)) {
-				// failed race against steal operation
-				job = nullptr; }
-
-			bottom.store(t + 1, std::memory_order_relaxed);
-			return job; }
-
-		// deque was already empty
-		bottom.store(t, std::memory_order_relaxed);
-		return nullptr; }
-
-	Job* steal() {
-		auto t = top.load(std::memory_order_relaxed);
-		std::atomic_thread_fence(std::memory_order_acquire);
-		auto b = bottom.load(std::memory_order_relaxed);
-		if (t < b) {
-			Job* job = jobs[t & MASK];
-			if (!top.compare_exchange_weak(t, t + 1)) {
-				return nullptr; }
-			return job; }
-
-		// queue is empty
-		return nullptr; }
-
-private:
-	Job* jobs[NUMBER_OF_JOBS];
-	std::atomic<long> top;
-	std::atomic<long> bottom;
-	};
-
-
-extern thread_local int thread_id;
-extern int thread_count;
-extern std::vector<std::vector<struct JobStat>> telemetry_stores;
-
-bool has_job_completed(const Job* const);
-void run(Job* job);
-void wait(const Job* job);
 void init(int threads);
-void reset();
+
+auto allocate_job() -> Job*;
+
+void run(Job* job);
+
+void wait(const Job* job);
+
+auto has_job_completed(const Job* const) -> bool;
+
 void stop();
+
 void join();
 
 void work_start();
+
 void work_end();
 
-Job* allocate_job();
-
-void mark_start();
-void mark_end(uint32_t bits);
+void reset();
 
 template <typename T>
-Job* make_job(T function) {
-	Job* job = allocate_job();
-	job->function = reinterpret_cast<JobFunction>(function);
-	job->parent = nullptr;
-	job->unfinished_jobs.store(1);
-	return job; }
-
+auto make_job(T function) -> Job*;
 
 template <typename T, typename D>
-Job* make_job(T function, D data) {
-	Job* job = allocate_job();
-	job->function = reinterpret_cast<JobFunction>(function);
-	job->parent = nullptr;
-	job->unfinished_jobs.store(1);
-	assert(sizeof(data) <= member_size(Job, data));
-	memcpy(job->data, &data, sizeof(data));
-	return job; }
-
+auto make_job(T function, D data) -> Job*;
 
 template <typename T>
-Job* make_job_as_child(Job* parent, T function) {
-	parent->unfinished_jobs++;
-
-	Job* job = allocate_job();
-	job->function = reinterpret_cast<JobFunction>(function);
-	job->parent = parent;
-	job->unfinished_jobs.store(1);
-	return job; }
-
+auto make_job_as_child(Job* parent, T function) -> Job*;
 
 template <typename T, typename D>
-Job* make_job_as_child(Job* parent, T function, D data) {
-	parent->unfinished_jobs++;
+auto make_job_as_child(Job* parent, T function, D data) -> Job*;
 
-	Job* job = allocate_job();
-	job->function = reinterpret_cast<JobFunction>(function);
-	job->parent = parent;
-	job->unfinished_jobs.store(1);
-	assert(sizeof(data) <= member_size(Job, data));
-	memcpy(job->data, &data, sizeof(data));
-	return job; }
+void add_link(Job* dest, Job* linked);
 
-
-inline void add_link(Job* dest, Job* linked) {
-	const auto idx = dest->link_count++;
-	dest->link[idx] = linked; }
-
-inline void move_links(Job* src, Job* dst) {
-	for (int i=0; i<src->link_count; i++) {
-		add_link(dst, src->link[i]); }
-	src->link_count = 0; }
+void move_links(Job* src, Job* dst);
 
 void noop(jobsys::Job* job, int tid, void* /*unused*/);
 
 void _sleep(int ms);
 
+void mark_start();
 
-#undef member_size
+void mark_end(uint32_t bits);
+
+struct JobStat {
+	double start_time;
+	double end_time;
+	uint32_t raw; };
+
+extern std::vector<std::vector<struct JobStat>> measurements_pt;
+
 }  // namespace jobsys
+
+// ============================================================================
+//                         INLINE DEFINITIONS
+// ============================================================================
+
+						// ----------------
+						// namespace jobsys
+						// ----------------
+
+// FREE FUNCTIONS
+template <typename T>
+auto jobsys::make_job(T function) -> Job* {
+	Job* job = allocate_job();
+	job->function = reinterpret_cast<JobFunction>(function);
+	job->parent = nullptr;
+	job->numPending.store(1);
+	job->numLinks = 0;
+	return job; }
+
+template <typename T, typename D>
+auto jobsys::make_job(T function, D data) -> Job* {
+	Job* job = make_job<T>(function);
+	static_assert(sizeof(data) <= member_size(Job, data));
+	memcpy(job->data, &data, sizeof(data));
+	return job; }
+
+template <typename T>
+auto jobsys::make_job_as_child(Job* parent, T function) -> Job* {
+	parent->numPending++;
+	Job* job = make_job<T>(function);
+	job->parent = parent;
+	return job; }
+
+template <typename T, typename D>
+auto jobsys::make_job_as_child(Job* parent, T function, D data) -> Job* {
+	Job* job = make_job_as_child<T>(parent, function);
+	static_assert(sizeof(data) <= member_size(Job, data));
+	memcpy(job->data, &data, sizeof(data));
+	return job; }
+
+inline
+void jobsys::add_link(Job* dest, Job* linked) {
+	const auto idx = dest->numLinks++;
+	dest->link[idx] = linked; }
+
+inline
+void jobsys::move_links(Job* src, Job* dst) {
+	for (int i=0; i<src->numLinks; i++) {
+		add_link(dst, src->link[i]); }
+	src->numLinks = 0; }
 
 
 }  // namespace rclmt
 }  // namespace rqdq
+
+#undef member_size

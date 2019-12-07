@@ -17,12 +17,20 @@ cc_library(
     )
 
 cc_library(
+    name = "fixedqueue",
+    srcs = ["rclmt_fixedqueue.cxx"],
+    hdrs = ["rclmt_fixedqueue.hxx"],
+    deps = [],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
     name = "jobsys",
     srcs = ["rclmt_jobsys.cxx"],
     hdrs = ["rclmt_jobsys.hxx"],
     deps = [
         "//src/rcl/rcls:timer",
         "//src/rcl/rclmt:barrier",
+        ":fixedqueue",
         ],
     copts = RSR_DEFAULT_COPTS,
     )

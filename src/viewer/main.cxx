@@ -28,6 +28,7 @@ int main() {
 		else {
 			threads = concurrency; } }
 
+	jobsys::telemetryEnabled = true;
 	jobsys::init(threads); // threads);
 	framepool::Init();
 

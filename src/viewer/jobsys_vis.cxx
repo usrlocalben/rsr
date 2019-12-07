@@ -69,8 +69,8 @@ void render_jobsys(const int left, const int top, const float xscale, rglr::True
 
 	// render to canvas
 	int bar_top = 0;
-	for (const auto &thread_telemetry : jobsys::telemetry_stores) {
-		for (const auto &jobstat : thread_telemetry) {
+	for (const auto& thread_measurements : jobsys::measurements_pt) {
+		for (const auto& jobstat : thread_measurements) {
 
 			auto span = to_span(jobstat, scale);
 			auto bright = 1.0F;

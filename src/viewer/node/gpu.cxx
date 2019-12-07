@@ -32,7 +32,7 @@ class GPUNode : public IGPU {
 public:
 	GPUNode(std::string_view id, InputList inputs, bool aa) :
 		IGPU(id, inputs),
-		gpu_(jobsys::thread_count),
+		gpu_(jobsys::numThreads),
 		aa_(aa) {}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
