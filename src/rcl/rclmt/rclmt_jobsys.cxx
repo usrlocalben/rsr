@@ -225,6 +225,12 @@ void join() {
 
 void noop(Job*, const int, void*) {}
 
+void fnjmp(Job*, const int, void* data) {
+	auto fn = static_cast<std::function<void()>*>(data);
+	(*fn)();
+	fn->~function();
+}
+
 void mark_start() {
     auto& timer = timer_pt[threadId];
 	if (telemetryEnabled) {

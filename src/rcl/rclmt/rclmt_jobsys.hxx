@@ -1,5 +1,6 @@
 #pragma once
 #include <atomic>
+#include <functional>
 #include <vector>
 
 #define member_size(type, member) sizeof(((type*)0)->member)
@@ -74,11 +75,15 @@ auto make_job_as_child(Job* parent, T function) -> Job*;
 template <typename T, typename D>
 auto make_job_as_child(Job* parent, T function, D data) -> Job*;
 
+auto make_job_as_child_fn(Job* parent, std::function<void()> fn) -> Job*;
+
 void add_link(Job* dest, Job* linked);
 
 void move_links(Job* src, Job* dst);
 
-void noop(jobsys::Job* job, int tid, void* /*unused*/);
+void noop(jobsys::Job*, int, void*);
+
+void fnjmp(jobsys::Job*, int, void*);
 
 void _sleep(int ms);
 
@@ -132,6 +137,13 @@ auto jobsys::make_job_as_child(Job* parent, T function, D data) -> Job* {
 	Job* job = make_job_as_child<T>(parent, function);
 	static_assert(sizeof(data) <= member_size(Job, data));
 	memcpy(job->data, &data, sizeof(data));
+	return job; }
+
+inline
+auto jobsys::make_job_as_child_fn(Job* parent, std::function<void()> fn) -> Job* {
+	Job* job = make_job_as_child(parent, jobsys::fnjmp);
+	void* d = static_cast<void*>(&job->data);
+	new (d) std::function<void()>{std::move(fn)};
 	return job; }
 
 inline
