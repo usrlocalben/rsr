@@ -5,66 +5,85 @@
 namespace rqdq {
 namespace rmlm {
 
-template<class T, int DEPTH>
+template <typename T, int DEPTH>
 class MatrixStack {
 	static constexpr int maxDepth = DEPTH;
 	using elementType = T;
 
+    // DATA
 	std::array<elementType, maxDepth> buf_;
 	int sp_{0};
 
 public:
-	void push();
-	void pop();
-	auto top() const -> const elementType& {
-	void clear();
-	void mul(const T& m);
-	void load(const elementType& m);
-	void reset(); };
+    MatrixStack();
+    MatrixStack(const T& init);
+
+    // MANIPULATORS
+	void Push();
+	void Pop();
+	auto Top() const -> const elementType&;
+	void Clear();
+	void Mul(const T& m);
+	void Load(const elementType& m);
+	void Reset(); };
 
 
-template<class T, int DEPTH>
+// ============================================================================
+//                                INLINE DEFINITIONS
+// ============================================================================
+// CREATORS
+template <typename T, int DEPTH>
 inline
-void MatrixStack::push() {
+MatrixStack<T, DEPTH>::MatrixStack() = default;
+
+template <typename T, int DEPTH>
+inline
+MatrixStack<T, DEPTH>::MatrixStack(const T& init) {
+    buf_[0] = init; }
+
+// MANIPULATORS
+template <typename T, int DEPTH>
+inline
+void MatrixStack<T, DEPTH>::Push() {
 	assert(sp_+1 < maxDepth);
 	buf_[sp_+1] = buf_[sp_];
 	++sp_; }
 
 
-template<class T, int DEPTH>
+template <typename T, int DEPTH>
 inline
-void MatrixStack::pop() {
+void MatrixStack<T, DEPTH>::Pop() {
 	assert(sp_ > 0);
 	--sp_; }
 
 
-template<class T, int DEPTH>
+template <typename T, int DEPTH>
 inline
-auto MatrixStack::top() const -> const MatrixStack::elementType& {
+auto MatrixStack<T, DEPTH>::Top() const -> const MatrixStack::elementType& {
 	return buf_[sp_]; }
 
 
-template<class T, int DEPTH>
+template <typename T, int DEPTH>
 inline
-void MatrixStack::clear() {
+void MatrixStack<T, DEPTH>::Clear() {
 	sp_ = 0; }
 
 
-template<class T, int DEPTH>
+template <typename T, int DEPTH>
 inline
-void MatrixStack::mul(const MatrixStack::elementType& m) {
+void MatrixStack<T, DEPTH>::Mul(const MatrixStack::elementType& m) {
 	buf_[sp_] *= m; }
 
 
-template<class T, int DEPTH>
+template <typename T, int DEPTH>
 inline
-void MatrixStack::load(const MatrixStack::elementType& m) {
+void MatrixStack<T, DEPTH>::Load(const MatrixStack::elementType& m) {
 	buf_[sp_] = m; }
 
 
-template<class T, int DEPTH>
+template <typename T, int DEPTH>
 inline
-void MatrixStack::reset() {
+void MatrixStack<T, DEPTH>::Reset() {
 	sp_ = 0;
 	load(mat4::identity()); }
 

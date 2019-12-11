@@ -8,18 +8,13 @@ namespace rqdq {
 namespace rmlm {
 
 struct alignas(64) mat4 {
+
+    // DATA
 	union {
 		float cr[4][4]; // col,row
 		std::array<float, 16> ff; };
 
-	mat4() = default;
-	explicit mat4(float scale) noexcept;
-	mat4(float a00, float a01, float a02, float a03,
-	     float a10, float a11, float a12, float a13,
-	     float a20, float a21, float a22, float a23,
-	     float a30, float a31, float a32, float a33) noexcept;
-	explicit mat4(std::array<float, 16> src) noexcept;
-
+    // CLASS METHODS
 	static auto identity() -> mat4;
 
 	static auto scale(float) -> mat4;
@@ -35,41 +30,37 @@ struct alignas(64) mat4 {
 
 	static auto rotate(float theta, float x, float y, float z) -> mat4;
 	static auto rotate(float theta, rmlv::vec3) -> mat4;
-	static auto rotate(float theta) -> mat4; };
-	
+	static auto rotate(float theta) -> mat4;
 
+    // CREATORS
+	mat4();
+	explicit mat4(float scale) noexcept;
+	mat4(float a00, float a01, float a02, float a03,
+	     float a10, float a11, float a12, float a13,
+	     float a20, float a21, float a22, float a23,
+	     float a30, float a31, float a32, float a33) noexcept;
+	explicit mat4(std::array<float, 16> src) noexcept;
+
+    // MANIPULATORS
+    auto operator*=(const mat4& rhs) -> mat4&; };
+	
+// FREE OPERATORS
+auto operator*(const mat4&, const rmlv::vec4&) -> rmlv::vec4;
+auto operator*(const mat4&, const mat4&) -> mat4;
+
+// FREE FUNCTIONS
 auto print(std::ostream&, const mat4&) -> void;
 auto inverse(mat4) -> mat4;
 auto transpose(mat4) -> mat4;
 
-auto operator*(const mat4&, const rmlv::vec4&) -> rmlv::vec4;
-auto operator*(const mat4&, const mat4&) -> mat4;
+// ============================================================================
+//                  INLINE DEFINITIONS
+// ============================================================================
 
-
-inline
-mat4::mat4(float s) noexcept :
-	ff({ { s, 0, 0, 0,
-	       0, s, 0, 0,
-	       0, 0, s, 0,
-	       0, 0, 0, 1 } }) {}
-
-
-inline
-mat4::mat4(float a00, float a01, float a02, float a03,
-           float a10, float a11, float a12, float a13,
-           float a20, float a21, float a22, float a23,
-           float a30, float a31, float a32, float a33) noexcept :
-	ff({ { a00, a10, a20, a30,
-	       a01, a11, a21, a31,
-	       a02, a12, a22, a32,
-	       a03, a13, a23, a33 } }) {}
-
-
-inline
-mat4::mat4(std::array<float, 16> src) noexcept :
-	ff(std::move(src)) {}
-
-
+                            // ----------
+                            // class mat4
+                            // ----------
+// CLASS METHODS
 inline
 auto mat4::scale(float x, float y, float z) -> mat4 {
 	return {
@@ -78,31 +69,25 @@ auto mat4::scale(float x, float y, float z) -> mat4 {
 		0, 0, z, 0,
 		0, 0, 0, 1 }; }
 
-
 inline
 auto mat4::scale(float s) -> mat4 {
 	return mat4::scale(s, s, s); }
-
 
 inline
 auto mat4::scale(rmlv::vec2 v) -> mat4 {
 	return mat4::scale(v.x, v.y, 1); }
 
-
 inline
 auto mat4::scale(rmlv::vec3 v) -> mat4 {
 	return mat4::scale(v.x, v.y, v.z); }
-
 
 inline
 auto mat4::scale(rmlv::vec4 v) -> mat4 {
 	return mat4::scale(v.x, v.y, v.z); }
 
-
 inline
 auto mat4::identity() -> mat4 {
 	return mat4::scale(1); }
-
 
 inline
 auto mat4::translate(float x, float y, float z) -> mat4 {
@@ -112,21 +97,17 @@ auto mat4::translate(float x, float y, float z) -> mat4 {
 		0, 0, 1, z,
 		0, 0, 0, 1 }; }
 
-
 inline
 auto mat4::translate(rmlv::vec2 v) -> mat4 {
 	return mat4::translate(v.x, v.y, 1); }
-
 
 inline
 auto mat4::translate(rmlv::vec3 v) -> mat4 {
 	return mat4::translate(v.x, v.y, v.z); }
 
-
 inline
 auto mat4::translate(rmlv::vec4 v) -> mat4 {
 	return mat4::translate(v.x, v.y, v.z); }
-
 
 inline
 auto mat4::rotate(float theta, float x, float y, float z) -> mat4 {
@@ -149,26 +130,47 @@ auto mat4::rotate(float theta, float x, float y, float z) -> mat4 {
 		tx*z - sy, ty*z + sx, tz*z + c,  0,
 		0,         0,         0,         1 }; }
 
-
 inline
 auto mat4::rotate(float theta) -> mat4 {
 	return mat4::rotate(theta, 0, 0, 1); }
-
 
 inline
 auto mat4::rotate(float theta, rmlv::vec3 a) -> mat4 {
 	return mat4::rotate(theta, a.x, a.y, a.z); }
 
+// CREATORS
+inline
+mat4::mat4() = default;
 
 inline
-auto transpose(mat4 m) -> mat4 {
-	return mat4{
-		m.ff[ 0], m.ff[ 1], m.ff[ 2], m.ff[ 3],
-		m.ff[ 4], m.ff[ 5], m.ff[ 6], m.ff[ 7],
-		m.ff[ 8], m.ff[ 9], m.ff[10], m.ff[11],
-		m.ff[12], m.ff[13], m.ff[14], m.ff[15] }; }
+mat4::mat4(float s) noexcept :
+	ff({ { s, 0, 0, 0,
+	       0, s, 0, 0,
+	       0, 0, s, 0,
+	       0, 0, 0, 1 } }) {}
 
+inline
+mat4::mat4(float a00, float a01, float a02, float a03,
+           float a10, float a11, float a12, float a13,
+           float a20, float a21, float a22, float a23,
+           float a30, float a31, float a32, float a33) noexcept :
+	ff({ { a00, a10, a20, a30,
+	       a01, a11, a21, a31,
+	       a02, a12, a22, a32,
+	       a03, a13, a23, a33 } }) {}
 
+inline
+mat4::mat4(std::array<float, 16> src) noexcept :
+	ff(std::move(src)) {}
+
+// MANIPULATORS
+inline
+auto mat4::operator*=(const mat4& rhs) -> mat4& {
+    auto tmp = *this * rhs;
+    ff = tmp.ff;
+    return *this; }
+
+// FREE OPERATORS
 inline
 auto operator*(const mat4& a, const rmlv::vec4& b) -> rmlv::vec4 {
 	return rmlv::vec4{
@@ -177,7 +179,6 @@ auto operator*(const mat4& a, const rmlv::vec4& b) -> rmlv::vec4 {
 		a.ff[2]*b.x + a.ff[6]*b.y + a.ff[10]*b.z + a.ff[14]*b.w,
 		a.ff[3]*b.x + a.ff[7]*b.y + a.ff[11]*b.z + a.ff[15]*b.w
 		}; }
-
 
 inline
 auto operator*(const mat4& lhs, const mat4& rhs) -> mat4 {
@@ -192,6 +193,14 @@ auto operator*(const mat4& lhs, const mat4& rhs) -> mat4 {
 			out.cr[rightCol][leftRow] = ax; }}
 	return out; }
 
+// FREE FUNCTIONS
+inline
+auto transpose(mat4 m) -> mat4 {
+	return mat4{
+		m.ff[ 0], m.ff[ 1], m.ff[ 2], m.ff[ 3],
+		m.ff[ 4], m.ff[ 5], m.ff[ 6], m.ff[ 7],
+		m.ff[ 8], m.ff[ 9], m.ff[10], m.ff[11],
+		m.ff[12], m.ff[13], m.ff[14], m.ff[15] }; }
 
 }  // namespace rmlm
 }  // namespace rqdq
