@@ -85,7 +85,7 @@ template <typename T, int DEPTH>
 inline
 void MatrixStack<T, DEPTH>::Reset() {
 	sp_ = 0;
-	load(mat4::identity()); }
+	Load(mat4::identity()); }
 
 
 }  // namespace rmlm
