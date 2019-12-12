@@ -564,7 +564,7 @@ private:
 		bool success;
 		std::tie(success, newNodes) = CompileDocument(docroot, meshStore_);
 		if (success) {
-			std::copy(begin(appNodes_), end(appNodes_), std::back_inserter(newNodes));
+			newNodes.insert(end(newNodes), begin(appNodes_), end(appNodes_));
 			success = Link(newNodes);
 			if (success) {
 				auto elapsed = compileTime.delta() * 1000.0;

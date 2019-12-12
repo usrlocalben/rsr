@@ -137,7 +137,7 @@ Icosphere::Icosphere(int divs, int reqColor) {
 	numRenderIndices_ = tris_.size();
 
 	// 4c. append the fringe tris, for e.g. vertex normal calc
-	std::copy(begin(fringe), end(fringe), back_inserter(tris_));
+	tris_.insert(end(tris_), begin(fringe), end(fringe));
 
 	// 5. finalize
 	Optimize();
