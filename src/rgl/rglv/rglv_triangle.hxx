@@ -14,7 +14,6 @@
 namespace rqdq {
 namespace rglv {
 
-
 template <typename FRAGMENT_PROCESSOR>
 class TriangleRasterizer {
 public:
@@ -59,9 +58,9 @@ public:
 		c2 = (c2 - 1) >> 4;
 		c3 = (c3 - 1) >> 4;
 
-		auto cb1 = mvec4i{0,dy12,0,dy12} + mvec4i{0,0,dx12,dx12} + c1;
-		auto cb2 = mvec4i{0,dy23,0,dy23} + mvec4i{0,0,dx23,dx23} + c2;
-		auto cb3 = mvec4i{0,dy31,0,dy31} + mvec4i{0,0,dx31,dx31} + c3;
+		auto cb1 = mvec4i{c1} + mvec4i{0,dy12,0,dy12} + mvec4i{0,0,dx12,dx12};
+		auto cb2 = mvec4i{c2} + mvec4i{0,dy23,0,dy23} + mvec4i{0,0,dx23,dx23};
+		auto cb3 = mvec4i{c3} + mvec4i{0,dy31,0,dy31} + mvec4i{0,0,dx31,dx31};
 		auto cb1dydx = mvec4i{dy12*2}; auto cb1dxdy = mvec4i{dx12*2};
 		auto cb2dydx = mvec4i{dy23*2}; auto cb2dxdy = mvec4i{dx23*2};
 		auto cb3dydx = mvec4i{dy31*2}; auto cb3dxdy = mvec4i{dx31*2};
