@@ -851,7 +851,7 @@ private:
 
 			// phase 3: project, convert to triangles and add to bins
 			const auto bi = static_cast<int>(clippedVertexBuffer0_.size());
-			std::copy(begin(clipA_), end(clipA_), back_inserter(clippedVertexBuffer0_));
+			clippedVertexBuffer0_.insert(end(clippedVertexBuffer0_), begin(clipA_), end(clipA_));
 			for (int vi=1; vi<clipA_.size() - 1; ++vi) {
 				int i0{0}, i1{vi}, i2{vi+1};
 				ForEachCoveredTile(clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](uint8_t** th) {

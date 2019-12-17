@@ -16,6 +16,7 @@
 #include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclr/rclr_algorithm.hxx"
+#include "src/rcl/rcls/rcls_smoothedintervaltimer.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rcl/rclx/rclx_jsonfile.hxx"
 #include "src/rgl/rglr/rglr_display_mode.hxx"
@@ -60,13 +61,6 @@ const int MEASUREMENT_SAMPLESIZE_IN_FRAMES = 1100;
 const int SCAN_SAMPLESIZE_IN_FRAMES = 120;
 const ivec2 SCAN_SIZE_LIMIT_IN_TILES{ 16, 16 };
 const double MEASUREMENT_DISCARD = 0.05;  // discard worst 5% because of os noise
-
-
-struct SampleSmoother {
-	double value = 0.0;
-	void add(double a) {
-		value = (value * 0.9) + (a * 0.1); }};
-
 
 std::vector<DisplayMode> modelist = {
 	{640, 360},
@@ -205,8 +199,6 @@ public:
 
 		if (!nice_) { jobsys::work_start();}
 
-		SampleSmoother renderTimeInMillis;
-		SampleSmoother frameTimeInMillis;
 		try {
 			while (!shouldQuit_) {
 				MaybeUpdateDisplay();
@@ -221,7 +213,7 @@ public:
 					reset_mouse_next_frame = false;
 					display_.center_mouse(); }
 
-				renderTimer_.reset();
+				renderTime_.Start();
 				auto frame = Frame(display_);
 				auto canvas = frame.canvas();
 
@@ -259,9 +251,9 @@ public:
 				audioController.FillBuffers();  // decrease chance of missing vsync
 #endif
 
-				renderTimeInMillis.add(renderTimer_.time() * 1000.0);
-				frameTimeInMillis.add(interFrameTimer_.delta() * 1000.0);
-				DrawUI(canvas, renderTimeInMillis.value, frameTimeInMillis.value);
+				renderTime_.Stop();
+				refreshTime_.Sample();
+				DrawUI(canvas);
 				runtimeInFrames_++; }}
 
 		catch (WindowClosed) {
@@ -391,7 +383,10 @@ private:
 		int ticks = wheel_amount / 120;
 		camera_.Zoom(ticks); }
 
-	void DrawUI(struct TrueColorCanvas& canvas, double renderTimeInMillis, double frameTimeInMillis) {
+	void DrawUI(struct TrueColorCanvas& canvas) {
+		auto renderTimeInMillis = renderTime_.Get();
+		auto refreshTimeInMillis = refreshTime_.Get();
+
 		if (show_mode_list) {
 			int idx = 1;
 			int top = canvas.height() / 2;
@@ -463,7 +458,7 @@ private:
 				measurementSamples_.push_back(renderTimeInMillis); } }
 
 		if (debug_mode) {
-			double fps = 1.0 / (frameTimeInMillis / 1000.0);
+			double fps = 1.0 / (refreshTimeInMillis / 1000.0);
 			auto s = fmt::sprintf("% 6.2f ms, fps: %.0f", renderTimeInMillis, fps);
 			pp_.write(s, 16, 16, canvas); }
 
@@ -564,7 +559,7 @@ private:
 		bool success;
 		std::tie(success, newNodes) = CompileDocument(docroot, meshStore_);
 		if (success) {
-			std::copy(begin(appNodes_), end(appNodes_), std::back_inserter(newNodes));
+			newNodes.insert(end(newNodes), begin(appNodes_), end(appNodes_));
 			success = Link(newNodes);
 			if (success) {
 				auto elapsed = compileTime.delta() * 1000.0;
@@ -581,8 +576,8 @@ private:
 	MaterialStore materialStore_;
 	TextureStore textureStore_;
 	ProPrinter pp_;
-	PixelToaster::Timer interFrameTimer_;
-	PixelToaster::Timer renderTimer_;
+	rcls::SmoothedIntervalTimer refreshTime_;
+	rcls::SmoothedIntervalTimer renderTime_;
 	PixelToaster::Timer wallClock_;
 
 	// BEGIN debugger state

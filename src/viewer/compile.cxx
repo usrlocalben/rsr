@@ -97,7 +97,7 @@ bool NodeCompiler::Input(std::string_view attrName, bool required) {
 			if (auto subPtr = CompileNode(jv.value(), *meshStore_)) {
 				auto [subNode, subDeps] = *subPtr;
 				deps_.emplace_back(subNode);
-				std::copy(begin(subDeps), end(subDeps), std::back_inserter(deps_));
+				deps_.insert(end(deps_), begin(subDeps), end(subDeps));
 				inputs_.emplace_back(attrName, subNode->get_id());
 				return true; }
 			else {
@@ -156,7 +156,7 @@ tuple<bool, NodeList> CompileDocument(const JsonValue root, const rglv::MeshStor
 		if (instance.has_value()) {
 			auto [node, deps] =  *instance;
 			nodes.push_back(node);
-			std::copy(begin(deps), end(deps), std::back_inserter(nodes)); }
+			nodes.insert(end(nodes), begin(deps), end(deps)); }
 		else {
 			std::cerr << "error deserializing json item\n";
 			success = false; }}

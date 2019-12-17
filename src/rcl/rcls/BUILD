@@ -3,6 +3,23 @@ load("//:copts.bzl", "RSR_DEFAULT_COPTS")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "linearsmoother",
+    srcs = ["rcls_linearsmoother.cxx"],
+    hdrs = ["rcls_linearsmoother.hxx"],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "smoothedintervaltimer",
+    srcs = ["rcls_smoothedintervaltimer.cxx"],
+    hdrs = ["rcls_smoothedintervaltimer.hxx"],
+    deps = [
+        "//3rdparty/pixeltoaster",
+        ":linearsmoother",],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
     name = "timer",
     srcs = ["rcls_timer.cxx"],
     hdrs = ["rcls_timer.hxx"],

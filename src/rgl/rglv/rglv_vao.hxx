@@ -150,6 +150,9 @@ struct VertexArray_F3F3F3 {
 	int size() const {
 		return int(a0.size());}
 
+	bool empty() const {
+		return size()==0; }
+
 	int append(const rmlv::vec3 v0, const rmlv::vec3 v1, const rmlv::vec3 v2) {
 		int idx = size();
 		a0.push_back(v0);
