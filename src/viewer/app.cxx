@@ -408,7 +408,7 @@ private:
 		if (measuring) {
 			if (measurementSamples_.size() == MEASUREMENT_SAMPLESIZE_IN_FRAMES) {
 				measuring = false;
-				last_stats = calc_stat(measurementSamples_, MEASUREMENT_DISCARD);
+				last_stats = CalcStat(measurementSamples_, MEASUREMENT_DISCARD);
 				show_stats = true; }
 			else {
 				measurementSamples_.push_back(renderTimeInMillis);
@@ -442,10 +442,10 @@ private:
 				ss << "          press s to stop            ";
 				pp_.write(ss.str(), 16, top, canvas);  top += 10; }
 			if (measurementSamples_.size() == SCAN_SAMPLESIZE_IN_FRAMES) {
-				last_stats = calc_stat(std::vector<double>(begin(measurementSamples_) + 60, end(measurementSamples_)), MEASUREMENT_DISCARD);
+				last_stats = CalcStat(std::vector<double>(begin(measurementSamples_) + 60, end(measurementSamples_)), MEASUREMENT_DISCARD);
 				measurementSamples_.clear();
-				if (last_stats._mean < scan_min_value) {
-					scan_min_value = last_stats._mean;
+				if (last_stats.avg < scan_min_value) {
+					scan_min_value = last_stats.avg;
 					scan_min_dim = tile_dim; }
 				tile_dim.x += 2;
 				if (tile_dim.x > SCAN_SIZE_LIMIT_IN_TILES.x) {
@@ -496,13 +496,13 @@ private:
 			pp_.write("   min    25th     med    75th     max    mean    sdev", 32, top, canvas);
 			top += 10;
 			fmt::memory_buffer out;
-			format_to(out, "{: 6.2f}  ", last_stats._min);
-			format_to(out, "{: 6.2f}  ", last_stats._25th);
-			format_to(out, "{: 6.2f}  ", last_stats._med);
-			format_to(out, "{: 6.2f}  ", last_stats._75th);
-			format_to(out, "{: 6.2f}  ", last_stats._max);
-			format_to(out, "{: 6.2f}  ", last_stats._mean);
-			format_to(out, "{: 6.2f}  ", last_stats._sdev);
+			format_to(out, "{: 6.2f}  ", last_stats.min);
+			format_to(out, "{: 6.2f}  ", last_stats.p25);
+			format_to(out, "{: 6.2f}  ", last_stats.med);
+			format_to(out, "{: 6.2f}  ", last_stats.p75);
+			format_to(out, "{: 6.2f}  ", last_stats.max);
+			format_to(out, "{: 6.2f}  ", last_stats.avg);
+			format_to(out, "{: 6.2f}  ", last_stats.std);
 			pp_.write(to_string(out), 32, top, canvas);
 			top += 10;
 			pp_.write(string("press C to clear"), 32, top, canvas); } }
