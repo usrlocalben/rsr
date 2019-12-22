@@ -680,11 +680,11 @@ private:
 			Mark(&h); }
 
 		for (int iid=0; iid<instanceCnt; ++iid) {
-			array<typename PGM::VertexInput, 3> vertex;
-			array<typename PGM::VertexOutputMD, 3> computed;
-			array<qfloat2, 3> devCoord;
-			array<mvec4i, 3> clipFlags;
-			array<array<int, 4>, 3> srcIdx;
+			std::array<typename PGM::VertexInput, 3> vertex;
+			std::array<typename PGM::VertexOutputMD, 3> computed;
+			std::array<rmlv::qfloat2, 3> devCoord;
+			std::array<rmlv::mvec4i, 3> clipFlags;
+			std::array<std::array<int, 4>, 3> srcIdx;
 			int li{0};
 
 			if (INSTANCED) {
@@ -695,21 +695,25 @@ private:
 			auto flush = [&]() {
 				for (int i{0}; i<3; ++i) {
 					qfloat4 gl_Position;
-					PGM::ShadeVertex(matrices, uniforms, vertex[i], gl_position, computed[i]);
+					PGM::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
 					clipFlags[i] = frustum.Test(gl_Position);
 					devCoord[i] = pdiv(gl_Position).xy() * deviceScale_ + deviceOffset_;
 					/* todo compute 4x triangle area here */ }
 
 				for (int ti{0}; ti<li; ++ti) {
-					stats0_.totalTriangeslSubmitted++;
+					stats0_.totalTrianglesSubmitted++;
 
-					const auto cf0 = clipFlags[0].lane[ti];
-					const auto cf1 = clipFlags[1].lane[ti];
-					const auto cf2 = clipFlags[2].lane[ti];
+					auto cf0 = clipFlags[0].si[ti];
+					auto cf1 = clipFlags[1].si[ti];
+					auto cf2 = clipFlags[2].si[ti];
 
-					const auto i0 = srcIdx[0][ti];
-					const auto i1 = srcIdx[1][ti];
-					const auto i2 = srcIdx[2][ti];
+					auto i0 = srcIdx[0][ti];
+					auto i1 = srcIdx[1][ti];
+					auto i2 = srcIdx[2][ti];
+
+					auto dc0 = devCoord[0].lane(ti);
+					auto dc1 = devCoord[1].lane(ti);
+					auto dc2 = devCoord[2].lane(ti);
 
 					if (cf0 | cf1 | cf2) {
 						if (cf0 & cf1 & cf2) {
@@ -719,10 +723,6 @@ private:
 						// queue for clipping
 						clipQueue_.push_back({ iid, i0, i1, i2 });
 						continue; }
-
-					auto dc0 = devCoord[0].lane[ti];
-					auto dc1 = devCoord[1].lane[ti];
-					auto dc2 = devCoord[2].lane[ti];
 
 					const bool backfacing = rmlg::triangle2Area(dc0, dc1, dc2) < 0;
 					if (backfacing) {
