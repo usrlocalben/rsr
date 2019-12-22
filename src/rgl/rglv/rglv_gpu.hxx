@@ -410,7 +410,7 @@ private:
 				struct SequenceSource {
 					int operator()(int ti) { return ti; }};
 				SequenceSource indexSource{};
-				bin_Draw<false, SequenceSource, SHADERS...>(count, indexSource, 1); }
+				bin_DrawArrays<false, SequenceSource, SHADERS...>(count, indexSource, 1); }
 			else if (cmd == CMD_DRAW_ARRAYS_INSTANCED) {
 				//auto flags = cs.consumeByte();
 				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -419,7 +419,7 @@ private:
 				struct SequenceSource {
 					int operator()(int ti) { return ti; }};
 				SequenceSource indexSource{};
-				bin_Draw<true, SequenceSource, SHADERS...>(count, indexSource, instanceCnt); }
+				bin_DrawArrays<true, SequenceSource, SHADERS...>(count, indexSource, instanceCnt); }
 			else if (cmd == CMD_DRAW_ELEMENTS) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -430,7 +430,7 @@ private:
 					int operator()(int ti) { return data_[ti]; }
 					const uint16_t* const data_; };
 				ArraySource indexSource{indices};
-				bin_Draw<false, ArraySource, SHADERS...>(count, indexSource, 1); }
+				bin_DrawElements<false, ArraySource, SHADERS...>(count, indexSource, 1); }
 			else if (cmd == CMD_DRAW_ELEMENTS_INSTANCED) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -442,7 +442,7 @@ private:
 					int operator()(int ti) { return data_[ti]; }
 					const uint16_t* const data_; };
 				ArraySource indexSource{indices};
-				bin_Draw<true, ArraySource, SHADERS...>(count, indexSource, instanceCnt); } }
+				bin_DrawElements<true, ArraySource, SHADERS...>(count, indexSource, instanceCnt); } }
 
 		// stats...
 		int total_ = 0;
@@ -536,12 +536,12 @@ private:
 			rglr::FilterTile<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
 
 	template <bool INSTANCED, typename INDEX_SOURCE, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
+	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_DrawArrays(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
 
 	template <bool INSTANCED, typename INDEX_SOURCE, typename PGM, typename ...PGMs>
-	void bin_Draw(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
+	void bin_DrawArrays(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
 		if (PGM::id != binState->programId) {
-			return bin_Draw<INSTANCED, INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
+			return bin_DrawArrays<INSTANCED, INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
@@ -638,6 +638,130 @@ private:
 					AppendUShort(th, i2); }); }
 
 			}  // instance loop
+
+		for (auto& h : tilesHead_) {
+			if (Touched(&h)) {
+				AppendUShort(&h, 0xffff); }
+			else {
+				// remove the command from any tiles
+				// that weren't covered by this draw
+				Unappend(&h, 1); }}
+
+		stats0_.totalTrianglesClipped = clipQueue_.size();
+		if (!clipQueue_.empty()) {
+			bin_DrawElementsClipped<INSTANCED, PGM>(state); }}
+
+	template <bool INSTANCED, typename INDEX_SOURCE, typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_DrawElements(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
+
+	template <bool INSTANCED, typename INDEX_SOURCE, typename PGM, typename ...PGMs>
+	void bin_DrawElements(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
+		if (PGM::id != binState->programId) {
+			return bin_DrawElements<INSTANCED, INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
+		using std::min, std::max, std::swap;
+		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
+		const auto& state = *binState;
+
+		const auto matrices = MakeMatrices(state);
+		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
+		const auto cullingEnabled = state.cullingEnabled;
+		const auto cullFace = state.cullFace;
+		typename PGM::Loader loader( state.buffers, state.bufferFormat );
+		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
+
+		if (!INSTANCED) {
+			// coding error if this is not true
+			// XXX could use constexpr instead of template param?
+			assert(instanceCnt == 1); }
+
+		const auto cmd = INSTANCED ? CMD_DRAW_INLINE_INSTANCED : CMD_DRAW_INLINE;
+		for (auto& h : tilesHead_) {
+			AppendByte(&h, cmd);
+			Mark(&h); }
+
+		for (int iid=0; iid<instanceCnt; ++iid) {
+			array<typename PGM::VertexInput, 3> vertex;
+			array<typename PGM::VertexOutputMD, 3> computed;
+			array<qfloat2, 3> devCoord;
+			array<mvec4i, 3> clipFlags;
+			array<array<int, 4>, 3> srcIdx;
+			int li{0};
+
+			if (INSTANCED) {
+				loader.LoadInstance(iid, vertex[0]);
+				loader.LoadInstance(iid, vertex[1]);
+				loader.LoadInstance(iid, vertex[2]); } 
+
+			auto flush = [&]() {
+				for (int i{0}; i<3; ++i) {
+					qfloat4 gl_Position;
+					PGM::ShadeVertex(matrices, uniforms, vertex[i], gl_position, computed[i]);
+					clipFlags[i] = frustum.Test(gl_Position);
+					devCoord[i] = pdiv(gl_Position).xy() * deviceScale_ + deviceOffset_;
+					/* todo compute 4x triangle area here */ }
+
+				for (int ti{0}; ti<li; ++ti) {
+					stats0_.totalTriangeslSubmitted++;
+
+					const auto cf0 = clipFlags[0].lane[ti];
+					const auto cf1 = clipFlags[1].lane[ti];
+					const auto cf2 = clipFlags[2].lane[ti];
+
+					const auto i0 = srcIdx[0][ti];
+					const auto i1 = srcIdx[1][ti];
+					const auto i2 = srcIdx[2][ti];
+
+					if (cf0 | cf1 | cf2) {
+						if (cf0 & cf1 & cf2) {
+							// all points outside of at least one plane
+							stats0_.totalTrianglesCulled++;
+							continue; }
+						// queue for clipping
+						clipQueue_.push_back({ iid, i0, i1, i2 });
+						continue; }
+
+					auto dc0 = devCoord[0].lane[ti];
+					auto dc1 = devCoord[1].lane[ti];
+					auto dc2 = devCoord[2].lane[ti];
+
+					const bool backfacing = rmlg::triangle2Area(dc0, dc1, dc2) < 0;
+					if (backfacing) {
+						if (cullingEnabled && cullFace == GL_BACK) {
+							stats0_.totalTrianglesCulled++;
+							continue; }
+						swap(i0, i2);
+						i0 |= 0x8000; }  // add backfacing flag
+					else {
+						if (cullingEnabled && cullFace == GL_FRONT) {
+							stats0_.totalTrianglesCulled++;
+							continue; }}
+
+					ForEachCoveredTile(dc0, dc1, dc2, [&](uint8_t** th) {
+						if (INSTANCED) {
+							AppendUShort(th, iid); }
+						AppendUShort(th, i0);  // also includes backfacing flag
+						AppendUShort(th, i1);
+						AppendUShort(th, i2); }); }
+
+				// reset the SIMD lane counter
+				li = 0; };
+
+			for (int ti=0; ti<count; ti+=3) {
+				stats0_.totalTrianglesSubmitted++;
+
+				uint16_t i0 = indexSource(ti);
+				uint16_t i1 = indexSource(ti+1);
+				uint16_t i2 = indexSource(ti+2);
+				srcIdx[0][li] = i0;
+				srcIdx[1][li] = i1;
+				srcIdx[2][li] = i2;
+				loader.LoadLane(i0, li, vertex[0]);
+				loader.LoadLane(i1, li, vertex[1]);
+				loader.LoadLane(i2, li, vertex[2]);
+				++li;
+				if (li == 4) {
+					flush(); }}
+			flush(); }  // end instance loop
 
 		for (auto& h : tilesHead_) {
 			if (Touched(&h)) {
