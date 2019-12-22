@@ -30,12 +30,13 @@ void GL::DrawArraysInstanced(const int mode, const int start, const int count, i
 	commands_.appendInt(instanceCnt); }
 
 
-void GL::DrawElements(const int mode, const int count, const int type, const uint16_t* indices) {
+void GL::DrawElements(const int mode, const int count, const int type, const uint16_t* indices, const uint8_t hint) {
 	assert(mode == GL_TRIANGLES);
 	assert(type == GL_UNSIGNED_SHORT);
 	MaybeUpdateState();
 	commands_.appendByte(CMD_DRAW_ELEMENTS);
 	commands_.appendByte(0x14);  // videocore: 16-bit indices, triangles
+	commands_.appendByte(hint);
 	// commands_.appendByte(enableClipping ? 1 : 0);
 	commands_.appendInt(count);
 	commands_.appendPtr(indices); }

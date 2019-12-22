@@ -90,7 +90,7 @@ public:
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, *vbo_);
-		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data());
+		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data(), RGL_HINT_DENSE|RGL_HINT_READ4);
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); } }
 

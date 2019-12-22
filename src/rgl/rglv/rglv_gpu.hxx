@@ -423,14 +423,29 @@ private:
 			else if (cmd == CMD_DRAW_ELEMENTS) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
+				auto hint = cs.consumeByte();
 				auto count = cs.consumeInt();
 				auto indices = static_cast<uint16_t*>(cs.consumePtr());
-				struct ArraySource {
-					ArraySource(const uint16_t* data) : data_(data) {}
-					int operator()(int ti) { return data_[ti]; }
-					const uint16_t* const data_; };
-				ArraySource indexSource{indices};
-				bin_DrawElements<false, ArraySource, SHADERS...>(count, indexSource, 1); }
+				if ((hint & RGL_HINT_DENSE) && (hint & RGL_HINT_READ4)) {
+					// special case:
+					// vertex data length is a multiple of 4 (SSE ready), and
+					// most/all of the vertex data will be used.
+					//
+					// in this case, it's better to run the vertex shader
+					// on the entire buffer first, then process the primitives
+					struct ArraySource {
+						ArraySource(const uint16_t* data) : data_(data) {}
+						int operator()(int ti) { return data_[ti]; }
+						const uint16_t* const data_; };
+					ArraySource indexSource{indices};
+					bin_DrawArrays<false, ArraySource, SHADERS...>(count, indexSource, 1); }
+				else {
+					struct ArraySource {
+						ArraySource(const uint16_t* data) : data_(data) {}
+						int operator()(int ti) { return data_[ti]; }
+						const uint16_t* const data_; };
+					ArraySource indexSource{indices};
+					bin_DrawElements<false, ArraySource, SHADERS...>(count, indexSource, 1); }}
 			else if (cmd == CMD_DRAW_ELEMENTS_INSTANCED) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -758,8 +773,7 @@ private:
 				loader.LoadLane(i0, li, vertex[0]);
 				loader.LoadLane(i1, li, vertex[1]);
 				loader.LoadLane(i2, li, vertex[2]);
-				++li;
-				if (li == 4) {
+				if (++li == 4) {
 					flush(); }}
 			flush(); }  // end instance loop
 

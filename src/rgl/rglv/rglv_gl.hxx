@@ -39,6 +39,9 @@ constexpr int GL_COLOR_BUFFER_BIT = 1;
 constexpr int GL_DEPTH_BUFFER_BIT = 2;
 constexpr int GL_STENCIL_BUFFER_BIT = 4;
 
+constexpr uint8_t RGL_HINT_READ4 = 1;
+constexpr uint8_t RGL_HINT_DENSE = 2;
+
 struct TextureState {
 	const PixelToaster::FloatingPointPixel *ptr;
 	int width;
@@ -189,7 +192,7 @@ public:
 	//void drawElements(const VertexArray_F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3&);
-	void DrawElements(int mode, int count, int type, const uint16_t* indices);
+	void DrawElements(int mode, int count, int type, const uint16_t* indices, uint8_t hint=0);
 	void DrawArrays(int mode, int start, int count);
 	void DrawElementsInstanced(int mode, int count, int type, const uint16_t* indices, int instanceCnt);
 	void DrawArraysInstanced(int mode, int start, int count, int instanceCnt);
