@@ -90,7 +90,7 @@ public:
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, *vbo_);
-		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data());
+		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data(), RGL_HINT_DENSE|RGL_HINT_READ4);
 		if (link != nullptr) {
 			rclmt::jobsys::run(link); } }
 
@@ -171,7 +171,7 @@ private:
 	int mod2_{0};
 	std::vector<uint16_t> indices_;
 	std::array<rglv::VertexArray_F3F3F3, 2> vbos_{};
-	rglv::VertexArray_F3F3F3* vbo_;
+	rglv::VertexArray_F3F3F3* vbo_{nullptr};
 
 	// inputs
 	IMaterial* materialNode_{nullptr};

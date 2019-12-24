@@ -25,6 +25,7 @@ constexpr int GL_CW = 0;
 constexpr int GL_CCW = 1;
 
 constexpr int GL_CULL_FACE = 1;
+constexpr int GL_SCISSOR_TEST = 2;
 
 constexpr int GL_FRONT = 1;
 constexpr int GL_BACK = 2;
@@ -38,6 +39,9 @@ constexpr int GL_LINEAR_MIPMAP_NEAREST = 1;
 constexpr int GL_COLOR_BUFFER_BIT = 1;
 constexpr int GL_DEPTH_BUFFER_BIT = 2;
 constexpr int GL_STENCIL_BUFFER_BIT = 4;
+
+constexpr uint8_t RGL_HINT_READ4 = 1;
+constexpr uint8_t RGL_HINT_DENSE = 2;
 
 struct TextureState {
 	const PixelToaster::FloatingPointPixel *ptr;
@@ -62,6 +66,11 @@ struct GLState {
 
 	bool cullingEnabled;		// default for GL_CULL_FACE is false
 	int cullFace;			// default GL_BACK
+	bool scissorEnabled;
+	rmlv::ivec2 scissorOrigin;
+	rmlv::ivec2 scissorSize;
+	rmlv::ivec2 viewportOrigin;
+	std::optional<rmlv::ivec2> viewportSize;
 
 	int programId;			// default is zero??? unclear
 	int uniformsOfs;
@@ -89,6 +98,11 @@ struct GLState {
 		cullingEnabled = false;
 		cullFace = GL_BACK;
 
+		scissorEnabled = false;
+
+		viewportOrigin = rmlv::ivec2{ 0, 0 };
+		viewportSize = std::nullopt;
+
 		programId = 0;
 		uniformsOfs = -1;
 
@@ -108,6 +122,8 @@ public:
 		dirty_ = true;
 		if (value == GL_CULL_FACE) {
 			cs_.cullingEnabled = true; }
+		else if (value == GL_SCISSOR_TEST) {
+			cs_.scissorEnabled = true; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
 
@@ -115,12 +131,24 @@ public:
 		dirty_ = true;
 		if (value == GL_CULL_FACE) {
 			cs_.cullingEnabled = false; }
+		else if (value == GL_SCISSOR_TEST) {
+			cs_.scissorEnabled = false; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
 
 	void CullFace(const int value) {
 		dirty_ = true;
 		cs_.cullFace = value; }
+
+	void Scissor(int x, int y, int width, int height) {
+		dirty_ = true;
+		cs_.scissorOrigin = rmlv::ivec2{ x, y };
+		cs_.scissorSize = rmlv::ivec2{ width, height }; }
+
+	void Viewport(int x, int y, int width, int height) {
+		dirty_ = true;
+		cs_.viewportOrigin = rmlv::ivec2{ x, y };
+		cs_.viewportSize = rmlv::ivec2{ width, height }; }
 
 	void UseProgram(const int v) {
 		dirty_ = true;
@@ -189,7 +217,7 @@ public:
 	//void drawElements(const VertexArray_F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3F3&, const rcls::vector<int>&);
 	//void drawElements(const VertexArray_F3F3&);
-	void DrawElements(int mode, int count, int type, const uint16_t* indices);
+	void DrawElements(int mode, int count, int type, const uint16_t* indices, uint8_t hint=0);
 	void DrawArrays(int mode, int start, int count);
 	void DrawElementsInstanced(int mode, int count, int type, const uint16_t* indices, int instanceCnt);
 	void DrawArraysInstanced(int mode, int start, int count, int instanceCnt);
