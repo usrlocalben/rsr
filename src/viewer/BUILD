@@ -44,6 +44,7 @@ app_deps = [
     "//src/rcl/rclmt:barrier",
     "//src/rcl/rclmt:jobsys",
     "//src/rcl/rclr:algorithm",
+    "//src/rcl/rcls:smoothedintervaltimer",
     "//src/rcl/rclx:gason_util",
     "//src/rcl/rclx:jsonfile",
     "//src/rgl/rglr:display_mode",
