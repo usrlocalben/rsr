@@ -171,7 +171,7 @@ private:
 	int mod2_{0};
 	std::vector<uint16_t> indices_;
 	std::array<rglv::VertexArray_F3F3F3, 2> vbos_{};
-	rglv::VertexArray_F3F3F3* vbo_;
+	rglv::VertexArray_F3F3F3* vbo_{nullptr};
 
 	// inputs
 	IMaterial* materialNode_{nullptr};

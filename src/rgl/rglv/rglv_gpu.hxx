@@ -79,11 +79,11 @@ inline Matrices MakeMatrices(const GLState& s) {
 	return m; }
 
 
-template <typename TEXTURE_UNIT, typename SHADER_PROGRAM, typename BLEND_PROGRAM>
+template <typename TEXTURE_UNIT, typename SHADER_PROGRAM>
 struct TriangleProgram {
 	rmlv::qfloat4* cb_;
 	rmlv::qfloat* db_;
-	int ofsX_, ofsY_;
+	rmlv::ivec2 tileOrigin_;
 	const TEXTURE_UNIT& tu0_, tu1_;
 
 	const int stride_;
@@ -105,8 +105,7 @@ struct TriangleProgram {
 		const TEXTURE_UNIT& tu1,
 		rglr::QFloat4Canvas& cc,
 		rglr::QFloatCanvas& dc,
-		int ofsX,
-		int ofsY,
+		rmlv::ivec2 tileOrigin_,
 		Matrices matrices,
 		typename SHADER_PROGRAM::UniformsMD uniforms,
 		VertexFloat1 oneOverW,
@@ -116,8 +115,7 @@ struct TriangleProgram {
 		typename SHADER_PROGRAM::VertexOutputSD computed2) :
 		cb_(cc.data()),
 		db_(dc.data()),
-		ofsX_(ofsX),
-		ofsY_(ofsY),
+		tileOrigin_(tileOrigin_),
 		tu0_(tu0),
 		tu1_(tu1),
 		stride_(cc.width() >> 1),
@@ -128,8 +126,8 @@ struct TriangleProgram {
 		uniforms_(uniforms) {}
 
 	inline void Begin(int x, int y) {
-		x -= ofsX_;
-		y -= ofsY_;
+		x -= tileOrigin_.x;
+		y -= tileOrigin_.y;
 		offs_ = offsLeft_ = (y>>1)*stride_ + (x>>1); }
 
 	inline void CR() {
@@ -154,12 +152,12 @@ struct TriangleProgram {
 		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
 
-	inline void LoadColor(rmlv::qfloat4& destColor) {
+	inline void LoadColor(rmlv::qfloat3& destColor) {
 		auto& cell = cb_[offs_];
 		rglr::QFloat4Canvas::Load(cb_+offs_, destColor.x.v, destColor.y.v, destColor.z.v); }
 
-	inline void StoreColor(rmlv::qfloat4 destColor,
-	                       rmlv::qfloat4 sourceColor,
+	inline void StoreColor(rmlv::qfloat3 destColor,
+	                       rmlv::qfloat3 sourceColor,
 	                       rmlv::mvec4i fragMask) {
 		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
 		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
@@ -172,13 +170,18 @@ struct TriangleProgram {
 		const auto fragDepth = rglv::Interpolate(bary, zOverW_);
 
 		// read depth buffer
-		qfloat destDepth; LoadDepth(destDepth);
+		qfloat destDepth;
+		rmlv::mvec4i fragMask;
 
-		const auto depthMask = float2bits(cmple(fragDepth, destDepth));
-		const auto fragMask = andnot(triMask, depthMask);
-
-		if (movemask(bits2float(fragMask)) == 0) {
-			return; }  // early out if whole quad fails depth test
+		if (SHADER_PROGRAM::DepthTestEnabled) {
+			LoadDepth(destDepth);
+			const auto depthMask = float2bits(SHADER_PROGRAM::DepthFunc(fragDepth, destDepth));
+			fragMask = andnot(triMask, depthMask);
+			if (movemask(bits2float(fragMask)) == 0) {
+				// early out if whole quad fails depth test
+				return; }}
+		else {
+			fragMask = andnot(triMask, float2bits(rmlv::mvec4f::all_ones())); }
 
 		// restore perspective
 		const auto fragW = rmlv::oneover(Interpolate(bary, oneOverW_));
@@ -199,13 +202,15 @@ struct TriangleProgram {
 			fragDepth,
 			fragColor);
 
-		qfloat4 destColor;
+		qfloat3 destColor;
 		LoadColor(destColor);
 
-		// qfloat4 blendedColor = fragColor; // no blending
+		qfloat3 blendedColor;
+		SHADER_PROGRAM::BlendFragment(fragColor, destColor, blendedColor);
 
-		StoreColor(destColor, fragColor, fragMask);
-		StoreDepth(destDepth, fragDepth, fragMask); } };
+		StoreColor(destColor, blendedColor, fragMask);
+		if (SHADER_PROGRAM::DepthTestEnabled) {
+			StoreDepth(destDepth, fragDepth, fragMask); } } };
 
 
 struct TileStat {
@@ -245,9 +250,6 @@ public:
 		    newTileDimensionsInBlocks != tileDimensionsInBlocks_) {
 			bufferDimensionsInPixels_ = newBufferDimensionsInPixels;
 			tileDimensionsInBlocks_ = newTileDimensionsInBlocks;
-			deviceScale_ = rmlv::qfloat2( bufferDimensionsInPixels_.x/2,
-			                             -bufferDimensionsInPixels_.y/2 );
-			deviceOffset_ = rmlv::qfloat2( bufferDimensionsInPixels_ / 2 );
 			Retile(); }}
 
 private:
@@ -483,6 +485,7 @@ private:
 		self->DrawImpl(tid, tileId); }
 	void DrawImpl(const unsigned tid, const int tileIdx) {
 		const auto rect = TileRect(tileIdx);
+		const auto tileOrigin = rect.top_left;
 		threadStats_[tid].tiles.emplace_back(tileIdx);
 
 		FastPackedReader cs{ ReadRange(tileIdx).first };
@@ -528,11 +531,23 @@ private:
 				// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
 				}
 			else if (cmd == CMD_CLIPPED_TRI) {
-				tile_DrawClipped<SHADERS...>(*stateptr, uniformptr, rect, tileIdx, cs); }
+				auto sRect = Intersect(rect, gl_offset_and_size_to_irect(stateptr->scissorOrigin, stateptr->scissorSize));
+				if (stateptr->scissorEnabled && sRect!=rect) {
+					tile_DrawClipped<true,  SHADERS...>(*stateptr, uniformptr, sRect,tileOrigin, tileIdx, cs); }
+				else {
+					tile_DrawClipped<false, SHADERS...>(*stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }}
 			else if (cmd == CMD_DRAW_INLINE) {
-				tile_DrawElements<false, SHADERS...>(*stateptr, uniformptr, rect, tileIdx, cs); }
+				auto sRect = Intersect(rect, gl_offset_and_size_to_irect(stateptr->scissorOrigin, stateptr->scissorSize));
+				if (stateptr->scissorEnabled && sRect!=rect) {
+					tile_DrawElements<true,  false, SHADERS...>(*stateptr, uniformptr, sRect,tileOrigin, tileIdx, cs); }
+				else {
+					tile_DrawElements<false, false, SHADERS...>(*stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }}
 			else if (cmd == CMD_DRAW_INLINE_INSTANCED) {
-				tile_DrawElements<true, SHADERS...>(*stateptr, uniformptr, rect, tileIdx, cs); }}}
+				auto sRect = Intersect(rect, gl_offset_and_size_to_irect(stateptr->scissorOrigin, stateptr->scissorSize));
+				if (stateptr->scissorEnabled && sRect!=rect) {
+					tile_DrawElements<true,  true, SHADERS...>(*stateptr, uniformptr, sRect,tileOrigin, tileIdx, cs); }
+				else {
+					tile_DrawElements<false, true, SHADERS...>(*stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }}}}
 
 	template <typename ...PGMs>
 	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
@@ -576,6 +591,12 @@ private:
 		devCoordXBuffer_.reserve(siz);
 		devCoordYBuffer_.reserve(siz);
 
+		const auto scissorRect = ScissorRect(state);
+
+		const auto [DS, DO] = DSDO(state);
+		const auto one = rmlv::mvec4f{ 1.0F };
+		const auto _1 = rmlv::qfloat2{ one, one };
+
 		if (!INSTANCED) {
 			// coding error if this is not true
 			// XXX could use constexpr instead of template param?
@@ -603,7 +624,7 @@ private:
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.data() + vi, flags);
 
-				auto devCoord = pdiv(coord).xy() * deviceScale_ + deviceOffset_;
+				auto devCoord = (pdiv(coord).xy() + _1) * DS + DO;
 				devCoord.template store<false>(devCoordXBuffer_.data() + vi,
 				                               devCoordYBuffer_.data() + vi); }
 
@@ -645,7 +666,7 @@ private:
 						stats0_.totalTrianglesCulled++;
 						continue; }}
 
-				ForEachCoveredTile(dc0, dc1, dc2, [&](uint8_t** th) {
+				ForEachCoveredTile(scissorRect, dc0, dc1, dc2, [&](uint8_t** th) {
 					if (INSTANCED) {
 						AppendUShort(th, iid);}
 					AppendUShort(th, i0);  // also includes backfacing flag
@@ -684,6 +705,12 @@ private:
 		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
+		const auto [DS, DO] = DSDO(state);
+		const auto one = rmlv::mvec4f{ 1.0F };
+		const auto _1 = rmlv::qfloat2{ one, one };
+
+		const auto scissorRect = ScissorRect(state);
+
 		if (!INSTANCED) {
 			// coding error if this is not true
 			// XXX could use constexpr instead of template param?
@@ -712,7 +739,7 @@ private:
 					qfloat4 gl_Position;
 					PGM::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
 					clipFlags[i] = frustum.Test(gl_Position);
-					devCoord[i] = pdiv(gl_Position).xy() * deviceScale_ + deviceOffset_;
+					devCoord[i] = (pdiv(gl_Position).xy() + _1) * DS + DO;
 					/* todo compute 4x triangle area here */ }
 
 				for (int ti{0}; ti<li; ++ti) {
@@ -751,7 +778,7 @@ private:
 							stats0_.totalTrianglesCulled++;
 							continue; }}
 
-					ForEachCoveredTile(dc0, dc1, dc2, [&](uint8_t** th) {
+					ForEachCoveredTile(scissorRect, dc0, dc1, dc2, [&](uint8_t** th) {
 						if (INSTANCED) {
 							AppendUShort(th, iid); }
 						AppendUShort(th, i0);  // also includes backfacing flag
@@ -786,16 +813,16 @@ private:
 				Unappend(&h, 1); }}
 
 		stats0_.totalTrianglesClipped = clipQueue_.size();
-		if (!clipQueue_.empty()) {
+		if (false) { //!clipQueue_.empty()) {
 			bin_DrawElementsClipped<INSTANCED, PGM>(state); }}
 
-	template <bool INSTANCED, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {}
+	template <bool SCISSOR_ENABLED, bool INSTANCED, typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {}
 
-	template<bool INSTANCED, typename PGM, typename ...PGMs>
-	void tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {
+	template<bool SCISSOR_ENABLED, bool INSTANCED, typename PGM, typename ...PGMs>
+	void tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
 		if (state.programId != PGM::id) {
-			return tile_DrawElements<INSTANCED, PGMs...>(state, uniformsPtr, rect, tileIdx, cs); }
+			return tile_DrawElements<SCISSOR_ENABLED, INSTANCED, PGMs...>(state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
 
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
@@ -808,6 +835,9 @@ private:
 		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
 		auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
 		const int targetHeightInPixels_ = cbc.height();
+
+		const auto [DS, DO] = DSDO(state);
+		const auto _1 = rmlv::mvec4f{ 1.0F };
 
 		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
@@ -828,15 +858,15 @@ private:
 				qfloat4 gl_Position;
 				PGM::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
 				devCoord[i] = pdiv(gl_Position);
-				fx[i] = ftoi(16.0F * (devCoord[i].x * deviceScale_.x + deviceOffset_.x));
-				fy[i] = ftoi(16.0F * (devCoord[i].y * deviceScale_.y + deviceOffset_.y)); }
+				fx[i] = ftoi(16.0F * ((devCoord[i].x+_1) * DS.x + DO.x));
+				fy[i] = ftoi(16.0F * ((devCoord[i].y+_1) * DS.y + DO.y)); }
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				auto rasterizerProgram = TriangleProgram<sampler, PGM, rglr::BlendProgram::Set>{
+				auto rasterizerProgram = TriangleProgram<sampler, PGM>{
 					tu0, tu1,
 					cbc, dbc,
-					rect.left.x, rect.top.y,
+					tileOrigin,
 					matrices,
 					uniforms,
 					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
@@ -844,7 +874,7 @@ private:
 					computed[0].Lane(ti),
 					computed[1].Lane(ti),
 					computed[2].Lane(ti) };
-				auto rasterizer = TriangleRasterizer{rasterizerProgram, rect, targetHeightInPixels_};
+				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, TriangleProgram<sampler, PGM>>{rasterizerProgram, rect, targetHeightInPixels_};
 				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
 				                fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
 				                !backfacing[ti]); }
@@ -899,6 +929,12 @@ private:
 
 		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
+
+		const auto [DS, DO] = DSDO(state);
+		const auto one = rmlv::mvec4f{ 1.0F };
+		const auto _1 = rmlv::qfloat2{ one, one };
+
+		const auto scissorRect = ScissorRect(state);
 
 		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
@@ -969,8 +1005,8 @@ private:
 			for (auto& vertex : clipA_) {
 				// convert clip-coord to device-coord
 				vertex.coord = pdiv(vertex.coord);
-				vertex.coord.x = (vertex.coord.x * deviceScale_.x + deviceOffset_.x).get_x();
-				vertex.coord.y = (vertex.coord.y * deviceScale_.y + deviceOffset_.y).get_x(); }
+				vertex.coord.x = ((vertex.coord.x+1) * DS.x + DO.x).get_x();
+				vertex.coord.y = ((vertex.coord.y+1) * DS.y + DO.y).get_x(); }
 			// end of phase 2: poly contains a clipped N-gon
 
 			// check direction, maybe cull, maybe reorder
@@ -992,23 +1028,23 @@ private:
 			clippedVertexBuffer0_.insert(end(clippedVertexBuffer0_), begin(clipA_), end(clipA_));
 			for (int vi=1; vi<clipA_.size() - 1; ++vi) {
 				int i0{0}, i1{vi}, i2{vi+1};
-				ForEachCoveredTile(clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](uint8_t** th) {
+				ForEachCoveredTile(scissorRect, clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](uint8_t** th) {
 					AppendByte(th, CMD_CLIPPED_TRI);
 					AppendUShort(th, (bi+i0) | (backfacing ? 0x8000 : 0));
 					AppendUShort(th, bi+i1);
 					AppendUShort(th, bi+i2); }); }}}
 
 	template <typename FUNC>
-	int ForEachCoveredTile(const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
+	int ForEachCoveredTile(const rmlg::irect rect, const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
 		using std::min, std::max, rmlv::ivec2;
 		const ivec2 idev0{ dc0 };
 		const ivec2 idev1{ dc1 };
 		const ivec2 idev2{ dc2 };
 
-		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x), 0);
-		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y), 0);
-		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x), bufferDimensionsInPixels_.x-1);
-		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y), bufferDimensionsInPixels_.y-1);
+		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x), rect.top_left.x);
+		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y), rect.top_left.y);
+		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x), rect.bottom_right.x-1);
+		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y), rect.bottom_right.y-1);
 
 		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
 		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
@@ -1022,13 +1058,13 @@ private:
 				func(&tilesHead_[tidRow + tx]); }}
 		return hits; }
 
-	template <typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {}
+	template <bool SCISSOR_ENABLED, typename ...PGMs>
+	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {}
 
-	template <typename PGM, typename ...PGMs>
-	void tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, int tileIdx, FastPackedReader& cs) {
+	template <bool SCISSOR_ENABLED, typename PGM, typename ...PGMs>
+	void tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
 		if (state.programId != PGM::id) {
-			return tile_DrawClipped<PGMs...>(state, uniformsPtr, rect, tileIdx, cs); }
+			return tile_DrawClipped<SCISSOR_ENABLED, PGMs...>(state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 
@@ -1056,10 +1092,10 @@ private:
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		auto rasterizerProgram = TriangleProgram<sampler, PGM, rglr::BlendProgram::Set>{
+		auto rasterizerProgram = TriangleProgram<sampler, PGM>{
 			tu0, tu1,
 			cbc, dbc,
-			rect.left.x, rect.top.y,
+			tileOrigin,
 			matrices,
 			uniforms,
 			VertexFloat1{ dev0.w, dev1.w, dev2.w },
@@ -1067,7 +1103,7 @@ private:
 			data0,
 			data1,
 			data2 };
-		auto rasterizer = TriangleRasterizer{rasterizerProgram, rect, targetHeightInPixels_};
+		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, TriangleProgram<sampler, PGM>>{rasterizerProgram, rect, targetHeightInPixels_};
 		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
 		                int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
 		                !backfacing); }
@@ -1119,6 +1155,26 @@ private:
 		uint8_t* end = begin + kMaxSizeInBytes;
 		return { begin, end }; }
 
+	auto gl_offset_and_size_to_irect(rmlv::ivec2 origin, rmlv::ivec2 size) const -> rmlg::irect {
+		int left = origin.x;
+		int right = left + size.x;
+		int bottom = bufferDimensionsInPixels_.y - origin.y - 1;
+		int top = bottom - size.y;
+		return { { left, top }, { right, bottom } }; }
+
+	auto DSDO(const GLState& s) const -> std::pair<rmlv::qfloat2, rmlv::qfloat2> {
+		auto vsz = s.viewportSize.value_or(bufferDimensionsInPixels_);
+		auto vpx = s.viewportOrigin;
+		auto DS = rmlv::qfloat2( vsz.x/2, -vsz.y/2 );
+		auto DO = rmlv::qfloat2( vpx.x, bufferDimensionsInPixels_.y-vpx.y );
+		return { DS, DO }; }
+
+	auto ScissorRect(const GLState& s) const -> rmlg::irect {
+		if (!s.scissorEnabled) {
+			return { { 0, 0 }, bufferDimensionsInPixels_ }; }
+		else {
+			return gl_offset_and_size_to_irect(s.scissorOrigin, s.scissorSize); }}
+
 private:
 	const int concurrency_;
 	rcls::vector<rglr::QFloat4Canvas> threadColorBufs_{};
@@ -1137,8 +1193,6 @@ private:
 	rmlv::ivec2 bufferDimensionsInTiles_;
 	rmlv::ivec2 tileDimensionsInBlocks_;
 	rmlv::ivec2 tileDimensionsInPixels_;
-	rmlv::qfloat2 deviceScale_;
-	rmlv::qfloat2 deviceOffset_;
 
 	// IC users can write to
 	int userIC_{0};

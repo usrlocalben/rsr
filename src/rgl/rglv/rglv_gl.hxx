@@ -25,6 +25,7 @@ constexpr int GL_CW = 0;
 constexpr int GL_CCW = 1;
 
 constexpr int GL_CULL_FACE = 1;
+constexpr int GL_SCISSOR_TEST = 2;
 
 constexpr int GL_FRONT = 1;
 constexpr int GL_BACK = 2;
@@ -65,6 +66,11 @@ struct GLState {
 
 	bool cullingEnabled;		// default for GL_CULL_FACE is false
 	int cullFace;			// default GL_BACK
+	bool scissorEnabled;
+	rmlv::ivec2 scissorOrigin;
+	rmlv::ivec2 scissorSize;
+	rmlv::ivec2 viewportOrigin;
+	std::optional<rmlv::ivec2> viewportSize;
 
 	int programId;			// default is zero??? unclear
 	int uniformsOfs;
@@ -92,6 +98,11 @@ struct GLState {
 		cullingEnabled = false;
 		cullFace = GL_BACK;
 
+		scissorEnabled = false;
+
+		viewportOrigin = rmlv::ivec2{ 0, 0 };
+		viewportSize = std::nullopt;
+
 		programId = 0;
 		uniformsOfs = -1;
 
@@ -111,6 +122,8 @@ public:
 		dirty_ = true;
 		if (value == GL_CULL_FACE) {
 			cs_.cullingEnabled = true; }
+		else if (value == GL_SCISSOR_TEST) {
+			cs_.scissorEnabled = true; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
 
@@ -118,12 +131,24 @@ public:
 		dirty_ = true;
 		if (value == GL_CULL_FACE) {
 			cs_.cullingEnabled = false; }
+		else if (value == GL_SCISSOR_TEST) {
+			cs_.scissorEnabled = false; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
 
 	void CullFace(const int value) {
 		dirty_ = true;
 		cs_.cullFace = value; }
+
+	void Scissor(int x, int y, int width, int height) {
+		dirty_ = true;
+		cs_.scissorOrigin = rmlv::ivec2{ x, y };
+		cs_.scissorSize = rmlv::ivec2{ width, height }; }
+
+	void Viewport(int x, int y, int width, int height) {
+		dirty_ = true;
+		cs_.viewportOrigin = rmlv::ivec2{ x, y };
+		cs_.viewportSize = rmlv::ivec2{ width, height }; }
 
 	void UseProgram(const int v) {
 		dirty_ = true;

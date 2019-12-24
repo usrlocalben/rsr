@@ -65,6 +65,12 @@ struct BaseProgram {
 		) {
 		gl_Position = m.vpm * v.a0; }
 
+	static constexpr bool DepthTestEnabled = true;
+
+	inline
+	static auto DepthFunc(rmlv::mvec4f fragDepth, rmlv::mvec4f destDepth) -> rmlv::mvec4f {
+		return cmplt(fragDepth, destDepth); }
+
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
 		const Matrices& m,
@@ -79,6 +85,13 @@ struct BaseProgram {
 		rmlv::qfloat4& gl_FragColor
 		) {
 		gl_FragColor = rmlv::mvec4f{1.0F}; }
+
+	inline static void BlendFragment(
+		rmlv::qfloat4& fragColor,
+		rmlv::qfloat3& destColor,
+		rmlv::qfloat3& out
+		) {
+		out = fragColor.xyz(); }
 
 	inline static rmlv::qfloat3 ShadeCanvas(
 		rmlv::qfloat2 gl_FragCoord,
