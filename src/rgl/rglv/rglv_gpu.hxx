@@ -698,6 +698,8 @@ private:
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
 
+		clipQueue_.clear();
+
 		const auto matrices = MakeMatrices(state);
 		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
 		const auto cullingEnabled = state.cullingEnabled;
@@ -705,7 +707,9 @@ private:
 		typename PGM::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
-		const auto [DS, DO] = DSDO(state);
+		// XXX workaround for lambda-capture of vars from structured binding
+		rmlv::qfloat2 DS, DO; std::tie(DS, DO) = DSDO(state);
+		// const auto [DS, DO] = DSDO(state);
 		const auto one = rmlv::mvec4f{ 1.0F };
 		const auto _1 = rmlv::qfloat2{ one, one };
 
@@ -813,7 +817,7 @@ private:
 				Unappend(&h, 1); }}
 
 		stats0_.totalTrianglesClipped = clipQueue_.size();
-		if (false) { //!clipQueue_.empty()) {
+		if (!clipQueue_.empty()) {
 			bin_DrawElementsClipped<INSTANCED, PGM>(state); }}
 
 	template <bool SCISSOR_ENABLED, bool INSTANCED, typename ...PGMs>
@@ -836,7 +840,9 @@ private:
 		auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
 		const int targetHeightInPixels_ = cbc.height();
 
-		const auto [DS, DO] = DSDO(state);
+		// XXX workaround for lambda-capture of vars from structured binding
+		rmlv::qfloat2 DS, DO; std::tie(DS, DO) = DSDO(state);
+		// const auto [DS, DO] = DSDO(state);
 		const auto _1 = rmlv::mvec4f{ 1.0F };
 
 		const auto matrices = MakeMatrices(state);
@@ -1106,7 +1112,7 @@ private:
 		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, TriangleProgram<sampler, PGM>>{rasterizerProgram, rect, targetHeightInPixels_};
 		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
 		                int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
-		                !backfacing); }
+		                !backfacing);}
 
 	void AppendByte(uint8_t** h, uint8_t a) {
 		*reinterpret_cast<uint8_t*>(*h) = a; *h += sizeof(uint8_t); }
