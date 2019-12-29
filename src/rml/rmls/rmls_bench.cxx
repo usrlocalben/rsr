@@ -2,55 +2,38 @@
 
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 #include <vector>
 
 namespace rqdq {
-
-namespace {
-
-template <typename T>
-const int len(const T& container) {
-	return int(container.size()); }
-
-template <typename T>
-T sorted(const T& container) {
-	T out(container);
-	sort(out.begin(), out.end());
-	return out; }
-
-}  // close unnamed namespace
-
 namespace rmls {
 
+auto CalcStat(std::vector<double> samples, const double discardPct) -> BenchStat {
+	std::sort(begin(samples), end(samples));
+	const auto entries_to_keep = int(samples.size() * (1.0 - discardPct));
+	samples.resize(entries_to_keep);
 
-struct BenchStat calc_stat(const std::vector<double>& _timings, const double discard) {
-	auto timings = sorted(_timings);
-	const auto entries_to_keep = int(len(timings) * (1.0 - discard));
-	timings.resize(entries_to_keep);
+	auto cnt = samples.size();
 
-	auto count = len(timings);
+	auto _min = samples.front();
+	auto _max = samples.back();
+	auto _p25 = samples[cnt*1/4];
+	auto _med = samples[cnt*1/2];
+	auto _p75 = samples[cnt*3/4];
 
-	auto _min = timings[0];
-	auto _max = timings[count - 1];
-	auto idx_25 = count / 4;
-	auto _25th = timings[idx_25];
-	auto idx_75 = idx_25 * 3;
-	auto _med = timings[count / 2];
-	auto _75th = timings[idx_75];
+	auto sum = std::accumulate(begin(samples), end(samples), 0.0);
+	auto _avg = sum / samples.size();
 
-	double ax = 0;
-	for (const auto &val : timings) {
-		ax += val; }
-	auto _mean = ax /= count;
+	auto sqsum = accumulate(
+		begin(samples), end(samples),
+		0.0, 
+		[=](double a, double b) {
+			auto err = b - _avg;
+			return a + (err*err); });
 
-	ax = 0;
-	for (const auto &val : timings) {
-		double tmp = val - _mean;
-		ax += (tmp * tmp); }
-	ax /= count;
-	auto _sdev = sqrt(ax);
+	auto _std = sqrt(sqsum / cnt);
 
-	return{ _min, _max, _25th, _med, _75th, _mean, _sdev }; }
+	return{ _min, _max, _p25, _med, _p75, _avg, _std }; }
 
 }  // close package namespace
 }  // close enterprise namespace

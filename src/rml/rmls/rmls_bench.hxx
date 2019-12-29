@@ -4,12 +4,17 @@
 namespace rqdq {
 namespace rmls {
 
-
 struct BenchStat {
-	double _min, _max, _25th, _med, _75th, _mean, _sdev;
-	};
+	double min;
+	double max;
+	double p25;
+	double med;
+	double p75;
+	double avg;
+	double std; };
 
-struct BenchStat calc_stat(const std::vector<double>& timings, const double discard);
+auto CalcStat(std::vector<double> samples, double discard) -> BenchStat;
+
 
 }  // close package namespace
 }  // close enterprise namespace
