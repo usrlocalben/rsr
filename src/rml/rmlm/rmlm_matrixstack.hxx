@@ -8,10 +8,10 @@ namespace rmlm {
 template <typename T, int DEPTH>
 class MatrixStack {
 	static constexpr int maxDepth = DEPTH;
-	using elementType = T;
+	using value_type = T;
 
     // DATA
-	std::array<elementType, maxDepth> buf_;
+	std::array<T, maxDepth> buf_;
 	int sp_{0};
 
 public:
@@ -21,16 +21,21 @@ public:
     // MANIPULATORS
 	void Push();
 	void Pop();
-	auto Top() const -> const elementType&;
+	auto Top() const -> const T&;
 	void Clear();
 	void Mul(const T& m);
-	void Load(const elementType& m);
+	void Load(const T& m);
 	void Reset(); };
 
 
 // ============================================================================
-//                                INLINE DEFINITIONS
+//                             INLINE DEFINITIONS
 // ============================================================================
+
+							// -----------------
+							// class MatrixStack
+							// -----------------
+
 // CREATORS
 template <typename T, int DEPTH>
 inline
@@ -49,43 +54,37 @@ void MatrixStack<T, DEPTH>::Push() {
 	buf_[sp_+1] = buf_[sp_];
 	++sp_; }
 
-
 template <typename T, int DEPTH>
 inline
 void MatrixStack<T, DEPTH>::Pop() {
 	assert(sp_ > 0);
 	--sp_; }
 
-
 template <typename T, int DEPTH>
 inline
-auto MatrixStack<T, DEPTH>::Top() const -> const MatrixStack::elementType& {
+auto MatrixStack<T, DEPTH>::Top() const -> const T& {
 	return buf_[sp_]; }
-
 
 template <typename T, int DEPTH>
 inline
 void MatrixStack<T, DEPTH>::Clear() {
 	sp_ = 0; }
 
-
 template <typename T, int DEPTH>
 inline
-void MatrixStack<T, DEPTH>::Mul(const MatrixStack::elementType& m) {
+void MatrixStack<T, DEPTH>::Mul(const T& m) {
 	buf_[sp_] *= m; }
 
-
 template <typename T, int DEPTH>
 inline
-void MatrixStack<T, DEPTH>::Load(const MatrixStack::elementType& m) {
+void MatrixStack<T, DEPTH>::Load(const T& m) {
 	buf_[sp_] = m; }
-
 
 template <typename T, int DEPTH>
 inline
 void MatrixStack<T, DEPTH>::Reset() {
 	sp_ = 0;
-	load(mat4::identity()); }
+	Load(T{1}); }
 
 
 }  // namespace rmlm
