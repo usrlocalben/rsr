@@ -60,8 +60,6 @@ struct qfloat2 {
 
 	template <bool STREAMING>
 	void store(float* xdst, float *ydst) const {
-		__m128 v0 = _mm_unpacklo_ps(x.v, y.v);  // x0 y0 x1 y1
-		__m128 v1 = _mm_unpackhi_ps(x.v, y.v);  // x2 y2 x3 y3
 		if (STREAMING) {
 			_mm_stream_ps(xdst, x.v);
 			_mm_stream_ps(ydst, y.v); }

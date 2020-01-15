@@ -233,7 +233,6 @@ private:
 			return; }
 
 		auto fillSlice = [&](){
-			float sz = block.leftTopBack.z;
 			mvec4f fooZ{ block.leftTopBack.z };
 			mvec4f fooY{ sy };
 			for (int iz=0; iz<dim+1; iz++, fooZ += delta) {

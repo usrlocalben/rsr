@@ -37,6 +37,8 @@
 namespace rqdq {
 namespace rglv {
 
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
 constexpr auto kBlockDimensionsInPixels = rmlv::ivec2{8, 8};
 
 constexpr auto kMaxSizeInBytes = 100000L;
@@ -155,7 +157,6 @@ struct TriangleProgram {
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
 
 	inline void LoadColor(rmlv::qfloat4& destColor) {
-		auto& cell = cb_[offs_];
 		rglr::QFloat4Canvas::Load(cb_+offs_, destColor.x.v, destColor.y.v, destColor.z.v); }
 
 	inline void StoreColor(rmlv::qfloat4 destColor,
@@ -271,7 +272,6 @@ private:
 		tilesMark_.clear();
 		tilesMark_.resize(areaInTiles, nullptr);
 
-		int tid{0};
 		for (int ti{0}; ti<areaInTiles; ++ti) {
 			tilesHead_[ti] = WriteRange(ti).first;
 			tilesMem1_[ti * kMaxSizeInBytes] = CMD_EOF; }}
@@ -423,6 +423,7 @@ private:
 			else if (cmd == CMD_DRAW_ELEMENTS) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
+				UNUSED(flags);
 				auto count = cs.consumeInt();
 				auto indices = static_cast<uint16_t*>(cs.consumePtr());
 				struct ArraySource {
@@ -434,6 +435,7 @@ private:
 			else if (cmd == CMD_DRAW_ELEMENTS_INSTANCED) {
 				auto flags = cs.consumeByte();
 				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
+				UNUSED(flags);
 				auto count = cs.consumeInt();
 				auto indices = static_cast<uint16_t*>(cs.consumePtr());
 				auto instanceCnt = cs.consumeInt();
@@ -1025,6 +1027,7 @@ private:
 	rcls::vector<ClippedVertex> clippedVertexBuffer1_;
 	GPUStats stats1_; };
 
+#undef UNUSED
 
 }  // namespace rglv
 }  // namespace rqdq

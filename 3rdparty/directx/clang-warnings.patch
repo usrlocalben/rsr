@@ -1,0 +1,53 @@
+diff --git a/3rdparty/directx/include/d3d9.h b/3rdparty/directx/include/d3d9.h
+index b891fb5..32f988a 100644
+--- a/3rdparty/directx/include/d3d9.h
++++ b/3rdparty/directx/include/d3d9.h
+@@ -2022,8 +2022,8 @@ typedef struct IDirect3DQuery9 *LPDIRECT3DQUERY9, *PDIRECT3DQUERY9;
+ 
+ 
+ /*********************
+-/* D3D9Ex interfaces
+-/*********************/
++ * D3D9Ex interfaces
++ *********************/
+ 
+ HRESULT WINAPI Direct3DCreate9Ex(UINT SDKVersion, IDirect3D9Ex**);
+ 
+diff --git a/3rdparty/directx/include/d3dx9math.h b/3rdparty/directx/include/d3dx9math.h
+index 5306ef9..5785620 100644
+--- a/3rdparty/directx/include/d3dx9math.h
++++ b/3rdparty/directx/include/d3dx9math.h
+@@ -389,8 +389,8 @@ typedef struct _D3DXMATRIXA16 : public D3DXMATRIX
+                     FLOAT _41, FLOAT _42, FLOAT _43, FLOAT _44 );
+ 
+     // new operators
+-    void* operator new   ( size_t );
+-    void* operator new[] ( size_t );
++    void* operator new   ( size_t ) noexcept;
++    void* operator new[] ( size_t ) noexcept;
+ 
+     // delete operators
+     void operator delete   ( void* );   // These are NOT virtual; Do not 
+diff --git a/3rdparty/directx/include/d3dx9math.inl b/3rdparty/directx/include/d3dx9math.inl
+index 849e9d0..6b66938 100755
+--- a/3rdparty/directx/include/d3dx9math.inl
++++ b/3rdparty/directx/include/d3dx9math.inl
+@@ -987,7 +987,7 @@ _D3DXMATRIXA16::_D3DXMATRIXA16( FLOAT _11, FLOAT _12, FLOAT _13, FLOAT _14,
+ #endif
+ 
+ D3DXINLINE void* 
+-_D3DXMATRIXA16::operator new( size_t s )
++_D3DXMATRIXA16::operator new( size_t s ) noexcept
+ {
+     if (s > (SIZE_MAX-16))
+ 	return NULL;
+@@ -1002,7 +1002,7 @@ _D3DXMATRIXA16::operator new( size_t s )
+ }
+ 
+ D3DXINLINE void* 
+-_D3DXMATRIXA16::operator new[]( size_t s )
++_D3DXMATRIXA16::operator new[]( size_t s ) noexcept
+ {
+     if (s > (SIZE_MAX-16))
+ 	return NULL;
+
