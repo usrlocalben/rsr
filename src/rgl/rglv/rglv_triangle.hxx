@@ -14,14 +14,37 @@
 namespace rqdq {
 namespace rglv {
 
-template <typename FRAGMENT_PROCESSOR>
+constexpr int SF_TOP = 1;
+constexpr int SF_BOTTOM = 2;
+constexpr int SF_LEFT = 4;
+constexpr int SF_RIGHT = 8;
+
+inline 
+auto ScissorFlags(const rmlg::irect& rect) -> int {
+	int fTop    =  (rect.top.y    & 1) > 0;
+	int fBottom = ((rect.bottom.y & 1) > 0) << 1;
+	int fLeft   = ((rect.left.x   & 1) > 0) << 2;
+	int fRight  = ((rect.right.x  & 1) > 0) << 3;
+	return fTop | fBottom | fLeft | fRight; }
+
+template <bool SCISSOR_TEST, typename FRAGMENT_PROCESSOR>
 class TriangleRasterizer {
+
+	// DATA
+	FRAGMENT_PROCESSOR& program_;
+	const rmlg::irect rect_;
+	const int targetHeightInPx_;
+	const int scissorFlags_;
+
 public:
+	// CREATORS
 	TriangleRasterizer(FRAGMENT_PROCESSOR& fp, rmlg::irect rect, int targetHeightInPx) :
 		program_(fp),
 		rect_(rect),
-		targetHeightInPx_(targetHeightInPx) {}
+		targetHeightInPx_(targetHeightInPx),
+		scissorFlags_(ScissorFlags(rect_)) {}
 
+	// MANIPULATORS
 	void Draw(rmlv::vec4 s1, rmlv::vec4 s2, rmlv::vec4 s3, const bool frontfacing) {
 		int x1 = int(16.0f * (s1.x - 0.5f));
 		int x2 = int(16.0f * (s2.x - 0.5f));
@@ -69,11 +92,29 @@ public:
 
 		program_.Begin(minx, miny);
 		for (int y=miny; y<endy; y+=2, cb1+=cb1dxdy, cb2+=cb2dxdy, cb3+=cb3dxdy, program_.CR()) {
+
+			int sTop=0, sBot=0;
+			if (SCISSOR_TEST) {
+				sTop = 0;
+				if ((y == (rect_.top.y&(~1))) && (scissorFlags_ & SF_TOP)) {
+					sTop=-1; }
+				sBot = 0;
+				if ((y >= (rect_.bottom.y&(~1))) && (scissorFlags_ & SF_BOTTOM)) {
+					sBot=-1; }}
+
 			auto cx1{cb1}, cx2{cb2}, cx3{cb3};
 			for (int x=minx; x<endx; x+=2, cx1+=cb1dydx, cx2+=cb2dydx, cx3+=cb3dydx, program_.Right2()) {
 				mvec4i edges{cx1|cx2|cx3};
 				if (movemask(bits2float(edges)) == 0xf) continue;
-				const mvec4i trimask(rmlv::sar<31>(edges));
+				mvec4i trimask(rmlv::sar<31>(edges));
+
+				if (SCISSOR_TEST) {
+					int sLeft=0, sRight=0;
+					if ((x == (rect_.left.x&(~1))) && (scissorFlags_ & SF_LEFT)) {
+						sLeft=-1; }
+					if ((x >= (rect_.right.x&(~1))) && (scissorFlags_ & SF_RIGHT)) {
+						sRight=-1; }
+					trimask |= mvec4i{ sLeft|sTop, sRight|sTop, sLeft|sBot, sRight|sBot }; }
 
 				// lower-left-origin opengl screen coords
 				const qfloat2 frag_coord = { mvec4f(x+0.5f)+mvec4f{0,1,0,1}, mvec4f(targetHeightInPx_-y-0.5f)+mvec4f{1,1,0,0} };
@@ -83,12 +124,7 @@ public:
 				bary.z = itof(cx1) * scale;
 				bary.y = 1.0F - bary.x - bary.z;
 
-				program_.Render(frag_coord, trimask, bary, frontfacing); }}}
-
-private:
-	FRAGMENT_PROCESSOR& program_;
-	const rmlg::irect rect_;
-	const int targetHeightInPx_; };
+				program_.Render(frag_coord, trimask, bary, frontfacing); }} } };
 
 
 }  // namespace rglv

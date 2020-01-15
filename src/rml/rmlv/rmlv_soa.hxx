@@ -121,6 +121,7 @@ struct qfloat4 {
 	inline qfloat4(const vec3& a, const float w) noexcept :x(a.x), y(a.y), z(a.z), w(w) {}
 	inline qfloat4(const vec4& a) noexcept :x(a.x), y(a.y), z(a.z), w(a.w) {}
 	inline qfloat4(const mvec4f& a) noexcept :x(a.xxxx()), y(a.yyyy()), z(a.zzzz()), w(a.wwww()) {}
+	inline qfloat4(const qfloat2& a, float z, float w) noexcept :x(a.x), y(a.y), z(z), w(w) {}
 	inline qfloat4(const qfloat3& a, const mvec4f& w) noexcept :x(a.x), y(a.y), z(a.z), w(w) {}
 	inline qfloat4(const float x, const float y, const float z, const float w) noexcept :x(x), y(y), z(z), w(w) {}
 	inline qfloat4(mvec4f x, mvec4f y, mvec4f z, mvec4f w) noexcept :x(x), y(y), z(z), w(w) {}
