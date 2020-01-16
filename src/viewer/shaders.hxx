@@ -97,7 +97,8 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4 faceNormal; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+		Loader(const std::array<const void*, 4>& buffers,
+		       const std::array<int, 4>& formats [[maybe_unused]]) :
 			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);
 			assert(buffers[0] != nullptr); }
@@ -175,7 +176,8 @@ struct AmyProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4 uv; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+		Loader(const std::array<const void*, 4>& buffers,
+		       const std::array<int, 4>& formats [[maybe_unused]]) :
 			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);
 			assert(buffers[0] != nullptr); }
@@ -254,7 +256,8 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4 smoothNormal; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+		Loader(const std::array<const void*, 4>& buffers,
+		       const std::array<int, 4>& formats [[maybe_unused]]) :
 			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);
 			assert(buffers[0] != nullptr); }
@@ -342,7 +345,8 @@ struct ManyProgram final : public rglv::BaseProgram {
 		rmlm::qmat4 imat; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+		Loader(const std::array<const void*, 4>& buffers,
+		       const std::array<int, 4>& formats [[maybe_unused]]) :
 			vbo_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])),
 			mats_(static_cast<const rmlm::mat4*>(buffers[1])) {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);

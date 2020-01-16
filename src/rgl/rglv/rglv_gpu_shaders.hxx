@@ -29,12 +29,13 @@ struct BaseProgram {
 		rmlv::qfloat4 a0; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers, const std::array<int, 4>& formats) :
+		Loader(const std::array<const void*, 4>& buffers,
+		       const std::array<int, 4>& formats [[maybe_unused]]) :
 			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
 				assert(formats[0] == AF_VAO_F3F3F3);
 				assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
-		void LoadInstance(int, VertexInput&) {
+		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.a0 = data_.a0.loadxyz1(idx); }
 		/*void LoadOne(int idx, VertexInput& vi) {

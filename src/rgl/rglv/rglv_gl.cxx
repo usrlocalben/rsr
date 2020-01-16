@@ -9,7 +9,7 @@
 namespace rqdq {
 namespace rglv {
 
-void GL::DrawArrays(const int mode, const int start, const int count) {
+void GL::DrawArrays(const int mode [[maybe_unused]], const int start [[maybe_unused]], const int count) {
 	assert(mode == GL_TRIANGLES);
 	assert(start == 0);
 	MaybeUpdateState();
@@ -19,7 +19,7 @@ void GL::DrawArrays(const int mode, const int start, const int count) {
 	commands_.appendInt(count); }
 
 
-void GL::DrawArraysInstanced(const int mode, const int start, const int count, int instanceCnt) {
+void GL::DrawArraysInstanced(const int mode [[maybe_unused]], const int start [[maybe_unused]], const int count, int instanceCnt) {
 	assert(mode == GL_TRIANGLES);
 	assert(start == 0);
 	MaybeUpdateState();
@@ -30,7 +30,7 @@ void GL::DrawArraysInstanced(const int mode, const int start, const int count, i
 	commands_.appendInt(instanceCnt); }
 
 
-void GL::DrawElements(const int mode, const int count, const int type, const uint16_t* indices, const uint8_t hint) {
+void GL::DrawElements(const int mode [[maybe_unused]], const int count, const int type [[maybe_unused]], const uint16_t* indices, const uint8_t hint) {
 	assert(mode == GL_TRIANGLES);
 	assert(type == GL_UNSIGNED_SHORT);
 	MaybeUpdateState();
@@ -42,7 +42,7 @@ void GL::DrawElements(const int mode, const int count, const int type, const uin
 	commands_.appendPtr(indices); }
 
 
-void GL::DrawElementsInstanced(const int mode, const int count, const int type, const uint16_t* indices, int instanceCnt) {
+void GL::DrawElementsInstanced(const int mode [[maybe_unused]], const int count, const int type [[maybe_unused]], const uint16_t* indices, int instanceCnt) {
 	assert(mode == GL_TRIANGLES);
 	assert(type == GL_UNSIGNED_SHORT);
 	MaybeUpdateState();
