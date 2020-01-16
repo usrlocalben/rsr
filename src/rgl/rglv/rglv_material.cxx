@@ -9,16 +9,15 @@ namespace rglv {
 
 void MaterialStore::print() const {
 	std::cout << "----- material pack -----" << std::endl;
-	for (int i = 0; i < d_store.size(); i++) {
+	for (int i = 0; i<int(d_store.size()); i++) {
 		auto& item = d_store[i];
 		std::cout << "id = " << i << ", ";
-		item.print();
-	}
+		item.print(); }
 	std::cout << "---  end of materials ---" << std::endl; }
 
 
 std::optional<int> MaterialStore::find_by_name(const std::string& name) const {
-	for (int i = 0; i<d_store.size(); i++) {
+	for (int i = 0; i<int(d_store.size()); i++) {
 		if (d_store[i].name == name) {
 			return i; }}
 	return {}; }

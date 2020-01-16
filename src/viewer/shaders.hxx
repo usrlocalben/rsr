@@ -102,7 +102,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);
 			assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
-		void LoadInstance(int id, VertexInput& vi) {}
+		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.position     = data_.a0.loadxyz1(idx);
 			vi.smoothNormal = data_.a1.loadxyz0(idx);
@@ -133,11 +133,11 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		rglv::VertexFloat2 envmapUV; };
 
 	inline static void ShadeVertex(
-		const rglv::Matrices& mats,
-		const UniformsMD& u,
-		const VertexInput& v,
+		const rglv::Matrices& mats [[maybe_unused]],
+		const UniformsMD& u [[maybe_unused]],
+		const VertexInput& v [[maybe_unused]],
 		rmlv::qfloat4& gl_Position,
-		VertexOutputMD& out) {
+		VertexOutputMD& out [[maybe_unused]]) {
 
 		rmlv::qfloat4 position = gl_ModelViewMatrix * v.position;
 		rmlv::qfloat3 e = normalize(position.xyz());
@@ -153,15 +153,15 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
-		const rglv::Matrices& mats,
-		const UniformsMD& u,
-		const TEXTURE_UNIT& tu0,
-		const TEXTURE_UNIT& tu1,
-		const rglv::BaryCoord& BP,
-		const VertexOutputMD& outs,
-		const rmlv::qfloat2& gl_FragCoord,
+		const rglv::Matrices& mats [[maybe_unused]],
+		const UniformsMD& u [[maybe_unused]],
+		const TEXTURE_UNIT& tu0 [[maybe_unused]],
+		const TEXTURE_UNIT& tu1 [[maybe_unused]],
+		const rglv::BaryCoord& BP [[maybe_unused]],
+		const VertexOutputMD& outs [[maybe_unused]],
+		const rmlv::qfloat2& gl_FragCoord [[maybe_unused]],
 		/* gl_FrontFacing, */
-		const rmlv::qfloat& gl_FragDepth,
+		const rmlv::qfloat& gl_FragDepth [[maybe_unused]],
 		rmlv::qfloat4& gl_FragColor) {
 		gl_FragColor = tu0.sample({ outs.envmapUV.x, outs.envmapUV.y }); } };
 
@@ -180,7 +180,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);
 			assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
-		void LoadInstance(int id, VertexInput& vi) {}
+		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.position = data_.a0.loadxyz1(idx);
 			vi.normal   = data_.a1.loadxyz0(idx);
@@ -212,7 +212,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 
 	static void ShadeVertex(
 		const rglv::Matrices& mats,
-		const rglv::BaseProgram::UniformsMD& u,
+		const rglv::BaseProgram::UniformsMD& u [[maybe_unused]],
 		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs) {
@@ -259,7 +259,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);
 			assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
-		void LoadInstance(int id, VertexInput& vi) {}
+		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.position     = data_.a0.loadxyz1(idx);
 			vi.smoothNormal = data_.a1.loadxyz0(idx); }
@@ -289,7 +289,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 
 	inline static void ShadeVertex(
 		const rglv::Matrices& mats,
-		const UniformsMD& u,
+		const UniformsMD& u [[maybe_unused]],
 		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs) {
@@ -384,7 +384,7 @@ struct ManyProgram final : public rglv::BaseProgram {
 
 	inline static void ShadeVertex(
 		const rglv::Matrices& mats,
-		const UniformsMD& u,
+		const UniformsMD& u [[maybe_unused]],
 		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs) {

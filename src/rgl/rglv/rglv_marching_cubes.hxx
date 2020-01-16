@@ -65,7 +65,6 @@ inline float calc_offset(const float a, const float b, const float target) {
 template <typename FIELD>
 void march_sdf_vao(
 	VertexArray_F3F3F3& vao,
-	const rmlv::vec3 pos,
 	const float delta,
 	const Cell cd,
 	const FIELD& field

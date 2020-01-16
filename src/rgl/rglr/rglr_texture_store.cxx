@@ -18,7 +18,7 @@ Texture checkerboard2x2() {
 	db.push_back(PixelToaster::FloatingPointPixel(1, 0, 1, 0));
 	db.push_back(PixelToaster::FloatingPointPixel(1, 0, 1, 0));
 	db.push_back(PixelToaster::FloatingPointPixel(0, 0, 0, 0));
-	return{ db, 2, 2, 2, "checkerboard" }; }
+	return{ db, 2, 2, 2, "checkerboard", -1, false }; }
 
 
 TextureStore::TextureStore() {

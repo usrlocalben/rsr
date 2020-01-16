@@ -65,7 +65,7 @@ public:
 			for (auto glnode : gls_) {
 				glnode->Run(); } }}
 
-	static void AllThen(rclmt::jobsys::Job* job, unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+	static void AllThen(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
 		if (--counter != 0) {
@@ -78,7 +78,7 @@ public:
 			color = colorNode_->Eval(colorSlot_).as_vec3(); }
 		return color; }
 
-	void Render(rglv::GL* dc, rmlv::ivec2 targetSizeInPx, float aspect, rclmt::jobsys::Job *link) override {
+	void Render(rglv::GL* dc, rmlv::ivec2 targetSizeInPx [[maybe_unused]], float aspect, rclmt::jobsys::Job *link) override {
 		using namespace rmlm;
 		using namespace rglv;
 		namespace framepool = rclma::framepool;
@@ -108,7 +108,7 @@ protected:
 private:
 	rclmt::jobsys::Job* Post() {
 		return rclmt::jobsys::make_job(Impl::PostJmp, std::tuple{this}); }
-	static void PostJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<Impl*>* data) {
+	static void PostJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto& [self] = *data;
 		self->Post(); }
 	void PostImpl() {}

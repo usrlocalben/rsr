@@ -23,7 +23,7 @@ struct BaseProgram {
 
 	struct UniformsSD {};
 	struct UniformsMD {
-		UniformsMD(const UniformsSD& data) {} };
+		UniformsMD(const UniformsSD&) {} };
 
 	struct VertexInput {
 		rmlv::qfloat4 a0; };
@@ -34,7 +34,7 @@ struct BaseProgram {
 				assert(formats[0] == AF_VAO_F3F3F3);
 				assert(buffers[0] != nullptr); }
 		int Size() const { return data_.size(); }
-		void LoadInstance(int id, VertexInput& vi) {}
+		void LoadInstance(int, VertexInput&) {
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.a0 = data_.a0.loadxyz1(idx); }
 		/*void LoadOne(int idx, VertexInput& vi) {
@@ -44,25 +44,24 @@ struct BaseProgram {
 		const rglv::VertexArray_F3F3F3& data_; };
 
 	struct VertexOutputSD {
-		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+		static VertexOutputSD Mix(VertexOutputSD, VertexOutputSD, float) {
 			return {}; }};
 
 	struct VertexOutputMD {
-		VertexOutputSD Lane(const int li) {
+		VertexOutputSD Lane(int) {
 			return {}; } };
 
 	struct Interpolants {
-		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) {}
-		VertexOutputMD Interpolate(rglv::BaryCoord bary) const {
+		Interpolants(VertexOutputSD, VertexOutputSD, VertexOutputSD) {}
+		VertexOutputMD Interpolate(rglv::BaryCoord) const {
 			return {}; } };
 
 	inline static void ShadeVertex(
 		const Matrices& m,
-		const UniformsMD& u,
+		const UniformsMD& u [[maybe_unused]],
 		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
-		VertexOutputMD& outs
-		) {
+		VertexOutputMD& outs [[maybe_unused]]) {
 		gl_Position = m.vpm * v.a0; }
 
 	static constexpr bool DepthTestEnabled = true;
@@ -73,28 +72,28 @@ struct BaseProgram {
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
-		const Matrices& m,
-		const UniformsMD& u,
-		const TEXTURE_UNIT& tu0,
-		const TEXTURE_UNIT& tu1,
-		const rglv::BaryCoord& bary,
-		const VertexOutputMD& v,
-		const rmlv::qfloat2& gl_FragCoord,
+		const Matrices& m [[maybe_unused]],
+		const UniformsMD& u [[maybe_unused]], 
+		const TEXTURE_UNIT& tu0 [[maybe_unused]],
+		const TEXTURE_UNIT& tu1 [[maybe_unused]],
+		const rglv::BaryCoord& bary [[maybe_unused]],
+		const VertexOutputMD& v [[maybe_unused]],
+		const rmlv::qfloat2& gl_FragCoord [[maybe_unused]],
 		/* gl_FrontFacing, */
-		const rmlv::qfloat& gl_FragDepth,
+		const rmlv::qfloat& gl_FragDepth [[maybe_unused]],
 		rmlv::qfloat4& gl_FragColor
 		) {
 		gl_FragColor = rmlv::mvec4f{1.0F}; }
 
 	inline static void BlendFragment(
 		rmlv::qfloat4& fragColor,
-		rmlv::qfloat3& destColor,
+		rmlv::qfloat3& destColor [[maybe_unused]],
 		rmlv::qfloat3& out
 		) {
 		out = fragColor.xyz(); }
 
 	inline static rmlv::qfloat3 ShadeCanvas(
-		rmlv::qfloat2 gl_FragCoord,
+		rmlv::qfloat2 gl_FragCoord [[maybe_unused]],
 		rmlv::qfloat3 source
 		) {
 		return source; } };

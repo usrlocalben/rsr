@@ -75,7 +75,7 @@ Icosphere::Icosphere(int divs, int reqColor) {
 		int newTris = numTris * 4;
 		tmpt.reserve(newTris * 3);
 
-		for (int i=0; i<tris_.size(); i+=4) {
+		for (int i=0; i<int(tris_.size()); i+=4) {
 			auto i0=tris_[i+0], i1=tris_[i+1], i2=tris_[i+2];
 			auto color = tris_[i+3];
 
@@ -105,7 +105,7 @@ Icosphere::Icosphere(int divs, int reqColor) {
 
 	// 3. identify all points that touch reqColor'd faces
 	std::vector<bool> pf(px.size(), false);
-	for (int i=0; i<tris_.size(); i+=4) {
+	for (int i=0; i<int(tris_.size()); i+=4) {
 		auto i0=tris_[i+0], i1=tris_[i+1], i2=tris_[i+2];
 		auto color = tris_[i+3];
 		if (color == reqColor) {
@@ -119,7 +119,7 @@ Icosphere::Icosphere(int divs, int reqColor) {
 	// into a temporary list (fringes)
 	tmpt.clear();
 	std::vector<int> fringe;
-	for (int i=0; i<tris_.size(); i+=4) {
+	for (int i=0; i<int(tris_.size()); i+=4) {
 		auto i0=tris_[i+0], i1=tris_[i+1], i2=tris_[i+2];
 		auto color = tris_[i+3];
 		if (color == reqColor) {
@@ -151,7 +151,7 @@ Icosphere::Icosphere(int divs, int reqColor) {
  */
 void Icosphere::Sphereize() {
 	// sphereize
-	for (int i=0; i<px.size(); ++i) {
+	for (int i=0; i<int(px.size()); ++i) {
 		UP(i, normalize(GP(i))); }}
 
 
@@ -160,7 +160,7 @@ void Icosphere::Sphereize() {
  */
 void Icosphere::Pad() {
 	int target = (px.size() + 3) / 4;
-	while (px.size() < target) {
+	while (int(px.size()) < target) {
 		px.emplace_back(0);
 		py.emplace_back(0);
 		pz.emplace_back(0); }}
@@ -174,7 +174,7 @@ void Icosphere::Optimize() {
 	int seq=0;
 	const int vcnt = px.size();
 	std::vector<int> access(vcnt, -1);
-	for (int i=0; i<tris_.size(); i+=3) {
+	for (int i=0; i<int(tris_.size()); i+=3) {
 		int i0=tris_[i], i1=tris_[i+1], i2=tris_[i+2];
 		if (access[i0] == -1) access[i0] = seq++;
 		if (access[i1] == -1) access[i1] = seq++;
@@ -199,7 +199,7 @@ void Icosphere::Optimize() {
 		if (access[i] == -1) continue;
 		pz[access[i]] = tmp[i]; }
 
-	for (int i=0; i<tris_.size(); i++) {
+	for (int i=0; i<int(tris_.size()); i++) {
 		tris_[i] = access[tris_[i]]; }}
 
 

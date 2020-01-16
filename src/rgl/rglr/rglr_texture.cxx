@@ -27,7 +27,7 @@ Texture ensurePowerOf2(Texture& src) {
 			auto sx = double(ix) / double(dim-1) * double(src.width-1);
 			img[iy*dim + ix] = src.buf[sy*src.width + sx]; } }
 
-	return Texture{ img, dim, dim, dim, src.name }; }
+	return Texture{ img, dim, dim, dim, src.name, -1, false }; }
 
 
 void Texture::maybe_make_mipmap() {

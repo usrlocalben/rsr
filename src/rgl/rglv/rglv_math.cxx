@@ -122,7 +122,7 @@ rmlm::mat4 Orthographic(float l, float r, float b, float t, float n, float f) {
  * from the paper
  * "Practical and Robust Stenciled Shadow Volumes for Hardware-Accelerated Rendering" (2002, nvidia)
  */
-rmlm::mat4 InfinitePerspective(float left, float right, float bottom, float top, float near, float far) {
+rmlm::mat4 InfinitePerspective(float left, float right, float bottom, float top, float near) {
 	return rmlm::mat4(
 		(2*near)/(right-left)           ,0           , (right+left)/(right-left)            ,0
 		         ,0           ,(2*near)/(top-bottom) , (top+bottom)/(top-bottom)            ,0

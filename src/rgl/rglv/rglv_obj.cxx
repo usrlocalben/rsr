@@ -238,7 +238,7 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 			for (auto& facechunk : faces) {
 				indexes.push_back(to_faceidx(facechunk)); }
 			// triangulate and make faces
-			for (int i = 0; i < indexes.size() - 2; i++){
+			for (int i = 0; i < int(indexes.size()) - 2; i++){
 				Face fd;
 				fd.front_material = material_idx;
 				fd.point_idx = { { indexes[0].vv, indexes[i + 1].vv, indexes[i + 2].vv } };

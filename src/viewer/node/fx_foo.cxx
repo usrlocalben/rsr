@@ -37,7 +37,7 @@ public:
 	void AddDeps() override {
 		AddDep(materialNode_); }
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth) override {
+	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth [[maybe_unused]]) override {
 		using namespace rglv;
 		auto& dc = *_dc;
 		std::lock_guard<std::mutex> lock(dc.mutex);

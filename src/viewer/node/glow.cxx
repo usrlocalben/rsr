@@ -21,7 +21,10 @@ namespace {
 using namespace rqv;
 
 struct GlowShader {
-	static rmlv::qfloat3 ShadeCanvas(rmlv::qfloat2 fragCoord, rmlv::qfloat3 c1, rmlv::qfloat3 c2) {
+	static rmlv::qfloat3 ShadeCanvas(
+		rmlv::qfloat2 fragCoord [[maybe_unused]],
+		rmlv::qfloat3 c1,
+		rmlv::qfloat3 c2) {
 		auto& image = c1;
 		auto& blur = c2;
 		const rmlv::qfloat blurAmt{ 0.700F };
@@ -83,7 +86,7 @@ public:
 
 	rclmt::jobsys::Job* Render() override {
 		return rclmt::jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
-	static void RenderJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<Impl*> * data) {
+	static void RenderJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
@@ -122,7 +125,7 @@ public:
 		if (parent != nullptr) {
 			return rclmt::jobsys::make_job_as_child(parent, Impl::PPJmp, std::tuple{this, yBegin, yEnd}); }
 		return rclmt::jobsys::make_job(Impl::PPJmp, std::tuple{this, yBegin, yEnd}); }
-	static void PPJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<Impl*, int, int>* data) {
+	static void PPJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*, int, int>* data) {
 		auto& [self, yBegin, yEnd] = *data;
 		self->PPImpl(yBegin, yEnd); }
 	void PPImpl(int yBegin, int yEnd) {

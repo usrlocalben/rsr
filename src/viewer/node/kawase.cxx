@@ -51,7 +51,7 @@ public:
 
 	rclmt::jobsys::Job* Render() {
 		return rclmt::jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
-	static void RenderJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<Impl*> * data) {
+	static void RenderJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
@@ -108,13 +108,13 @@ public:
 			return rclmt::jobsys::make_job_as_child(parent, Impl::BlurLinesJmp, std::tuple{this, yBegin, yEnd}); }
 		else {
 			return rclmt::jobsys::make_job(Impl::BlurLinesJmp, std::tuple{this, yBegin, yEnd}); }}
-	static void BlurLinesJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<Impl*, int, int>* data) {
+	static void BlurLinesJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*, int, int>* data) {
 		auto&[self, yBegin, yEnd] = *data;
 		self->BlurLinesImpl(yBegin, yEnd); }
 	void BlurLinesImpl(int yBegin, int yEnd) {
 		KawaseBlurFilter(*src_, *dst_, dist_, yBegin, yEnd); }
 
-    std::pair<int, const void*> GetCanvas(std::string_view slot) override {
+    std::pair<int, const void*> GetCanvas(std::string_view slot [[maybe_unused]]) override {
         return { ICanvas::CT_FLOAT4_LINEAR, output_ }; }
 
 private:

@@ -14,7 +14,7 @@ using namespace rqv;
 class Impl final : public ICamera {
 public:
 	using ICamera::ICamera;
-	rmlm::mat4 ProjectionMatrix(float aspect) const override {
+	rmlm::mat4 ProjectionMatrix(float aspect [[maybe_unused]]) const override {
 		return rglv::Orthographic(-1.0F, 1.0F, -1.0F, 1.0F, 1.0F, -1.0F); }
 
 	rmlm::mat4 ViewMatrix() const override {

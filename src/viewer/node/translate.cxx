@@ -120,7 +120,7 @@ public:
 		if (depth >= kForkUntilDepth) {
 			jobsys::run(link); } }
 
-	static void AfterDraw(rclmt::jobsys::Job* job, const int tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+	static void AfterDraw(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
 		if (--counter != 0) {
@@ -129,7 +129,7 @@ public:
 
 	rclmt::jobsys::Job* DrawLower(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) {
 		return rclmt::jobsys::make_job(DrawLowerJmp, std::tuple{this, dc, pmat, mvmat, link, depth}); }
-	static void DrawLowerJmp(rclmt::jobsys::Job* job, const int tid, std::tuple<RepeatOp*, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const, rclmt::jobsys::Job*, int>* data) {
+	static void DrawLowerJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<RepeatOp*, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const, rclmt::jobsys::Job*, int>* data) {
 		auto [self, dc, pmat, mvmat, link, depth] = *data;
 		self->lowerNode_->Draw(dc, pmat, mvmat, link, depth); }
 

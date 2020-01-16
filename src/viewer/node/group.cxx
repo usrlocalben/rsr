@@ -46,7 +46,7 @@ public:
 			for (auto glnode : gls_) {
 				glnode->Run(); } }}
 
-	static void AllThen(rclmt::jobsys::Job* job, unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+	static void AllThen(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
 		if (--counter != 0) {

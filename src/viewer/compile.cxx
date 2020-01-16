@@ -169,7 +169,7 @@ bool Link(NodeList& nodes) {
 
 	// index by id, check for duplicates
 	std::string nodeId;
-	for (int idx=0; idx<nodes.size(); idx++) {
+	for (int idx=0; idx<int(nodes.size()); idx++) {
 		// std::cerr << "  " << nodes[idx]->get_id() << "\n";
 		nodeId.assign(nodes[idx]->get_id());  // xxx yuck
 		if (auto existing = byId.find(nodeId); existing != end(byId)) {

@@ -33,7 +33,7 @@ std::vector<uint8_t> decode_png(std::vector<uint8_t>& png_bits) {
 
 	// convert black-on-white truecolor
 	// to 1=foreground, 0=background
-	for (int i = 0; i < image.size(); i += 4) {
+	for (std::size_t i = 0; i < image.size(); i += 4) {
 		bitmap.push_back(image[i] == 0xff ? 0 : 1); }
 
 	return bitmap; }

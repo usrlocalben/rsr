@@ -121,7 +121,7 @@ public:
 
 	rclmt::jobsys::Job* Draw() {
 		return rclmt::jobsys::make_job(GPUNode::DrawJmp, std::tuple{this}); }
-	static void DrawJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<GPUNode*>* data) {
+	static void DrawJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<GPUNode*>* data) {
 		auto& [self] = *data;
 		self->DrawImpl(); }
 	void DrawImpl() {
@@ -131,7 +131,7 @@ public:
 		for (auto layer : layers_) {
 			layer->Render(&gpu_.IC(), targetSizeInPx_, aspect_, jobsys::make_job(GPUNode::AllThen, std::tuple{&pcnt_, postJob})); } }
 
-	static void AllThen(rclmt::jobsys::Job* job, unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+	static void AllThen(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
 		if (--counter != 0) {
@@ -140,7 +140,7 @@ public:
 
 	rclmt::jobsys::Job* Post() {
 		return rclmt::jobsys::make_job(GPUNode::PostJmp, std::tuple{this}); }
-	static void PostJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<GPUNode*>* data) {
+	static void PostJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<GPUNode*>* data) {
 		auto& [self] = *data;
 		self->Post(); }
 	void PostImpl() {}

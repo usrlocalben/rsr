@@ -102,7 +102,7 @@ public:
 		materialNode_->AddLink(postSetup);
 		materialNode_->Run();}
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth) override {
+	void Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth [[maybe_unused]]) override {
 		auto& dc = *_dc;
 		using namespace rglv;
 		std::scoped_lock<std::mutex> lock(dc.mutex);

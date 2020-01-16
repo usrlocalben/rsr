@@ -39,7 +39,7 @@ namespace PixelToaster
 		I* const operator->() const { return get(); }
 		I** address() { return &i_; }
 		void swap(SmartI& other) { I* i = i_; i_ = other.i_; other.i_ = i; }
-		const bool operator!() const { return i_ == NULL; }
+		bool operator!() const { return i_ == NULL; }
 	private:
 		I* i_;
 	};

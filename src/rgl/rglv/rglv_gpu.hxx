@@ -291,7 +291,7 @@ public:
 	auto Run() {
 		return rclmt::jobsys::make_job(GPU::RunJmp, std::tuple{this}); }
 private:
-	static void RunJmp(rclmt::jobsys::Job* job, unsigned tid, std::tuple<GPU*>* data) {
+	static void RunJmp(rclmt::jobsys::Job* job, unsigned threadId [[maybe_unused]], std::tuple<GPU*>* data) {
 		auto&[self] = *data;
 		self->RunImpl(job); }
 	void RunImpl(rclmt::jobsys::Job* job) {
@@ -983,7 +983,7 @@ private:
 				bool hereIsInside = frustum.IsInside(plane, clipA_[0].coord);
 
 				clipB_.clear();
-				for (int here_vi = 0; here_vi < clipA_.size(); ++here_vi) {
+				for (int here_vi = 0; here_vi < int(clipA_.size()); ++here_vi) {
 					const auto next_vi = (here_vi + 1) % clipA_.size(); // wrap
 
 					const auto& here = clipA_[here_vi];
@@ -1032,7 +1032,7 @@ private:
 			// phase 3: project, convert to triangles and add to bins
 			const auto bi = static_cast<int>(clippedVertexBuffer0_.size());
 			clippedVertexBuffer0_.insert(end(clippedVertexBuffer0_), begin(clipA_), end(clipA_));
-			for (int vi=1; vi<clipA_.size() - 1; ++vi) {
+			for (int vi=1; vi<int(clipA_.size()) - 1; ++vi) {
 				int i0{0}, i1{vi}, i2{vi+1};
 				ForEachCoveredTile(scissorRect, clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](uint8_t** th) {
 					AppendByte(th, CMD_CLIPPED_TRI);

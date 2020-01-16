@@ -81,7 +81,7 @@ struct SplashDialog {
 		auto* pThis = reinterpret_cast<SplashDialog*>(GetWindowLongPtr(hDlg, DWLP_USER));
 		return pThis != nullptr ? pThis->DialogProc(hDlg, uMsg, wParam, lParam) : FALSE; }
 
-	INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam [[maybe_unused]]) {
 		switch (uMsg) {
 		case WM_INITDIALOG: {
 			/*HWND combogpu = GetDlgItem(hDlg, IDC_GPU);
@@ -115,7 +115,7 @@ struct SplashDialog {
 		return FALSE; }};
 
 
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE h0, LPSTR lpCmdLine, int nCmdShow) {
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE h0 [[maybe_unused]], LPSTR lpCmdLine [[maybe_unused]], int nCmdShow) {
 	using namespace rqdq::rqv;
 	namespace jobsys = rqdq::rclmt::jobsys;
 	namespace framepool = rqdq::rclma::framepool;

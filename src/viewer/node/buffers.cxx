@@ -49,7 +49,7 @@ public:
 
 	rclmt::jobsys::Job* Render() {
 		return rclmt::jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
-	static void RenderJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<Impl*> * data) {
+	static void RenderJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
@@ -73,7 +73,7 @@ public:
 
 	rclmt::jobsys::Job* PostProcess() {
 		return rclmt::jobsys::make_job(Impl::PostProcessJmp, std::tuple{this}); }
-	static void PostProcessJmp(rclmt::jobsys::Job* job, const unsigned tid, std::tuple<Impl*>* data) {
+	static void PostProcessJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto&[self] = *data;
 		self->PostProcessImpl(); }
 	void PostProcessImpl() {

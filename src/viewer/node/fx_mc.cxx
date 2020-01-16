@@ -157,7 +157,7 @@ public:
 			jobsys::run(subJobs[sji]); }
 		jobsys::run(finalizeJob); }
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth) override {
+	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth [[maybe_unused]]) override {
 		auto& dc = *_dc;
 		using rglv::GL_UNSIGNED_SHORT;
 		using rglv::GL_CULL_FACE;
@@ -191,7 +191,7 @@ private:
 		std::scoped_lock lock(bufferMutex_);
 		auto& buffer = buffers_[activeBuffer_];
 		auto& end = bufferEnd_[activeBuffer_];
-		if (end == buffer.size()) {
+		if (end == int(buffer.size())) {
 			if (buffer.capacity() == buffer.size()) {
 				std::cerr << "buffer is full @ " << buffer.size() << std::endl;
 				throw std::runtime_error("buffer full"); }
@@ -202,7 +202,7 @@ private:
 
 	rclmt::jobsys::Job* Finalize() {
 		return rclmt::jobsys::make_job(Impl::FinalizeJmp, std::tuple{this}); }
-	static void FinalizeJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<Impl*>* data) {
+	static void FinalizeJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto&[self] = *data;
 		self->FinalizeImpl(); }
 	void FinalizeImpl() {
@@ -212,10 +212,10 @@ private:
 		if (parent != nullptr) {
 			return rclmt::jobsys::make_job_as_child(parent, Impl::ResolveJmp, std::tuple{this, block, dim}); }
 		return rclmt::jobsys::make_job(Impl::ResolveJmp, std::tuple{this, block, dim}); }
-	static void ResolveJmp(rclmt::jobsys::Job* jobptr, unsigned threadId, std::tuple<Impl*, AABB, int>* data) {
+	static void ResolveJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*, AABB, int>* data) {
 		auto&[self, block, dim] = *data;
-		self->ResolveImpl(block, dim, threadId);}
-	void ResolveImpl(AABB block, int dim, int threadId) {
+		self->ResolveImpl(block, dim);}
+	void ResolveImpl(AABB block, int dim) {
 		using rmlv::vec3, rmlv::mvec4f, rmlv::qfloat, rmlv::qfloat3;
 		const int stride = 64;
 		std::array<std::array<float, stride*stride>, 2> buf;
@@ -280,7 +280,7 @@ private:
 
 					cell.value[7] = buf[top][(iz+1)*stride + ix];
 					cell.pos[7] = vec3{ origin.x,         origin.y + delta, origin.z + delta };
-					rglv::march_sdf_vao(vao, origin, delta, cell, field_); }}}}
+					rglv::march_sdf_vao(vao, delta, cell, field_); }}}}
 
 private:
 	Surface field_;

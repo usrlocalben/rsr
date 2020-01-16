@@ -346,7 +346,7 @@ private:
 				int modeidx = key - Key::One;
 				change_mode = modelist[modeidx]; }}}
 
-	void onKeyDown(PixelToaster::DisplayInterface& display, PixelToaster::Key key) override {
+	void onKeyDown(PixelToaster::DisplayInterface&, PixelToaster::Key key) override {
 		switch (key) {
 		case Key::Escape:
 			shouldQuit_ = true;
@@ -359,7 +359,7 @@ private:
 			break;
 		default: break; }}
 
-	void onKeyUp(PixelToaster::DisplayInterface& display, PixelToaster::Key key) override {
+	void onKeyUp(PixelToaster::DisplayInterface&, PixelToaster::Key key) override {
 		switch (key) {
 		case Key::M:
 			show_mode_list = false;
@@ -370,7 +370,7 @@ private:
 		default: break; }}
 
 //	void onMouseButtonDown(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse);
-	void onMouseMove(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse) override {
+	void onMouseMove(PixelToaster::DisplayInterface& display, PixelToaster::Mouse mouse) override {
 		mousePositionInPx_ = { mouse.x, mouse.y };
 		float dmx = (display.width() / 2.0F) - mouse.x;
 		float dmy = (display.height() / 2.0F) - mouse.y;
@@ -379,7 +379,7 @@ private:
 			camera_.onMouseMove({ dmx, dmy });
 			reset_mouse_next_frame = true; }}
 
-	void onMouseWheel(PixelToaster::DisplayInterface & display, PixelToaster::Mouse mouse, short wheel_amount) override {
+	void onMouseWheel(PixelToaster::DisplayInterface&, PixelToaster::Mouse, short wheel_amount) override {
 		int ticks = wheel_amount / 120;
 		camera_.Zoom(ticks); }
 

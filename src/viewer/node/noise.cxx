@@ -37,7 +37,7 @@ public:
 		AddDep(coordNode_);}
 
 	// IValue
-	NamedValue Eval(std::string_view name) override {
+	NamedValue Eval(std::string_view name [[maybe_unused]]) override {
 		if (cache_.has_value()) {
 			return cache_.value(); }
 

@@ -51,7 +51,7 @@ Texture load_png(const std::string& filename, const std::string& name, const boo
 			dst.g *= dst.a;
 			dst.b *= dst.a; }}
 
-	return{ pc, int(w), int(h), int(w), name }; }
+	return { pc, int(w), int(h), int(w), name, -1, false }; }
 
 
 Texture load_any(const std::string& prefix, const std::string& fn, const std::string& name, const bool premultiply) {
