@@ -50,6 +50,7 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		const rglv::BaseProgram::UniformsMD& u,
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
+		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
 		const WireframeProgram::VertexOutputMD& v,
 		const rmlv::qfloat2& gl_FragCoord,
@@ -129,8 +130,8 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 	struct Interpolants {
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			envmapUV({ d0.envmapUV, d1.envmapUV, d2.envmapUV }) {}
-		VertexOutputMD Interpolate(rglv::BaryCoord bary) const {
-			return { rglv::Interpolate(bary, envmapUV) }; }
+		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
+			return { rglv::Interpolate(BP, envmapUV) }; }
 		rglv::VertexFloat2 envmapUV; };
 
 	inline static void ShadeVertex(
@@ -158,6 +159,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		const UniformsMD& u [[maybe_unused]],
 		const TEXTURE_UNIT& tu0 [[maybe_unused]],
 		const TEXTURE_UNIT& tu1 [[maybe_unused]],
+		const rglv::BaryCoord& BS [[maybe_unused]],
 		const rglv::BaryCoord& BP [[maybe_unused]],
 		const VertexOutputMD& outs [[maybe_unused]],
 		const rmlv::qfloat2& gl_FragCoord [[maybe_unused]],
@@ -208,8 +210,8 @@ struct AmyProgram final : public rglv::BaseProgram {
 	struct Interpolants {
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			uv({ d0.uv, d1.uv, d2.uv }) {}
-		VertexOutputMD Interpolate(rglv::BaryCoord bary) const {
-			return { rglv::Interpolate(bary, uv) }; }
+		VertexOutputMD Interpolate(rglv::BaryCoord BS, rglv::BaryCoord BP [[maybe_unused]]) const {
+			return { rglv::Interpolate(BS, uv) }; }
 		rglv::VertexFloat3 uv; };
 
 	static void ShadeVertex(
@@ -227,6 +229,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 		const rglv::BaseProgram::UniformsMD& u,
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
+		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
 		const VertexOutputMD& outs,
 		const rmlv::qfloat2& gl_FragCoord,
@@ -286,8 +289,8 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 	struct Interpolants {
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			envmapUV({ d0.envmapUV, d1.envmapUV, d2.envmapUV }) {}
-		VertexOutputMD Interpolate(rglv::BaryCoord bary) const {
-			return { rglv::Interpolate(bary, envmapUV) }; }
+		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
+			return { rglv::Interpolate(BP, envmapUV) }; }
 		rglv::VertexFloat3 envmapUV; };
 
 	inline static void ShadeVertex(
@@ -315,6 +318,7 @@ struct EnvmapXProgram final : public rglv::BaseProgram {
 		const UniformsMD& u,
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
+		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
 		const VertexOutputMD& outs,
 		const rmlv::qfloat2& gl_FragCoord,
@@ -382,8 +386,8 @@ struct ManyProgram final : public rglv::BaseProgram {
 	struct Interpolants {
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			uv({ d0.uv, d1.uv, d2.uv }) {}
-		VertexOutputMD Interpolate(rglv::BaryCoord bary) const {
-			return { rglv::Interpolate(bary, uv) }; }
+		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
+			return { rglv::Interpolate(BP, uv) }; }
 		rglv::VertexFloat2 uv; };
 
 	inline static void ShadeVertex(
@@ -402,6 +406,7 @@ struct ManyProgram final : public rglv::BaseProgram {
 		const UniformsMD& u,
 		const TEXTURE_UNIT& tu0,
 		const TEXTURE_UNIT& tu1,
+		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
 		const VertexOutputMD& outs,
 		const rmlv::qfloat2& gl_FragCoord,

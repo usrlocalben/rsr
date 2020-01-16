@@ -54,7 +54,7 @@ struct BaseProgram {
 
 	struct Interpolants {
 		Interpolants(VertexOutputSD, VertexOutputSD, VertexOutputSD) {}
-		VertexOutputMD Interpolate(rglv::BaryCoord) const {
+		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP [[maybe_unused]]) const {
 			return {}; } };
 
 	inline static void ShadeVertex(
@@ -77,7 +77,8 @@ struct BaseProgram {
 		const UniformsMD& u [[maybe_unused]], 
 		const TEXTURE_UNIT& tu0 [[maybe_unused]],
 		const TEXTURE_UNIT& tu1 [[maybe_unused]],
-		const rglv::BaryCoord& bary [[maybe_unused]],
+		const rglv::BaryCoord& BS [[maybe_unused]],
+		const rglv::BaryCoord& BP [[maybe_unused]],
 		const VertexOutputMD& v [[maybe_unused]],
 		const rmlv::qfloat2& gl_FragCoord [[maybe_unused]],
 		/* gl_FrontFacing, */

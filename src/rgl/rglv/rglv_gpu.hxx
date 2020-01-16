@@ -165,10 +165,10 @@ struct TriangleProgram {
 		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
 		rglr::QFloat4Canvas::Store(sr, sg, sb, cb_+offs_); }
 
-	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord bary, const bool frontfacing) {
+	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord BS, const bool frontfacing) {
 		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
 
-		const auto fragDepth = rglv::Interpolate(bary, zOverW_);
+		const auto fragDepth = rglv::Interpolate(BS, zOverW_);
 
 		// read depth buffer
 		qfloat destDepth;
@@ -185,19 +185,20 @@ struct TriangleProgram {
 			fragMask = andnot(triMask, float2bits(rmlv::mvec4f::all_ones())); }
 
 		// restore perspective
-		const auto fragW = rmlv::oneover(Interpolate(bary, oneOverW_));
-		bary.x = oneOverW_.v0 * bary.x * fragW;
-		bary.z = oneOverW_.v2 * bary.z * fragW;
-		bary.y = 1.0f - bary.x - bary.z;
+		const auto fragW = rmlv::oneover(Interpolate(BS, oneOverW_));
+		rglv::BaryCoord BP;
+		BP.x = oneOverW_.v0 * BS.x * fragW;
+		BP.z = oneOverW_.v2 * BS.z * fragW;
+		BP.y = 1.0f - BP.x - BP.z;
 
-		auto attrs = vo_.Interpolate(bary);
+		auto attrs = vo_.Interpolate(BS, BP);
 
 		qfloat4 fragColor;
 		SHADER_PROGRAM::ShadeFragment(
 			matrices_,
 			uniforms_,
 			tu0_, tu1_,
-			bary, attrs,
+			BS, BP, attrs,
 			fragCoord,
 			/*frontFacing,*/
 			fragDepth,
