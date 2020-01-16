@@ -34,8 +34,7 @@ std::pair<int, rclmt::Event*> AllocTimer(bool type, rclmt::Reactor* reactor) {
 	if (available != end(timers)) {
 		timer = &*available;}
 	else {
-		timers.emplace_back();
-		timer = &timers.back();}
+		timer = &timers.emplace_back(); }
 
 	timer->inUse = true;
 	timer->canceled = false;

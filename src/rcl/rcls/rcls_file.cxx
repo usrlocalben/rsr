@@ -26,7 +26,7 @@ std::vector<std::string> FindGlob(const std::string& pathpat) {
 		do {
 			if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0U) {
 				continue; }
-			lst.push_back(rclt::UTF8Codec::Encode(std::wstring{ffd.cFileName}));
+			lst.emplace_back(rclt::UTF8Codec::Encode(std::wstring{ffd.cFileName}));
 		} while (FindNextFile(hFind, &ffd) != 0); }
 	return lst; }
 

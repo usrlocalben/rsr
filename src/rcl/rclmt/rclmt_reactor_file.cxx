@@ -100,8 +100,7 @@ LoadFileDeferred& LoadFile(const std::string& path, Reactor* reactor) {
 LoadFileDeferred& LoadFile(const std::wstring& path, Reactor* reactor_) {
 	auto& reactor = reactor_ != nullptr ? *reactor_ : Reactor::GetInstance();
 
-	fileOps.emplace_back(FileOp{});
-	auto& op = fileOps.back();
+	auto& op = fileOps.emplace_back();
 	auto& d = op.deferred;
 
 	op.id = GetNextOpId();

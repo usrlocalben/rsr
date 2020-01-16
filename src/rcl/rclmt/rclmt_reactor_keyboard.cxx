@@ -1,6 +1,7 @@
 #include "src/rcl/rclmt/rclmt_reactor_keyboard.hxx"
 
 #include <functional>
+#include <stdexcept>
 #include <vector>
 
 #include <Windows.h>
