@@ -1,6 +1,7 @@
-#include "src/rcl/rclt/rclt_util.hxx"
+#include "rclt_util.hxx"
 
 #include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <codecvt>
 #include <fstream>
@@ -14,53 +15,58 @@
 namespace rqdq {
 namespace rclt {
 
+// ----------------
+// struct UTF8Codec
+// ----------------
 
-std::wstring UTF8Codec::Decode(std::string_view str_) {
+auto UTF8Codec::Decode(std::string_view text) -> std::wstring {
 	thread_local std::string str;
-	str.assign(str_);
+	str.assign(text);
 	return Decode(str); }
 
-
-std::wstring UTF8Codec::Decode(const std::string& str) {
+auto UTF8Codec::Decode(const std::string& str) -> std::wstring {
+	assert(str.size() <= std::numeric_limits<int>::max());
+	const auto inputLengthInBytes = static_cast<int>(str.size());
+	std::wstring out;
 	if (str.empty()) {
-		return std::wstring{}; }
-	int needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.c_str(), str.size(), nullptr, 0);
+		return out; }
+	const int needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str.data(), inputLengthInBytes, nullptr, 0);
 	if (needed == 0) {
 		throw std::runtime_error("error decoding UTF8"); }
-	std::wstring out(needed, 0);
-	MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.size(), out.data(), out.size());
+	out.resize(needed, 0);
+	MultiByteToWideChar(CP_UTF8, 0, str.data(), inputLengthInBytes, out.data(), needed);
 	return out; }
 
-
-std::string UTF8Codec::Encode(const std::wstring& str) {
+auto UTF8Codec::Encode(const std::wstring& str) -> std::string {
+	assert(str.size() <= std::numeric_limits<int>::max());
+	const auto inputLengthInWChars = static_cast<int>(str.size());
+	std::string out;
 	if (str.empty()) {
-		return std::string{}; }
-	int needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str.c_str(), str.size(), nullptr, 0, nullptr, nullptr);
+		return out; }
+	const int needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, str.data(), inputLengthInWChars, nullptr, 0, nullptr, nullptr);
 	if (needed == 0) {
 		throw std::runtime_error("error decoding wchars"); }
-	std::string out(needed, 0);
-	WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.size(), out.data(), needed, nullptr, nullptr);
+	out.resize(needed, 0);
+	WideCharToMultiByte(CP_UTF8, 0, str.data(), inputLengthInWChars, out.data(), needed, nullptr, nullptr);
 	return out; }
 
-
-std::vector<std::string> Split(const std::string& str, char ch) {
+// FREE FUNCTIONS
+auto Split(const std::string& str, char delim) -> std::vector<std::string> {
 	std::vector<std::string> items;
 	std::string src(str);
-	auto nextmatch = src.find(ch);
+	auto nextmatch = src.find(delim);
 	while (true) {
 		auto item = src.substr(0, nextmatch);
 		items.emplace_back(item);
 		if (nextmatch == std::string::npos) { break; }
 		src = src.substr(nextmatch + 1);
-		nextmatch = src.find(ch); }
-
+		nextmatch = src.find(delim); }
 	return items; }
 
-
-void Split(const std::string& str, char ch, std::vector<std::string>& out) {
+void Split(const std::string& str, char delim, std::vector<std::string>& out) {
 	std::vector<std::string> items;
 	std::string src(str);
-	auto nextmatch = src.find(ch);
+	auto nextmatch = src.find(delim);
 	std::size_t cnt{0};
 	while (true) {
 		auto item = src.substr(0, nextmatch);
@@ -71,28 +77,22 @@ void Split(const std::string& str, char ch, std::vector<std::string>& out) {
 		++cnt;
 		if (nextmatch == std::string::npos) { break; }
 		src = src.substr(nextmatch + 1);
-		nextmatch = src.find(ch); }
+		nextmatch = src.find(delim); }
 	out.resize(cnt); }
 
+auto Trim(const std::string& s) -> std::string {
+	auto lit = cbegin(s);
+	auto rit = crbegin(s);
+	while (lit != cend(s)    && (isspace(*lit) != 0)) ++lit;
+	while (rit.base() != lit && (isspace(*rit) != 0)) ++rit;
+	return std::string(lit, rit.base()); }
 
-bool ConsumePrefix(std::string& str, const std::string& prefix) {
+auto ConsumePrefix(std::string& str, const std::string& prefix) -> bool {
 	if (str.compare(0, prefix.length(), prefix) == 0) {
 		str.erase(0, prefix.length());
 		return true; }
 	return false; }
 
 
-std::string Trim(const std::string &s) {
-	auto it = cbegin(s);
-	while (it != cend(s) && (isspace(*it) != 0)) {
-		it++; }
-
-	auto rit = crbegin(s);
-	while (rit.base() != it && (isspace(*rit) != 0)) {
-		rit++; }
-
-	return std::string(it, rit.base()); }
-
-
-}  // namespace rclt
-}  // namespace rqdq
+}  // close package namespace
+}  // close enterprise namespace

@@ -20,4 +20,5 @@ TEST(Trim, TrimsWhitespaceBoth) {
 TEST(Trim, NoWhitespaceIsIdentity) {
 	EXPECT_EQ(rclt::Trim("hey"), "hey"); }
 
+
 }  // close unnamed namespace
