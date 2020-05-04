@@ -232,6 +232,11 @@ public:
 				if (musicPositionInRows > songDurationInRows) {
 					shouldQuit_ = true; }  // end of soundtrack == end of demo
 #else
+				(void)songDurationInRows;
+#endif
+
+#ifdef SYNC_PLAYER
+#else
 				// host send-and-receive
 				if (syncController.Update((int)floor(musicPositionInRows))) {
 					syncController.Connect(); }
