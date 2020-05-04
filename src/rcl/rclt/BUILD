@@ -17,4 +17,5 @@ cc_test(
         ":util",
         ],
     copts = RSR_DEFAULT_COPTS,
+    timeout = "short",
     )
