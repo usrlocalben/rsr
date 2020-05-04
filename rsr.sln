@@ -1,9 +1,22 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27004.2010
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "viewer", "build-support\viewer.vcxproj", "{259CD5BA-0871-4008-843E-ED7359A8495A}"
+EndProject
+Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "dbg", "dbg.exe", "{952E7570-F4A9-4764-B031-E199C526CDFA}"
+	ProjectSection(DebuggerProjectSystem) = preProject
+		PortSupplier = 00000000-0000-0000-0000-000000000000
+		Executable = C:\Users\benjamin\rsr\dbg.exe
+		RemoteMachine = KOMAJIRO
+		StartingDirectory = C:\Users\benjamin\rsr
+		Environment = Default
+		LaunchingEngine = 00000000-0000-0000-0000-000000000000
+		UseLegacyDebugEngines = No
+		LaunchSQLEngine = No
+		AttachLaunchAction = No
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +34,10 @@ Global
 		{259CD5BA-0871-4008-843E-ED7359A8495A}.Release|x64.Build.0 = Release|x64
 		{259CD5BA-0871-4008-843E-ED7359A8495A}.Release|x86.ActiveCfg = Debug|x64
 		{259CD5BA-0871-4008-843E-ED7359A8495A}.Release|x86.Build.0 = Debug|x64
+		{952E7570-F4A9-4764-B031-E199C526CDFA}.Debug|x64.ActiveCfg = Release
+		{952E7570-F4A9-4764-B031-E199C526CDFA}.Debug|x86.ActiveCfg = Release
+		{952E7570-F4A9-4764-B031-E199C526CDFA}.Release|x64.ActiveCfg = Release
+		{952E7570-F4A9-4764-B031-E199C526CDFA}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
