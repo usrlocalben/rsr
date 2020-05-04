@@ -44,12 +44,12 @@ static const char *path_encode(const char *path)
 	for (i = 0; i < path_len; ++i) {
 		int ch = path[i];
 		if (valid_path_char(ch)) {
-			if (pos >= sizeof(temp) - 1)
+			if (pos >= (int)sizeof(temp) - 1)
 				break;
 
 			temp[pos++] = (char)ch;
 		} else {
-			if (pos >= sizeof(temp) - 3)
+			if (pos >= (int)sizeof(temp) - 3)
 				break;
 
 			temp[pos++] = '-';

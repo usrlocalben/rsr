@@ -13,6 +13,7 @@ MSVC_FLAGS = [
 
     # for clang-cl
     "-Wno-builtin-macro-redefined",
+    "-Wno-unused-command-line-argument",  # rocket .c sources don't use /std:c++17
 
     "/DUNICODE",
     "/D_UNICODE",
