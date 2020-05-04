@@ -12,16 +12,13 @@ MSVC_FLAGS = [
     #"/wd4267",  # conversion from 'size_t' to 'type', possible loss of data
 
     # for clang-cl
-    "-Wno-builtin-macro-redefined",
-    "-Wno-unused-command-line-argument",  # rocket .c sources don't use /std:c++17
+    #"-Wno-builtin-macro-redefined",
+    #"-Wno-unused-command-line-argument",  # rocket .c sources don't use /std:c++17
 
     "/DUNICODE",
     "/D_UNICODE",
     "/D_ENABLE_EXTENDED_ALIGNED_STORAGE",
     "/DNOMINMAX",  # Don't define min and max macros (windows.h)
-
-    #"/DENABLE_MUSIC",
-    #"/DSYNC_PLAYER",
     ]
 
 MSVC_RELEASE_FLAGS = [
