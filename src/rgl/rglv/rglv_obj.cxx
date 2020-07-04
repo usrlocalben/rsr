@@ -10,7 +10,7 @@
 
 #include "src/rcl/rcls/rcls_file.hxx"
 #include "src/rcl/rclt/rclt_util.hxx"
-#include "src/rgl/rglv/rglv_material.hxx"
+// #include "src/rgl/rglv/rglv_material.hxx"
 #include "src/rgl/rglv/rglv_mesh.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
@@ -19,62 +19,72 @@ namespace rqdq {
 using rmlv::vec4;
 using rmlv::vec3;
 using rmlv::vec2;
-using rglv::MaterialStore;
+// using rglv::MaterialStore;
 using rglv::Material;
+
+using MaterialList = std::vector<Material>;
+
 
 namespace {
 
 struct SVec3 {
+
+	static
+	auto read(std::stringstream& ss) -> SVec3 {
+		float x, y, z;
+		ss >> x >> y >> z;
+		return SVec3{x, y, z}; }
+
 	float x{0}, y{0}, z{0};
+
 	SVec3()  {}
 	SVec3(float a) :x(a), y(a), z(a) {}
 	SVec3(float x, float y, float z) :x(x), y(y), z(z) {}
 
-	vec4 xyz1() const {
+	auto xyz1() const -> vec4 {
 		return vec4{x, y, z, 1}; }
-	vec4 xyz0() const {
+	auto xyz0() const -> vec4 {
 		return vec4{x, y, z, 0}; }
-	vec3 xyz() const {
-		return vec3{x, y, z}; }
-	static SVec3 read(std::stringstream& ss) {
-		float x, y, z;
-		ss >> x >> y >> z;
-		return SVec3{x, y, z}; }
-	};
+	auto xyz() const -> vec3 {
+		return vec3{x, y, z}; }};
 
 
 struct SVec2 {
-	float x{0}, y{0};
-	SVec2()  {}
-	SVec2(float x, float y) :x(x), y(y) {}
-	vec4 xy00() const {
-		// the bilinear texture sampler
-		// assumes that the texcoords
-		// will be non-negative. this
-		// offset prevents badness for
-		// some meshes. XXX
-		return vec4{ x, y, 0, 0 }; }
-		//return rqlma::Vec4{ x, y, 0, 0 }; };
-	vec2 xy() const {
-		// the bilinear texture sampler
-		// assumes that the texcoords
-		// will be non-negative. this
-		// offset prevents badness for
-		// some meshes. XXX
-		return vec2{ x, y }; }
-		//return rqlma::Vec4{ x, y, 0, 0 }; };
-	static SVec2 read(std::stringstream& ss) {
+
+	static
+	auto read(std::stringstream& ss) -> SVec2 {
 		float x, y;
 		ss >> x >> y;
-		return SVec2{x, y}; }
-	};
+		return { x, y }; }
+
+	float x{0}, y{0};
+
+	SVec2()  {}
+	SVec2(float x, float y) :x(x), y(y) {}
+
+	auto xy00() const -> vec4 {
+		// the bilinear texture sampler
+		// assumes that the texcoords
+		// will be non-negative. this
+		// offset prevents badness for
+		// some meshes. XXX
+		return { x, y, 0, 0 }; }
+		//return rqlma::Vec4{ x, y, 0, 0 }; };
+
+	auto xy() const -> vec2 {
+		// the bilinear texture sampler
+		// assumes that the texcoords
+		// will be non-negative. this
+		// offset prevents badness for
+		// some meshes. XXX
+		return { x, y }; } };
 
 
 struct faceidx {
 	int vv, vt, vn; };
 
 
-faceidx to_faceidx(const std::string& data) {
+auto to_faceidx(const std::string& data) -> faceidx {
 	auto tmp = rclt::Split(data, '/'); // "nn/nn/nn" or "nn//nn", 1+ indexed!!
 	return faceidx{
 		tmp[0].length() != 0u ? std::stol(tmp[0]) - 1 : 0, // vv
@@ -92,7 +102,7 @@ struct ObjMaterial {
 	float specpow;
 	float density;
 
-	void reset() {
+	void Reset() {
 		name = "__none__";
 		texture = "";
 		ka = SVec3{0.0F};
@@ -101,35 +111,34 @@ struct ObjMaterial {
 		specpow = 1.0F;
 		density = 1.0F; }
 
-	Material to_material() const {
+	auto ToMaterial() const -> Material {
 		Material mm;
 		mm.ka = ka.xyz();
 		mm.kd = kd.xyz();
 		mm.ks = ks.xyz();
 		mm.specpow = specpow;
 		mm.d = density;
-		mm.name = "obj-" + name;
+		mm.name = name;
 		mm.imagename = texture;
-		mm.shader = "obj";
 		mm.pass = 0; // assume pass 0 by default
 		return mm; }};
 
 
-MaterialStore loadMaterials(const std::string& fn) {
+auto LoadMaterials(const std::string& fn) -> MaterialList {
 
-	MaterialStore mlst;
+	MaterialList mlst;
 	ObjMaterial m;
 
-	auto push = [&mlst,&m]() {
+	auto push = [&mlst, &m]() {
 		float p = 1.0f; // 2.2f;
 		m.kd.x = pow(m.kd.x, p);
 		m.kd.y = pow(m.kd.y, p);
 		m.kd.z = pow(m.kd.z, p);
-		mlst.append(m.to_material()); };
+		mlst.push_back(m.ToMaterial()); };
 
 	auto lines = rcls::LoadLines(fn);
 
-	m.reset();
+	m.Reset();
 	for (auto& line : lines) {
 
 		// remove comments, trim, skip empty lines
@@ -146,7 +155,7 @@ MaterialStore loadMaterials(const std::string& fn) {
 		if (cmd == "newmtl") {  //name
 			if (m.name != "__none__") {
 				push();
-				m.reset(); }
+				m.Reset(); }
 			ss >> m.name; }
 		else if (cmd == "Ka") { // ambient color
 			m.ka = SVec3::read(ss); }
@@ -171,7 +180,7 @@ MaterialStore loadMaterials(const std::string& fn) {
 
 namespace rglv {
 
-std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::string& fn) {
+auto LoadOBJ(const std::string& prepend, const std::string& fn) -> Mesh {
 
 	// std::cout << "---- loading [" << fn << "]:" << std::endl;
 
@@ -180,10 +189,9 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 	std::string group_name("defaultgroup");
 	int material_idx = -1;
 
-	MaterialStore materials;
 	Mesh mesh;
 
-	mesh.name = fn;
+	mesh.name_ = fn;
 
 	for (auto& line : lines) {
 
@@ -201,7 +209,7 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 			std::string mtlfn;
 			ss >> mtlfn;
 			// std::cout << "material library is [" << mtlfn << "]\n";
-			materials = loadMaterials(prepend + mtlfn); }
+			mesh.material_ = LoadMaterials(prepend + mtlfn); }
 
 		else if (cmd == "g") {
 			// group, XXX unused
@@ -211,23 +219,23 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 			// material setting
 			std::string material_name;
 			ss >> material_name;
-			auto found = materials.find_by_name(std::string("obj-") + material_name);
-			if (!found.has_value()) {
+			auto found = std::find_if(begin(mesh.material_), end(mesh.material_), [&](const auto& item) { return item.name == material_name; });
+			if (found == end(mesh.material_)) {
 				std::cout << "usemtl \"" << material_name << "\" not found in mtl\n";
 				throw std::runtime_error("usemtl not found"); }
-			material_idx = found.value(); }
+			material_idx = std::distance(begin(mesh.material_), found); }
 
 		else if (cmd == "v") {
 			// vertex
-			mesh.points.push_back(SVec3::read(ss).xyz()); }
+			mesh.position_.push_back(SVec3::read(ss).xyz()); }
 
 		else if (cmd == "vn") {
 			// vertex normal
-			mesh.normals.push_back(SVec3::read(ss).xyz()); }
+			mesh.normal_.push_back(SVec3::read(ss).xyz()); }
 
 		else if (cmd == "vt") {
 			// vertex uv
-			mesh.texcoords.push_back(SVec2::read(ss).xy()); }
+			mesh.texture_.push_back(SVec2::read(ss).xy()); }
 
 		else if (cmd == "f") {
 			// face indices
@@ -238,18 +246,18 @@ std::tuple<Mesh,MaterialStore> loadOBJ(const std::string& prepend, const std::st
 			for (auto& facechunk : faces) {
 				indexes.push_back(to_faceidx(facechunk)); }
 			// triangulate and make faces
-			for (int i = 0; i < int(indexes.size()) - 2; i++){
+			for (int i = 0; i < int(indexes.size()) - 2; ++i) {
 				Face fd;
-				fd.front_material = material_idx;
-				fd.point_idx = { { indexes[0].vv, indexes[i + 1].vv, indexes[i + 2].vv } };
-				fd.normal_idx = { { indexes[0].vn, indexes[i + 1].vn, indexes[i + 2].vn } };
-				fd.texcoord_idx = { { indexes[0].vt, indexes[i + 1].vt, indexes[i + 2].vt } };
-				mesh.faces.push_back(fd); }}}
+				fd.frontMaterial = material_idx;
+				fd.idx.position = { { indexes[0].vv, indexes[i+1].vv, indexes[i+2].vv } };
+				fd.idx.normal   = { { indexes[0].vn, indexes[i+1].vn, indexes[i+2].vn } };
+				fd.idx.texture  = { { indexes[0].vt, indexes[i+1].vt, indexes[i+2].vt } };
+				mesh.face_.push_back(fd); }}}
 
-	mesh.compute_bbox();
-	mesh.compute_face_and_vertex_normals();
-	mesh.compute_edges();
-	return std::tuple<Mesh, MaterialStore>(mesh, materials); }
+	mesh.ComputeBBox();
+	mesh.ComputeFaceAndVertexNormals();
+	mesh.ComputeEdges();
+	return mesh; }
 
 
 }  // namespace rglv

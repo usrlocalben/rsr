@@ -36,8 +36,8 @@ void NodeBase::Run() {
 	this->Main(); }
 
 
-void NodeBase::DecrJob([[maybe_unused]] rclmt::jobsys::Job* job,
-                       [[maybe_unused]] const unsigned tid,
+void NodeBase::DecrJob(rclmt::jobsys::Job* job [[maybe_unused]],
+                       const unsigned tid [[maybe_unused]],
                        std::tuple<std::atomic<int>*,rclmt::jobsys::Job*>* data) {
 	auto [cnt, waiting_job] = *data;
 	auto& counter = *cnt;
@@ -47,7 +47,7 @@ void NodeBase::DecrJob([[maybe_unused]] rclmt::jobsys::Job* job,
 	rclmt::jobsys::run(waiting_job); }
 
 
-rclmt::jobsys::Job* NodeBase::AfterAll(rclmt::jobsys::Job* job) {
+auto NodeBase::AfterAll(rclmt::jobsys::Job* job) -> rclmt::jobsys::Job* {
 	groupCnt_++;
 	return rclmt::jobsys::make_job(DecrJob, std::tuple{&groupCnt_, job}); }
 
@@ -62,12 +62,12 @@ void NodeBase::Reset() {
 	groupCnt_ = 0; }
 
 
-bool NodeBase::Connect(std::string_view attr, NodeBase* other, std::string_view slot) {
+auto NodeBase::Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool {
 	std::cerr << "NodeBase(" << id_ << ") attempted to connect " << attr << " to " << other->id_ << ":" << slot << "\n";
 	return false; }
 
 
-bool NodeBase::IsValid() {
+auto NodeBase::IsValid() -> bool {
 	return true; }
 
 
@@ -84,7 +84,7 @@ void NodeBase::AddDep(NodeBase* node) {
 void NodeBase::AddDeps(){}
 
 
-const std::vector<NodeBase*>& NodeBase::Deps() {
+auto NodeBase::Deps() -> const std::vector<NodeBase*>& {
 	deps_.clear();
 	AddDeps();
 	return deps_; }

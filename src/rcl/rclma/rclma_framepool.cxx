@@ -8,11 +8,10 @@ namespace rqdq {
 namespace {
 
 std::vector<char*> pools;
+std::vector<int> sp;
 
-int sps[128];
 
-
-int Ceil16(const int x) {
+auto Ceil16(const int x) -> int {
 	int rag = x & 0xf;
 	int segments = x >> 4;
 	if (rag != 0) {
@@ -28,23 +27,23 @@ namespace framepool {
 
 void Init() {
 	pools.clear();
-	for (int ti = 0; ti < rclmt::jobsys::numThreads; ti++) {
-		void * ptr = _aligned_malloc(100000 * 64, 64);
-		pools.push_back(reinterpret_cast<char*>(ptr));
-		sps[ti] = 0; }}
+	for (int ti=0; ti<rclmt::jobsys::numThreads; ++ti) {
+		void * const buf = _aligned_malloc(100000 * 64, 64);
+		pools.push_back(reinterpret_cast<char*>(buf)); }
+	sp.resize( rclmt::jobsys::numThreads * 16, 0 ); }
 
 
 void Reset() {
-	for (int ti = 0; ti < rclmt::jobsys::numThreads; ti++) {
-		sps[ti] = 0; }}
+	for (int ti=0; ti<rclmt::jobsys::numThreads; ++ti) {
+		sp[ti*16] = 0; }}
 
 
-void* Allocate(int amt) {
+auto Allocate(int amt) -> void* {
 	amt = Ceil16(amt);
 	auto my_store = pools[rclmt::jobsys::threadId];
-	auto& sp = sps[rclmt::jobsys::threadId];
-	void *out = reinterpret_cast<void*>(my_store + sp);
-	sp += amt;
+	auto& my_idx = sp[rclmt::jobsys::threadId * 16];
+	void * const out = reinterpret_cast<void*>(my_store + my_idx);
+	my_idx += amt;
 	return out; }
 
 

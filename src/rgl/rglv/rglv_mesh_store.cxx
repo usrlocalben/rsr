@@ -27,26 +27,14 @@ namespace rglv {
 using std::cout;
 using std::endl;
 
-void MeshStore::load_dir(const std::string& prefix,
-						 rglv::MaterialStore& materialstore,
-						 rglr::TextureStore& texturestore) {
+void MeshStore::LoadDir(const std::string& prefix) {
 
 	const std::string spec = "*.obj";
 
 	for (auto& fn : rcls::FindGlob(prefix + spec)) {
 		// cout << "loading mesh [" << prefix << "][" << fn << "]" << endl;
-		auto [tmp_mesh, tmp_materials] = rglv::loadOBJ(prefix, fn);
-		int material_base_idx = materialstore.size();
-
-		tmp_materials.for_each([&](const Material& item) {
-			if (!item.imagename.empty()) {
-				texturestore.load_any(prefix, item.imagename); }
-			materialstore.append(item); });
-
-		for (auto& item : tmp_mesh.faces) {
-			item.front_material += material_base_idx; }
-
-		store.push_back(tmp_mesh); }}
+		auto tmp_mesh = rglv::LoadOBJ(prefix, fn);
+		store_.push_back(tmp_mesh); }}
 
 
 }  // namespace rglv

@@ -10,16 +10,15 @@ namespace rqdq {
 namespace rclmt {
 
 class Barrier {
-public:
-	explicit Barrier(int numThreads);
-	bool Join();
+	std::mutex mutex_;
+	std::condition_variable condition_;
+	const int concurrencyInThreads_;
+	int activityInThreads_;
+	uint32_t generation_{0};
 
-private:
-	std::mutex d_mutex;
-	std::condition_variable d_condition;
-	const int d_numThreads;
-	int d_numThreadsStillActive;
-	uint32_t d_generation = 0; };
+public:
+	explicit Barrier(int /*numThreads*/);
+	auto Join() -> bool; };
 
 
 }  // namespace rclmt

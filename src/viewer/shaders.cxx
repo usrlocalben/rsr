@@ -18,6 +18,10 @@ ShaderProgramId ShaderProgramNameSerializer::Deserialize(std::string_view text) 
 		return ShaderProgramId::Amy; }
 	if (text == "EnvmapX") {
 		return ShaderProgramId::EnvmapX; }
+	if (text == "OBJ1") {
+		return ShaderProgramId::OBJ1; }
+	if (text == "OBJ2") {
+		return ShaderProgramId::OBJ2; }
 	if (text == "Many") {
 		return ShaderProgramId::Many; }
 	cout << "can't deserialize shader program \""s << text << "\", using Default"s << endl;

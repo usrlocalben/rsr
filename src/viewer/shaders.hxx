@@ -30,7 +30,9 @@ enum class ShaderProgramId {
 	Envmap,
 	Amy,
 	EnvmapX,
-	Many, };
+	Many,
+	OBJ1,
+	OBJ2 };
 
 
 struct ShaderProgramNameSerializer {
@@ -414,6 +416,182 @@ struct ManyProgram final : public rglv::BaseProgram {
 		const rmlv::qfloat& gl_FragDepth,
 		rmlv::qfloat4& gl_FragColor) {
 		gl_FragColor = { outs.uv.x, outs.uv.y, u.magic, 1.0F }; } };
+
+
+struct OBJ1Program final : public rglv::BaseProgram {
+	static constexpr int id = int(ShaderProgramId::OBJ1);
+
+	struct VertexInput {
+		rmlv::qfloat4 position;
+		rmlv::qfloat4 normal;
+		rmlv::qfloat3 kd; };
+
+	struct Loader {
+		Loader(const std::array<const void*, 4>& buffers,
+		       const std::array<int, 4>& formats [[maybe_unused]]) :
+			vbo_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == rglv::AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
+		int Size() const { return vbo_.size(); }
+		void LoadInstance(int id [[maybe_unused]], VertexInput& vi [[maybe_unused]]) {}
+		void LoadMD(int idx, VertexInput& vi) {
+			vi.position = vbo_.a0.loadxyz1(idx);
+			vi.normal   = vbo_.a1.loadxyz0(idx);
+			vi.kd       = vbo_.a2.load(idx); }
+		void LoadLane(int idx, int li, VertexInput& vi) {
+			vi.position.setLane(li, rmlv::vec4{ vbo_.a0.at(idx), 1 });
+			vi.normal  .setLane(li, rmlv::vec4{ vbo_.a1.at(idx), 0 });
+			vi.kd      .setLane(li, vbo_.a2.at(idx)); }
+		const rglv::VertexArray_F3F3F3& vbo_; };
+
+	struct VertexOutputSD {
+		rmlv::vec3 kd;
+		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+			return { mix(a.kd, b.kd, t) }; }};
+
+	struct VertexOutputMD {
+		rmlv::qfloat3 kd;
+
+		VertexOutputSD Lane(const int li) {
+			return VertexOutputSD{
+				kd.lane(li) }; }};
+
+	struct Interpolants {
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
+			kd({ d0.kd, d1.kd, d2.kd }) {}
+		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
+			return { rglv::Interpolate(BP, kd) }; }
+		rglv::VertexFloat3 kd; };
+
+	inline static void ShadeVertex(
+		const rglv::Matrices& mats,
+		const UniformsMD& u [[maybe_unused]],
+		const VertexInput& v,
+		rmlv::qfloat4& gl_Position,
+		VertexOutputMD& outs) {
+
+		// rmlv::qfloat4 lightPos{ 0.0F, 100.0F, 100.0F, 1.0F };
+		// lightPos = mats.vm * lightPos;
+
+		rmlv::qfloat4 lightPos{ 0.0F, 0.0F, 0.0F, 1.0F };
+
+		auto mvv = mats.vm * v.position;
+		auto mvn = mats.vm * v.normal;
+		auto distance = rmlv::length(lightPos - mvv);
+		auto lightVector = rmlv::normalize(lightPos - mvv);
+		auto diffuse = vmax(dot(mvn, lightVector), 0.1F);
+		// diffuse = diffuse * (1.0F / (1.0F + (0.02F * distance * distance)));
+		diffuse = diffuse * (100.0F / distance);
+		outs.kd = v.kd * diffuse;
+
+		// outs.kd = v.kd;
+		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
+
+	template <typename TEXTURE_UNIT>
+	inline static void ShadeFragment(
+		const rglv::Matrices& mats,
+		const UniformsMD& u,
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
+		const rglv::BaryCoord& BS,
+		const rglv::BaryCoord& BP,
+		const VertexOutputMD& outs,
+		const rmlv::qfloat2& gl_FragCoord,
+		/* gl_FrontFacing, */
+		const rmlv::qfloat& gl_FragDepth,
+		rmlv::qfloat4& gl_FragColor) {
+		gl_FragColor = { outs.kd, 1.0F }; } };
+
+
+struct OBJ2Program final : public rglv::BaseProgram {
+	static constexpr int id = int(ShaderProgramId::OBJ2);
+
+	struct VertexInput {
+		rmlv::qfloat4 position;
+		rmlv::qfloat4 normal;
+		rmlv::qfloat3 kd; };
+
+	struct Loader {
+		Loader(const std::array<const void*, 4>& buffers,
+		       const std::array<int, 4>& formats [[maybe_unused]]) :
+			vbo_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == rglv::AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
+		int Size() const { return vbo_.size(); }
+		void LoadInstance(int id [[maybe_unused]], VertexInput& vi [[maybe_unused]]) {}
+		void LoadMD(int idx, VertexInput& vi) {
+			vi.position = vbo_.a0.loadxyz1(idx);
+			vi.normal   = vbo_.a1.loadxyz0(idx);
+			vi.kd       = vbo_.a2.load(idx); }
+		void LoadLane(int idx, int li, VertexInput& vi) {
+			vi.position.setLane(li, rmlv::vec4{ vbo_.a0.at(idx), 1 });
+			vi.normal  .setLane(li, rmlv::vec4{ vbo_.a1.at(idx), 0 });
+			vi.kd      .setLane(li, vbo_.a2.at(idx)); }
+		const rglv::VertexArray_F3F3F3& vbo_; };
+
+	struct VertexOutputSD {
+		rmlv::vec4 sp;
+		rmlv::vec4 sn;
+		rmlv::vec3 kd;
+		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+			return { mix(a.sp, b.sp, t),
+			         mix(a.sn, b.sn, t),
+			         mix(a.kd, b.kd, t) }; }};
+
+	struct VertexOutputMD {
+		rmlv::qfloat4 sp;
+		rmlv::qfloat4 sn;
+		rmlv::qfloat3 kd;
+
+		VertexOutputSD Lane(const int li) {
+			return VertexOutputSD{
+				sp.lane(li), sn.lane(li), kd.lane(li) }; }};
+
+	struct Interpolants {
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
+			sp({ d0.sp, d1.sp, d2.sp }),
+			sn({ d0.sn, d1.sn, d2.sn }),
+			kd({ d0.kd, d1.kd, d2.kd }) {}
+		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
+			return { rglv::Interpolate(BP, sp), rglv::Interpolate(BP, sn), rglv::Interpolate(BP, kd) }; }
+		rglv::VertexFloat4 sp, sn;
+		rglv::VertexFloat3 kd; };
+
+	inline static void ShadeVertex(
+		const rglv::Matrices& mats,
+		const UniformsMD& u [[maybe_unused]],
+		const VertexInput& v,
+		rmlv::qfloat4& gl_Position,
+		VertexOutputMD& outs) {
+		outs.sp = mats.vm * v.position;
+		outs.sn = mats.vm * v.normal;
+		outs.kd = v.kd;
+		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
+
+	template <typename TEXTURE_UNIT>
+	inline static void ShadeFragment(
+		const rglv::Matrices& mats,
+		const UniformsMD& u,
+		const TEXTURE_UNIT& tu0,
+		const TEXTURE_UNIT& tu1,
+		const rglv::BaryCoord& BS,
+		const rglv::BaryCoord& BP,
+		const VertexOutputMD& outs,
+		const rmlv::qfloat2& gl_FragCoord,
+		/* gl_FrontFacing, */
+		const rmlv::qfloat& gl_FragDepth,
+		rmlv::qfloat4& gl_FragColor) {
+
+		// rmlv::qfloat4 lightPos{ 0.0F, 100.0F, 100.0F, 1.0F };
+		// lightPos = mats.vm * lightPos;
+		rmlv::qfloat4 lightPos{ 0.0F, 0.0F, 0.0F, 1.0F };
+		auto distance = rmlv::length(lightPos - outs.sp);
+		auto lightVector = rmlv::normalize(lightPos - outs.sp);
+		auto diffuse = vmax(dot(outs.sn, lightVector), 0.1F);
+		// diffuse = diffuse * (1.0F / (1.0F + (0.02F * distance * distance)));
+		diffuse = diffuse * (100.0F / distance);
+		// outs.kd = v.kd * diffuse;
+		gl_FragColor = { outs.kd * diffuse, 1.0F }; } };
 
 
 }  // namespace rqv

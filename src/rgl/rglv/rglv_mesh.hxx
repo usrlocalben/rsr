@@ -10,16 +10,33 @@
 namespace rqdq {
 namespace rglv {
 
+struct Material {
+	rmlv::vec3 ka;
+	rmlv::vec3 kd;
+	rmlv::vec3 ks;
+	float specpow;
+	float d;
+	int pass;
+	int invert;
+	std::string name;
+	std::string imagename;
+
+	void Print() const; };
+
+
 struct Face {
-	std::array<int, 3> point_idx;
-	std::array<int, 3> texcoord_idx;
-	std::array<int, 3> normal_idx;
+	struct {
+		std::array<int, 3> position;
+		std::array<int, 3> normal;
+		std::array<int, 3> texture;
+	} idx;
+
 	rmlv::vec3 normal;
-	int front_material;
+	int frontMaterial;
 //	int back_material;
 
-	std::array<int, 3> edge_ids;  // edge_id for each edge
-	std::array<int, 3> edge_faces;  // adjacent face_id for each edge
+	std::array<int, 3> edge;      // edge_id for each edge
+	std::array<int, 3> adjacent;  // adjacent face_id for each edge
 
 	/*
 	soa point-in-face & adjacent-normals for shadow volumes
@@ -30,25 +47,25 @@ struct Face {
 
 
 struct Mesh {
-	rmlv::vec4 bbox[8];
+	std::array<rmlv::vec4, 8> aabb_;
 
-	rcls::vector<rmlv::vec3> points;
-	rcls::vector<rmlv::vec3> normals;
-	rcls::vector<rmlv::vec2> texcoords;
+	std::vector<rmlv::vec3> position_;
+	std::vector<rmlv::vec3> normal_;
+	std::vector<rmlv::vec2> texture_;
+	std::vector<rmlv::vec3> smoothNormal_;
+	std::vector<Face> face_;
 
-	rcls::vector<rmlv::vec3> vertex_normals;
-	rcls::vector<Face> faces;
+	std::vector<Material> material_;
 
-	std::string name;
+	std::string name_;
 
-	bool solid;
-	std::string message;
+	bool solid_;
+	std::string message_;
 
-	void print() const;
-	void compute_bbox();
-	void compute_face_and_vertex_normals();
-	void compute_edges();
-	};
+	void Print() const;
+	void ComputeBBox();
+	void ComputeFaceAndVertexNormals();
+	void ComputeEdges(); };
 
 
 /*inline bool almost_equal(const vao_vertex& a, const vao_vertex& b) {
@@ -58,8 +75,8 @@ struct Mesh {
 		almost_equal(a.texcoord, b.texcoord)); }*/
 
 
-std::tuple<rglv::VertexArray_F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3(const Mesh& /*m*/);
-std::tuple<rglv::VertexArray_F3F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3F3(const Mesh& /*m*/);
+void MakeArray(const Mesh& m, const std::string& spec, VertexArray_F3F3& buffer, rcls::vector<uint16_t>& idx);
+void MakeArray(const Mesh& m, const std::string& spec, VertexArray_F3F3F3& buffer, rcls::vector<uint16_t>& idx);
 
 
 }  // namespace rglv

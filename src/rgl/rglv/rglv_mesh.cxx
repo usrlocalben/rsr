@@ -1,7 +1,6 @@
 #include "src/rgl/rglv/rglv_mesh.hxx"
 
 #include <iostream>
-#include <map>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -13,6 +12,12 @@
 #include "3rdparty/tuple_hash/tuple_hash.hxx"
 
 namespace rqdq {
+namespace {
+
+
+
+}  // close unnamed namespace
+
 namespace rglv {
 
 using rmlv::vec3;
@@ -20,123 +25,130 @@ using std::cout;
 using std::endl;
 using rclr::len;
 
+							// --------------
+							// class Material
+							// --------------
 
-void Mesh::print() const {
-	cout << "mesh[" << this->name << "]:" << endl;
-	cout << "  vert(" << len(this->points) << "), normal(" << this->normals.size() << "), uv(" << this->texcoords.size() << ")" << endl;
-	cout << "  faces(" << len(this->faces) << ")" << endl; }
+void Material::Print() const {
+	std::cout << "material[" << name << "]:" << std::endl;
+	std::cout << "  ka" << ka << ", ";
+	std::cout << "kd" << kd << ", ";
+	std::cout << "ks" << ks << std::endl;
+	std::cout << "  specpow(" << specpow << "), density(" << d << ")" << std::endl;
+	std::cout << "  texture[" << imagename << "]" << std::endl; }
 
 
-void Mesh::compute_bbox() {
+							// ----------
+							// class Mesh
+							// ----------
 
-	vec3 pmin = this->points[0];
+void Mesh::Print() const {
+	cout << "mesh[" << name_ << "]:" << endl;
+	cout << "  vert(" << len(position_) << "), normal(" << normal_.size() << "), uv(" << texture_.size() << ")" << endl;
+	cout << "  faces(" << len(face_) << ")" << endl; }
+
+
+void Mesh::ComputeBBox() {
+
+	vec3 pmin = position_[0];
 	vec3 pmax = pmin;
-	for (auto& item : this->points) {
-		pmin = vmin(pmin, item);
-		pmax = vmax(pmax, item); }
+	for (const auto& p : position_) {
+		pmin = vmin(pmin, p);
+		pmax = vmax(pmax, p); }
 
-	bbox[0] = { pmin.x, pmin.y, pmin.z, 1 };
-	bbox[1] = { pmin.x, pmin.y, pmax.z, 1 };
-	bbox[2] = { pmin.x, pmax.y, pmin.z, 1 };
-	bbox[3] = { pmin.x, pmax.y, pmax.z, 1 };
-	bbox[4] = { pmax.x, pmin.y, pmin.z, 1 };
-	bbox[5] = { pmax.x, pmin.y, pmax.z, 1 };
-	bbox[6] = { pmax.x, pmax.y, pmin.z, 1 };
-	bbox[7] = { pmax.x, pmax.y, pmax.z, 1 }; }
-
-
-void Mesh::compute_face_and_vertex_normals() {
-
-	vertex_normals.clear();
-	for (int i = 0; i < len(points); i++) {
-		vertex_normals.push_back(vec3{ 0 }); }
-
-	for (auto& face : faces) {
-		vec3 v0v2 = points[face.point_idx[2]] - points[face.point_idx[0]];
-		vec3 v0v1 = points[face.point_idx[1]] - points[face.point_idx[0]];
-		vec3 dir = cross(v0v1, v0v2);
-		face.normal = normalize(dir);
-
-		vertex_normals[face.point_idx[0]] += dir;
-		vertex_normals[face.point_idx[1]] += dir;
-		vertex_normals[face.point_idx[2]] += dir; }
-
-	for (auto& vn : vertex_normals) {
-		vn = normalize(vn); }}
+	aabb_[0] = { pmin.x, pmin.y, pmin.z, 1 };
+	aabb_[1] = { pmin.x, pmin.y, pmax.z, 1 };
+	aabb_[2] = { pmin.x, pmax.y, pmin.z, 1 };
+	aabb_[3] = { pmin.x, pmax.y, pmax.z, 1 };
+	aabb_[4] = { pmax.x, pmin.y, pmin.z, 1 };
+	aabb_[5] = { pmax.x, pmin.y, pmax.z, 1 };
+	aabb_[6] = { pmax.x, pmax.y, pmin.z, 1 };
+	aabb_[7] = { pmax.x, pmax.y, pmax.z, 1 }; }
 
 
-struct _edgedata {
-	int first_face_id;
-	int second_face_id;
-	int edge_id; };
+void Mesh::ComputeFaceAndVertexNormals() {
+
+	smoothNormal_.clear();
+	smoothNormal_.resize(position_.size(), vec3{0.0F});
+
+	for (auto& f : face_) {
+		const auto i0 = f.idx.position[0];
+		const auto i1 = f.idx.position[1];
+		const auto i2 = f.idx.position[2];
+
+		const auto v0v2 = position_[i2] - position_[i0];
+		const auto v0v1 = position_[i1] - position_[i0];
+		const auto dir = cross(v0v1, v0v2);
+		f.normal = normalize(dir);
+
+		smoothNormal_[i0] += dir;
+		smoothNormal_[i1] += dir;
+		smoothNormal_[i2] += dir; }
+
+	for (auto& n : smoothNormal_) {
+		n = normalize(n); }}
 
 
-int make_edge_key(const int vidx1, const int vidx2) {
-	int first, second;
-	if (vidx1 < vidx2) {
-		first = vidx1;
-		second = vidx2; }
-	else {
-		first = vidx2;
-		second = vidx1; }
-	return (first << 16) | second; }
+void Mesh::ComputeEdges() {
+	struct _edgedata { int f1, f2, id; };
+	std::unordered_map<int, _edgedata> edges;
 
+	auto make_edge_key = [](int v1, int v2) -> int {
+		if (v1 > v2) {
+			std::swap(v1, v2); }
+		return (v1 << 16) | v2; };
 
-void Mesh::compute_edges() {
+	int seq = 0;
+	auto generate_edge_id = [&]() { return seq++; };
 
-	std::map<int, _edgedata> edges;
-	int edge_id_seq = 0;
-	auto generate_edge_id = [&]() {
-		return edge_id_seq++;
-	};
-
-	solid = true;
+	solid_ = true;
 
 	/*
 	 * pass 1
 	 * create a table of unique edges, and the two faces that share them
 	 */
-	for (int face_idx = 0; face_idx < len(faces); face_idx += 1) {
-		Face& face = faces[face_idx];
-		for (int vertex_idx = 0; vertex_idx < 3; vertex_idx += 1) {
-			const int next_vertex_idx = (vertex_idx + 1) % 3;
-			const int edgekey = make_edge_key(face.point_idx[vertex_idx],
-												   face.point_idx[next_vertex_idx]);
-			if (edges.count(edgekey) == 0) {
+	for (int fi=0; fi<len(face_); ++fi) {
+		Face& face = face_[fi];
+		for (int vi=0; vi<3; ++vi) {
+			const int nextVi = (vi+1) % 3;
+			const int edgeKey = make_edge_key(face.idx.position[vi],
+			                                  face.idx.position[nextVi]);
+			if (auto existing = edges.find(edgeKey); existing == end(edges)) {
 				// first time this edge has been seen
-				int this_edge_id = generate_edge_id();
-				face.edge_ids[vertex_idx] = this_edge_id;
-				edges[edgekey] = _edgedata{ face_idx, -1, this_edge_id }; }
+				const int eid = generate_edge_id();
+				face.edge[vi] = eid;
+				edges[edgeKey] = _edgedata{ fi, -1, eid }; }
 			else {
 				// second time this edge has been seen
-				if (edges[edgekey].second_face_id != -1) {
+				auto& edge = existing->second;
+				if (edge.f2 != -1) {
 					// oops, we saw it more than twice
-					solid = false;
-					message = "edge over shared";
+					solid_ = false;
+					message_ = "edge over-shared";
 					return; }
-				edges[edgekey].second_face_id = face_idx;
-				face.edge_ids[vertex_idx] = edges[edgekey].edge_id; }}}
+				edge.f2 = fi;
+				face.edge[vi] = edge.id; }}}
 
 	/*
 	 * pass 2
 	 * update each face to include the adjacent face for each edge
 	 */
-	for (int face_idx = 0; face_idx < len(faces); face_idx += 1) {
-		auto& face = faces[face_idx];
-		for (int vertex_idx=0; vertex_idx<3; vertex_idx++) {
-			const int next_vertex_idx = (vertex_idx + 1) % 3;
-			const int edgekey = make_edge_key(face.point_idx[vertex_idx],
-												   face.point_idx[next_vertex_idx]);
-			auto& edge = edges[edgekey];
-			if (edge.second_face_id == -1) {
+	for (int fi=0; fi<len(face_); ++fi) {
+		auto& face = face_[fi];
+		for (int vi=0; vi<3; ++vi) {
+			const int nextVi = (vi+1) % 3;
+			const int edgeKey = make_edge_key(face.idx.position[vi],
+			                                  face.idx.position[nextVi]);
+			auto& edge = edges[edgeKey];
+			if (edge.f2 == -1) {
 				// oops, this edge has no adjacent face
-				solid = false;
-				message = "open edge";
+				solid_ = false;
+				message_ = "open edge";
 				return; }
 
 			// my neighbor is the face_id that isn't myself
-			const int adjacent_face_id = edge.first_face_id == face_idx ? edge.second_face_id : edge.first_face_id;
-			face.edge_faces[vertex_idx] = adjacent_face_id; }}
+			const int adjacent_fid = edge.f1 == fi ? edge.f2 : edge.f1;
+			face.adjacent[vi] = adjacent_fid; }}
 
 	/*
 	pass 3
@@ -170,70 +182,118 @@ void Mesh::compute_edges() {
 }
 
 
-std::tuple<VertexArray_F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3(const Mesh& m) {
-	VertexArray_F3F3 vao;
+// FREE FUNCTIONS
+
+void MakeArray(const Mesh& m, const std::string& spec, VertexArray_F3F3& buffer, rcls::vector<uint16_t>& idx) {
 	using vertexdata = std::tuple<vec3, vec3>;
 	std::unordered_map<vertexdata, int> vertexMap;
-	rcls::vector<uint16_t> idx;
 
-	for (const auto& face : m.faces) {
+	for (const auto& face : m.face_) {
+		const auto& material = m.material_[face.frontMaterial];
 		for (int i = 0; i < 3; i++) {
-			auto d0 = m.points[face.point_idx[i]];
-			// auto normal = m.normals[face.normal_idx[i]];
-			auto smooth = m.vertex_normals[face.point_idx[i]];
-			auto faceted = face.normal;
-			auto d1 = normalize(mix(smooth, faceted, 0.666));
-			// auto texcoord = m.texcoords[face.texcoord_idx[i]];
+			vec3 d[2];
 
-			auto key = vertexdata{d0, d1};
+			for (int ti = 0; ti < 2; ++ti) {
+				vec3& dd = d[ti];
+				switch (spec[ti]) {
+				case 'P':
+					dd = m.position_[face.idx.position[i]];
+					break;
+				case 'N':
+					dd = m.normal_[face.idx.normal[i]];
+					break;
+				case 'T':
+					dd = vec3{ m.texture_[face.idx.texture[i]], 0 };
+					break;
+				case 'F':
+					dd = face.normal;
+					break;
+				case 'A':
+					dd = material.ka;
+					break;
+				case 'D':
+					dd = material.kd;
+					break;
+				case 'S':
+					dd = material.ks;
+					break;
+
+				case 'c':
+					dd = m.smoothNormal_[face.idx.position[i]];
+					break;
+				case 'b': {
+					const auto& faceted = face.normal;
+					const auto& smooth = m.smoothNormal_[face.idx.position[i]];
+					dd = normalize(mix(smooth, faceted, 0.666F)); }
+					break;
+				default:
+					throw std::runtime_error(std::string{"unknown spec "} + spec[ti]); } }
+
+			auto key = vertexdata{ d[0], d[1] };
 			int vertexIdx;
 			if (auto found = vertexMap.find(key); found != vertexMap.end()) {
 				vertexIdx = found->second; }
 			else {
-				vertexIdx = vertexMap[key] = vao.append(d0, d1); }
+				vertexIdx = vertexMap[key] = buffer.append(d[0], d[1]); }
 			idx.push_back(vertexIdx); }}
 
-	vao.pad();
-	return std::tuple{vao, idx}; }
+	buffer.pad(); }
 
 
-std::tuple<VertexArray_F3F3F3, rcls::vector<uint16_t>> make_indexed_vao_F3F3F3(const Mesh& m) {
-	VertexArray_F3F3F3 vao;
+void MakeArray(const Mesh& m, const std::string& spec, VertexArray_F3F3F3& buffer, rcls::vector<uint16_t>& idx) {
 	using vertexdata = std::tuple<vec3, vec3, vec3>;
 	std::unordered_map<vertexdata, int> vertexMap;
-	rcls::vector<uint16_t> idx;
 
-	for (const auto& face : m.faces) {
+	for (const auto& face : m.face_) {
+		const auto& material = m.material_[face.frontMaterial];
 		for (int i = 0; i < 3; i++) {
-			// position
-			auto d0 = m.points[face.point_idx[i]];
-			// computed smooth normals
-			auto d1 = m.vertex_normals[face.point_idx[i]];
-			// computed face normals
-			auto d2 = vec3{ m.texcoords[face.texcoord_idx[i]], 0 };
-			// auto d2 = vec3{ 0.0F, i*0.5F, 0.4F }; //vec3{ m.texcoords[face.texcoord_idx[i]], 0 };
+			vec3 d[3];
 
-			//face.normal;
+			for (int ti = 0; ti < 3; ++ti) {
+				vec3& dd = d[ti];
+				switch (spec[ti]) {
+				case 'P':
+					dd = m.position_[face.idx.position[i]];
+					break;
+				case 'N':
+					dd = m.normal_[face.idx.normal[i]];
+					break;
+				case 'T':
+					dd = vec3{ m.texture_[face.idx.texture[i]], 0 };
+					break;
+				case 'F':
+					dd = face.normal;
+					break;
+				case 'A':
+					dd = material.ka;
+					break;
+				case 'D':
+					dd = material.kd;
+					break;
+				case 'S':
+					dd = material.ks;
+					break;
 
-			// blended normals
-			// normalize(mix(smooth, faceted, 0.666)),
+				case 'c':
+					dd = m.smoothNormal_[face.idx.position[i]];
+					break;
+				case 'b': {
+					const auto& faceted = face.normal;
+					const auto& smooth = m.smoothNormal_[face.idx.position[i]];
+					dd = normalize(mix(smooth, faceted, 0.666F)); }
+					break;
+				default:
+					throw std::runtime_error(std::string{"unknown spec "} + spec[ti]); } }
 
-			// obj normals
-			// m.normals[face.normal_idx[i]],
-
-			// obj texture coords
-			// vec3{ m.texcoords[face.texcoord_idx[i]], 0 },
-
-			vertexdata key{ d0, d1, d2 };
+			vertexdata key{ d[0], d[1], d[2] };
 			int vertexIdx;
 			if (auto found = vertexMap.find(key); found != vertexMap.end()) {
 				vertexIdx = found->second; }
 			else {
-				vertexIdx = vertexMap[key] = vao.append(d0, d1, d2); }
+				vertexIdx = vertexMap[key] = buffer.append(d[0], d[1], d[2]); }
 			idx.push_back(vertexIdx); }}
 
-	vao.pad();
-	return std::tuple{vao, idx}; }
+	buffer.pad(); }
 
 
 }  // namespace rglv

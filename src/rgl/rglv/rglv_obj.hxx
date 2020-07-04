@@ -6,9 +6,9 @@ namespace rqdq {
 namespace rglv {
 
 struct Mesh;
-struct MaterialStore;
+class MaterialStore;
 
-std::tuple<Mesh, MaterialStore> loadOBJ(const std::string& prepend, const std::string& fn);
+auto LoadOBJ(const std::string& prepend, const std::string& fn) -> Mesh;
 
 
 }  // namespace rglv

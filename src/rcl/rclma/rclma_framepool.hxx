@@ -4,10 +4,10 @@ namespace rqdq {
 namespace rclma {
 
 namespace framepool {
-	void Init();
-	void Reset();
-	void* Allocate(int /*amt*/);
 
+void Init();
+void Reset();
+auto Allocate(int /*amt*/) -> void*;
 
 }  // namespace framepool
 

@@ -140,7 +140,7 @@ class Application::impl : public PixelToaster::Listener {
 public:
 	void Run() {
 		textureStore_.load_dir("data\\textures\\");
-		meshStore_.load_dir("data\\meshes\\", materialStore_, textureStore_);
+		meshStore_.LoadDir("data\\meshes\\");
 
 		PrepareBuiltInNodes();
 
@@ -578,7 +578,6 @@ private:
 
 	PixelToaster::Display display_;
 	rglv::MeshStore meshStore_;
-	MaterialStore materialStore_;
 	TextureStore textureStore_;
 	ProPrinter pp_;
 	rcls::SmoothedIntervalTimer refreshTime_;

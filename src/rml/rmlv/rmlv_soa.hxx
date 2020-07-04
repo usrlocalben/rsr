@@ -106,6 +106,11 @@ struct qfloat3 {
 	inline vec3 lane(const int li) {
 		return vec3{ x.lane[li], y.lane[li], z.lane[li] }; }
 
+	inline void setLane(const int li, const vec3 a) {
+		x.lane[li] = a.x;
+		y.lane[li] = a.y;
+		z.lane[li] = a.z; }
+
 	inline qfloat2 xy() const { return{ x, y }; }
 
 	union {
@@ -128,6 +133,7 @@ struct qfloat4 {
 
 	inline qfloat4& operator+=(const qfloat4& rhs) { x += rhs.x; y += rhs.y; z += rhs.z; w += rhs.w; return *this; }
 	inline qfloat4 operator*(const qfloat4& rhs) const { return { x*rhs.x, y*rhs.y, z*rhs.z, w*rhs.w }; }
+	inline qfloat4 operator-(const qfloat4& rhs) const { return { x-rhs.x, y-rhs.y, z-rhs.z, w-rhs.z }; }
 
 	inline qfloat2 xy() const { return{ x, y }; }
 	inline qfloat3 xyz() const { return{ x, y, z }; }
@@ -169,6 +175,12 @@ inline qfloat2 sqrt(qfloat2 a) { return{ sqrt(a.x), sqrt(a.y) }; }
 inline qfloat3 sqrt(qfloat3 a) { return{ sqrt(a.x), sqrt(a.y), sqrt(a.z) }; }
 inline qfloat4 sqrt(qfloat4 a) { return{ sqrt(a.x), sqrt(a.y), sqrt(a.z), sqrt(a.w) }; }
 
+// rsqrt
+/*
+inline qfloat2 rsqrt(qfloat2 a) { return{ rsqrt(a.x), rsqrt(a.y) }; }
+inline qfloat3 rsqrt(qfloat3 a) { return{ rsqrt(a.x), rsqrt(a.y), rsqrt(a.z) }; }
+inline qfloat4 rsqrt(qfloat4 a) { return{ rsqrt(a.x), rsqrt(a.y), rsqrt(a.z), rsqrt(a.w) }; }
+*/
 
 // dot
 inline qfloat dot(const qfloat2& a, const qfloat2& b) { return a.x*b.x + a.y*b.y; }

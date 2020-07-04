@@ -5,24 +5,26 @@
 namespace rqdq {
 namespace rclmt {
 
-Barrier::Barrier(int numThreads)
-	:d_numThreads(numThreads), d_numThreadsStillActive(numThreads) {
+Barrier::Barrier(int numThreads) :
+	concurrencyInThreads_(numThreads),
+	activityInThreads_(numThreads) {
 	assert(numThreads > 0); }
 
 
-bool Barrier::Join() {
-	std::unique_lock<std::mutex> lock(d_mutex);
-	auto gen = d_generation;
-	if (--d_numThreadsStillActive == 0) {
-		d_generation++;
-		d_numThreadsStillActive = d_numThreads;
-		d_condition.notify_all();
+auto Barrier::Join() -> bool {
+	std::unique_lock lock(mutex_);
+	const auto thisGeneration = generation_;
+	if (--activityInThreads_ == 0) {
+		// last thread to join, reset
+		++generation_;
+		activityInThreads_ = concurrencyInThreads_;
+		condition_.notify_all();
 		return true; }
-
-	while (gen == d_generation) {
-		d_condition.wait(lock); }
-
-	return false; }
+	else {
+		// spin until others join
+		while (generation_ == thisGeneration) {
+			condition_.wait(lock); }
+		return false; }}
 
 
 }  // namespace rclmt

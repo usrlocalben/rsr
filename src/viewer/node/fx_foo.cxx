@@ -23,7 +23,7 @@ class Impl final : public IGl {
 public:
 	Impl(std::string_view id, InputList inputs, const rglv::Mesh& mesh)
 		:IGl(id, std::move(inputs)) {
-		std::tie(meshVAO_, meshIndices_) = rglv::make_indexed_vao_F3F3F3(mesh); }
+		rglv::MakeArray(mesh, "PND", meshVAO_, meshIndices_); }
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "material") {

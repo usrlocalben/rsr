@@ -12,18 +12,17 @@ namespace rqdq {
 namespace rglv {
 
 class MeshStore {
+	std::vector<Mesh> store_;
+
 public:
-	const Mesh& get(std::string_view name) const {
-		for (const auto& mesh : store) {
-			if (mesh.name == name) {
+	auto get(std::string_view name) const -> const Mesh& {
+		for (const auto& mesh : store_) {
+			if (mesh.name_ == name) {
 				return mesh; }}
 		throw std::exception("mesh not found"); }
 
-	void print() const;
-	void load_dir(const std::string& prefix, rglv::MaterialStore& materialstore, rglr::TextureStore& texturestore);
-
-private:
-	rcls::vector<Mesh> store; };
+	void Print() const;
+	void LoadDir(const std::string& prefix); };
 
 
 }  // namespace rglv

@@ -31,9 +31,7 @@ public:
 		using rmlm::mat4;
 		using std::cout;
 
-		auto [tmpVBO, tmpIdx] = make_indexed_vao_F3F3F3(mesh);
-		vbo_ = tmpVBO;
-		meshIndices_ = tmpIdx;
+		rglv::MakeArray(mesh, "PNT", vbo_, meshIndices_);
 
 		float radius = 50.0F;
 		float offset =  5.0F;
