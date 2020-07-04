@@ -322,9 +322,17 @@ namespace PixelToaster
 			if (scale < 0.0f) {
 				auto dc = GetDC(nullptr);
 				auto screen_dpi = GetDeviceCaps(dc, LOGPIXELSX);
-				// std::cout << "desktop logpixelx " << screen_dpi << std::endl;
+				// std::cerr << "desktop logpixelx " << screen_dpi << std::endl;
 				ReleaseDC(nullptr, dc);
-				scale = float(screen_dpi) / 96.0f;
+				// std::cerr << "screen_dpi = " << screen_dpi << std::endl;
+				if (screen_dpi == 96) {
+					scale = 1.0F;
+				}
+				else if (screen_dpi == 192) {
+					scale = 2.0F;
+				} else {
+					scale = screen_dpi / 96.0F;
+				}
 			}
 
 			// get current window rect and calculate current window center
@@ -432,8 +440,41 @@ namespace PixelToaster
 		void center_mouse()
 		{
 			POINT pt;
-			pt.x = width / 2;
-			pt.y = height / 2;
+
+			int realWidth, realHeight;
+			if (zoomLevel == ZOOM_ORIGINAL)
+			{
+				realWidth = width;
+				realHeight = height;
+			}
+			else if (zoomLevel == ZOOM_2X) {
+				realWidth = width * 2;
+				realHeight = height * 2;
+			}
+			else if (zoomLevel == ZOOM_4X) {
+				realWidth = width * 4;
+				realHeight = height * 4;
+			}
+			else if (zoomLevel == ZOOM_8X) {
+				realWidth = width * 8;
+				realHeight = height * 8;
+			}
+			else {
+				auto dc = GetDC(nullptr);
+				auto screen_dpi = GetDeviceCaps(dc, LOGPIXELSX);
+				ReleaseDC(nullptr, dc);
+				realWidth = width * screen_dpi / 96;
+				realHeight = height * screen_dpi / 96;
+			}
+
+			pt.x = realWidth / 2;
+			pt.y = realHeight / 2;
+
+			/*RECT rect;
+			GetWindowRect( window, &rect );
+			pt.x = (rect.right - rect.left) / 2;
+			pt.y = (rect.bottom - rect.top) / 2;
+			std::cerr << "centering: x " << pt.x << ", y " << pt.y << "\n";*/
 
 			if (mode == Fullscreen && active)
 			{
@@ -796,6 +837,21 @@ namespace PixelToaster
 					}
 					mouse.x = (float) GET_X_LPARAM( lParam );
 					mouse.y = (float) GET_Y_LPARAM( lParam );
+					if (zoomLevel == ZOOM_ORIGINAL) {
+						// nothing
+					}
+					else if (zoomLevel == ZOOM_2X) {
+						mouse.x *= 0.5F;
+						mouse.y *= 0.5F;
+					}
+					else {
+						RECT rect;
+						GetClientRect( window, &rect );
+						float widthRatio = float(width) / ( rect.right - rect.left );
+						float heightRatio = float(height) / (rect.bottom - rect.top );
+						mouse.x *= widthRatio;
+						mouse.y *= heightRatio;
+					}
 					if ( _listener )
 						_listener->onMouseMove( display->wrapper() ? *display->wrapper() : *display, mouse );
 				}
