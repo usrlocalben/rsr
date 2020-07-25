@@ -137,6 +137,65 @@ struct SyncConfigSerializer {
 
 
 class Application::impl : public PixelToaster::Listener {
+
+	PixelToaster::Display display_;
+	rglv::MeshStore meshStore_;
+	TextureStore textureStore_;
+	ProPrinter pp_;
+	rcls::SmoothedIntervalTimer refreshTime_;
+	rcls::SmoothedIntervalTimer renderTime_;
+	PixelToaster::Timer wallClock_;
+
+	// BEGIN debugger state
+	bool shouldQuit_ = false;
+	int runtimeInFrames_{ 0 };
+	int taskSize_ = 6;
+	ivec2 tile_dim{ 12, 4 };
+
+	int vis_scale = 30;
+	bool debug_mode = true;
+	bool show_shader_threads = false;
+	bool isPaused_ = false;
+	bool runFullScreen_ = false;
+	bool nice_ = true;
+
+	bool mouseCaptured_ = false;
+	bool reset_mouse_next_frame = false;
+	rmlv::vec2 mousePositionInPx_{};
+
+	bool measuring = false;
+	bool start_measuring = false;
+	bool scanning = false;
+	bool start_scanning = false;
+	bool stop_scanning = false;
+	double scan_min_value;
+	ivec2 scan_min_dim;
+
+	std::vector<double> measurementSamples_;
+	BenchStat last_stats;
+	bool show_stats = false;
+	DisplayMode cur_mode{ 0, 0 };
+	DisplayMode change_mode = modelist[3];
+	bool runningFullScreen_ = false;
+	bool show_mode_list = false;
+	bool keys_shifted = false;
+
+	HandyCam camera_;
+	// END debugger state
+
+	// current scene and built-in nodes
+	NodeList nodes_;
+	NodeList appNodes_;
+	std::shared_ptr<MultiValueNode> globalsNode_;
+	std::shared_ptr<MultiValueNode> syncNode_;
+	std::shared_ptr<UICamera> uiCameraNode_;
+
+#ifdef ENABLE_MUSIC
+	// music/sync
+	Soundtrack soundtrack_;
+	SyncConfig syncConfig_;
+#endif
+
 public:
 	void Run() {
 		textureStore_.load_dir("data\\textures\\");
@@ -574,66 +633,7 @@ private:
 			std::cerr << "link failed, scene not updated!\n"; }
 		else {
 			std::cerr << "compile failed, scene not updated!\n"; }
-		return false; }
-
-	PixelToaster::Display display_;
-	rglv::MeshStore meshStore_;
-	TextureStore textureStore_;
-	ProPrinter pp_;
-	rcls::SmoothedIntervalTimer refreshTime_;
-	rcls::SmoothedIntervalTimer renderTime_;
-	PixelToaster::Timer wallClock_;
-
-	// BEGIN debugger state
-	bool shouldQuit_ = false;
-	int runtimeInFrames_{ 0 };
-	int taskSize_ = 6;
-	ivec2 tile_dim{ 12, 4 };
-
-	int vis_scale = 30;
-	bool debug_mode = true;
-	bool show_shader_threads = false;
-	bool isPaused_ = false;
-	bool runFullScreen_ = false;
-	bool nice_ = true;
-
-	bool mouseCaptured_ = false;
-	bool reset_mouse_next_frame = false;
-	rmlv::vec2 mousePositionInPx_{};
-
-	bool measuring = false;
-	bool start_measuring = false;
-	bool scanning = false;
-	bool start_scanning = false;
-	bool stop_scanning = false;
-	double scan_min_value;
-	ivec2 scan_min_dim;
-
-	std::vector<double> measurementSamples_;
-	BenchStat last_stats;
-	bool show_stats = false;
-	DisplayMode cur_mode{ 0, 0 };
-	DisplayMode change_mode = modelist[3];
-	bool runningFullScreen_ = false;
-	bool show_mode_list = false;
-	bool keys_shifted = false;
-
-	HandyCam camera_;
-	// END debugger state
-
-	// current scene and built-in nodes
-	NodeList nodes_;
-	NodeList appNodes_;
-	std::shared_ptr<MultiValueNode> globalsNode_;
-	std::shared_ptr<MultiValueNode> syncNode_;
-	std::shared_ptr<UICamera> uiCameraNode_;
-
-#ifdef ENABLE_MUSIC
-	// music/sync
-	Soundtrack soundtrack_;
-	SyncConfig syncConfig_;
-#endif
-	};
+		return false; } };
 
 
 Application::Application() :impl_(std::make_unique<impl>()) {}

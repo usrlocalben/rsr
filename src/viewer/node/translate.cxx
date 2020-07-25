@@ -23,12 +23,9 @@ constexpr int kForkUntilDepth = 100;
 
 class RepeatOp final : public IGl {
 public:
-	RepeatOp(std::string_view id, InputList inputs, int cnt, rmlv::vec3 translate, rmlv::vec3 rotate, rmlv::vec3 scale)
+	RepeatOp(std::string_view id, InputList inputs, int cnt)
 		:IGl(id, std::move(inputs)),
-		cnt_(cnt),
-		translateFixed_(translate),
-		rotateFixed_(rotate),
-		scaleFixed_(scale) {}
+		cnt_(cnt) {}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "gl") {
@@ -77,13 +74,13 @@ public:
 		namespace jobsys = rclmt::jobsys;
 		namespace framepool = rclma::framepool;
 
-		auto translate = translateFixed_;
+		auto translate = rmlv::vec3{0,0,0};
 		if (translateNode_ != nullptr) {
 			translate = translateNode_->Eval(translateSlot_).as_vec3(); }
-		auto rotate = rotateFixed_;
+		auto rotate = rmlv::vec3{0,0,0};
 		if (rotateNode_ != nullptr) {
 			rotate = rotateNode_->Eval(rotateSlot_).as_vec3(); }
-		auto scale = scaleFixed_;
+		auto scale = rmlv::vec3{1,1,1};
 		if (scaleNode_ != nullptr) {
 			scale = scaleNode_->Eval(scaleSlot_).as_vec3(); }
 
@@ -97,7 +94,7 @@ public:
 		auto& counter = *reinterpret_cast<std::atomic<int>*>(framepool::Allocate(sizeof(std::atomic<int>)));
 		counter = cnt_;
 		for (int i = 0; i < cnt_; i++) {
-			if (depth < kForkUntilDepth) {
+			if (false) { //depth < kForkUntilDepth) {
 				mat4& M = *reinterpret_cast<mat4*>(framepool::Allocate(64));
 				M = *mvmat  * mat4::rotate(r.x * M_PI * 2, 1, 0, 0);
 				M = M * mat4::rotate(r.y * M_PI * 2, 0, 1, 0);
@@ -136,9 +133,9 @@ public:
 private:
 	// config
 	int cnt_;
-	rmlv::vec3 translateFixed_{};
+	/*rmlv::vec3 translateFixed_{};
 	rmlv::vec3 rotateFixed_{};
-	rmlv::vec3 scaleFixed_{};
+	rmlv::vec3 scaleFixed_{};*/
 
 	// input
 	IGl *lowerNode_{nullptr};
@@ -221,6 +218,9 @@ public:
 		M = M * mat4::translate(translate);
 		lowerNode_->Draw(dc, pmat, &M, link, depth); }
 
+/*	auto GetLights(const rmlm::mat4* mvmat) -> rcls::vector<Light> override {
+		return lowerNode_->GetLights(); }*/
+
 private:
 	IGl *lowerNode_{nullptr};
 	std::string scaleSlot_{"default"};
@@ -263,27 +263,13 @@ class RepeatCompiler final : public NodeCompiler {
 	void Build() override {
 		using namespace rclx;
 		int many{1};
-		std::map<std::string, rmlv::vec3> slotValues = {
-			{"translate", rmlv::vec3{0,0,0}},
-			{"rotate", rmlv::vec3{0,0,0}},
-			{"scale", rmlv::vec3{1,1,1}},
-			};
-		for (const auto& slot_name : { "translate", "rotate", "scale" }) {
-			if (auto jv = jv_find(data_, slot_name)) {
-				auto value = jv_decode_ref_or_vec3(*jv);
-				if (auto ptr = std::get_if<std::string>(&value)) {
-					inputs_.emplace_back(slot_name, *ptr); }
-				else if (auto ptr = std::get_if<rmlv::vec3>(&value)) {
-					slotValues[slot_name] = *ptr; } } }
+		if (!Input("rotate", /*required=*/false)) { return; }
+		if (!Input("scale", /*required=*/false)) { return; }
+		if (!Input("translate", /*required=*/false)) { return; }
+		if (!Input("gl", /*required=*/true)) { return; }
 		if (auto jv = jv_find(data_, "many", JSON_NUMBER)) {
 			many = static_cast<int>(jv->toNumber()); }
-		if (auto jv = jv_find(data_, "gl", JSON_STRING)) {
-			inputs_.emplace_back("gl", jv->toString()); }
-		out_ = std::make_shared<RepeatOp>(id_, std::move(inputs_),
-		                                  many,
-		                                  slotValues["translate"],
-		                                  slotValues["rotate"],
-		                                  slotValues["scale"]); }};
+		out_ = std::make_shared<RepeatOp>(id_, std::move(inputs_), many); }};
 
 
 struct init { init() {

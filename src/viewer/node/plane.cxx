@@ -25,6 +25,24 @@ namespace {
 using namespace rqv;
 
 class Impl final : public IGl {
+	int activeBuffer_{0};
+	std::array<rglv::VertexArray_F3F3F3, 3> buffers_;
+	rcls::vector<uint16_t> meshIdx_;
+
+	// connections
+	IMaterial* materialNode_{nullptr};
+	/*IValue* leftTopNode_{nullptr};
+	std::string leftTopSlot_{};
+	IValue* rightBottomNode_{nullptr};
+	std::string rightBottomSlot_{};
+	IValue* zNode_{nullptr};
+	std::string zSlot_{};*/
+
+	// config
+	// rmlv::vec2 leftTop_;
+	// rmlv::vec2 rightBottom_;
+	// float z_;
+
 public:
 	using IGl::IGl;
 
@@ -35,34 +53,10 @@ public:
 				TYPE_ERROR(IMaterial);
 				return false; }
 			return true; }
-		if (attr == "leftTop") {
-			leftTopNode_ = dynamic_cast<IValue*>(other);
-			leftTopSlot_ = slot;
-			if (leftTopNode_ == nullptr) {
-				TYPE_ERROR(IValue);
-				return false; }
-			return true; }
-		if (attr == "rightBottom") {
-			rightBottomNode_ = dynamic_cast<IValue*>(other);
-			rightBottomSlot_ = slot;
-			if (rightBottomNode_ == nullptr) {
-				TYPE_ERROR(IValue);
-				return false; }
-			return true; }
-		if (attr == "z") {
-			zNode_ = dynamic_cast<IValue*>(other);
-			zSlot_ = slot;
-			if (zNode_ == nullptr) {
-				TYPE_ERROR(IValue);
-				return false; }
-			return true; }
 		return IGl::Connect(attr, other, slot); }
 
 	void AddDeps() override {
-		AddDep(materialNode_);
-		AddDep(leftTopNode_);
-		AddDep(rightBottomNode_);
-		AddDep(zNode_); }
+		AddDep(materialNode_); }
 
 	void Reset() override {
 		activeBuffer_ = (activeBuffer_+1)%3;
@@ -74,9 +68,9 @@ public:
 		auto& vao = buffers_[activeBuffer_];
 		vao.clear();
 
-		rmlv::vec2 leftTop = leftTopNode_ != nullptr ? leftTopNode_->Eval(leftTopSlot_).as_vec2() : leftTop_;
-		rmlv::vec2 rightBottom = rightBottomNode_ != nullptr ? rightBottomNode_->Eval(rightBottomSlot_).as_vec2() : rightBottom_;
-		float z = zNode_ != nullptr ? zNode_->Eval(zSlot_).as_float() : z_;
+		rmlv::vec2 leftTop{ -0.5F, 0.5F }; // = leftTopNode_ != nullptr ? leftTopNode_->Eval(leftTopSlot_).as_vec2() : leftTop_;
+		rmlv::vec2 rightBottom{ 0.5F, -0.5F }; //  = rightBottomNode_ != nullptr ? rightBottomNode_->Eval(rightBottomSlot_).as_vec2() : rightBottom_;
+		float z = 0.0F; //zNode_ != nullptr ? zNode_->Eval(zSlot_).as_float() : z_;
 
 		vec3 pul{ leftTop.x, leftTop.y, z };     vec3 pur{ rightBottom.x, leftTop.y, z };
 		vec3 tul{ 0.0F, 1.0F, 0 };               vec3 tur{ 1.0F, 1.0F, 0 };
@@ -117,34 +111,15 @@ public:
 		dc.UseBuffer(0, buffers_[activeBuffer_]);
 		dc.DrawArrays(GL_TRIANGLES, 0, 6);
 		if (link != nullptr) {
-			rclmt::jobsys::run(link); } }
-
-private:
-	int activeBuffer_{0};
-	std::array<rglv::VertexArray_F3F3F3, 3> buffers_;
-	rcls::vector<uint16_t> meshIdx_;
-
-	// connections
-	IMaterial* materialNode_{nullptr};
-	IValue* leftTopNode_{nullptr};
-	std::string leftTopSlot_{};
-	IValue* rightBottomNode_{nullptr};
-	std::string rightBottomSlot_{};
-	IValue* zNode_{nullptr};
-	std::string zSlot_{};
-
-	// config
-	rmlv::vec2 leftTop_;
-	rmlv::vec2 rightBottom_;
-	float z_; };
+			rclmt::jobsys::run(link); } }};
 
 
 class Compiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("material", /*required=*/true)) { return; }
-		if (!Input("leftTop", /*required=*/true)) { return; }
-		if (!Input("rightBottom", /*required=*/true)) { return; }
-		if (!Input("z", /*required=*/true)) { return; }
+		// if (!Input("leftTop", /*required=*/true)) { return; }
+		// if (!Input("rightBottom", /*required=*/true)) { return; }
+		// if (!Input("z", /*required=*/true)) { return; }
 
 		/*vec2 leftTop{ -1.0F, 1.0F };
 		vec2 rightBottom{ 1.0F, -1.0F };
@@ -154,7 +129,7 @@ class Compiler final : public NodeCompiler {
 
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$fxXYQuad", [](){ return std::make_unique<Compiler>(); });
+	NodeRegistry::GetInstance().Register("$plane", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

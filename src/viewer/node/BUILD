@@ -111,8 +111,8 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
-    name = "fx_xyquad",
-    srcs = ["fx_xyquad.cxx"],
+    name = "plane",
+    srcs = ["plane.cxx"],
     deps = [
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rcls:aligned_containers",

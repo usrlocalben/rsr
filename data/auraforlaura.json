@@ -4,17 +4,13 @@
 		"program": "Default",
 		"gpu": {"$gpu": {
 			"targetSize": "globals:windowSize",
-			"layers": ["lAmy", "lEffects", "nPIPLayer"]
+			"layers": ["lAmy", "lEffects"]
 		}}}},
 
 	{"$layer": { "id": "lAmy",
-		"camera": {"$orthographic": {}},
+		"camera": {"$orthographic": {"l": 0, "r": 16.0, "b": 0, "t": 9.0}},
 		"color": "amyBackgroundColor",
 		"gl": [ "nAmy" ]}},
-
-	{"$layerSelect": {"id": "chooser",
-		"selector": {"$float": {"x": 1}},
-		"layers": ["nPIPLayer", "lEffects"]}},
 
 	{"$computedVec3": {
 		"id": "amyBackgroundColor",
@@ -28,103 +24,23 @@
 			"originX": -0.425}},
 		"gl": [ "nAuraForLaura" ]}},
 
-	{"$layer": { "id": "lCarpet",
-		"camera": "uiCamera",
-		"gl": [ "nCarpet" ]}},
-
-	{"$fxCarpet": { "id": "nCarpet",
-		"material": "mAmy",
-		"freq": {"$computedVec3": {
-			"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-			"code": "{sin(t*1.5)/2.0+1.0, sin(t*0.5)/1, 0}"}},
-		"phase": {"$computedVec3": {
-			"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-			"code": "{t, t*1.333, 0}"}}}},
-
 	{"$perspective": { "id": "nCam",
 		"position": {"$vec3": {"x": 2, "y": 0, "z": 4}},
 		"h": 3.14, "v": 0,
 		"fov": 55.0}},
 
-	{"$renderToTexture": {"id": "texRTT",
-		"gpu": {"$gpu": {
-			"targetSize": {"$vec2": {"x": 64, "y": 64}},
-			"aspect": {"$float": {"x": 1.6666}},
-			"aa": true,
-			"layers": [ "nfoo" ]}}}},
-
-	{"$material": {"id": "mTest", "program": "Amy", "filter": false, "texture0": "texRTT"}},
-
-	{"$layer": { "id": "nPIPLayer",
-		"camera": {"$orthographic": {}},
-		"gl": ["npipborder", "npip"]}},
-
-	{"$fxXYQuad": { "id": "npipborder",
-		"material": "mBlack",
-		"leftTop": {"$vec2": {"x": 0.09, "y": -0.09}},
-		"rightBottom": {"$vec2": {"x": 0.91, "y": -0.91}},
-		"z": {"$float": {"x": 0.91}}}},
-	{"$fxXYQuad": { "id": "npip",
-		"material": "mTest",
-		"leftTop": {"$vec2": {"x": 0.1, "y": -0.1}},
-		"rightBottom": {"$vec2": {"x": 0.9, "y": -0.9}},
-		"z": {"$float": {"x": 0.9}}}},
-
-	{"$layer": { "id": "nfoo",
-		"color": {"$float": {"x": 0.333}},
-		"camera": "uiCamera",
-		"gl": [ "nField" ]}},
-
-	{"$group": {"id": "nGeo", "gl": [ "nAmy" ]}},
-	{"$fxXYQuad": { "id": "nAmy",
-		"material": "mAmy",
-		"leftTop": "circlelt",
-		"rightBottom": "circlerb",
-		"z": {"$float": {"x": 1.0}}}},
-
-	{"$computedVec3": { "id": "circlelt",
-		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"},
-		         {"name": "a", "type": "real", "source": "sync:bar"}],
-		"code": "{sin(t)*a + 0.0, cos(t)*a + 1.0, 0}"}},
-
-	{"$computedVec3": { "id": "circlerb",
-		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"},
-		         {"name": "a", "type": "real", "source": "sync:bar"}],
-		"code": "{sin(t)*a + 1.2, cos(t)*a - 1.0, 0}"}},
-
-	{"$computedVec3": { "id": "amp2",
-		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-		"code": "{sin(t * 0.333) + 1.0, 0, 0}"}},
-
-	{"$float": {"id": "amp1", "x": 0}},
-
-	{"$translate": {"id":"nField",
-		"gl": {"$fxMC": {
-			"material": "mBlack",
-			"frob": "globals:wallclock",
-			"precision": 32,
-			"range": 3.2,
-			"forkDepth": 3}},
-		"scale": {"$float": {"x": 1.0}},
-		"rotate": "fieldrotator"}},
+	{"$translate": {"id": "nAmy",
+		"translate": {"$vec3": {"x": 12.5, "y": 4.5, "z": 1.0}},
+		"gl": {"$translate": {
+			"scale": {"$vec3": {"x": 9.0, "y": 9.0, "z": 1.0}},
+			"gl": {"$plane": {"material": "mAmy"}}}}}},
 
 	{"$material": {"id": "mWire", "program": "Wireframe"}},
 
-	{"$material": { "id": "mBlack",
+	{"$material": { "id": "mPurpleEnvmap",
 		"program": "Envmap",
 		"filter": false,
-		"texture0": {"$image": {"file": "data/textures/env-black.png"}}}},
-
-	{"$material": { "id": "mPurpleFade",
-		"program": "EnvmapX",
-		"filter": false,
-		"u0": "amyBackgroundColor",
-		"u1": "sync:foo",
 		"texture0": {"$image": {"id": "texpurple1", "file": "data/textures/env-purple.png"}}}},
-
-	{"$computedVec3": {
-		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
-		"code": "{pow(sin(t)*0.5+0.5, 8), 0, 0}"}},
 
 	{"$material": { "id": "mAmy",
 		"program": "Amy",
@@ -148,13 +64,13 @@
 		"code": "{0, sin(t*0.5)*0.2+0.2, sin(t*0.222)*0.1}"}},
 
 	{"$fxAuraForLaura": {"id": "aura1of4", "hunk": 0,
-		"material": "mPurpleFade", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
+		"material": "mPurpleEnvmap", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
 	{"$fxAuraForLaura": {"id": "aura2of4", "hunk": 1,
-		"material": "mPurpleFade", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
+		"material": "mPurpleEnvmap", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
 	{"$fxAuraForLaura": {"id": "aura3of4", "hunk": 2,
-		"material": "mPurpleFade", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
+		"material": "mPurpleEnvmap", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
 	{"$fxAuraForLaura": {"id": "aura4of4", "hunk": 3,
-		"material": "mPurpleFade", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
+		"material": "mPurpleEnvmap", "freq": "auraFreq", "phase": "auraPhase", "amp": "auraAmp", "divs": 6}},
 
 	{"$translate": { "id":"nAuraForLaura",
 		"gl": {"$group": {
