@@ -53,12 +53,10 @@ public:
 			return; }
 		jobsys::run(link); }
 
-	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) override {
+	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) override {
 		for (auto glnode : gls_) {
 			// XXX increment depth even if matrix/transform stack is not modified?
-			glnode->Draw(dc, pmat, mvmat, nullptr, depth); }
-		if (link) {
-			jobsys::run(link); }}
+			glnode->Draw(dc, pmat, mvmat, depth); }}
 
 protected:
 	void AddDeps() override {

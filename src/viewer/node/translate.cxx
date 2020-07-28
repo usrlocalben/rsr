@@ -19,15 +19,33 @@ namespace {
 
 using namespace rqv;
 
-constexpr int kForkUntilDepth = 100;
+// constexpr int kForkUntilDepth = 100;
 
 class RepeatOp final : public IGl {
-public:
-	RepeatOp(std::string_view id, InputList inputs, int cnt)
-		:IGl(id, std::move(inputs)),
-		cnt_(cnt) {}
+	// config
+	int cnt_;
+	bool fork_;
+	/*rmlv::vec3 translateFixed_{};
+	rmlv::vec3 rotateFixed_{};
+	rmlv::vec3 scaleFixed_{};*/
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	// input
+	IGl *lowerNode_{nullptr};
+	std::string scaleSlot_{"default"};
+	IValue* scaleNode_{nullptr};
+	std::string rotateSlot_{"default"};
+	IValue* rotateNode_{nullptr};
+	std::string translateSlot_{"default"};
+	IValue* translateNode_{nullptr};
+
+public:
+	RepeatOp(std::string_view id, InputList inputs, int cnt, bool fork) :
+		IGl(id, std::move(inputs)),
+		cnt_(cnt),
+		fork_(fork)
+		{}
+
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "gl") {
 			lowerNode_ = dynamic_cast<IGl*>(other);
 			if (lowerNode_ == nullptr) {
@@ -68,11 +86,10 @@ public:
 		lowerNode_->AddLink(my_noop);
 		lowerNode_->Run(); }
 
-	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) override {
+	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) override {
 		using rmlm::mat4;
 		using rmlv::M_PI;
 		namespace jobsys = rclmt::jobsys;
-		namespace framepool = rclma::framepool;
 
 		auto translate = rmlv::vec3{0,0,0};
 		if (translateNode_ != nullptr) {
@@ -85,73 +102,64 @@ public:
 			scale = scaleNode_->Eval(scaleSlot_).as_vec3(); }
 
 		if (cnt_ == 0) {
-			rclmt::jobsys::run(link);
 			return; }
+
+		auto root = rclmt::jobsys::make_job(rclmt::jobsys::noop);
+		jobsys::Job* ptrs[128];  // XXX
+		int ptrcnt{0};
 
 		rmlv::vec3 p{0,0,0};
 		rmlv::vec3 r{0,0,0};
 		rmlv::vec3 s{1,1,1};
-		auto& counter = *reinterpret_cast<std::atomic<int>*>(framepool::Allocate(sizeof(std::atomic<int>)));
-		counter = cnt_;
-		for (int i = 0; i < cnt_; i++) {
-			if (false) { //depth < kForkUntilDepth) {
-				mat4& M = *reinterpret_cast<mat4*>(framepool::Allocate(64));
-				M = *mvmat  * mat4::rotate(r.x * M_PI * 2, 1, 0, 0);
-				M = M * mat4::rotate(r.y * M_PI * 2, 0, 1, 0);
-				M = M * mat4::rotate(r.z * M_PI * 2, 0, 0, 1);
-				M = M * mat4::translate(p);
-				M = M * mat4::scale(s);
-				jobsys::Job* then = jobsys::make_job(AfterDraw, std::tuple{&counter, link});
-				jobsys::run(DrawLower(dc, pmat, &M, then, depth+1)); }
-			else {
-				mat4 M;
-				M = *mvmat * mat4::rotate(r.x * M_PI * 2, 1, 0, 0);
-				M = M * mat4::rotate(r.y * M_PI * 2, 0, 1, 0);
-				M = M * mat4::rotate(r.z * M_PI * 2, 0, 0, 1);
-				M = M * mat4::translate(p);
-				M = M * mat4::scale(s);
-				lowerNode_->Draw(dc, pmat, &M, nullptr, depth + 1); }
-			p += translate;
-			r += rotate;
-			s *= scale; }
-		if (depth >= kForkUntilDepth) {
-			jobsys::run(link); } }
 
-	static void AfterDraw(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+		for (int i=0; i<cnt_; ++i, p+=translate, r+=rotate, s*=scale) {
+			auto& M = *static_cast<mat4*>(rclma::framepool::Allocate(64));
+			M = *mvmat;
+			M = M * mat4::rotate(r.x * M_PI * 2, 1, 0, 0);
+			M = M * mat4::rotate(r.y * M_PI * 2, 0, 1, 0);
+			M = M * mat4::rotate(r.z * M_PI * 2, 0, 0, 1);
+			M = M * mat4::translate(p);
+			M = M * mat4::scale(s);
+
+			if (fork_) {
+				ptrs[ptrcnt++] = DrawLower(root, dc, pmat, &M, depth +1); }
+			else {
+				lowerNode_->Draw(dc, pmat, &M, depth+1); }}
+
+		if (fork_) {
+			for (int i = 0; i < ptrcnt; ++i) {
+				jobsys::run(ptrs[i]); }
+			jobsys::run(root);
+			jobsys::wait(root); }}
+
+	static 
+	void AfterDraw(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
-		if (--counter != 0) {
-			return; }
-		rclmt::jobsys::run(link); }
+		if (--counter == 0) {
+			rclmt::jobsys::run(link); }}
 
-	rclmt::jobsys::Job* DrawLower(rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) {
-		return rclmt::jobsys::make_job(DrawLowerJmp, std::tuple{this, dc, pmat, mvmat, link, depth}); }
-	static void DrawLowerJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<RepeatOp*, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const, rclmt::jobsys::Job*, int>* data) {
-		auto [self, dc, pmat, mvmat, link, depth] = *data;
-		self->lowerNode_->Draw(dc, pmat, mvmat, link, depth); }
+	auto DrawLower(rclmt::jobsys::Job* p, rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* mvmat, int depth) -> rclmt::jobsys::Job* {
+		return rclmt::jobsys::make_job_as_child(p, DrawLowerJmp, std::tuple{this, dc, pmat, mvmat, depth}); }
+	static
+	void DrawLowerJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<RepeatOp*, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const, int>* data) {
+		auto [self, dc, pmat, mvmat, depth] = *data;
+		self->lowerNode_->Draw(dc, pmat, mvmat, depth); }};
 
-private:
-	// config
-	int cnt_;
-	/*rmlv::vec3 translateFixed_{};
-	rmlv::vec3 rotateFixed_{};
-	rmlv::vec3 scaleFixed_{};*/
 
-	// input
+class TranslateOp final : public IGl {
 	IGl *lowerNode_{nullptr};
 	std::string scaleSlot_{"default"};
 	IValue* scaleNode_{nullptr};
 	std::string rotateSlot_{"default"};
 	IValue* rotateNode_{nullptr};
 	std::string translateSlot_{"default"};
-	IValue* translateNode_{nullptr}; };
+	IValue* translateNode_{nullptr};
 
-
-class TranslateOp final : public IGl {
 public:
 	using IGl::IGl;
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "gl") {
 			lowerNode_ = dynamic_cast<IGl*>(other);
 			if (lowerNode_ == nullptr) {
@@ -191,13 +199,12 @@ public:
 		lowerNode_->AddLink(my_noop);
 		lowerNode_->Run(); }
 
-	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job *link, int depth) override {
+	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) override {
 		using rmlm::mat4;
 		using rmlv::M_PI;
-		namespace framepool = rclma::framepool;
 		namespace jobsys = rclmt::jobsys;
 
-		mat4& M = *reinterpret_cast<mat4*>(framepool::Allocate(64));
+		auto& M = *static_cast<mat4*>(rclma::framepool::Allocate(64));
 
 		auto scale = rmlv::vec3{1.0F, 1.0F, 1.0F};
 		if (scaleNode_ != nullptr) {
@@ -211,24 +218,13 @@ public:
 		if (translateNode_ != nullptr) {
 			translate = translateNode_->Eval(translateSlot_).as_vec3(); }
 
-		M = *mvmat * mat4::scale(scale);
+		M = *mvmat;
+		M = M * mat4::scale(scale);
 		M = M * mat4::rotate(rotate.x * M_PI * 2, 1, 0, 0);
 		M = M * mat4::rotate(rotate.y * M_PI * 2, 0, 1, 0);
 		M = M * mat4::rotate(rotate.z * M_PI * 2, 0, 0, 1);
 		M = M * mat4::translate(translate);
-		lowerNode_->Draw(dc, pmat, &M, link, depth); }
-
-/*	auto GetLights(const rmlm::mat4* mvmat) -> rcls::vector<Light> override {
-		return lowerNode_->GetLights(); }*/
-
-private:
-	IGl *lowerNode_{nullptr};
-	std::string scaleSlot_{"default"};
-	IValue* scaleNode_{nullptr};
-	std::string rotateSlot_{"default"};
-	IValue* rotateNode_{nullptr};
-	std::string translateSlot_{"default"};
-	IValue* translateNode_{nullptr}; };
+		lowerNode_->Draw(dc, pmat, &M, depth); } };
 
 
 class TranslateCompiler final : public NodeCompiler {
@@ -263,13 +259,16 @@ class RepeatCompiler final : public NodeCompiler {
 	void Build() override {
 		using namespace rclx;
 		int many{1};
+		bool fork{false};
 		if (!Input("rotate", /*required=*/false)) { return; }
 		if (!Input("scale", /*required=*/false)) { return; }
 		if (!Input("translate", /*required=*/false)) { return; }
 		if (!Input("gl", /*required=*/true)) { return; }
 		if (auto jv = jv_find(data_, "many", JSON_NUMBER)) {
 			many = static_cast<int>(jv->toNumber()); }
-		out_ = std::make_shared<RepeatOp>(id_, std::move(inputs_), many); }};
+		if (auto jv = jv_find(data_, "fork", JSON_TRUE)) {
+			fork = true; }
+		out_ = std::make_shared<RepeatOp>(id_, std::move(inputs_), many, fork); }};
 
 
 struct init { init() {

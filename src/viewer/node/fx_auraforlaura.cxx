@@ -77,7 +77,7 @@ public:
 	void Main() override {
 		rclmt::jobsys::run(Compute());}
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth [[maybe_unused]]) override {
+	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth [[maybe_unused]]) override {
 		using namespace rglv;
 		auto& dc = *_dc;
 		std::lock_guard<std::mutex> lock(dc.mutex);
@@ -90,9 +90,7 @@ public:
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, *vbo_);
-		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data(), RGL_HINT_DENSE|RGL_HINT_READ4);
-		if (link != nullptr) {
-			rclmt::jobsys::run(link); } }
+		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data(), RGL_HINT_DENSE|RGL_HINT_READ4); }
 
 public:
 	rclmt::jobsys::Job* Compute(rclmt::jobsys::Job* parent = nullptr) {

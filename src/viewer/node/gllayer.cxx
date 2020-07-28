@@ -25,6 +25,11 @@ using namespace rqv;
 namespace jobsys = rclmt::jobsys;
 
 class Impl : public ILayer {
+	std::vector<IGl*> gls_{};
+	ICamera* cameraNode_{nullptr};
+	IValue* colorNode_{nullptr};
+	std::string colorSlot_{};
+
 public:
 	using ILayer::ILayer;
 
@@ -78,24 +83,21 @@ public:
 			color = colorNode_->Eval(colorSlot_).as_vec3(); }
 		return color; }
 
-	void Render(rglv::GL* dc, rmlv::ivec2 targetSizeInPx [[maybe_unused]], float aspect, rclmt::jobsys::Job *link) override {
+	void Render(rglv::GL* dc, rmlv::ivec2 targetSizeInPx [[maybe_unused]], float aspect) override {
 		using namespace rmlm;
 		using namespace rglv;
-		namespace framepool = rclma::framepool;
 
-		mat4* pmat = reinterpret_cast<mat4*>(framepool::Allocate(64));
-		mat4* mvmat = reinterpret_cast<mat4*>(framepool::Allocate(64));
+		auto& pmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
+		auto& mvmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
 		if (cameraNode_ != nullptr) {
-			*pmat = cameraNode_->ProjectionMatrix(aspect);
-			*mvmat = cameraNode_->ViewMatrix(); }
+			pmat = cameraNode_->ProjectionMatrix(aspect);
+			mvmat = cameraNode_->ViewMatrix(); }
 		else {
-			*pmat = mat4{1};
-			*mvmat = mat4{1}; }
+			pmat = mat4{1};
+			mvmat = mat4{1}; }
 
 		for (auto gl : gls_) {
-			gl->Draw(dc, pmat, mvmat, nullptr, 0);}
-		if (link) {
-			jobsys::run(link); }}
+			gl->Draw(dc, &pmat, &mvmat, 0);}}
 
 protected:
 	void AddDeps() override {
@@ -111,13 +113,8 @@ private:
 	static void PostJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto& [self] = *data;
 		self->Post(); }
-	void PostImpl() {}
+	void PostImpl() {}};
 
-private:
-	std::vector<IGl*> gls_{};
-	ICamera* cameraNode_{nullptr};
-	IValue* colorNode_{nullptr};
-	std::string colorSlot_{}; };
 
 
 class Compiler final : public NodeCompiler {

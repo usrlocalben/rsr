@@ -7,6 +7,7 @@
 namespace rqdq {
 namespace {
 
+int mod2{0};
 std::vector<char*> pools;
 std::vector<int> sp;
 
@@ -27,20 +28,20 @@ namespace framepool {
 
 void Init() {
 	pools.clear();
-	for (int ti=0; ti<rclmt::jobsys::numThreads; ++ti) {
+	for (int ti=0; ti<rclmt::jobsys::numThreads*2; ++ti) {
 		void * const buf = _aligned_malloc(100000 * 64, 64);
 		pools.push_back(reinterpret_cast<char*>(buf)); }
 	sp.resize( rclmt::jobsys::numThreads * 16, 0 ); }
 
 
 void Reset() {
-	for (int ti=0; ti<rclmt::jobsys::numThreads; ++ti) {
-		sp[ti*16] = 0; }}
+	mod2 = (mod2+1)%2;
+	std::fill(begin(sp), end(sp), 0); }
 
 
 auto Allocate(int amt) -> void* {
 	amt = Ceil16(amt);
-	auto my_store = pools[rclmt::jobsys::threadId];
+	auto my_store = pools[rclmt::jobsys::threadId * 2 + mod2];
 	auto& my_idx = sp[rclmt::jobsys::threadId * 16];
 	void * const out = reinterpret_cast<void*>(my_store + my_idx);
 	my_idx += amt;

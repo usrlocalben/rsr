@@ -157,7 +157,7 @@ public:
 			jobsys::run(subJobs[sji]); }
 		jobsys::run(finalizeJob); }
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, rclmt::jobsys::Job* link, int depth [[maybe_unused]]) override {
+	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth [[maybe_unused]]) override {
 		auto& dc = *_dc;
 		using rglv::GL_UNSIGNED_SHORT;
 		using rglv::GL_CULL_FACE;
@@ -178,9 +178,7 @@ public:
 				const int elements = vao.size();
 				vao.pad();
 				dc.UseBuffer(0, vao);
-				dc.DrawArrays(GL_TRIANGLES, 0, elements); }}
-		if (link != nullptr) {
-			rclmt::jobsys::run(link); } }
+				dc.DrawArrays(GL_TRIANGLES, 0, elements); }}}
 
 private:
 	void SwapBuffers() {

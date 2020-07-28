@@ -96,7 +96,7 @@ public:
 		materialNode_->AddLink(postSetup);
 		materialNode_->Run();}
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, rclmt::jobsys::Job* link, int depth [[maybe_unused]]) override {
+	void Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, int depth [[maybe_unused]]) override {
 		auto& dc = *_dc;
 		using namespace rglv;
 		std::scoped_lock<std::mutex> lock(dc.mutex);
@@ -109,9 +109,7 @@ public:
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, buffers_[activeBuffer_]);
-		dc.DrawArrays(GL_TRIANGLES, 0, 6);
-		if (link != nullptr) {
-			rclmt::jobsys::run(link); } }};
+		dc.DrawArrays(GL_TRIANGLES, 0, 6); }};
 
 
 class Compiler final : public NodeCompiler {
