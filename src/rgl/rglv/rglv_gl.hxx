@@ -90,6 +90,19 @@ struct GLState {
 	rmlm::mat4 normalMatrix;
 	rmlm::mat4 projectionMatrix;
 
+	auto VertexStateKey() const -> uint32_t {
+		uint32_t key = programId << 24;
+		return key; }
+
+	auto FragmentStateKey() const -> uint32_t {
+		uint32_t key = programId << 24;
+		key |= scissorEnabled;
+		return key; }
+
+	auto BltStateKey() const -> uint32_t {
+		uint32_t key = programId << 24;
+		return key; }
+
 	void reset() {
 		clearColor = rmlv::vec4{ 0.0F, 0.0F, 0.0F, 1.0F };
 		clearDepth = 1.0F;

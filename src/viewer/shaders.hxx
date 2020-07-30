@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "src/rgl/rglv/rglv_fragment.hxx"
+#include "src/rgl/rglv/rglv_gpu.hxx"
 #include "src/rgl/rglv/rglv_gpu_protocol.hxx"
 #include "src/rgl/rglv/rglv_gpu_shaders.hxx"
 #include "src/rgl/rglv/rglv_interpolate.hxx"
@@ -592,6 +593,9 @@ struct OBJ2Program final : public rglv::BaseProgram {
 		diffuse = diffuse * (100.0F / distance);
 		// outs.kd = v.kd * diffuse;
 		gl_FragColor = { outs.kd * diffuse, 1.0F }; } };
+
+
+void Install(class rqdq::rglv::GPU& gpu);
 
 
 }  // namespace rqv

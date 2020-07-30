@@ -23,6 +23,26 @@ using namespace rqv;
 //PixelToaster::Timer ttt;
 
 class Impl final : public IGl {
+
+	const rglv::Icosphere mesh_;
+	const int numVertices_;
+	const int numRenderIndices_;
+
+	// state
+	int mod2_{0};
+	std::vector<uint16_t> indices_;
+	std::array<rglv::VertexArray_F3F3F3, 2> vbos_{};
+	rglv::VertexArray_F3F3F3* vbo_{nullptr};
+
+	// inputs
+	IMaterial* materialNode_{nullptr};
+	IValue* freqNode_{nullptr};
+	std::string freqSlot_{};
+	IValue* phaseNode_{nullptr};
+	std::string phaseSlot_{};
+	IValue* ampNode_{nullptr};
+	std::string ampSlot_{};
+
 public:
 	Impl(std::string_view id, InputList inputs, int divs, int hunk) :
 		IGl(id, std::move(inputs)),
@@ -158,27 +178,7 @@ private:
 		auto postSetup = rclmt::jobsys::make_job(rclmt::jobsys::noop);
 		AddLinksTo(postSetup);
 		materialNode_->AddLink(postSetup);
-		materialNode_->Run();}}
-
-private:
-	const rglv::Icosphere mesh_;
-	const int numVertices_;
-	const int numRenderIndices_;
-
-	// state
-	int mod2_{0};
-	std::vector<uint16_t> indices_;
-	std::array<rglv::VertexArray_F3F3F3, 2> vbos_{};
-	rglv::VertexArray_F3F3F3* vbo_{nullptr};
-
-	// inputs
-	IMaterial* materialNode_{nullptr};
-	IValue* freqNode_{nullptr};
-	std::string freqSlot_{};
-	IValue* phaseNode_{nullptr};
-	std::string phaseSlot_{};
-	IValue* ampNode_{nullptr};
-	std::string ampSlot_{}; };
+		materialNode_->Run();}}};
 
 
 class Compiler final : public NodeCompiler {

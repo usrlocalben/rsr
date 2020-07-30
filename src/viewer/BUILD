@@ -173,6 +173,7 @@ cc_library(
     hdrs = ["shaders.hxx"],
     deps = [
         "//src/rgl/rglv:fragment",
+        "//src/rgl/rglv:gpu",
         "//src/rgl/rglv:gpu_shaders",
         "//src/rgl/rglv:gpu_protocol",
         "//src/rgl/rglv:interpolate",

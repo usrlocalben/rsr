@@ -37,7 +37,6 @@
 namespace rqdq {
 namespace rglv {
 
-#define UNUSED(expr) do { (void)(expr); } while (0)
 
 constexpr auto kBlockDimensionsInPixels = rmlv::ivec2{8, 8};
 
@@ -226,106 +225,103 @@ inline void PrintStatistics(const GPUStats& stats) {
 	fmt::printf("tile bytes total: %d, min: %d, max: %d\n", stats.totalTileCommandBytes, stats.minTileCommandBytes, stats.maxTileCommandBytes);
 	fmt::printf("triangles submitted: %d, culled: %d, clipped: %d, drawn: %d\n", stats.totalTrianglesSubmitted, stats.totalTrianglesCulled, stats.totalTrianglesClipped, stats.totalTrianglesDrawn); }
 
+class GPU;
 
-template<typename ...SHADERS>
+
+struct VertexProgramPtrs {
+	void (GPU::*bin_DrawArraysSingle)(int /*count*/);
+	void (GPU::*bin_DrawArraysInstanced)(int /*count*/, int /*instanceCnt*/);
+	void (GPU::*bin_DrawElementsSingle)(int count, uint16_t* indices, uint8_t /*hint*/);
+	void (GPU::*bin_DrawElementsInstanced)(int count, uint16_t* indices, int /*instanceCnt*/);
+	// void (GPU::*tile_DrawClipped)(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
+};
+
+struct FragmentProgramPtrs {
+	void (GPU::*tile_DrawClipped)(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
+	void (GPU::*tile_DrawElementsSingle)(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
+	void (GPU::*tile_DrawElementsInstanced)(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
+	};
+
+struct BltProgramPtrs {
+	void (GPU::*tile_StoreTrueColor)(const GLState& state, const void* uniformsPtr, rmlg::irect rect, bool enableGamma, rglr::TrueColorCanvas& outcanvas);
+	};
+
+
 class GPU {
+protected:
+	std::unordered_map<uint32_t, VertexProgramPtrs> vertexDispatch_{};
+	std::unordered_map<uint32_t, FragmentProgramPtrs> fragmentDispatch_{};
+	std::unordered_map<uint32_t, BltProgramPtrs> bltDispatch_{};
+
+	const int concurrency_;
+	rcls::vector<rglr::QFloat4Canvas> threadColorBufs_{};
+	rcls::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
+	std::vector<ThreadStat> threadStats_;
+
+	// tile/bin collection
+	std::vector<uint8_t*> tilesHead_;
+	std::vector<uint8_t*> tilesMark_;
+	std::vector<uint8_t> tilesMem0_;
+	std::vector<uint8_t> tilesMem1_;
+	std::vector<TileStat> tileStats_;
+
+	// render target parameters
+	rmlv::ivec2 bufferDimensionsInPixels_;
+	rmlv::ivec2 bufferDimensionsInTiles_;
+	rmlv::ivec2 tileDimensionsInBlocks_;
+	rmlv::ivec2 tileDimensionsInPixels_;
+
+	// IC users can write to
+	int userIC_{0};
+
+	// double-buffered GL contexts: binning
+	GL IC0_;
+	rcls::vector<ClippedVertex> clippedVertexBuffer0_;
+	GPUStats stats0_;
+
+	// buffers used during binning and clipping
+	const GLState* binState{nullptr};
+	const void* binUniforms{nullptr};
+	rcls::vector<uint8_t> clipFlagBuffer_{};
+	rcls::vector<float> devCoordXBuffer_{};
+	rcls::vector<float> devCoordYBuffer_{};
+	rcls::vector<std::array<int, 4>> clipQueue_;
+	rcls::vector<ClippedVertex> clipA_;
+	rcls::vector<ClippedVertex> clipB_;
+
+	// double-buffered GL contexts: drawing
+	GL IC1_;
+	rcls::vector<ClippedVertex> clippedVertexBuffer1_;
+	GPUStats stats1_;
+
 public:
-	GPU(int concurrency) :
-		concurrency_(concurrency),
-		threadColorBufs_(concurrency),
-		threadDepthBufs_(concurrency),
-		threadStats_(concurrency) {}
+	GPU(int concurrency);
+	void Install(int programId, uint32_t stateKey, VertexProgramPtrs ptrs);
+	void Install(int programId, uint32_t stateKey, FragmentProgramPtrs ptrs);
+	void Install(int programId, uint32_t stateKey, BltProgramPtrs ptrs);
 
-	void Reset(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks) {
-		SetSize(newBufferDimensionsInPixels, newTileDimensionsInBlocks);
-		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-			tilesHead_[t] = WriteRange(t).first; }
-		clippedVertexBuffer0_.clear();
-		stats0_ = GPUStats{};
-		IC().Reset(); }
+	auto IC() -> GL&;
+	void Reset(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks);
+	void SetSize(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks);
 
-	GL& IC() {
-		return (userIC_ == 0 ? IC0_ : IC1_); }
-
-	void SetSize(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks) {
-		if (newBufferDimensionsInPixels != bufferDimensionsInPixels_ ||
-		    newTileDimensionsInBlocks != tileDimensionsInBlocks_) {
-			bufferDimensionsInPixels_ = newBufferDimensionsInPixels;
-			tileDimensionsInBlocks_ = newTileDimensionsInBlocks;
-			Retile(); }}
-
-private:
-	void Retile() {
-		using rmlv::ivec2;
-		using std::min, std::max;
-		tileDimensionsInPixels_ = tileDimensionsInBlocks_ * kBlockDimensionsInPixels;
-		bufferDimensionsInTiles_ = (bufferDimensionsInPixels_ + (tileDimensionsInPixels_ - ivec2{1, 1})) / tileDimensionsInPixels_;
-
-		for (int ti=0; ti<concurrency_; ++ti) {
-			threadStats_[ti].Reset();
-			threadColorBufs_[ti].resize(tileDimensionsInPixels_);
-			threadDepthBufs_[ti].resize(tileDimensionsInPixels_); }
-
-		auto areaInTiles = Area(bufferDimensionsInTiles_);
-
-		tilesMem0_.resize(kMaxSizeInBytes * areaInTiles);
-		tilesMem1_.resize(kMaxSizeInBytes * areaInTiles);
-		tilesHead_.clear();
-		tilesHead_.resize(areaInTiles, nullptr);
-		tilesMark_.clear();
-		tilesMark_.resize(areaInTiles, nullptr);
-
-		for (int ti{0}; ti<areaInTiles; ++ti) {
-			tilesHead_[ti] = WriteRange(ti).first;
-			tilesMem1_[ti * kMaxSizeInBytes] = CMD_EOF; }}
-
-	rmlg::irect TileRect(int idx) const {
-		auto ty = idx / bufferDimensionsInTiles_.x;
-		auto tx = idx % bufferDimensionsInTiles_.x;
-		auto tpos = rmlv::ivec2{ tx, ty };
-		auto ltpx = tpos * tileDimensionsInPixels_;
-		auto rbpx = ltpx + tileDimensionsInPixels_;
-		rbpx = vmin(rbpx, bufferDimensionsInPixels_);  // clip against screen edge
-		return { ltpx, rbpx }; }
+protected:
+	void Retile();
+	auto TileRect(int idx) const -> rmlg::irect;
 
 public:
 	auto Run() {
 		return rclmt::jobsys::make_job(GPU::RunJmp, std::tuple{this}); }
-private:
-	static void RunJmp(rclmt::jobsys::Job* job, unsigned threadId [[maybe_unused]], std::tuple<GPU*>* data) {
+protected:
+	static
+	void RunJmp(rclmt::jobsys::Job* job, unsigned threadId [[maybe_unused]], std::tuple<GPU*>* data) {
 		auto&[self] = *data;
 		self->RunImpl(job); }
-	void RunImpl(rclmt::jobsys::Job* job) {
-		namespace jobsys = rclmt::jobsys;
-		auto finalizeJob = Finalize();
-		if (job != nullptr) {
-			jobsys::move_links(job, finalizeJob); }
-
-		if (!doubleBuffer) {
-			BinImpl();
-			SwapBuffers(); }
-
-		// sort tiles by their estimated cost before queueing
-		tileStats_.clear();
-		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-			tileStats_.push_back({ t, RenderCost(t) }); }
-		rclr::sort(tileStats_, [](auto a, auto b) { return a.cost > b.cost; });
-		// std::rotate(tileStats_.begin(), tileStats_.begin() + 1, tileStats_.end())
-
-		std::vector<rclmt::jobsys::Job*> allJobs;
-		for (const auto& item : tileStats_) {
-			int bi = item.tileId;
-			allJobs.push_back(Draw(finalizeJob, bi)); }
-		if (doubleBuffer) {
-			allJobs.push_back(Bin(finalizeJob)); }
-
-		for (auto& job : allJobs) {
-			jobsys::run(job); }
-		jobsys::run(finalizeJob); }
+	void RunImpl(rclmt::jobsys::Job* job);
 
 	auto Finalize() {
 		return rclmt::jobsys::make_job(GPU::FinalizeJmp, std::tuple{this}); }
-	static void FinalizeJmp(rclmt::jobsys::Job* job, unsigned tid, std::tuple<GPU*>* data) {
+	static
+	void FinalizeJmp(rclmt::jobsys::Job* job [[maybe_unused]], unsigned tid [[maybe_unused]], std::tuple<GPU*>* data) {
 		auto&[self] = *data;
 		self->FinalizeImpl(); }
 	void FinalizeImpl() {
@@ -345,248 +341,204 @@ private:
 	 */
 	auto Bin(rclmt::jobsys::Job *parent) {
 		return rclmt::jobsys::make_job_as_child(parent, GPU::BinJmp, std::tuple{this}); }
-	static void BinJmp(rclmt::jobsys::Job* job, unsigned tid, std::tuple<GPU*>* data) {
+	static void BinJmp(rclmt::jobsys::Job* job [[maybe_unused]], unsigned tid [[maybe_unused]], std::tuple<GPU*>* data) {
 		auto&[self] = *data;
 		self->BinImpl(); }
-	void BinImpl() {
-		using fmt::printf;
-		// printf("----- BEGIN BINNING -----\n");
-
-		binState = nullptr;
-		binUniforms = nullptr;
-		auto& cs = IC().commands_;
-		cs.appendByte(CMD_EOF);
-		int totalCommands = 0;
-		while (1) {
-			totalCommands += 1;
-			auto cmd = cs.consumeByte();
-			// printf("cmd %02x %d:", cmd, cmd);
-			if (cmd == CMD_EOF) {
-				for (auto& h : tilesHead_) {
-					AppendByte(&h, cmd); }
-				break; }
-			else if (cmd == CMD_STATE) {
-				binState = static_cast<GLState*>(cs.consumePtr());
-				binUniforms = IC().GetUniformBufferAddr(binState->uniformsOfs);
-				// printf(" state is now at %p\n", binState);
-				for (auto& h : tilesHead_) {
-					AppendByte(&h, cmd);
-					AppendPtr(&h, binState);
-					AppendPtr(&h, binUniforms); }}
-			else if (cmd == CMD_CLEAR) {
-				auto arg = cs.consumeByte();
-				// printf(" clear with color ");
-				// std::cout << color << std::endl;
-				for (auto& h : tilesHead_) {
-					AppendByte(&h, cmd);
-					AppendByte(&h, arg); }}
-			else if (cmd == CMD_STORE_COLOR_HALF_LINEAR_FP) {
-				auto ptr = cs.consumePtr();
-				// printf(" store halfsize colorbuffer @ %p\n", ptr);
-				for (auto& h : tilesHead_) {
-					AppendByte(&h, cmd);
-					AppendPtr(&h, ptr); }}
-			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_FP) {
-				auto ptr = cs.consumePtr();
-				// printf(" store unswizzled colorbuffer @ %p\n", ptr);
-				for (auto& h : tilesHead_) {
-					AppendByte(&h, cmd);
-					AppendPtr(&h, ptr); }}
-			else if (cmd == CMD_STORE_COLOR_FULL_QUADS_FP) {
-				auto ptr = cs.consumePtr();
-				// printf(" store swizzled colorbuffer @ %p\n", ptr);
-				for (auto& h : tilesHead_) {
-					AppendByte(&h, cmd);
-					AppendPtr(&h, ptr); }}
-			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_TC) {
-				auto enableGamma = cs.consumeByte();
-				auto ptr = cs.consumePtr();
-				// printf(" store truecolor @ %p, gamma corrected? %s\n", ptr, (enableGamma?"Yes":"No"));
-				for (auto& h : tilesHead_) {
-					AppendByte(&h, cmd);
-					AppendByte(&h, enableGamma);
-					AppendPtr(&h, ptr); }}
-			else if (cmd == CMD_DRAW_ARRAYS) {
-				//auto flags = cs.consumeByte();
-				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
-				auto count = cs.consumeInt();
-				struct SequenceSource {
-					int operator()(int ti) { return ti; }};
-				SequenceSource indexSource{};
-				bin_DrawArrays<false, SequenceSource, SHADERS...>(count, indexSource, 1); }
-			else if (cmd == CMD_DRAW_ARRAYS_INSTANCED) {
-				//auto flags = cs.consumeByte();
-				//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
-				auto count = cs.consumeInt();
-				auto instanceCnt = cs.consumeInt();
-				struct SequenceSource {
-					int operator()(int ti) { return ti; }};
-				SequenceSource indexSource{};
-				bin_DrawArrays<true, SequenceSource, SHADERS...>(count, indexSource, instanceCnt); }
-			else if (cmd == CMD_DRAW_ELEMENTS) {
-				auto flags = cs.consumeByte();
-				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
-				UNUSED(flags);
-				auto hint = cs.consumeByte();
-				auto count = cs.consumeInt();
-				auto indices = static_cast<uint16_t*>(cs.consumePtr());
-				if ((hint & RGL_HINT_DENSE) && (hint & RGL_HINT_READ4)) {
-					// special case:
-					// vertex data length is a multiple of 4 (SSE ready), and
-					// most/all of the vertex data will be used.
-					//
-					// in this case, it's better to run the vertex shader
-					// on the entire buffer first, then process the primitives
-					struct ArraySource {
-						ArraySource(const uint16_t* data) : data_(data) {}
-						int operator()(int ti) { return data_[ti]; }
-						const uint16_t* const data_; };
-					ArraySource indexSource{indices};
-					bin_DrawArrays<false, ArraySource, SHADERS...>(count, indexSource, 1); }
-				else {
-					struct ArraySource {
-						ArraySource(const uint16_t* data) : data_(data) {}
-						int operator()(int ti) { return data_[ti]; }
-						const uint16_t* const data_; };
-					ArraySource indexSource{indices};
-					bin_DrawElements<false, ArraySource, SHADERS...>(count, indexSource, 1); }}
-			else if (cmd == CMD_DRAW_ELEMENTS_INSTANCED) {
-				auto flags = cs.consumeByte();
-				assert(flags == 0x14);  // videocore: 16-bit indices, triangles
-				UNUSED(flags);
-				auto count = cs.consumeInt();
-				auto indices = static_cast<uint16_t*>(cs.consumePtr());
-				auto instanceCnt = cs.consumeInt();
-				struct ArraySource {
-					ArraySource(const uint16_t* data) : data_(data) {}
-					int operator()(int ti) { return data_[ti]; }
-					const uint16_t* const data_; };
-				ArraySource indexSource{indices};
-				bin_DrawElements<true, ArraySource, SHADERS...>(count, indexSource, instanceCnt); } }
-
-		// stats...
-		int total_ = 0;
-		int min_ = 0x7fffffff;
-		int max_ = 0;
-		for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
-			const int thisTileBytes = tilesHead_[t] - WriteRange(t).first;
-			total_ += thisTileBytes;
-			min_ = std::min(min_, thisTileBytes);
-			max_ = std::max(max_, thisTileBytes); }
-		stats0_.totalTiles = tilesHead_.size();
-		stats0_.totalCommands = totalCommands;
-		// stats0_.totalStates = IC().d_si;
-		stats0_.totalCommandBytes = cs.size();
-		stats0_.totalTileCommandBytes = total_;
-		stats0_.minTileCommandBytes = min_;
-		stats0_.maxTileCommandBytes = max_; }
+	void BinImpl();
 
 	auto Draw(rclmt::jobsys::Job* parent, int tileId) {
 		return rclmt::jobsys::make_job_as_child(parent, GPU::DrawJmp, std::tuple{this, tileId}); }
-	static void DrawJmp(rclmt::jobsys::Job* job, unsigned tid, std::tuple<GPU*, int>* data) {
+	static void DrawJmp(rclmt::jobsys::Job* job [[maybe_unused]], unsigned tid, std::tuple<GPU*, int>* data) {
 		auto&[self, tileId] = *data;
 		self->DrawImpl(tid, tileId); }
-	void DrawImpl(const unsigned tid, const int tileIdx) {
-		const auto rect = TileRect(tileIdx);
-		const auto tileOrigin = rect.top_left;
-		threadStats_[tid].tiles.emplace_back(tileIdx);
+	void DrawImpl(const unsigned tid, const int tileIdx);
 
-		FastPackedReader cs{ ReadRange(tileIdx).first };
-		int cmdCnt = 0;
+	void AppendByte(uint8_t** h, uint8_t a) {
+		*reinterpret_cast<uint8_t*>(*h) = a; *h += sizeof(uint8_t); }
+	void AppendUShort(uint8_t** h, uint16_t a) {
+		*reinterpret_cast<uint16_t*>(*h) = a; *h += sizeof(uint16_t); }
+	void AppendInt(uint8_t** h, int a) {
+		*reinterpret_cast<int*>(*h) = a; *h += sizeof(int); }
+	void AppendFloat(uint8_t** h, float a) {
+		*reinterpret_cast<float*>(*h) = a;  *h += sizeof(float); }
+	void AppendPtr(uint8_t** h, const void* a) {
+		*reinterpret_cast<const void**>(*h) = a;  *h += sizeof(void*); }
+	void AppendVec4(uint8_t** h, rmlv::vec4 a) {
+		AppendFloat(h, a.x);
+		AppendFloat(h, a.y);
+		AppendFloat(h, a.z);
+		AppendFloat(h, a.w); }
 
-		auto& dc = threadDepthBufs_[rclmt::jobsys::threadId];
-		auto& cc = threadColorBufs_[rclmt::jobsys::threadId];
+	auto Unappend(uint8_t** h, int many) {
+		*h -= many; }
 
-		const GLState* stateptr = nullptr;
-		const void* uniformptr = nullptr;
-		while (1) {
-			++cmdCnt;
-			auto cmd = cs.ConsumeByte();
-			// fmt::printf("tile(%d) cmd(%02x, %d)\n", tileIdx, cmd, cmd);
-			if (cmd == CMD_EOF) {
-				break; }
-			else if (cmd == CMD_STATE) {
-				stateptr = static_cast<const GLState*>(cs.ConsumePtr());
-				uniformptr = cs.ConsumePtr(); }
-			else if (cmd == CMD_CLEAR) {
-				int bits = cs.ConsumeByte();
-				if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
-					// std::cout << "clearing to " << color << std::endl;
-					Fill(cc, stateptr->clearColor, rect); }
-				if ((bits & GL_DEPTH_BUFFER_BIT) != 0) {
-					Fill(dc, stateptr->clearDepth, rect); }
-				if ((bits & GL_STENCIL_BUFFER_BIT) != 0) {
-					// XXX not implemented
-					assert(false); }}
-			else if (cmd == CMD_STORE_COLOR_HALF_LINEAR_FP) {
-				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
-				Downsample(cc, *dst, rect); }
-			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_FP) {
-				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
-				Copy(cc, *dst, rect); }
-			else if (cmd == CMD_STORE_COLOR_FULL_QUADS_FP) {
-				auto dst = static_cast<rglr::QFloat4Canvas*>(cs.ConsumePtr());
-				Copy(cc, *dst, rect); }
-			else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_TC) {
-				auto enableGamma = cs.ConsumeByte();
-				auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.ConsumePtr());
-				tile_StoreTrueColor<SHADERS...>(*stateptr, uniformptr, rect, enableGamma, outcanvas);
-				// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
-				}
-			else if (cmd == CMD_CLIPPED_TRI) {
-				auto sRect = Intersect(rect, gl_offset_and_size_to_irect(stateptr->scissorOrigin, stateptr->scissorSize));
-				if (stateptr->scissorEnabled && sRect!=rect) {
-					tile_DrawClipped<true,  SHADERS...>(*stateptr, uniformptr, sRect,tileOrigin, tileIdx, cs); }
-				else {
-					tile_DrawClipped<false, SHADERS...>(*stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }}
-			else if (cmd == CMD_DRAW_INLINE) {
-				auto sRect = Intersect(rect, gl_offset_and_size_to_irect(stateptr->scissorOrigin, stateptr->scissorSize));
-				if (stateptr->scissorEnabled && sRect!=rect) {
-					tile_DrawElements<true,  false, SHADERS...>(*stateptr, uniformptr, sRect,tileOrigin, tileIdx, cs); }
-				else {
-					tile_DrawElements<false, false, SHADERS...>(*stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }}
-			else if (cmd == CMD_DRAW_INLINE_INSTANCED) {
-				auto sRect = Intersect(rect, gl_offset_and_size_to_irect(stateptr->scissorOrigin, stateptr->scissorSize));
-				if (stateptr->scissorEnabled && sRect!=rect) {
-					tile_DrawElements<true,  true, SHADERS...>(*stateptr, uniformptr, sRect,tileOrigin, tileIdx, cs); }
-				else {
-					tile_DrawElements<false, true, SHADERS...>(*stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }}}}
+	auto Mark(uint8_t** h) {
+		int dist = h - tilesHead_.data();
+		tilesMark_[dist] = *h; }
 
-	template <typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {}
+	auto Touched(uint8_t** h) const -> bool {
+		int dist = h - tilesHead_.data();
+		return tilesMark_[dist] != *h; }
 
-	template <typename PGM, typename ...PGMs>
+	/* XXX bool Eof(int t) const {
+		return tilesTail_[t*16] == tilesHead_[t]; }*/
+
+	/*
+	 * use the command list length as an approximate compute cost
+	 */
+	auto RenderCost(int t) const -> int {
+		auto begin = WriteRange(t).first;
+		return tilesHead_[t] - begin; }
+
+	auto WriteRange(int t) const -> std::pair<uint8_t*, uint8_t*> {
+		uint8_t* begin = const_cast<uint8_t*>(tilesMem0_.data()) + t*kMaxSizeInBytes;
+		uint8_t* end = begin + kMaxSizeInBytes;
+		return { begin, end }; }
+
+	auto ReadRange(int t) const -> std::pair<uint8_t*, uint8_t*> {
+		uint8_t* begin = const_cast<uint8_t*>(tilesMem1_.data()) + t*kMaxSizeInBytes;
+		uint8_t* end = begin + kMaxSizeInBytes;
+		return { begin, end }; }
+
+	auto gl_offset_and_size_to_irect(rmlv::ivec2 origin, rmlv::ivec2 size) const -> rmlg::irect {
+		int left = origin.x;
+		int right = left + size.x;
+		int bottom = bufferDimensionsInPixels_.y - origin.y - 1;
+		int top = bottom - size.y;
+		return { { left, top }, { right, bottom } }; }
+
+	auto DSDO(const GLState& s) const -> std::pair<rmlv::qfloat2, rmlv::qfloat2> {
+		auto vsz = s.viewportSize.value_or(bufferDimensionsInPixels_);
+		auto vpx = s.viewportOrigin;
+		auto DS = rmlv::qfloat2( vsz.x/2, -vsz.y/2 );
+		auto DO = rmlv::qfloat2( vpx.x, bufferDimensionsInPixels_.y-vpx.y );
+		return { DS, DO }; }
+
+	auto ScissorRect(const GLState& s) const -> rmlg::irect {
+		if (!s.scissorEnabled) {
+			return { { 0, 0 }, bufferDimensionsInPixels_ }; }
+		else {
+			return gl_offset_and_size_to_irect(s.scissorOrigin, s.scissorSize); }}
+
+	template <typename FUNC>
+	auto ForEachCoveredTile(const rmlg::irect rect, const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) -> int {
+		using std::min, std::max, rmlv::ivec2;
+		const ivec2 idev0{ dc0 };
+		const ivec2 idev1{ dc1 };
+		const ivec2 idev2{ dc2 };
+
+		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x), rect.top_left.x);
+		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y), rect.top_left.y);
+		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x), rect.bottom_right.x-1);
+		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y), rect.bottom_right.y-1);
+
+		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
+		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
+
+		int stride = bufferDimensionsInTiles_.x;
+		int tidRow = topLeft.y * stride;
+		int hits{0};
+		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
+			for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
+				++hits;
+				func(&tilesHead_[tidRow + tx]); }}
+		return hits; } };
+
+
+inline
+auto GPU::IC() -> GL& {
+	return (userIC_ == 0 ? IC0_ : IC1_); }
+
+
+inline
+auto GPU::TileRect(int idx) const -> rmlg::irect {
+	auto ty = idx / bufferDimensionsInTiles_.x;
+	auto tx = idx % bufferDimensionsInTiles_.x;
+	auto tpos = rmlv::ivec2{ tx, ty };
+	auto ltpx = tpos * tileDimensionsInPixels_;
+	auto rbpx = ltpx + tileDimensionsInPixels_;
+	rbpx = vmin(rbpx, bufferDimensionsInPixels_);  // clip against screen edge
+	return { ltpx, rbpx }; }
+
+
+template <typename SHADER>
+class GPUBltImpl : GPU {
+
 	void tile_StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
-		if (state.programId != PGM::id) {
-			return tile_StoreTrueColor<PGMs...>(state, uniformsPtr, rect, enableGamma, outcanvas); }
-
 		// XXX add support for uniforms in stream-out shader
-
 		auto& cc = threadColorBufs_[rclmt::jobsys::threadId];
 		if (enableGamma) {
-			rglr::FilterTile<PGM, rglr::sRGB>(cc, outcanvas, rect); }
+			rglr::FilterTile<SHADER, rglr::sRGB>(cc, outcanvas, rect); }
 		else {
-			rglr::FilterTile<PGM, rglr::LinearColor>(cc, outcanvas, rect); }}
+			rglr::FilterTile<SHADER, rglr::LinearColor>(cc, outcanvas, rect); }}
 
-	template <bool INSTANCED, typename INDEX_SOURCE, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_DrawArrays(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
+public:
+	static
+	auto MakeBltProgramPtrs() -> rglv::BltProgramPtrs {
+		rglv::BltProgramPtrs out;
+		out.tile_StoreTrueColor = static_cast<decltype(out.tile_StoreTrueColor)>(&GPUBltImpl::tile_StoreTrueColor);
+		return out; } };
 
-	template <bool INSTANCED, typename INDEX_SOURCE, typename PGM, typename ...PGMs>
+
+template <typename SHADER>
+class GPUBinImpl : GPU {
+
+	void bin_DrawArraysInstanced(int count, int instanceCnt) {
+		struct SequenceSource {
+			int operator()(int ti) { return ti; }};
+		SequenceSource indexSource{};
+		bin_DrawArrays<true>(count, indexSource, instanceCnt); }
+
+	void bin_DrawArraysSingle(int count) {
+		struct SequenceSource {
+			int operator()(int ti) { return ti; }};
+		SequenceSource indexSource{};
+		bin_DrawArrays<false>(count, indexSource, 1); }
+
+	void bin_DrawElementsSingle(int count, uint16_t* indices, uint8_t hint) {
+		if ((hint & RGL_HINT_DENSE) && (hint & RGL_HINT_READ4)) {
+			// special case:
+			// vertex data length is a multiple of 4 (SSE ready), and
+			// most/all of the vertex data will be used.
+			//
+			// in this case, it's better to run the vertex shader
+			// on the entire buffer first, then process the primitives
+			struct ArraySource {
+				ArraySource(const uint16_t* data) : data_(data) {}
+				int operator()(int ti) { return data_[ti]; }
+				const uint16_t* const data_; };
+			ArraySource indexSource{indices};
+			bin_DrawArrays<false>(count, indexSource, 1); }
+		else {
+			struct ArraySource {
+				ArraySource(const uint16_t* data) : data_(data) {}
+				int operator()(int ti) { return data_[ti]; }
+				const uint16_t* const data_; };
+			ArraySource indexSource{indices};
+			bin_DrawElements<false>(count, indexSource, 1); }}
+
+	void bin_DrawElementsInstanced(int count, uint16_t* indices, int instanceCnt) {
+			struct ArraySource {
+				ArraySource(const uint16_t* data) : data_(data) {}
+				int operator()(int ti) { return data_[ti]; }
+				const uint16_t* const data_; };
+			ArraySource indexSource{indices};
+			bin_DrawElements<true>(count, indexSource, instanceCnt); }
+
+	template <bool INSTANCED, typename INDEX_SOURCE>
 	void bin_DrawArrays(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
-		if (PGM::id != binState->programId) {
-			return bin_DrawArrays<INSTANCED, INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
 
 		const auto matrices = MakeMatrices(state);
-		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
+		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(binUniforms));
 		const auto cullingEnabled = state.cullingEnabled;
 		const auto cullFace = state.cullFace;
-		typename PGM::Loader loader( state.buffers, state.bufferFormat );
+		typename SHADER::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
-		typename PGM::VertexInput vertex;
+		typename SHADER::VertexInput vertex;
 
 		clipQueue_.clear();
 		int siz = (loader.Size() + 3) & (~0x3);
@@ -621,8 +573,8 @@ private:
 				loader.LoadMD(vi, vertex);
 
 				qfloat4 coord;
-				typename PGM::VertexOutputMD unused;
-				PGM::ShadeVertex(matrices, uniforms, vertex, coord, unused);
+				typename SHADER::VertexOutputMD unused;
+				SHADER::ShadeVertex(matrices, uniforms, vertex, coord, unused);
 
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.data() + vi, flags);
@@ -688,15 +640,10 @@ private:
 
 		stats0_.totalTrianglesClipped = clipQueue_.size();
 		if (!clipQueue_.empty()) {
-			bin_DrawElementsClipped<INSTANCED, PGM>(state); }}
+			bin_DrawElementsClipped<INSTANCED>(state); }}
 
-	template <bool INSTANCED, typename INDEX_SOURCE, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type bin_DrawElements(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {}
-
-	template <bool INSTANCED, typename INDEX_SOURCE, typename PGM, typename ...PGMs>
+	template <bool INSTANCED, typename INDEX_SOURCE>
 	void bin_DrawElements(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
-		if (PGM::id != binState->programId) {
-			return bin_DrawElements<INSTANCED, INDEX_SOURCE, PGMs...>(count, indexSource, instanceCnt); }
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
@@ -704,10 +651,10 @@ private:
 		clipQueue_.clear();
 
 		const auto matrices = MakeMatrices(state);
-		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
+		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(binUniforms));
 		const auto cullingEnabled = state.cullingEnabled;
 		const auto cullFace = state.cullFace;
-		typename PGM::Loader loader( state.buffers, state.bufferFormat );
+		typename SHADER::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
 		// XXX workaround for lambda-capture of vars from structured binding
@@ -729,8 +676,8 @@ private:
 			Mark(&h); }
 
 		for (int iid=0; iid<instanceCnt; ++iid) {
-			std::array<typename PGM::VertexInput, 3> vertex;
-			std::array<typename PGM::VertexOutputMD, 3> computed;
+			std::array<typename SHADER::VertexInput, 3> vertex;
+			std::array<typename SHADER::VertexOutputMD, 3> computed;
 			std::array<rmlv::qfloat2, 3> devCoord;
 			std::array<rmlv::mvec4i, 3> clipFlags;
 			std::array<std::array<int, 4>, 3> srcIdx;
@@ -744,7 +691,7 @@ private:
 			auto flush = [&]() {
 				for (int i{0}; i<3; ++i) {
 					qfloat4 gl_Position;
-					PGM::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
+					SHADER::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
 					clipFlags[i] = frustum.Test(gl_Position);
 					devCoord[i] = (pdiv(gl_Position).xy() + _1) * DS + DO;
 					/* todo compute 4x triangle area here */ }
@@ -821,122 +768,15 @@ private:
 
 		stats0_.totalTrianglesClipped = clipQueue_.size();
 		if (!clipQueue_.empty()) {
-			bin_DrawElementsClipped<INSTANCED, PGM>(state); }}
+			bin_DrawElementsClipped<INSTANCED>(state); }}
 
-	template <bool SCISSOR_ENABLED, bool INSTANCED, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {}
-
-	template<bool SCISSOR_ENABLED, bool INSTANCED, typename PGM, typename ...PGMs>
-	void tile_DrawElements(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
-		if (state.programId != PGM::id) {
-			return tile_DrawElements<SCISSOR_ENABLED, INSTANCED, PGMs...>(state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
-
-		using rmlm::mat4;
-		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
-		using rmlv::mvec4i;
-		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat4;
-		using std::array, std::swap;
-
-		auto loader = typename PGM::Loader{ state.buffers, state.bufferFormat };
-
-		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
-		auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
-		const int targetHeightInPixels_ = cbc.height();
-
-		// XXX workaround for lambda-capture of vars from structured binding
-		rmlv::qfloat2 DS, DO; std::tie(DS, DO) = DSDO(state);
-		// const auto [DS, DO] = DSDO(state);
-		const auto _1 = rmlv::mvec4f{ 1.0F };
-
-		const auto matrices = MakeMatrices(state);
-		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
-
-		using sampler = rglr::ts_pow2_mipmap;
-		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
-		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
-
-		array<typename PGM::VertexInput, 3> vertex;
-		array<typename PGM::VertexOutputMD, 3> computed;
-		array<qfloat4, 3> devCoord;
-		array<mvec4i, 3> fx, fy;
-		bool backfacing[4];
-		int li{0};  // sse lane being loaded
-
-		auto flush = [&]() {
-			for (int i=0; i<3; ++i) {
-				qfloat4 gl_Position;
-				PGM::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
-				devCoord[i] = pdiv(gl_Position);
-				fx[i] = ftoi(16.0F * ((devCoord[i].x+_1) * DS.x + DO.x));
-				fy[i] = ftoi(16.0F * ((devCoord[i].y+_1) * DS.y + DO.y)); }
-
-			// draw up to 4 triangles
-			for (int ti=0; ti<li; ti++) {
-				auto rasterizerProgram = TriangleProgram<sampler, PGM>{
-					tu0, tu1,
-					cbc, dbc,
-					tileOrigin,
-					matrices,
-					uniforms,
-					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
-					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
-					computed[0].Lane(ti),
-					computed[1].Lane(ti),
-					computed[2].Lane(ti) };
-				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, TriangleProgram<sampler, PGM>>{rasterizerProgram, rect, targetHeightInPixels_};
-				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
-				                fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
-				                !backfacing[ti]); }
-
-			// reset the SIMD lane counter
-			li = 0; };
-
-		int loadedInstanceId;
-		if (INSTANCED) {
-			loadedInstanceId = cs.PeekUShort();
-			loader.LoadInstance(loadedInstanceId, vertex[0]);
-			loader.LoadInstance(loadedInstanceId, vertex[1]);
-			loader.LoadInstance(loadedInstanceId, vertex[2]); }
-
-		while (1) {
-			uint16_t firstWord = cs.ConsumeUShort();
-			if (firstWord == 0xffff) {
-				break; }
-
-			if (INSTANCED) {
-				const int iid = firstWord;
-				if (iid != loadedInstanceId) {
-					flush();
-					loadedInstanceId = iid;
-					loader.LoadInstance(iid, vertex[0]);
-					loader.LoadInstance(iid, vertex[1]);
-					loader.LoadInstance(iid, vertex[2]); }}
-
-			uint16_t tmp;
-			if (INSTANCED) {
-				tmp = cs.ConsumeUShort(); }
-			else {
-				tmp = firstWord; }
-			const uint16_t i1 = cs.ConsumeUShort();
-			const uint16_t i2 = cs.ConsumeUShort();
-			backfacing[li] = tmp & 0x8000;
-			const uint16_t i0 = tmp & 0x7fff;
-			loader.LoadLane(i0, li, vertex[0]);
-			loader.LoadLane(i1, li, vertex[1]);
-			loader.LoadLane(i2, li, vertex[2]);
-			++li;
-
-			if (li == 4) {
-				flush(); }}
-		flush(); }
-
-	template <bool INSTANCED, typename PGM>
+	template <bool INSTANCED>
 	void bin_DrawElementsClipped(const GLState& state) {
 		using rmlm::mat4;
 		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
 		using std::array, std::swap, std::min, std::max;
 
-		typename PGM::Loader loader( state.buffers, state.bufferFormat );
+		typename SHADER::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
 		const auto [DS, DO] = DSDO(state);
@@ -944,16 +784,16 @@ private:
 		const auto scissorRect = ScissorRect(state);
 
 		const auto matrices = MakeMatrices(state);
-		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(binUniforms));
+		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(binUniforms));
 
 		auto CVMix = [&](const ClippedVertex& a, const ClippedVertex& b, const float d) {
-			static_assert(sizeof(typename PGM::VertexOutputSD) <= sizeof(ClippedVertex::data), "shader output too large for clipped vertex buffer");
+			static_assert(sizeof(typename SHADER::VertexOutputSD) <= sizeof(ClippedVertex::data), "shader output too large for clipped vertex buffer");
 			ClippedVertex out;
 			out.coord = mix(a.coord, b.coord, d);
-			auto& ad = *reinterpret_cast<const typename PGM::VertexOutputSD*>(&a.data);
-			auto& bd = *reinterpret_cast<const typename PGM::VertexOutputSD*>(&b.data);
-			auto& od = *reinterpret_cast<      typename PGM::VertexOutputSD*>(&out.data);
-			od = PGM::VertexOutputSD::Mix(ad, bd, d);
+			auto& ad = *reinterpret_cast<const typename SHADER::VertexOutputSD*>(&a.data);
+			auto& bd = *reinterpret_cast<const typename SHADER::VertexOutputSD*>(&b.data);
+			auto& od = *reinterpret_cast<      typename SHADER::VertexOutputSD*>(&out.data);
+			od = SHADER::VertexOutputSD::Mix(ad, bd, d);
 			return out; };
 
 		for (const auto& faceIndices : clipQueue_) {
@@ -963,18 +803,18 @@ private:
 				const int iid = faceIndices[0];
 				const auto idx = faceIndices[i+1];
 
-				typename PGM::VertexInput vertex;
+				typename SHADER::VertexInput vertex;
 				loader.LoadLane(idx, 0, vertex);
 				if (INSTANCED) {
 					loader.LoadInstance(iid, vertex); }
 
 				qfloat4 coord;
-				typename PGM::VertexOutputMD computed;
-				PGM::ShadeVertex(matrices, uniforms, vertex, coord, computed);
+				typename SHADER::VertexOutputMD computed;
+				SHADER::ShadeVertex(matrices, uniforms, vertex, coord, computed);
 
 				ClippedVertex cv;
 				cv.coord = coord.lane(0);
-				auto* tmp = reinterpret_cast<typename PGM::VertexOutputSD*>(&cv.data);
+				auto* tmp = reinterpret_cast<typename SHADER::VertexOutputSD*>(&cv.data);
 				*tmp = computed.Lane(0);
 				clipA_.emplace_back(cv); }
 
@@ -1040,47 +880,144 @@ private:
 					AppendUShort(th, (bi+i0) | (backfacing ? 0x8000 : 0));
 					AppendUShort(th, bi+i1);
 					AppendUShort(th, bi+i2); }); }}}
+public:
+	static
+	auto MakeVertexProgramPtrs() -> rglv::VertexProgramPtrs {
+		rglv::VertexProgramPtrs out;
+		out.bin_DrawArraysSingle = static_cast<decltype(out.bin_DrawArraysSingle)>(&GPUBinImpl::bin_DrawArraysSingle);
+		out.bin_DrawArraysInstanced = static_cast<decltype(out.bin_DrawArraysInstanced)>(&GPUBinImpl::bin_DrawArraysInstanced);
+		out.bin_DrawElementsSingle = static_cast<decltype(out.bin_DrawElementsSingle)>(&GPUBinImpl::bin_DrawElementsSingle);
+		out.bin_DrawElementsInstanced = static_cast<decltype(out.bin_DrawElementsInstanced)>(&GPUBinImpl::bin_DrawElementsInstanced);
+		return out; }};
 
-	template <typename FUNC>
-	int ForEachCoveredTile(const rmlg::irect rect, const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) {
-		using std::min, std::max, rmlv::ivec2;
-		const ivec2 idev0{ dc0 };
-		const ivec2 idev1{ dc1 };
-		const ivec2 idev2{ dc2 };
+			
+template <typename SHADER, bool SCISSOR_ENABLED>
+class GPUTileImpl : GPU {
 
-		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x), rect.top_left.x);
-		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y), rect.top_left.y);
-		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x), rect.bottom_right.x-1);
-		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y), rect.bottom_right.y-1);
+	void tile_DrawElementsSingle(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+		tile_DrawElements<false>(state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
 
-		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
-		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
+	void tile_DrawElementsInstanced(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+		tile_DrawElements<true>(state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
 
-		int stride = bufferDimensionsInTiles_.x;
-		int tidRow = topLeft.y * stride;
-		int hits{0};
-		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
-			for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
-				++hits;
-				func(&tilesHead_[tidRow + tx]); }}
-		return hits; }
-
-	template <bool SCISSOR_ENABLED, typename ...PGMs>
-	typename std::enable_if<sizeof...(PGMs) == 0>::type tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {}
-
-	template <bool SCISSOR_ENABLED, typename PGM, typename ...PGMs>
-	void tile_DrawClipped(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
-		if (state.programId != PGM::id) {
-			return tile_DrawClipped<SCISSOR_ENABLED, PGMs...>(state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
+	template<bool INSTANCED>
+	void tile_DrawElements(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
+		using rmlv::mvec4i;
+		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat4;
+		using std::array, std::swap;
+
+		if (SCISSOR_ENABLED) {
+			rect = Intersect(rect, gl_offset_and_size_to_irect(state.scissorOrigin, state.scissorSize)); }
+
+		auto loader = typename SHADER::Loader{ state.buffers, state.bufferFormat };
+
+		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
+		auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
+		const int targetHeightInPixels_ = cbc.height();
+
+		// XXX workaround for lambda-capture of vars from structured binding
+		rmlv::qfloat2 DS, DO; std::tie(DS, DO) = DSDO(state);
+		// const auto [DS, DO] = DSDO(state);
+		const auto _1 = rmlv::mvec4f{ 1.0F };
+
+		const auto matrices = MakeMatrices(state);
+		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(uniformsPtr));
+
+		using sampler = rglr::ts_pow2_mipmap;
+		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
+		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
+
+		array<typename SHADER::VertexInput, 3> vertex;
+		array<typename SHADER::VertexOutputMD, 3> computed;
+		array<qfloat4, 3> devCoord;
+		array<mvec4i, 3> fx, fy;
+		bool backfacing[4];
+		int li{0};  // sse lane being loaded
+
+		auto flush = [&]() {
+			for (int i=0; i<3; ++i) {
+				qfloat4 gl_Position;
+				SHADER::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
+				devCoord[i] = pdiv(gl_Position);
+				fx[i] = ftoi(16.0F * ((devCoord[i].x+_1) * DS.x + DO.x));
+				fy[i] = ftoi(16.0F * ((devCoord[i].y+_1) * DS.y + DO.y)); }
+
+			// draw up to 4 triangles
+			for (int ti=0; ti<li; ti++) {
+				auto rasterizerProgram = TriangleProgram<sampler, SHADER>{
+					tu0, tu1,
+					cbc, dbc,
+					tileOrigin,
+					matrices,
+					uniforms,
+					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
+					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
+					computed[0].Lane(ti),
+					computed[1].Lane(ti),
+					computed[2].Lane(ti) };
+				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, TriangleProgram<sampler, SHADER>>{rasterizerProgram, rect, targetHeightInPixels_};
+				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
+				                fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
+				                !backfacing[ti]); }
+
+			// reset the SIMD lane counter
+			li = 0; };
+
+		int loadedInstanceId;
+		if (INSTANCED) {
+			loadedInstanceId = cs.PeekUShort();
+			loader.LoadInstance(loadedInstanceId, vertex[0]);
+			loader.LoadInstance(loadedInstanceId, vertex[1]);
+			loader.LoadInstance(loadedInstanceId, vertex[2]); }
+
+		while (1) {
+			uint16_t firstWord = cs.ConsumeUShort();
+			if (firstWord == 0xffff) {
+				break; }
+
+			if (INSTANCED) {
+				const int iid = firstWord;
+				if (iid != loadedInstanceId) {
+					flush();
+					loadedInstanceId = iid;
+					loader.LoadInstance(iid, vertex[0]);
+					loader.LoadInstance(iid, vertex[1]);
+					loader.LoadInstance(iid, vertex[2]); }}
+
+			uint16_t tmp;
+			if (INSTANCED) {
+				tmp = cs.ConsumeUShort(); }
+			else {
+				tmp = firstWord; }
+			const uint16_t i1 = cs.ConsumeUShort();
+			const uint16_t i2 = cs.ConsumeUShort();
+			backfacing[li] = tmp & 0x8000;
+			const uint16_t i0 = tmp & 0x7fff;
+			loader.LoadLane(i0, li, vertex[0]);
+			loader.LoadLane(i1, li, vertex[1]);
+			loader.LoadLane(i2, li, vertex[2]);
+			++li;
+
+			if (li == 4) {
+				flush(); }}
+		flush(); }
+
+
+	void tile_DrawClipped(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+		using rmlm::mat4;
+		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
+
+		if (SCISSOR_ENABLED) {
+			rect = Intersect(rect, gl_offset_and_size_to_irect(state.scissorOrigin, state.scissorSize)); }
 
 		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
 		auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
 		const int targetHeightInPixels_ = cbc.height();
 
 		const auto matrices = MakeMatrices(state);
-		const typename PGM::UniformsMD uniforms(*static_cast<const typename PGM::UniformsSD*>(uniformsPtr));
+		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(uniformsPtr));
 
 		const auto tmp = cs.ConsumeUShort();
 		const bool backfacing = (tmp & 0x8000) != 0;
@@ -1091,15 +1028,15 @@ private:
 		vec4 dev0 = clippedVertexBuffer1_[i0].coord;
 		vec4 dev1 = clippedVertexBuffer1_[i1].coord;
 		vec4 dev2 = clippedVertexBuffer1_[i2].coord;
-		auto& data0 = *reinterpret_cast<typename PGM::VertexOutputSD*>(&(clippedVertexBuffer1_[i0].data));
-		auto& data1 = *reinterpret_cast<typename PGM::VertexOutputSD*>(&(clippedVertexBuffer1_[i1].data));
-		auto& data2 = *reinterpret_cast<typename PGM::VertexOutputSD*>(&(clippedVertexBuffer1_[i2].data));
+		auto& data0 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i0].data));
+		auto& data1 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i1].data));
+		auto& data2 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i2].data));
 
 		using sampler = rglr::ts_pow2_mipmap;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		auto rasterizerProgram = TriangleProgram<sampler, PGM>{
+		auto rasterizerProgram = TriangleProgram<sampler, SHADER>{
 			tu0, tu1,
 			cbc, dbc,
 			tileOrigin,
@@ -1110,121 +1047,20 @@ private:
 			data0,
 			data1,
 			data2 };
-		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, TriangleProgram<sampler, PGM>>{rasterizerProgram, rect, targetHeightInPixels_};
+		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, TriangleProgram<sampler, SHADER>>{rasterizerProgram, rect, targetHeightInPixels_};
 		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
 		                int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
 		                !backfacing);}
 
-	void AppendByte(uint8_t** h, uint8_t a) {
-		*reinterpret_cast<uint8_t*>(*h) = a; *h += sizeof(uint8_t); }
-	void AppendUShort(uint8_t** h, uint16_t a) {
-		*reinterpret_cast<uint16_t*>(*h) = a; *h += sizeof(uint16_t); }
-	void AppendInt(uint8_t** h, int a) {
-		*reinterpret_cast<int*>(*h) = a; *h += sizeof(int); }
-	void AppendFloat(uint8_t** h, float a) {
-		*reinterpret_cast<float*>(*h) = a;  *h += sizeof(float); }
-	void AppendPtr(uint8_t** h, const void* a) {
-		*reinterpret_cast<const void**>(*h) = a;  *h += sizeof(void*); }
-	void AppendVec4(uint8_t** h, rmlv::vec4 a) {
-		AppendFloat(h, a.x);
-		AppendFloat(h, a.y);
-		AppendFloat(h, a.z);
-		AppendFloat(h, a.w); }
+public:
+	static
+	auto MakeFragmentProgramPtrs() -> rglv::FragmentProgramPtrs {
+		rglv::FragmentProgramPtrs out;
+		out.tile_DrawClipped = static_cast<decltype(out.tile_DrawClipped)>(&GPUTileImpl::tile_DrawClipped);
+		out.tile_DrawElementsSingle = static_cast<decltype(out.tile_DrawElementsSingle)>(&GPUTileImpl::tile_DrawElementsSingle);
+		out.tile_DrawElementsInstanced = static_cast<decltype(out.tile_DrawElementsInstanced)>(&GPUTileImpl::tile_DrawElementsInstanced);
+		return out; }};
 
-	auto Unappend(uint8_t** h, int many) {
-		*h -= many; }
-
-	auto Mark(uint8_t** h) {
-		int dist = h - tilesHead_.data();
-		tilesMark_[dist] = *h; }
-
-	bool Touched(uint8_t** h) const {
-		int dist = h - tilesHead_.data();
-		return tilesMark_[dist] != *h; }
-
-	/* XXX bool Eof(int t) const {
-		return tilesTail_[t*16] == tilesHead_[t]; }*/
-
-	/*
-	 * use the command list length as an approximate compute cost
-	 */
-	inline int RenderCost(int t) const {
-		auto begin = WriteRange(t).first;
-		return tilesHead_[t] - begin; }
-
-	std::pair<uint8_t*, uint8_t*> WriteRange(int t) const {
-		uint8_t* begin = const_cast<uint8_t*>(tilesMem0_.data()) + t*kMaxSizeInBytes;
-		uint8_t* end = begin + kMaxSizeInBytes;
-		return { begin, end }; }
-
-	std::pair<uint8_t*, uint8_t*> ReadRange(int t) const {
-		uint8_t* begin = const_cast<uint8_t*>(tilesMem1_.data()) + t*kMaxSizeInBytes;
-		uint8_t* end = begin + kMaxSizeInBytes;
-		return { begin, end }; }
-
-	auto gl_offset_and_size_to_irect(rmlv::ivec2 origin, rmlv::ivec2 size) const -> rmlg::irect {
-		int left = origin.x;
-		int right = left + size.x;
-		int bottom = bufferDimensionsInPixels_.y - origin.y - 1;
-		int top = bottom - size.y;
-		return { { left, top }, { right, bottom } }; }
-
-	auto DSDO(const GLState& s) const -> std::pair<rmlv::qfloat2, rmlv::qfloat2> {
-		auto vsz = s.viewportSize.value_or(bufferDimensionsInPixels_);
-		auto vpx = s.viewportOrigin;
-		auto DS = rmlv::qfloat2( vsz.x/2, -vsz.y/2 );
-		auto DO = rmlv::qfloat2( vpx.x, bufferDimensionsInPixels_.y-vpx.y );
-		return { DS, DO }; }
-
-	auto ScissorRect(const GLState& s) const -> rmlg::irect {
-		if (!s.scissorEnabled) {
-			return { { 0, 0 }, bufferDimensionsInPixels_ }; }
-		else {
-			return gl_offset_and_size_to_irect(s.scissorOrigin, s.scissorSize); }}
-
-private:
-	const int concurrency_;
-	rcls::vector<rglr::QFloat4Canvas> threadColorBufs_{};
-	rcls::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
-	std::vector<ThreadStat> threadStats_;
-
-	// tile/bin collection
-	std::vector<uint8_t*> tilesHead_;
-	std::vector<uint8_t*> tilesMark_;
-	std::vector<uint8_t> tilesMem0_;
-	std::vector<uint8_t> tilesMem1_;
-	std::vector<TileStat> tileStats_;
-
-	// render target parameters
-	rmlv::ivec2 bufferDimensionsInPixels_;
-	rmlv::ivec2 bufferDimensionsInTiles_;
-	rmlv::ivec2 tileDimensionsInBlocks_;
-	rmlv::ivec2 tileDimensionsInPixels_;
-
-	// IC users can write to
-	int userIC_{0};
-
-	// double-buffered GL contexts: binning
-	GL IC0_;
-	rcls::vector<ClippedVertex> clippedVertexBuffer0_;
-	GPUStats stats0_;
-
-	// buffers used during binning and clipping
-	const GLState* binState{nullptr};
-	const void* binUniforms{nullptr};
-	rcls::vector<uint8_t> clipFlagBuffer_{};
-	rcls::vector<float> devCoordXBuffer_{};
-	rcls::vector<float> devCoordYBuffer_{};
-	rcls::vector<std::array<int, 4>> clipQueue_;
-	rcls::vector<ClippedVertex> clipA_;
-	rcls::vector<ClippedVertex> clipB_;
-
-	// double-buffered GL contexts: drawing
-	GL IC1_;
-	rcls::vector<ClippedVertex> clippedVertexBuffer1_;
-	GPUStats stats1_; };
-
-#undef UNUSED
 
 }  // namespace rglv
 }  // namespace rqdq

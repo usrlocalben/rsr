@@ -64,8 +64,8 @@ public:
 
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
-		auto [id, ptr] = dc.AllocUniformBuffer<rglv::BaseProgram::UniformsSD>();
-		dc.UseUniforms(id);
+		// auto [id, ptr] = dc.AllocUniformBuffer<rglv::BaseProgram::UniformsSD>();
+		// dc.UseUniforms(id);
 
 		dc.UseBuffer(0, buffers_[activeBuffer_]);
 		dc.DrawArrays(GL_TRIANGLES, 0, 6); }

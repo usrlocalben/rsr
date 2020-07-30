@@ -25,15 +25,14 @@ using namespace rqv;
 
 namespace jobsys = rclmt::jobsys;
 
-using GPU = rglv::GPU<rglv::BaseProgram, WireframeProgram, IQPostProgram, EnvmapProgram, AmyProgram, EnvmapXProgram, ManyProgram, OBJ1Program, OBJ2Program>;
-
 
 class GPUNode : public IGPU {
 public:
 	GPUNode(std::string_view id, InputList inputs, bool aa) :
 		IGPU(id, inputs),
 		gpu_(jobsys::numThreads),
-		aa_(aa) {}
+		aa_(aa) {
+		rqdq::rqv::Install(gpu_); }
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "layer") {
@@ -163,7 +162,7 @@ public:
 
 private:
 	// internal
-	GPU gpu_;
+	rglv::GPU gpu_;
 
 	// static
 	const bool aa_;
