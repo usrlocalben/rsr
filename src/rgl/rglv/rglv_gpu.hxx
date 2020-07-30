@@ -248,12 +248,14 @@ struct BltProgramPtrs {
 
 
 class GPU {
-protected:
+private:
 	std::unordered_map<uint32_t, VertexProgramPtrs> vertexDispatch_{};
 	std::unordered_map<uint32_t, FragmentProgramPtrs> fragmentDispatch_{};
 	std::unordered_map<uint32_t, BltProgramPtrs> bltDispatch_{};
 
 	const int concurrency_;
+
+protected:
 	rcls::vector<rglr::QFloat4Canvas> threadColorBufs_{};
 	rcls::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
 	std::vector<ThreadStat> threadStats_;
