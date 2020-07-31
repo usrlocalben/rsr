@@ -26,6 +26,8 @@ constexpr int GL_CCW = 1;
 
 constexpr int GL_CULL_FACE = 1;
 constexpr int GL_SCISSOR_TEST = 2;
+constexpr int GL_BLEND = 3;
+constexpr int GL_DEPTH_TEST = 4;
 
 constexpr int GL_FRONT = 1;
 constexpr int GL_BACK = 2;
@@ -42,6 +44,11 @@ constexpr int GL_STENCIL_BUFFER_BIT = 4;
 
 constexpr uint8_t RGL_HINT_READ4 = 1;
 constexpr uint8_t RGL_HINT_DENSE = 2;
+
+constexpr int GL_LESS = 0;
+constexpr int GL_LEQUAL = 1;
+constexpr int GL_EQUAL = 2;
+
 
 struct TextureState {
 	const PixelToaster::FloatingPointPixel *ptr;
@@ -71,6 +78,11 @@ struct GLState {
 	rmlv::ivec2 scissorSize;
 	rmlv::ivec2 viewportOrigin;
 	std::optional<rmlv::ivec2> viewportSize;
+	bool blendingEnabled;		// false, disabled
+	bool colorWriteMask;		// true, enabled
+	bool depthWriteMask;		// true, enabled
+	bool depthTestEnabled;      // 
+	int depthFunc; 
 
 	int programId;			// default is zero??? unclear
 	int uniformsOfs;
@@ -94,9 +106,29 @@ struct GLState {
 		uint32_t key = programId << 24;
 		return key; }
 
+	void Dump() const {
+		std::cerr << "<GLState pgm=" << programId;
+		if (cullingEnabled) std::cerr << " CULL_FACE";
+		if (cullFace & GL_BACK) std::cerr << " BACK";
+		if (cullFace & GL_FRONT) std::cerr << " FRONT";
+		if (scissorEnabled) std::cerr << " SCISSOR_TEST";
+		if (depthTestEnabled) std::cerr << " DEPTH_TEST";
+		if (depthFunc == GL_LESS) std::cerr << " LESS";
+		if (depthFunc == GL_LEQUAL) std::cerr << " LEQUAL";
+		if (depthFunc == GL_EQUAL) std::cerr << " EQUAL";
+		if (blendingEnabled) std::cerr << " BLEND";
+		if (depthWriteMask) std::cerr << " DEPTH_WRITE";
+		if (colorWriteMask) std::cerr << " COLOR_WRITE";
+		std::cerr << ">\n"; }
+
 	auto FragmentStateKey() const -> uint32_t {
 		uint32_t key = programId << 24;
 		key |= scissorEnabled;
+		key |= depthTestEnabled<<1;
+		if (depthTestEnabled) key |= depthFunc<<2;
+		key |= blendingEnabled<<4;
+		key |= depthWriteMask<<5;
+		key |= colorWriteMask<<6;
 		return key; }
 
 	auto BltStateKey() const -> uint32_t {
@@ -112,6 +144,11 @@ struct GLState {
 		cullFace = GL_BACK;
 
 		scissorEnabled = false;
+		blendingEnabled = false;
+		colorWriteMask = true;
+		depthWriteMask = true;
+		depthTestEnabled = true;
+		depthFunc = GL_LESS;
 
 		viewportOrigin = rmlv::ivec2{ 0, 0 };
 		viewportSize = std::nullopt;
@@ -137,6 +174,10 @@ public:
 			cs_.cullingEnabled = true; }
 		else if (value == GL_SCISSOR_TEST) {
 			cs_.scissorEnabled = true; }
+		else if (value == GL_BLEND) {
+			cs_.blendingEnabled = true; }
+		else if (value == GL_DEPTH_TEST) {
+			cs_.depthTestEnabled = true; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
 
@@ -146,8 +187,24 @@ public:
 			cs_.cullingEnabled = false; }
 		else if (value == GL_SCISSOR_TEST) {
 			cs_.scissorEnabled = false; }
+		else if (value == GL_BLEND) {
+			cs_.blendingEnabled = false; }
+		else if (value == GL_DEPTH_TEST) {
+			cs_.depthTestEnabled = false; }
 		else {
 			throw std::runtime_error("unknown glEnable value"); }}
+
+	void DepthFunc(int value) {
+		dirty_ = true;
+		cs_.depthFunc = value; }
+
+	void DepthWriteMask(bool value) {
+		dirty_ = true;
+		cs_.depthWriteMask = value; }
+
+	void ColorWriteMask(bool value) {
+		dirty_ = true;
+		cs_.colorWriteMask = value; }
 
 	void CullFace(const int value) {
 		dirty_ = true;
@@ -223,6 +280,10 @@ public:
 	void NormalMatrix(const rmlm::mat4& m) {
 		dirty_ = true;
 		cs_.normalMatrix = m; }
+
+	void ResetX() {
+		dirty_ = true;
+		cs_.reset(); }
 
 	//inline void glUniform(const VertexInputUniform& viu) {
 	//	state.vertex_input_uniform = viu; }

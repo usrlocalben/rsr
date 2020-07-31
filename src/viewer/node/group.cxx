@@ -53,10 +53,10 @@ public:
 			return; }
 		jobsys::run(link); }
 
-	void Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) override {
+	void Draw(int pass, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) override {
 		for (auto glnode : gls_) {
 			// XXX increment depth even if matrix/transform stack is not modified?
-			glnode->Draw(dc, pmat, mvmat, depth); }}
+			glnode->Draw(pass, dc, pmat, mvmat, depth); }}
 
 protected:
 	void AddDeps() override {

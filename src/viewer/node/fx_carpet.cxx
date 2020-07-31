@@ -55,9 +55,10 @@ public:
 	void Main() override {
 		jobsys::run(Compute());}
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth [[maybe_unused]]) override {
+	void Draw(int pass, rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth [[maybe_unused]]) override {
 		using namespace rglv;
 		auto& dc = *_dc;
+		if (pass != 1) return;
 		std::lock_guard<std::mutex> lock(dc.mutex);
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }

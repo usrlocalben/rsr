@@ -177,7 +177,9 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth [[maybe_unused]],
 		rmlv::qfloat4& gl_FragColor) {
-		gl_FragColor = tu0.sample({ outs.envmapUV.x, outs.envmapUV.y }); } };
+		gl_FragColor = tu0.sample({ outs.envmapUV.x, outs.envmapUV.y });
+		gl_FragColor.w = 0.5F;
+	} };
 
 
 struct AmyProgram final : public rglv::BaseProgram {

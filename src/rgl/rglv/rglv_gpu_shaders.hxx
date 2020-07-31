@@ -65,9 +65,6 @@ struct BaseProgram {
 		VertexOutputMD& outs [[maybe_unused]]) {
 		gl_Position = m.vpm * v.a0; }
 
-	static constexpr bool DepthTestEnabled = true;
-
-
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(
 		const Matrices& m [[maybe_unused]],
@@ -83,13 +80,6 @@ struct BaseProgram {
 		rmlv::qfloat4& gl_FragColor
 		) {
 		gl_FragColor = rmlv::mvec4f{1.0F}; }
-
-	inline static void BlendFragment(
-		rmlv::qfloat4& fragColor,
-		rmlv::qfloat3& destColor [[maybe_unused]],
-		rmlv::qfloat3& out
-		) {
-		out = fragColor.xyz(); }
 
 	inline static rmlv::qfloat3 ShadeCanvas(
 		rmlv::qfloat2 gl_FragCoord [[maybe_unused]],

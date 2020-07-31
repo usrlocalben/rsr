@@ -17,7 +17,7 @@ struct Light {
 class IGl : public NodeBase {
 public:
 	using NodeBase::NodeBase;
-	virtual auto Draw(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) -> void = 0;
+	virtual auto Draw(int pass, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) -> void = 0;
 	// virtual auto GetLights(const rmlm::mat4* mvmat) -> rcls::vector<Light> = 0;
 	};
 

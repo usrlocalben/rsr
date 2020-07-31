@@ -84,9 +84,19 @@ struct DepthFuncLess {
 	auto operator()(const rmlv::mvec4f& fragDepth, const rmlv::mvec4f& destDepth) const -> rmlv::mvec4f {
 		return cmplt(fragDepth, destDepth); } };
 
+struct DepthFuncEqual {
+	auto operator()(const rmlv::mvec4f& fragDepth, const rmlv::mvec4f& destDepth) const -> rmlv::mvec4f {
+		return cmpeq(fragDepth, destDepth); } };
+
 struct BlendFuncOff {
 	auto operator()(const rmlv::qfloat4& fragColor, const rmlv::qfloat3& destColor [[maybe_unused]] ) const -> rmlv::qfloat3 {
 		return fragColor.xyz(); } };
+
+struct BlendFuncAlpha {
+	auto operator()(const rmlv::qfloat4& fragColor, const rmlv::qfloat3& destColor [[maybe_unused]] ) const -> rmlv::qfloat3 {
+		auto alpha = fragColor.w;
+		auto oneMinusAlpha = rmlv::mvec4f{1.0F} - alpha;
+		return fragColor.xyz()*alpha + destColor*oneMinusAlpha; }};
 
 
 
@@ -194,28 +204,28 @@ struct TriangleProgram {
 			fragMask = andnot(triMask, float2bits(rmlv::mvec4f::all_ones())); }
 
 		// restore perspective
-		const auto fragW = rmlv::oneover(Interpolate(BS, oneOverW_));
-		rglv::BaryCoord BP;
-		BP.x = oneOverW_.v0 * BS.x * fragW;
-		BP.z = oneOverW_.v2 * BS.z * fragW;
-		BP.y = 1.0f - BP.x - BP.z;
+		if (COLOR_WRITEMASK) {
+			const auto fragW = rmlv::oneover(Interpolate(BS, oneOverW_));
+			rglv::BaryCoord BP;
+			BP.x = oneOverW_.v0 * BS.x * fragW;
+			BP.z = oneOverW_.v2 * BS.z * fragW;
+			BP.y = 1.0f - BP.x - BP.z;
 
-		auto attrs = vo_.Interpolate(BS, BP);
+			auto attrs = vo_.Interpolate(BS, BP);
 
-		qfloat4 fragColor;
-		SHADER_PROGRAM::ShadeFragment(
-			matrices_,
-			uniforms_,
-			tu0_, tu1_,
-			BS, BP, attrs,
-			fragCoord,
-			/*frontFacing,*/
-			fragDepth,
-			fragColor);
+			qfloat4 fragColor;
+			SHADER_PROGRAM::ShadeFragment(
+				matrices_,
+				uniforms_,
+				tu0_, tu1_,
+				BS, BP, attrs,
+				fragCoord,
+				/*frontFacing,*/
+				fragDepth,
+				fragColor);
 
 		// XXX late-Z should happen here <----
 
-		if (COLOR_WRITEMASK) {
 			qfloat3 destColor;
 			LoadColor(destColor);
 

@@ -157,11 +157,12 @@ public:
 			jobsys::run(subJobs[sji]); }
 		jobsys::run(finalizeJob); }
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth [[maybe_unused]]) override {
+	void Draw(int pass, rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth [[maybe_unused]]) override {
 		auto& dc = *_dc;
 		using rglv::GL_UNSIGNED_SHORT;
 		using rglv::GL_CULL_FACE;
 		using rglv::GL_TRIANGLES;
+		if (pass != 1) return;
 		std::lock_guard<std::mutex> lock(dc.mutex);
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }

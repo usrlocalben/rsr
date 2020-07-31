@@ -518,6 +518,7 @@ inline auto cmplt(const mvec4i&a, const mvec4i& b) -> mvec4i { return mvec4i(_mm
 inline auto cmpeq(const mvec4i&a, const mvec4i& b) -> mvec4i { return mvec4i(_mm_cmpeq_epi32(a.v, b.v)); }
 inline auto cmpgt(const mvec4i&a, const mvec4i& b) -> mvec4i { return mvec4i(_mm_cmpgt_epi32(a.v, b.v)); }
 
+inline auto cmpeq(const mvec4f&a, const mvec4f& b) -> mvec4f { return _mm_cmpeq_ps(a.v, b.v); }
 inline auto cmplt(const mvec4f&a, const mvec4f& b) -> mvec4f { return _mm_cmplt_ps(a.v, b.v); }
 inline auto cmple(const mvec4f&a, const mvec4f& b) -> mvec4f { return _mm_cmple_ps(a.v, b.v); }
 inline auto cmpge(const mvec4f&a, const mvec4f& b) -> mvec4f { return _mm_cmpge_ps(a.v, b.v); }

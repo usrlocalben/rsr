@@ -58,10 +58,10 @@ public:
 			return rmlv::vec3{ 0.0F }; }
 		return layerNode->GetBackgroundColor(); }
 
-	void Render(rglv::GL* dc, rmlv::ivec2 targetSizeInPx, float aspect) override {
+	void Render(int pass, rglv::GL* dc, rmlv::ivec2 targetSizeInPx, float aspect) override {
 		auto layerNode = GetSelectedLayer();
 		if (layerNode != nullptr) {
-			layerNode->Render(dc, targetSizeInPx, aspect); }}
+			layerNode->Render(pass, dc, targetSizeInPx, aspect); }}
 
 protected:
 	void AddDeps() override {

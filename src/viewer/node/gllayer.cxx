@@ -83,7 +83,7 @@ public:
 			color = colorNode_->Eval(colorSlot_).as_vec3(); }
 		return color; }
 
-	void Render(rglv::GL* dc, rmlv::ivec2 targetSizeInPx [[maybe_unused]], float aspect) override {
+	void Render(int pass, rglv::GL* dc, rmlv::ivec2 targetSizeInPx [[maybe_unused]], float aspect) override {
 		using namespace rmlm;
 		using namespace rglv;
 
@@ -97,7 +97,7 @@ public:
 			mvmat = mat4{1}; }
 
 		for (auto gl : gls_) {
-			gl->Draw(dc, &pmat, &mvmat, 0);}}
+			gl->Draw(pass, dc, &pmat, &mvmat, 0);}}
 
 protected:
 	void AddDeps() override {

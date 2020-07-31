@@ -128,7 +128,9 @@ public:
 		jobsys::Job *postJob = Post();
 		AddLinksTo(postJob);
 		for (auto layer : layers_) {
-			layer->Render(&gpu_.IC(), targetSizeInPx_, aspect_); }
+			layer->Render(0, &gpu_.IC(), targetSizeInPx_, aspect_); }
+		for (auto layer : layers_) {
+			layer->Render(1, &gpu_.IC(), targetSizeInPx_, aspect_); }
 		jobsys::run(postJob); }
 
 	static void AllThen(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {

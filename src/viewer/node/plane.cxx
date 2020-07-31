@@ -96,9 +96,11 @@ public:
 		materialNode_->AddLink(postSetup);
 		materialNode_->Run();}
 
-	void Draw(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, int depth [[maybe_unused]]) override {
+	void Draw(int pass, rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, int depth [[maybe_unused]]) override {
 		auto& dc = *_dc;
 		using namespace rglv;
+		if (pass != 1) return;
+		//dc.Reset();
 		std::scoped_lock<std::mutex> lock(dc.mutex);
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
