@@ -67,9 +67,6 @@ struct BaseProgram {
 
 	static constexpr bool DepthTestEnabled = true;
 
-	inline
-	static auto DepthFunc(rmlv::mvec4f fragDepth, rmlv::mvec4f destDepth) -> rmlv::mvec4f {
-		return cmplt(fragDepth, destDepth); }
 
 	template <typename TEXTURE_UNIT>
 	inline static void ShadeFragment(

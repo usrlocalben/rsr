@@ -80,7 +80,17 @@ inline Matrices MakeMatrices(const GLState& s) {
 	return m; }
 
 
-template <typename TEXTURE_UNIT, typename SHADER_PROGRAM>
+struct DepthFuncLess {
+	auto operator()(const rmlv::mvec4f& fragDepth, const rmlv::mvec4f& destDepth) const -> rmlv::mvec4f {
+		return cmplt(fragDepth, destDepth); } };
+
+struct BlendFuncOff {
+	auto operator()(const rmlv::qfloat4& fragColor, const rmlv::qfloat3& destColor [[maybe_unused]] ) const -> rmlv::qfloat3 {
+		return fragColor.xyz(); } };
+
+
+
+template <typename TEXTURE_UNIT, typename SHADER_PROGRAM, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
 struct TriangleProgram {
 	rmlv::qfloat4* cb_;
 	rmlv::qfloat* db_;
@@ -173,9 +183,9 @@ struct TriangleProgram {
 		qfloat destDepth;
 		rmlv::mvec4i fragMask;
 
-		if (SHADER_PROGRAM::DepthTestEnabled) {
+		if (DEPTH_TEST) {
 			LoadDepth(destDepth);
-			const auto depthMask = float2bits(SHADER_PROGRAM::DepthFunc(fragDepth, destDepth));
+			const auto depthMask = float2bits(DEPTH_FUNC{}(fragDepth, destDepth));
 			fragMask = andnot(triMask, depthMask);
 			if (movemask(bits2float(fragMask)) == 0) {
 				// early out if whole quad fails depth test
@@ -203,14 +213,17 @@ struct TriangleProgram {
 			fragDepth,
 			fragColor);
 
-		qfloat3 destColor;
-		LoadColor(destColor);
+		// XXX late-Z should happen here <----
 
-		qfloat3 blendedColor;
-		SHADER_PROGRAM::BlendFragment(fragColor, destColor, blendedColor);
+		if (COLOR_WRITEMASK) {
+			qfloat3 destColor;
+			LoadColor(destColor);
 
-		StoreColor(destColor, blendedColor, fragMask);
-		if (SHADER_PROGRAM::DepthTestEnabled) {
+			qfloat3 blendedColor = BLEND_FUNC()(fragColor, destColor);
+
+			StoreColor(destColor, blendedColor, fragMask); }
+
+		if (DEPTH_WRITEMASK) {
 			StoreDepth(destDepth, fragDepth, fragMask); } } };
 
 
@@ -420,47 +433,10 @@ protected:
 		if (!s.scissorEnabled) {
 			return { { 0, 0 }, bufferDimensionsInPixels_ }; }
 		else {
-			return gl_offset_and_size_to_irect(s.scissorOrigin, s.scissorSize); }}
-
-	template <typename FUNC>
-	auto ForEachCoveredTile(const rmlg::irect rect, const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) -> int {
-		using std::min, std::max, rmlv::ivec2;
-		const ivec2 idev0{ dc0 };
-		const ivec2 idev1{ dc1 };
-		const ivec2 idev2{ dc2 };
-
-		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x), rect.top_left.x);
-		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y), rect.top_left.y);
-		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x), rect.bottom_right.x-1);
-		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y), rect.bottom_right.y-1);
-
-		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
-		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
-
-		int stride = bufferDimensionsInTiles_.x;
-		int tidRow = topLeft.y * stride;
-		int hits{0};
-		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
-			for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
-				++hits;
-				func(&tilesHead_[tidRow + tx]); }}
-		return hits; } };
+			return gl_offset_and_size_to_irect(s.scissorOrigin, s.scissorSize); }}};
 
 
-inline
-auto GPU::IC() -> GL& {
-	return (userIC_ == 0 ? IC0_ : IC1_); }
 
-
-inline
-auto GPU::TileRect(int idx) const -> rmlg::irect {
-	auto ty = idx / bufferDimensionsInTiles_.x;
-	auto tx = idx % bufferDimensionsInTiles_.x;
-	auto tpos = rmlv::ivec2{ tx, ty };
-	auto ltpx = tpos * tileDimensionsInPixels_;
-	auto rbpx = ltpx + tileDimensionsInPixels_;
-	rbpx = vmin(rbpx, bufferDimensionsInPixels_);  // clip against screen edge
-	return { ltpx, rbpx }; }
 
 
 template <typename SHADER>
@@ -882,6 +858,31 @@ class GPUBinImpl : GPU {
 					AppendUShort(th, (bi+i0) | (backfacing ? 0x8000 : 0));
 					AppendUShort(th, bi+i1);
 					AppendUShort(th, bi+i2); }); }}}
+
+	template <typename FUNC>
+	auto ForEachCoveredTile(const rmlg::irect rect, const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) -> int {
+		using std::min, std::max, rmlv::ivec2;
+		const ivec2 idev0{ dc0 };
+		const ivec2 idev1{ dc1 };
+		const ivec2 idev2{ dc2 };
+
+		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x), rect.top_left.x);
+		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y), rect.top_left.y);
+		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x), rect.bottom_right.x-1);
+		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y), rect.bottom_right.y-1);
+
+		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
+		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
+
+		int stride = bufferDimensionsInTiles_.x;
+		int tidRow = topLeft.y * stride;
+		int hits{0};
+		for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
+			for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
+				++hits;
+				func(&tilesHead_[tidRow + tx]); }}
+		return hits; }
+
 public:
 	static
 	auto MakeVertexProgramPtrs() -> rglv::VertexProgramPtrs {
@@ -893,7 +894,7 @@ public:
 		return out; }};
 
 			
-template <typename SHADER, bool SCISSOR_ENABLED>
+template <typename SHADER, bool SCISSOR_ENABLED, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
 class GPUTileImpl : GPU {
 
 	void tile_DrawElementsSingle(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
@@ -948,7 +949,7 @@ class GPUTileImpl : GPU {
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				auto rasterizerProgram = TriangleProgram<sampler, SHADER>{
+				auto rasterizerProgram = TriangleProgram<sampler, SHADER, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
 					tu0, tu1,
 					cbc, dbc,
 					tileOrigin,
@@ -959,7 +960,7 @@ class GPUTileImpl : GPU {
 					computed[0].Lane(ti),
 					computed[1].Lane(ti),
 					computed[2].Lane(ti) };
-				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, TriangleProgram<sampler, SHADER>>{rasterizerProgram, rect, targetHeightInPixels_};
+				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(rasterizerProgram)>{rasterizerProgram, rect, targetHeightInPixels_};
 				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
 				                fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
 				                !backfacing[ti]); }
@@ -1006,7 +1007,6 @@ class GPUTileImpl : GPU {
 				flush(); }}
 		flush(); }
 
-
 	void tile_DrawClipped(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
@@ -1038,7 +1038,7 @@ class GPUTileImpl : GPU {
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		auto rasterizerProgram = TriangleProgram<sampler, SHADER>{
+		auto rasterizerProgram = TriangleProgram<sampler, SHADER, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
 			tu0, tu1,
 			cbc, dbc,
 			tileOrigin,
@@ -1049,7 +1049,7 @@ class GPUTileImpl : GPU {
 			data0,
 			data1,
 			data2 };
-		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, TriangleProgram<sampler, SHADER>>{rasterizerProgram, rect, targetHeightInPixels_};
+		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(rasterizerProgram)>{rasterizerProgram, rect, targetHeightInPixels_};
 		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
 		                int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
 		                !backfacing);}
@@ -1062,6 +1062,29 @@ public:
 		out.tile_DrawElementsSingle = static_cast<decltype(out.tile_DrawElementsSingle)>(&GPUTileImpl::tile_DrawElementsSingle);
 		out.tile_DrawElementsInstanced = static_cast<decltype(out.tile_DrawElementsInstanced)>(&GPUTileImpl::tile_DrawElementsInstanced);
 		return out; }};
+
+
+//=============================================================================
+//                            INLINE DEFINITIONS
+//=============================================================================
+
+							// ---------
+							// class GPU
+							// ---------
+inline
+auto GPU::IC() -> GL& {
+	return (userIC_ == 0 ? IC0_ : IC1_); }
+
+
+inline
+auto GPU::TileRect(int idx) const -> rmlg::irect {
+	auto ty = idx / bufferDimensionsInTiles_.x;
+	auto tx = idx % bufferDimensionsInTiles_.x;
+	auto tpos = rmlv::ivec2{ tx, ty };
+	auto ltpx = tpos * tileDimensionsInPixels_;
+	auto rbpx = ltpx + tileDimensionsInPixels_;
+	rbpx = vmin(rbpx, bufferDimensionsInPixels_);  // clip against screen edge
+	return { ltpx, rbpx }; }
 
 
 }  // namespace rglv

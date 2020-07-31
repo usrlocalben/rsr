@@ -80,6 +80,14 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		return vmin(a3.v[0], vmin(a3.v[1], a3.v[2])); } };
 
 
+struct DefaultPostProgram final : public rglv::BaseProgram {
+	static constexpr int id = int(ShaderProgramId::IQ);
+
+	static inline
+	auto ShadeCanvas(const rmlv::qfloat2 q [[maybe_unused]], const rmlv::qfloat3 source) -> rmlv::qfloat3 {
+		return source; }};
+
+
 struct IQPostProgram final : public rglv::BaseProgram {
 	static constexpr int id = int(ShaderProgramId::IQ);
 
