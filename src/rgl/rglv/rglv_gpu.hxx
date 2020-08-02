@@ -99,102 +99,171 @@ struct BlendFuncAlpha {
 		return fragColor.xyz()*alpha + destColor*oneMinusAlpha; }};
 
 
+struct QFloat4CanvasCursor {
 
-template <typename TEXTURE_UNIT, typename SHADER_PROGRAM, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
-struct TriangleProgram {
-	rmlv::qfloat4* cb_;
-	rmlv::qfloat* db_;
-	rmlv::ivec2 tileOrigin_;
-	const TEXTURE_UNIT& tu0_, tu1_;
-
+	rmlv::qfloat4* buf_;
 	const int stride_;
-	// const int height_;
-	// const rmlv::qfloat2 targetDimensions_;
+	const rmlv::ivec2 origin_;
+
 	int offs_, offsLeft_;
 
-	const rglv::VertexFloat1 oneOverW_;
-	const rglv::VertexFloat1 zOverW_;
+	QFloat4CanvasCursor(rglr::QFloat4Canvas& canvas, rmlv::ivec2 origin) :
+		buf_(canvas.data()),
+		stride_(canvas.width() / 2),
+		origin_(origin)
+		{}
 
-	const typename SHADER_PROGRAM::Interpolants vo_;
-
-	const Matrices matrices_;
-
-	const typename SHADER_PROGRAM::UniformsMD uniforms_;
-
-	TriangleProgram(
-		const TEXTURE_UNIT& tu0,
-		const TEXTURE_UNIT& tu1,
-		rglr::QFloat4Canvas& cc,
-		rglr::QFloatCanvas& dc,
-		rmlv::ivec2 tileOrigin_,
-		Matrices matrices,
-		typename SHADER_PROGRAM::UniformsMD uniforms,
-		VertexFloat1 oneOverW,
-		VertexFloat1 zOverW,
-		typename SHADER_PROGRAM::VertexOutputSD computed0,
-		typename SHADER_PROGRAM::VertexOutputSD computed1,
-		typename SHADER_PROGRAM::VertexOutputSD computed2) :
-		cb_(cc.data()),
-		db_(dc.data()),
-		tileOrigin_(tileOrigin_),
-		tu0_(tu0),
-		tu1_(tu1),
-		stride_(cc.width() >> 1),
-		oneOverW_(oneOverW),
-		zOverW_(zOverW),
-		vo_(computed0, computed1, computed2),
-		matrices_(matrices),
-		uniforms_(uniforms) {}
-
-	inline void Begin(int x, int y) {
-		x -= tileOrigin_.x;
-		y -= tileOrigin_.y;
+	void Begin(int x, int y) {
+		x -= origin_.x;
+		y -= origin_.y;
 		offs_ = offsLeft_ = (y>>1)*stride_ + (x>>1); }
 
-	inline void CR() {
+	void CR() {
 		offsLeft_ += stride_;
 		offs_ = offsLeft_; }
 
-	inline void Right2() {
+	void Right2() {
 		offs_++; }
 
-	inline void LoadDepth(rmlv::qfloat& destDepth) {
-		// from depthbuffer
-		// destDepth = _mm_load_ps(reinterpret_cast<float*>(&db[offs]));
+	void Load(rmlv::qfloat3& data) {
+		rglr::QFloat4Canvas::Load(buf_+offs_, data.x.v, data.y.v, data.z.v); }
 
-		// from alpha
-		destDepth = _mm_load_ps(reinterpret_cast<float*>(&(cb_[offs_].a))); }
-
-	inline void StoreDepth(rmlv::qfloat destDepth,
-	                       rmlv::qfloat sourceDepth,
-	                       rmlv::mvec4i fragMask) {
-		// auto addr = &db_[offs_];   // depthbuffer
-		auto addr = &(cb_[offs_].a);  // alpha-channel
-		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
-		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
-
-	inline void LoadColor(rmlv::qfloat3& destColor) {
-		rglr::QFloat4Canvas::Load(cb_+offs_, destColor.x.v, destColor.y.v, destColor.z.v); }
-
-	inline void StoreColor(rmlv::qfloat3 destColor,
-	                       rmlv::qfloat3 sourceColor,
-	                       rmlv::mvec4i fragMask) {
+	void Store(rmlv::qfloat3 destColor, rmlv::qfloat3 sourceColor, rmlv::mvec4i fragMask) {
 		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
 		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
 		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
-		rglr::QFloat4Canvas::Store(sr, sg, sb, cb_+offs_); }
+		rglr::QFloat4Canvas::Store(sr, sg, sb, buf_+offs_); } };
 
-	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord BS, const bool frontfacing) {
+
+/**
+ * cursor for the alpha channel of a QFloat4Canvas
+ */
+struct QFloat4WCanvasCursor {
+
+	rmlv::qfloat4* buf_;
+	const int stride_;
+	const rmlv::ivec2 origin_;
+
+	int offs_, offsLeft_;
+
+	QFloat4WCanvasCursor(rglr::QFloat4Canvas& canvas, rmlv::ivec2 origin) :
+		buf_(canvas.data()),
+		stride_(canvas.width() / 2),
+		origin_(origin)
+		{}
+
+	void Begin(int x, int y) {
+		x -= origin_.x;
+		y -= origin_.y;
+		offs_ = offsLeft_ = (y>>1)*stride_ + (x>>1); }
+
+	void CR() {
+		offsLeft_ += stride_;
+		offs_ = offsLeft_; }
+
+	void Right2() {
+		offs_++; }
+
+	void Load(rmlv::qfloat& data) {
+		data = _mm_load_ps(reinterpret_cast<float*>(&(buf_[offs_].a))); }
+
+	void Store(rmlv::qfloat destDepth, rmlv::qfloat sourceDepth, rmlv::mvec4i fragMask) {
+		auto addr = &(buf_[offs_].a);  // alpha-channel
+		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
+		_mm_store_ps(reinterpret_cast<float*>(addr), result); }};
+
+
+struct QFloatCanvasCursor {
+	rmlv::qfloat* buf_;
+	const int stride_;
+	const rmlv::ivec2 origin_;
+
+	int offs_, offsLeft_;
+
+	QFloatCanvasCursor(rglr::QFloatCanvas& canvas, rmlv::ivec2 origin) :
+		buf_(canvas.data()),
+		stride_(canvas.width() / 2),
+		origin_(origin)
+		{}
+
+	void Begin(int x, int y) {
+		x -= origin_.x;
+		y -= origin_.y;
+		offs_ = offsLeft_ = (y>>1)*stride_ + (x>>1); }
+
+	void CR() {
+		offsLeft_ += stride_;
+		offs_ = offsLeft_; }
+
+	void Right2() {
+		offs_++; }
+
+	void Load(rmlv::qfloat& data) {
+		data = _mm_load_ps(reinterpret_cast<float*>(&buf_[offs_])); }
+
+	void Store(rmlv::qfloat destDepth, rmlv::qfloat sourceDepth, rmlv::mvec4i fragMask) {
+		auto addr = &buf_[offs_];
+		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
+		_mm_store_ps(reinterpret_cast<float*>(addr), result); }};
+
+
+template <typename SHADER, typename COLOR_IO, typename DEPTH_IO, typename TEXTURE_UNIT0, typename TEXTURE_UNIT1, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
+struct TriangleProgram {
+	COLOR_IO cc_;
+	DEPTH_IO dc_;
+	const Matrices matrices_;
+	const rglv::VertexFloat1 oneOverW_;
+	const rglv::VertexFloat1 zOverW_;
+	const typename SHADER::UniformsMD uniforms_;
+	const typename SHADER::Interpolants vo_;
+	const TEXTURE_UNIT0& tu0_;
+	const TEXTURE_UNIT1& tu1_;
+
+	TriangleProgram(
+		COLOR_IO cc,
+		DEPTH_IO dc,
+		Matrices matrices,
+		VertexFloat1 oneOverW,
+		VertexFloat1 zOverW,
+		typename SHADER::UniformsMD uniforms,
+		typename SHADER::VertexOutputSD computed0,
+		typename SHADER::VertexOutputSD computed1,
+		typename SHADER::VertexOutputSD computed2,
+		const TEXTURE_UNIT0& tu0,
+		const TEXTURE_UNIT1& tu1) :
+		cc_(cc),
+		dc_(dc),
+		matrices_(matrices),
+		oneOverW_(oneOverW),
+		zOverW_(zOverW),
+		uniforms_(uniforms),
+		vo_(computed0, computed1, computed2),
+		tu0_(tu0),
+		tu1_(tu1)
+		{}
+
+	void Begin(int x, int y) {
+		cc_.Begin(x, y);
+		dc_.Begin(x, y); }
+
+	void CR() {
+		cc_.CR();
+		dc_.CR(); }
+
+	void Right2() {
+		cc_.Right2();
+		dc_.Right2(); }
+
+	void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord BS, const bool frontfacing) {
 		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
 
 		const auto fragDepth = rglv::Interpolate(BS, zOverW_);
 
-		// read depth buffer
 		qfloat destDepth;
 		rmlv::mvec4i fragMask;
 
 		if (DEPTH_TEST) {
-			LoadDepth(destDepth);
+			dc_.Load(destDepth);
 			const auto depthMask = float2bits(DEPTH_FUNC{}(fragDepth, destDepth));
 			fragMask = andnot(triMask, depthMask);
 			if (movemask(bits2float(fragMask)) == 0) {
@@ -214,7 +283,7 @@ struct TriangleProgram {
 			auto attrs = vo_.Interpolate(BS, BP);
 
 			qfloat4 fragColor;
-			SHADER_PROGRAM::ShadeFragment(
+			SHADER::ShadeFragment(
 				matrices_,
 				uniforms_,
 				tu0_, tu1_,
@@ -227,14 +296,12 @@ struct TriangleProgram {
 		// XXX late-Z should happen here <----
 
 			qfloat3 destColor;
-			LoadColor(destColor);
-
+			cc_.Load(destColor);
 			qfloat3 blendedColor = BLEND_FUNC()(fragColor, destColor);
-
-			StoreColor(destColor, blendedColor, fragMask); }
+			cc_.Store(destColor, blendedColor, fragMask); }
 
 		if (DEPTH_WRITEMASK) {
-			StoreDepth(destDepth, fragDepth, fragMask); } } };
+			dc_.Store(destDepth, fragDepth, fragMask); }}};
 
 
 struct TileStat {
@@ -927,7 +994,7 @@ class GPUTileImpl : GPU {
 		auto loader = typename SHADER::Loader{ state.buffers, state.bufferFormat };
 
 		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
-		auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
+		// auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
 		const int targetHeightInPixels_ = cbc.height();
 
 		// XXX workaround for lambda-capture of vars from structured binding
@@ -959,18 +1026,17 @@ class GPUTileImpl : GPU {
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				auto rasterizerProgram = TriangleProgram<sampler, SHADER, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
-					tu0, tu1,
-					cbc, dbc,
-					tileOrigin,
+				auto triPgm = TriangleProgram<SHADER, QFloat4CanvasCursor, QFloat4WCanvasCursor, sampler, sampler, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
+					QFloat4CanvasCursor{cbc, tileOrigin},
+					QFloat4WCanvasCursor{cbc, tileOrigin},
 					matrices,
-					uniforms,
 					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
-					computed[0].Lane(ti),
-					computed[1].Lane(ti),
-					computed[2].Lane(ti) };
-				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(rasterizerProgram)>{rasterizerProgram, rect, targetHeightInPixels_};
+					uniforms,
+					computed[0].Lane(ti), computed[1].Lane(ti), computed[2].Lane(ti),
+					tu0, tu1
+					};
+				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
 				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
 				                fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
 				                !backfacing[ti]); }
@@ -1025,7 +1091,7 @@ class GPUTileImpl : GPU {
 			rect = Intersect(rect, gl_offset_and_size_to_irect(state.scissorOrigin, state.scissorSize)); }
 
 		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
-		auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
+		// auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
 		const int targetHeightInPixels_ = cbc.height();
 
 		const auto matrices = MakeMatrices(state);
@@ -1048,18 +1114,17 @@ class GPUTileImpl : GPU {
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		auto rasterizerProgram = TriangleProgram<sampler, SHADER, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
-			tu0, tu1,
-			cbc, dbc,
-			tileOrigin,
+		auto triPgm = TriangleProgram<SHADER, QFloat4CanvasCursor, QFloat4WCanvasCursor, sampler, sampler, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
+			QFloat4CanvasCursor{ cbc, tileOrigin },
+			QFloat4WCanvasCursor{ cbc, tileOrigin },
 			matrices,
-			uniforms,
 			VertexFloat1{ dev0.w, dev1.w, dev2.w },
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
-			data0,
-			data1,
-			data2 };
-		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(rasterizerProgram)>{rasterizerProgram, rect, targetHeightInPixels_};
+			uniforms,
+			data0, data1, data2,
+			tu0, tu1 
+			};
+		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
 		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
 		                int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
 		                !backfacing);}
