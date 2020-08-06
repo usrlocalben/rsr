@@ -1,0 +1,38 @@
+[{"$truecolor": { "id": "root",
+	"sRGB": true,
+	"program": "Default",
+	"gpu": {"$gpu": {
+		"targetSize": "globals:windowSize",
+		"layers": ["lEffects"]
+	}}}},
+
+{"$computedVec3": {
+	"id": "backgroundColor",
+	"code": "{pow(128/255.0, 2.2333), pow(128/255.0, 2.2333), pow(128/255.0, 2.333)}"}},
+
+{"$layer": { "id": "lEffects",
+	"camera": "fixedCamera",
+	"color": "backgroundColor",
+	"gl": [ "sceneGeo" ]}},
+
+{"$perspective": { "id": "fixedCamera",
+	"position": {"$vec3": {"x": 88, "y": 80, "z": 93}},
+	"h": 3.72, "v": -0.35,
+	"fov": 45.0}},
+
+{"$group": {"id": "sceneGeo",
+	"gl": ["ncolortest", "myLight"]}},
+
+{"$translate": {"id": "myLight",
+	"translate": {"$vec3": {"x": 0, "y": 80, "z": 0}},
+	"gl": {"$translate": {
+		"rotate": {"$vec3": {"x": -0.25, "y": 0, "z": 0}},
+		"gl": {"$spot": {}}}}}},
+
+{"$fxFoo": { "id": "ncolortest",
+	"name": "colortest.obj",
+	"material": "mObjPixelLight"}},
+
+{"$material": {"id": "mWire", "program": "Wireframe"}},
+{"$material": {"id": "mObjVertexLight", "program": "OBJ1"}},
+{"$material": {"id": "mObjPixelLight", "program": "OBJ2"}} ]

@@ -96,7 +96,20 @@ public:
 		materialNode_->AddLink(postSetup);
 		materialNode_->Run();}
 
-	void Draw(int pass, rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat, int depth [[maybe_unused]]) override {
+	void DrawDepth(rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat) override {
+		auto& dc = *_dc;
+		using namespace rglv;
+		std::scoped_lock<std::mutex> lock(dc.mutex);
+
+		dc.ViewMatrix(*mvmat);
+		dc.ProjectionMatrix(*pmat);
+		auto [id, ptr] = dc.AllocUniformBuffer<AmyProgram::UniformsSD>();
+		dc.UseUniforms(id);
+
+		dc.UseBuffer(0, buffers_[activeBuffer_]);
+		dc.DrawArrays(GL_TRIANGLES, 0, 6); }
+
+	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const mvmat) override {
 		auto& dc = *_dc;
 		using namespace rglv;
 		if (pass != 1) return;
@@ -112,6 +125,30 @@ public:
 
 		dc.UseBuffer(0, buffers_[activeBuffer_]);
 		dc.DrawArrays(GL_TRIANGLES, 0, 6); }};
+
+
+class SpotLight final : public IGl {
+
+	// config
+	const float angle_;
+
+public:
+	SpotLight(std::string_view id, InputList inputs) :
+		IGl(id, std::move(inputs)),
+		angle_(3.14159F/4.0F) {}
+
+	auto Lights(rmlm::mat4 mvmat) -> LightPack override {
+		// mvmat is lightToWorld
+		LightPack out;
+		out.cnt = 1;
+		out.mvmat[0] = mvmat;
+		out.angle[0] = angle_;
+		return out; }};
+
+
+class SpotLightCompiler final : public NodeCompiler {
+	void Build() override {
+		out_ = std::make_shared<SpotLight>(id_, std::move(inputs_)); }};
 
 
 class Compiler final : public NodeCompiler {
@@ -130,6 +167,7 @@ class Compiler final : public NodeCompiler {
 
 struct init { init() {
 	NodeRegistry::GetInstance().Register("$plane", [](){ return std::make_unique<Compiler>(); });
+	NodeRegistry::GetInstance().Register("$spot", [](){ return std::make_unique<SpotLightCompiler>(); });
 }} init{};
 
 

@@ -53,10 +53,21 @@ public:
 			return; }
 		jobsys::run(link); }
 
-	void Draw(int pass, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) override {
+	auto Lights(rmlm::mat4 mvmat) -> LightPack override {
+		LightPack ax;
+		for (auto glnode : gls_) {
+			ax = Merge(ax, glnode->Lights(mvmat)); }
+		return ax; }
+
+	void DrawDepth(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		for (auto glnode : gls_) {
 			// XXX increment depth even if matrix/transform stack is not modified?
-			glnode->Draw(pass, dc, pmat, mvmat, depth); }}
+			glnode->DrawDepth(dc, pmat, mvmat); }}
+
+	void Draw(int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+		for (auto glnode : gls_) {
+			// XXX increment depth even if matrix/transform stack is not modified?
+			glnode->Draw(pass, lights, dc, pmat, mvmat); }}
 
 protected:
 	void AddDeps() override {

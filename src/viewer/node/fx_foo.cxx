@@ -37,7 +37,20 @@ public:
 	void AddDeps() override {
 		AddDep(materialNode_); }
 
-	void Draw(int pass, rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth [[maybe_unused]]) override {
+	void DrawDepth(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+		using namespace rglv;
+		auto& dc = *_dc;
+		std::lock_guard<std::mutex> lock(dc.mutex);
+
+		dc.ViewMatrix(*mvmat);
+		dc.ProjectionMatrix(*pmat);
+		auto [id, ptr] = dc.AllocUniformBuffer<rglv::BaseProgram::UniformsSD>();
+		dc.UseUniforms(id);
+
+		dc.UseBuffer(0, meshVAO_);
+		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data()); }
+
+	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		using namespace rglv;
 		auto& dc = *_dc;
 		if (pass != 1) return;

@@ -49,6 +49,14 @@ constexpr int GL_LESS = 0;
 constexpr int GL_LEQUAL = 1;
 constexpr int GL_EQUAL = 2;
 
+constexpr int GL_DEPTH_ATTACHMENT = 0;
+constexpr int GL_STENCIL_ATTACHMENT = 1;
+constexpr int GL_COLOR_ATTACHMENT0 = 2;
+
+constexpr int RB_COLOR_DEPTH = 0;
+constexpr int RB_RGBF32 = 1;
+constexpr int RB_RGBAF32 = 2;
+constexpr int RB_F32 = 3;
 
 struct TextureState {
 	const PixelToaster::FloatingPointPixel *ptr;
@@ -87,6 +95,9 @@ struct GLState {
 	int programId;			// default is zero??? unclear
 	int uniformsOfs;
 
+	int color0AttachmentType;  // default is RB_COLOR_DEPTH
+	int depthAttachmentType;   // default is RB_COLOR_DEPTH
+
 	std::array<const void*, 4> buffers;
 	std::array<int, 4> bufferFormat;
 
@@ -108,6 +119,8 @@ struct GLState {
 
 	void Dump() const {
 		std::cerr << "<GLState pgm=" << programId;
+		std::cerr << " A(C0)=" << color0AttachmentType;
+		std::cerr << " A(D)=" << depthAttachmentType;
 		if (cullingEnabled) std::cerr << " CULL_FACE";
 		if (cullFace & GL_BACK) std::cerr << " BACK";
 		if (cullFace & GL_FRONT) std::cerr << " FRONT";
@@ -129,6 +142,8 @@ struct GLState {
 		key |= blendingEnabled<<4;
 		key |= depthWriteMask<<5;
 		key |= colorWriteMask<<6;
+		key |= color0AttachmentType<<7;
+		key |= depthAttachmentType<<9;
 		return key; }
 
 	auto BltStateKey() const -> uint32_t {
@@ -228,6 +243,13 @@ public:
 		dirty_ = true;
 		cs_.uniformsOfs = ofs; }
 
+	void RenderbufferType(int attachment, int type) {
+		dirty_ = true;
+		if (attachment == GL_DEPTH_ATTACHMENT) {
+			cs_.depthAttachmentType = type; } 
+		else if (attachment == GL_COLOR_ATTACHMENT0) {
+			cs_.color0AttachmentType = type; }}
+
 	template <typename T>
 	std::pair<int, T*> AllocUniformBuffer() {
 		const int amt = (sizeof(T) + 0xf) & 0xfffffff0;
@@ -299,6 +321,7 @@ public:
 	void StoreColor(rglr::FloatingPointCanvas *dst, bool downsample);
 	void StoreColor(rglr::QFloat4Canvas *dst);
 	void StoreColor(rglr::TrueColorCanvas *dst, bool enableGammaCorrection);
+	void StoreDepth(float* dst);
 	// void StoreDepth(rglr::QFloatCanvas *dst);
 	void Finish() {}
 	void Reset();

@@ -157,7 +157,28 @@ public:
 			jobsys::run(subJobs[sji]); }
 		jobsys::run(finalizeJob); }
 
-	void Draw(int pass, rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth [[maybe_unused]]) override {
+	void DrawDepth(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+		auto& dc = *_dc;
+		using rglv::GL_UNSIGNED_SHORT;
+		using rglv::GL_CULL_FACE;
+		using rglv::GL_TRIANGLES;
+		std::lock_guard<std::mutex> lock(dc.mutex);
+
+		dc.ViewMatrix(*mvmat);
+		dc.ProjectionMatrix(*pmat);
+		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapProgram::UniformsSD>();
+		dc.UseUniforms(id);
+
+		auto& buffer = buffers_[activeBuffer_];
+		for (int ai=0; ai<bufferEnd_[activeBuffer_]; ai++) {
+			auto& vao = buffer[ai];
+			if (vao.size() != 0) {
+				const int elements = vao.size();
+				vao.pad();
+				dc.UseBuffer(0, vao);
+				dc.DrawArrays(GL_TRIANGLES, 0, elements); }}}
+
+	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		auto& dc = *_dc;
 		using rglv::GL_UNSIGNED_SHORT;
 		using rglv::GL_CULL_FACE;

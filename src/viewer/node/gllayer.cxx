@@ -8,6 +8,7 @@
 #include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
+#include "src/rgl/rglv/rglv_gpu.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/viewer/compile.hxx"
@@ -29,9 +30,23 @@ class Impl : public ILayer {
 	ICamera* cameraNode_{nullptr};
 	IValue* colorNode_{nullptr};
 	std::string colorSlot_{};
+	std::vector<rcls::vector<float>> lightmaps_{};
+	rglv::GPU gpu_{ jobsys::numThreads };
 
 public:
-	using ILayer::ILayer;
+	Impl(std::string_view id, InputList inputs) :
+		ILayer(id, std::move(inputs)) {
+		int id = 0;
+
+	id = static_cast<int>(ShaderProgramId::Default);
+	gpu.Install(id, 0, rglv::GPUBltImpl<DefaultPostProgram>::MakeBltProgramPtrs());
+
+	id = static_cast<int>(ShaderProgramId::Wireframe);
+	gpu.Install(id, 0, rglv::GPUBinImpl<WireframeProgram>::MakeVertexProgramPtrs());
+	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, WireframeProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
+
+	}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "camera") {
@@ -96,8 +111,37 @@ public:
 			pmat = mat4{1};
 			mvmat = mat4{1}; }
 
+		auto& lights = *static_cast<LightPack*>(rclma::framepool::Allocate(sizeof(LightPack)));
+		lights = LightPack{};
 		for (auto gl : gls_) {
-			gl->Draw(pass, dc, &pmat, &mvmat, 0);}}
+			lights = Merge(lights, gl->Lights(mat4{1})); }
+		for (int i = 0; i < lights.cnt; ++i) {
+			lights.pmat[i] = rglv::Perspective2(lights.angle[i], 1.0, 1, 1000);
+			lights.mvmat[i] = rmlm::inverse(lights.mvmat[i]);
+			if (i >= int(lightmaps_.size())) {
+				lightmaps_.emplace_back(256*256); }
+			lights.map[i] = lightmaps_[i].data(); }
+
+		jobsys::Job* lightJob{nullptr};
+		if (lights.cnt) {
+			gpu_.Reset({ 256, 256 }, { 8, 8 });
+			auto& ic = gpu_.IC();
+			ic.RenderbufferType(rglv::GL_COLOR_ATTACHMENT0, rglv::RB_RGBAF32);
+			ic.RenderbufferType(rglv::GL_DEPTH_ATTACHMENT, rglv::RB_F32);
+			ic.ColorWriteMask(false);
+			ic.ClearDepth(1.0F);
+			ic.Clear(rglv::GL_DEPTH_BUFFER_BIT);
+			for (auto gl : gls_) {
+				gl->DrawDepth(&ic, &lights.pmat[0], &lights.mvmat[0]); }
+			ic.StoreDepth(lights.map[0]);
+			ic.Finish();
+			lightJob = gpu_.Run();
+			jobsys::run(lightJob); }
+
+		for (auto gl : gls_) {
+			gl->Draw(pass, lights, dc, &pmat, &mvmat);}
+
+		jobsys::wait(lightJob); }
 
 protected:
 	void AddDeps() override {

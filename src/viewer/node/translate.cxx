@@ -86,7 +86,7 @@ public:
 		lowerNode_->AddLink(my_noop);
 		lowerNode_->Run(); }
 
-	void Draw(int pass, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) override {
+	void Draw(int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		using rmlm::mat4;
 		using rmlv::M_PI;
 		namespace jobsys = rclmt::jobsys;
@@ -122,9 +122,9 @@ public:
 			M = M * mat4::scale(s);
 
 			if (fork_) {
-				ptrs[ptrcnt++] = DrawLower(root, pass, dc, pmat, &M, depth +1); }
+				ptrs[ptrcnt++] = DrawLower(root, pass, lights, dc, pmat, &M); }
 			else {
-				lowerNode_->Draw(pass, dc, pmat, &M, depth+1); }}
+				lowerNode_->Draw(pass, lights, dc, pmat, &M); }}
 
 		if (fork_) {
 			for (int i = 0; i < ptrcnt; ++i) {
@@ -139,12 +139,12 @@ public:
 		if (--counter == 0) {
 			rclmt::jobsys::run(link); }}
 
-	auto DrawLower(rclmt::jobsys::Job* p, int pass, rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* mvmat, int depth) -> rclmt::jobsys::Job* {
-		return rclmt::jobsys::make_job_as_child(p, DrawLowerJmp, std::tuple{this, pass, dc, pmat, mvmat, depth}); }
+	auto DrawLower(rclmt::jobsys::Job* p, int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* mvmat) -> rclmt::jobsys::Job* {
+		return rclmt::jobsys::make_job_as_child(p, DrawLowerJmp, std::tuple{this, pass, &lights, dc, pmat, mvmat}); }
 	static
-	void DrawLowerJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<RepeatOp*, int, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const, int>* data) {
-		auto [self, pass, dc, pmat, mvmat, depth] = *data;
-		self->lowerNode_->Draw(pass, dc, pmat, mvmat, depth); }};
+	void DrawLowerJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<RepeatOp*, int, const LightPack&, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const>* data) {
+		auto [self, pass, lights, dc, pmat, mvmat] = *data;
+		self->lowerNode_->Draw(pass, lights, dc, pmat, mvmat); }};
 
 
 class TranslateOp final : public IGl {
@@ -199,13 +199,22 @@ public:
 		lowerNode_->AddLink(my_noop);
 		lowerNode_->Run(); }
 
-	void Draw(int pass, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth) override {
+	auto Lights(rmlm::mat4 mvmat) -> LightPack override {
+		return lowerNode_->Lights(Apply(mvmat)); }
+
+	void DrawDepth(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+		auto M = static_cast<rmlm::mat4*>(rclma::framepool::Allocate(64));
+		*M = Apply(*mvmat);
+		lowerNode_->DrawDepth(dc, pmat, M); }
+
+	void Draw(int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+		auto M = static_cast<rmlm::mat4*>(rclma::framepool::Allocate(64));
+		*M = Apply(*mvmat);
+		lowerNode_->Draw(pass, lights, dc, pmat, M); }
+
+	auto Apply(rmlm::mat4 a) -> rmlm::mat4 {
 		using rmlm::mat4;
 		using rmlv::M_PI;
-		namespace jobsys = rclmt::jobsys;
-
-		auto& M = *static_cast<mat4*>(rclma::framepool::Allocate(64));
-
 		auto scale = rmlv::vec3{1.0F, 1.0F, 1.0F};
 		if (scaleNode_ != nullptr) {
 			scale = scaleNode_->Eval(scaleSlot_).as_vec3(); }
@@ -218,13 +227,12 @@ public:
 		if (translateNode_ != nullptr) {
 			translate = translateNode_->Eval(translateSlot_).as_vec3(); }
 
-		M = *mvmat;
-		M = M * mat4::scale(scale);
-		M = M * mat4::rotate(rotate.x * M_PI * 2, 1, 0, 0);
-		M = M * mat4::rotate(rotate.y * M_PI * 2, 0, 1, 0);
-		M = M * mat4::rotate(rotate.z * M_PI * 2, 0, 0, 1);
-		M = M * mat4::translate(translate);
-		lowerNode_->Draw(pass, dc, pmat, &M, depth); } };
+		a = a * mat4::translate(translate);
+		a = a * mat4::rotate(rotate.z * M_PI * 2, 0, 0, 1);
+		a = a * mat4::rotate(rotate.y * M_PI * 2, 0, 1, 0);
+		a = a * mat4::rotate(rotate.x * M_PI * 2, 1, 0, 0);
+		a = a * mat4::scale(scale);
+		return a; } };
 
 
 class TranslateCompiler final : public NodeCompiler {

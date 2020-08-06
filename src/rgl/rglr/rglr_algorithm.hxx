@@ -9,15 +9,61 @@
 namespace rqdq {
 namespace rglr {
 
+void FillAll(QFloatCanvas& dst, float value);
+void FillAll(QFloat3Canvas& dst, rmlv::vec3 value);
+void FillAll(QFloat4Canvas& dst, rmlv::vec4 value);
+
 void Fill(QFloatCanvas& dst, float value, rmlg::irect rect);
 void Fill(QFloat4Canvas& dst, rmlv::vec4 value, rmlg::irect rect);
 void Fill(QShort3Canvas& dst, rmlv::vec4 value, rmlg::irect rect);
 void Stroke(TrueColorCanvas& dst, PixelToaster::TrueColorPixel color, rmlg::irect rect);
+void Downsample(const QFloat3Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
 void Downsample(const QFloat4Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
 void Downsample(const QShort3Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
+void Copy(const QFloatCanvas& src, FloatCanvas& dst, const rmlg::irect rect);
+void Copy(const QFloat3Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
 void Copy(const QFloat4Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
 void Copy(const QShort3Canvas& src, FloatingPointCanvas& dst, rmlg::irect rect);
+void Copy(const QFloat3Canvas& src, QFloat4Canvas& dst, rmlg::irect rect);
 void Copy(const QFloat4Canvas& src, QFloat4Canvas& dst, rmlg::irect rect);
+
+
+template <class SHADER, class CONVERTER>
+void FilterTile(const QFloat3Canvas& src1, TrueColorCanvas& dst, const rmlg::irect rect) {
+	using rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4;
+	using rmlv::mvec4f, rmlv::mvec4i;
+
+	const float iw = 1.0F / dst.width();
+	const float ih = 1.0F / dst.height();
+	const mvec4f fcdx{  iw*2 };
+	const mvec4f fcdy{ -ih*2 };
+	mvec4f fcxLeft{(               rect.left.x + 0.5F) / float(dst.width()) };
+	fcxLeft += mvec4f{0,iw,0,iw};
+	mvec4f fcy    {(dst.height() - rect.top.y  - 0.5F) / float(dst.height())};
+	fcy -= mvec4f{0,0,ih,ih};
+
+	auto* src1AddrLeft = src1.cdata();
+	for (int y=rect.top.y; y<rect.bottom.y; y+=2, src1AddrLeft += src1.stride(), fcy+=fcdy) {
+		auto destRow1Addr = &dst.data()[y * dst.stride() + rect.left.x];
+		auto destRow2Addr = destRow1Addr + dst.stride();
+
+		auto* src1Addr = src1AddrLeft;
+
+		mvec4f fcx = fcxLeft;
+		for (int x = rect.left.x; x < rect.right.x; x += 4, destRow1Addr+=4, destRow2Addr+=4) {
+			mvec4i packed[2];
+			for (int sub = 0; sub < 2; ++sub, ++src1Addr, fcx+=fcdx) {
+
+				// load source1 color
+				qfloat3 sc;
+				QFloat3Canvas::Load(src1Addr, sc.x.v, sc.y.v, sc.z.v);
+
+				// shade & convert
+				qfloat3 fragColor = SHADER::ShadeCanvas({ fcx, fcy }, sc);
+				packed[sub] = CONVERTER::to_tc(fragColor); }
+
+			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow1Addr), _mm_unpacklo_epi64(packed[0].v, packed[1].v));
+			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow2Addr), _mm_unpackhi_epi64(packed[0].v, packed[1].v)); }}}
 
 
 template <class SHADER, class CONVERTER>
@@ -34,20 +80,21 @@ void FilterTile(const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::ire
 	mvec4f fcy    {(dst.height() - rect.top.y  - 0.5F) / float(dst.height())};
 	fcy -= mvec4f{0,0,ih,ih};
 
-	for (int y=rect.top.y, oy=0; y<rect.bottom.y; y+=2, oy+=2, fcy+=fcdy) {
+	auto* src1AddrLeft = src1.cdata();
+	for (int y=rect.top.y; y<rect.bottom.y; y+=2, src1AddrLeft += src1.stride(), fcy+=fcdy) {
 		auto destRow1Addr = &dst.data()[y * dst.stride() + rect.left.x];
 		auto destRow2Addr = destRow1Addr + dst.stride();
 
-		auto* source1Addr = &src1.cdata()[(oy >> 1) * (src1.width() >> 1)];
+		auto* src1Addr = src1AddrLeft;
 
 		mvec4f fcx = fcxLeft;
 		for (int x = rect.left.x; x < rect.right.x; x += 4, destRow1Addr+=4, destRow2Addr+=4) {
 			mvec4i packed[2];
-			for (int sub = 0; sub < 2; sub++, source1Addr++, fcx+=fcdx) {
+			for (int sub = 0; sub < 2; ++sub, ++src1Addr, fcx+=fcdx) {
 
 				// load source1 color
 				qfloat3 sc;
-				QFloat4Canvas::Load(source1Addr, sc.x.v, sc.y.v, sc.z.v);
+				QFloat4Canvas::Load(src1Addr, sc.x.v, sc.y.v, sc.z.v);
 
 				// shade & convert
 				qfloat3 fragColor = SHADER::ShadeCanvas({ fcx, fcy }, sc);
@@ -75,7 +122,7 @@ void Filter(const QFloat4Canvas& src1, const FloatingPointCanvas& src2, TrueColo
 		auto destRow1Addr = &dst.data()[y * dst.stride() + rect.left.x];
 		auto destRow2Addr = destRow1Addr + dst.stride();
 
-		auto* source1Addr = &src1.cdata()[y/2*src1.stride2() + rect.left.x/2];
+		auto* source1Addr = &src1.cdata()[y/2*src1.stride() + rect.left.x/2];
 		auto* source2Addr = &src2.cdata()[y/2*src2.stride() + rect.left.x/2];
 
 		mvec4f fcx = fcxLeft;

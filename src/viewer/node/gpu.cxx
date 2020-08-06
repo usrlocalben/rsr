@@ -27,6 +27,29 @@ namespace jobsys = rclmt::jobsys;
 
 
 class GPUNode : public IGPU {
+
+	// internal
+	rglv::GPU gpu_;
+
+	// static
+	const bool aa_;
+
+	std::atomic<int> pcnt_;  // all_then counter
+
+	// inputs
+	std::vector<ILayer*> layers_;
+	IValue* targetSizeNode_{nullptr};
+	std::string targetSizeSlot_{};
+	IValue* tileSizeNode_{nullptr};
+	std::string tileSizeSlot_{};
+	IValue* aspectNode_{nullptr};
+	std::string aspectSlot_{};
+
+	// received
+	rmlv::ivec2 targetSizeInPx_;
+	rmlv::ivec2 tileSizeInBlocks_;
+	float aspect_;
+
 public:
 	GPUNode(std::string_view id, InputList inputs, bool aa) :
 		IGPU(id, inputs),
@@ -105,9 +128,11 @@ public:
 		if (!layers_.empty()) {
 			auto& firstLayer = layers_[0];
 			backgroundColor = firstLayer->GetBackgroundColor(); }
+		ic.RenderbufferType(rglv::GL_COLOR_ATTACHMENT0, rglv::RB_COLOR_DEPTH);
+		ic.RenderbufferType(rglv::GL_DEPTH_ATTACHMENT, rglv::RB_COLOR_DEPTH);
 		ic.ClearColor(backgroundColor);
 		ic.ClearDepth(1.0F);
-		ic.Clear(rglv::GL_COLOR_BUFFER_BIT); //|rglv::GL_DEPTH_BUFFER_BIT);
+		ic.Clear(rglv::GL_COLOR_BUFFER_BIT|rglv::GL_DEPTH_BUFFER_BIT);
 
 		if (layers_.empty()) {
 			RunLinks(); }
@@ -160,30 +185,7 @@ public:
 		return targetSizeInPx_; }
 
 	bool GetAA() const override {
-		return aa_; }
-
-private:
-	// internal
-	rglv::GPU gpu_;
-
-	// static
-	const bool aa_;
-
-	std::atomic<int> pcnt_;  // all_then counter
-
-	// inputs
-	std::vector<ILayer*> layers_;
-	IValue* targetSizeNode_{nullptr};
-	std::string targetSizeSlot_{};
-	IValue* tileSizeNode_{nullptr};
-	std::string tileSizeSlot_{};
-	IValue* aspectNode_{nullptr};
-	std::string aspectSlot_{};
-
-	// received
-	rmlv::ivec2 targetSizeInPx_;
-	rmlv::ivec2 tileSizeInBlocks_;
-	float aspect_; };
+		return aa_; }};
 
 
 class Compiler final : public NodeCompiler {

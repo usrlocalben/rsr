@@ -42,6 +42,10 @@ constexpr auto kBlockDimensionsInPixels = rmlv::ivec2{8, 8};
 
 constexpr auto kMaxSizeInBytes = 100000L;
 
+constexpr auto kTileColorSizeInBytes = 0x40000;  // 256KiB, up to 128x128 RGBA float32
+constexpr auto kTileDepthSizeInBytes = 0x10000;  // 64KiB,  up to 128x128 1-ch float32
+
+
 extern bool doubleBuffer;
 
 struct ClippedVertex {
@@ -80,55 +84,141 @@ inline Matrices MakeMatrices(const GLState& s) {
 	return m; }
 
 
-struct DepthFuncLess {
+struct DepthLT {
 	auto operator()(const rmlv::mvec4f& fragDepth, const rmlv::mvec4f& destDepth) const -> rmlv::mvec4f {
 		return cmplt(fragDepth, destDepth); } };
 
-struct DepthFuncEqual {
+struct DepthLE {
+	auto operator()(const rmlv::mvec4f& fragDepth, const rmlv::mvec4f& destDepth) const -> rmlv::mvec4f {
+		return cmple(fragDepth, destDepth); } };
+
+struct DepthEQ {
 	auto operator()(const rmlv::mvec4f& fragDepth, const rmlv::mvec4f& destDepth) const -> rmlv::mvec4f {
 		return cmpeq(fragDepth, destDepth); } };
 
-struct BlendFuncOff {
+struct BlendOff {
 	auto operator()(const rmlv::qfloat4& fragColor, const rmlv::qfloat3& destColor [[maybe_unused]] ) const -> rmlv::qfloat3 {
 		return fragColor.xyz(); } };
 
-struct BlendFuncAlpha {
+struct BlendAlpha {
 	auto operator()(const rmlv::qfloat4& fragColor, const rmlv::qfloat3& destColor [[maybe_unused]] ) const -> rmlv::qfloat3 {
 		auto alpha = fragColor.w;
 		auto oneMinusAlpha = rmlv::mvec4f{1.0F} - alpha;
 		return fragColor.xyz()*alpha + destColor*oneMinusAlpha; }};
 
 
-struct QFloat4CanvasCursor {
+struct QFloatRenderbufferCursor {
 
-	rmlv::qfloat4* buf_;
-	const int stride_;
+	using dataType = rmlv::qfloat;
+	using elemType = rmlv::qfloat;
+	static constexpr int strideInQuads = 64;
+	static constexpr int tileAreaInQuads = 64*64;
+
+	rmlv::qfloat* buf_;
 	const rmlv::ivec2 origin_;
 
 	int offs_, offsLeft_;
 
-	QFloat4CanvasCursor(rglr::QFloat4Canvas& canvas, rmlv::ivec2 origin) :
-		buf_(canvas.data()),
-		stride_(canvas.width() / 2),
-		origin_(origin)
-		{}
+	QFloatRenderbufferCursor(void* buf, rmlv::ivec2 origin) :
+		buf_(static_cast<elemType*>(buf)),
+		origin_(origin) {}
 
 	void Begin(int x, int y) {
 		x -= origin_.x;
 		y -= origin_.y;
-		offs_ = offsLeft_ = (y>>1)*stride_ + (x>>1); }
+		offs_ = offsLeft_ = (y/2)*strideInQuads + (x/2); }
 
 	void CR() {
-		offsLeft_ += stride_;
+		offsLeft_ += strideInQuads;
 		offs_ = offsLeft_; }
 
 	void Right2() {
 		offs_++; }
 
-	void Load(rmlv::qfloat3& data) {
+	void Load(dataType& data) {
+		data = _mm_load_ps(reinterpret_cast<float*>(&(buf_[offs_]))); }
+
+	void Store(dataType destDepth, dataType sourceDepth, rmlv::mvec4i fragMask) {
+		auto addr = &(buf_[offs_]);  // alpha-channel
+		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
+		_mm_store_ps(reinterpret_cast<float*>(addr), result); }};
+
+
+/**
+ * qfloat3 in a qfloat4 buffer's rgb channels
+ */
+struct QFloat3RenderbufferCursor {
+
+	using dataType = rmlv::qfloat3;
+	using elemType = rmlv::qfloat3;
+	static constexpr int strideInQuads = 64;
+	static constexpr int tileAreaInQuads = 64*64;
+
+	rmlv::qfloat3* buf_;
+	const rmlv::ivec2 origin_;
+
+	int offs_, offsLeft_;
+
+	QFloat3RenderbufferCursor(void* buf, rmlv::ivec2 origin) :
+		buf_(static_cast<elemType*>(buf)),
+		origin_(origin) {}
+
+	void Begin(int x, int y) {
+		x -= origin_.x;
+		y -= origin_.y;
+		offs_ = offsLeft_ = (y/2)*strideInQuads + (x/2); }
+
+	void CR() {
+		offsLeft_ += strideInQuads;
+		offs_ = offsLeft_; }
+
+	void Right2() {
+		offs_++; }
+
+	void Load(dataType& data) {
+		rglr::QFloat3Canvas::Load(buf_+offs_, data.x.v, data.y.v, data.z.v); }
+
+	void Store(dataType destColor, dataType sourceColor, rmlv::mvec4i fragMask) {
+		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
+		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
+		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
+		rglr::QFloat3Canvas::Store(sr, sg, sb, buf_+offs_); } };
+
+/**
+ * qfloat3 in a qfloat4 buffer's rgb channels
+ */
+struct QFloat4RGBRenderbufferCursor {
+
+	using dataType = rmlv::qfloat3;
+	using elemType = rmlv::qfloat4;
+	static constexpr int strideInQuads = 64;
+	static constexpr int tileAreaInQuads = 64*64;
+
+	rmlv::qfloat4* buf_;
+	const rmlv::ivec2 origin_;
+
+	int offs_, offsLeft_;
+
+	QFloat4RGBRenderbufferCursor(void* buf, rmlv::ivec2 origin) :
+		buf_(static_cast<elemType*>(buf)),
+		origin_(origin) {}
+
+	void Begin(int x, int y) {
+		x -= origin_.x;
+		y -= origin_.y;
+		offs_ = offsLeft_ = (y/2)*strideInQuads + (x/2); }
+
+	void CR() {
+		offsLeft_ += strideInQuads;
+		offs_ = offsLeft_; }
+
+	void Right2() {
+		offs_++; }
+
+	void Load(dataType& data) {
 		rglr::QFloat4Canvas::Load(buf_+offs_, data.x.v, data.y.v, data.z.v); }
 
-	void Store(rmlv::qfloat3 destColor, rmlv::qfloat3 sourceColor, rmlv::mvec4i fragMask) {
+	void Store(dataType destColor, dataType sourceColor, rmlv::mvec4i fragMask) {
 		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
 		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
 		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
@@ -136,72 +226,78 @@ struct QFloat4CanvasCursor {
 
 
 /**
- * cursor for the alpha channel of a QFloat4Canvas
+ * qfloat in a qfloat4 buffer's alpha channel
  */
-struct QFloat4WCanvasCursor {
+struct QFloat4ARenderbufferCursor {
+
+	using dataType = rmlv::qfloat;
+	using elemType = rmlv::qfloat4;
+	static constexpr int strideInQuads = 64;
+	static constexpr int tileAreaInQuads = 64*64;
 
 	rmlv::qfloat4* buf_;
-	const int stride_;
 	const rmlv::ivec2 origin_;
 
 	int offs_, offsLeft_;
 
-	QFloat4WCanvasCursor(rglr::QFloat4Canvas& canvas, rmlv::ivec2 origin) :
-		buf_(canvas.data()),
-		stride_(canvas.width() / 2),
-		origin_(origin)
-		{}
+	QFloat4ARenderbufferCursor(void* base, rmlv::ivec2 origin) :
+		buf_(static_cast<elemType*>(base)),
+		origin_(origin) {}
 
 	void Begin(int x, int y) {
 		x -= origin_.x;
 		y -= origin_.y;
-		offs_ = offsLeft_ = (y>>1)*stride_ + (x>>1); }
+		offs_ = offsLeft_ = (y/2)*strideInQuads + (x/2); }
 
 	void CR() {
-		offsLeft_ += stride_;
+		offsLeft_ += strideInQuads;
 		offs_ = offsLeft_; }
 
 	void Right2() {
 		offs_++; }
 
-	void Load(rmlv::qfloat& data) {
+	void Load(dataType& data) {
 		data = _mm_load_ps(reinterpret_cast<float*>(&(buf_[offs_].a))); }
 
-	void Store(rmlv::qfloat destDepth, rmlv::qfloat sourceDepth, rmlv::mvec4i fragMask) {
+	void Store(dataType destDepth, dataType sourceDepth, rmlv::mvec4i fragMask) {
 		auto addr = &(buf_[offs_].a);  // alpha-channel
 		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }};
 
 
-struct QFloatCanvasCursor {
+struct QFloatRenderBufferCursor {
+
+	using dataType = rmlv::qfloat;
+	using elemType = rmlv::qfloat;
+
+	static constexpr int strideInQuads = 64;
+	static constexpr int tileAreaInQuads = 64*64;
+
 	rmlv::qfloat* buf_;
-	const int stride_;
 	const rmlv::ivec2 origin_;
 
 	int offs_, offsLeft_;
 
-	QFloatCanvasCursor(rglr::QFloatCanvas& canvas, rmlv::ivec2 origin) :
-		buf_(canvas.data()),
-		stride_(canvas.width() / 2),
-		origin_(origin)
-		{}
+	QFloatRenderBufferCursor(void* buf, rmlv::ivec2 origin) :
+		buf_(static_cast<elemType*>(buf)),
+		origin_(origin) {}
 
 	void Begin(int x, int y) {
 		x -= origin_.x;
 		y -= origin_.y;
-		offs_ = offsLeft_ = (y>>1)*stride_ + (x>>1); }
+		offs_ = offsLeft_ = (y/2)*strideInQuads + (x/2); }
 
 	void CR() {
-		offsLeft_ += stride_;
+		offsLeft_ += strideInQuads;
 		offs_ = offsLeft_; }
 
 	void Right2() {
 		offs_++; }
 
-	void Load(rmlv::qfloat& data) {
+	void Load(dataType& data) {
 		data = _mm_load_ps(reinterpret_cast<float*>(&buf_[offs_])); }
 
-	void Store(rmlv::qfloat destDepth, rmlv::qfloat sourceDepth, rmlv::mvec4i fragMask) {
+	void Store(dataType destDepth, dataType sourceDepth, rmlv::mvec4i fragMask) {
 		auto addr = &buf_[offs_];
 		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }};
@@ -327,9 +423,9 @@ struct VertexProgramPtrs {
 };
 
 struct FragmentProgramPtrs {
-	void (GPU::*tile_DrawClipped)(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
-	void (GPU::*tile_DrawElementsSingle)(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
-	void (GPU::*tile_DrawElementsInstanced)(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
+	void (GPU::*tile_DrawClipped)(void*, void*, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
+	void (GPU::*tile_DrawElementsSingle)(void*, void*, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
+	void (GPU::*tile_DrawElementsInstanced)(void*, void*, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
 	};
 
 struct BltProgramPtrs {
@@ -346,8 +442,9 @@ private:
 	const int concurrency_;
 
 protected:
-	rcls::vector<rglr::QFloat4Canvas> threadColorBufs_{};
-	rcls::vector<rglr::QFloatCanvas>  threadDepthBufs_{};
+	rcls::vector<uint8_t> color0Buf_{};
+	rcls::vector<uint8_t> depthBuf_{};
+
 	std::vector<ThreadStat> threadStats_;
 
 	// tile/bin collection
@@ -521,11 +618,23 @@ class GPUBltImpl : GPU {
 
 	void tile_StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
 		// XXX add support for uniforms in stream-out shader
-		auto& cc = threadColorBufs_[rclmt::jobsys::threadId];
-		if (enableGamma) {
-			rglr::FilterTile<SHADER, rglr::sRGB>(cc, outcanvas, rect); }
+		if (state.color0AttachmentType == RB_COLOR_DEPTH || state.color0AttachmentType == RB_RGBAF32) {
+			auto ptr = reinterpret_cast<rmlv::qfloat4*>(color0Buf_.data() + kTileColorSizeInBytes*rclmt::jobsys::threadId);
+			rglr::QFloat4Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, ptr, 64 };
+			if (enableGamma) {
+				rglr::FilterTile<SHADER, rglr::sRGB>(cc, outcanvas, rect); }
+			else {
+				rglr::FilterTile<SHADER, rglr::LinearColor>(cc, outcanvas, rect); }}
+		else if (state.color0AttachmentType == RB_RGBF32) {
+			auto ptr = reinterpret_cast<rmlv::qfloat3*>(color0Buf_.data() + kTileColorSizeInBytes*rclmt::jobsys::threadId);
+			rglr::QFloat3Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, ptr, 64 };
+			if (enableGamma) {
+				rglr::FilterTile<SHADER, rglr::sRGB>(cc, outcanvas, rect); }
+			else {
+				rglr::FilterTile<SHADER, rglr::LinearColor>(cc, outcanvas, rect); }}
 		else {
-			rglr::FilterTile<SHADER, rglr::LinearColor>(cc, outcanvas, rect); }}
+			std::cerr << "not implemented: tile_StoreTrueColor for color attachment type " << state.color0AttachmentType << "\n";
+			std::exit(1); }}
 
 public:
 	static
@@ -971,17 +1080,17 @@ public:
 		return out; }};
 
 			
-template <typename SHADER, bool SCISSOR_ENABLED, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
+template <typename COLOR_IO, typename DEPTH_IO, typename SHADER, bool SCISSOR_ENABLED, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
 class GPUTileImpl : GPU {
 
-	void tile_DrawElementsSingle(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
-		tile_DrawElements<false>(state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
+	void tile_DrawElementsSingle(void* c0, void* d, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+		tile_DrawElements<false>(c0, d, state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
 
-	void tile_DrawElementsInstanced(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
-		tile_DrawElements<true>(state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
+	void tile_DrawElementsInstanced(void* c0, void* d, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+		tile_DrawElements<true>(c0, d, state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
 
 	template<bool INSTANCED>
-	void tile_DrawElements(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+	void tile_DrawElements(void* color0Buf, void* depthBuf, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 		using rmlv::mvec4i;
@@ -991,11 +1100,12 @@ class GPUTileImpl : GPU {
 		if (SCISSOR_ENABLED) {
 			rect = Intersect(rect, gl_offset_and_size_to_irect(state.scissorOrigin, state.scissorSize)); }
 
+		COLOR_IO colorCursor( color0Buf, tileOrigin );
+		DEPTH_IO depthCursor( depthBuf, tileOrigin );
+
 		auto loader = typename SHADER::Loader{ state.buffers, state.bufferFormat };
 
-		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
-		// auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
-		const int targetHeightInPixels_ = cbc.height();
+		const int targetHeightInPixels_ = bufferDimensionsInPixels_.y;
 
 		// XXX workaround for lambda-capture of vars from structured binding
 		rmlv::qfloat2 DS, DO; std::tie(DS, DO) = DSDO(state);
@@ -1026,9 +1136,9 @@ class GPUTileImpl : GPU {
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				auto triPgm = TriangleProgram<SHADER, QFloat4CanvasCursor, QFloat4WCanvasCursor, sampler, sampler, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
-					QFloat4CanvasCursor{cbc, tileOrigin},
-					QFloat4WCanvasCursor{cbc, tileOrigin},
+				auto triPgm = TriangleProgram<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
+					colorCursor,
+					depthCursor,
 					matrices,
 					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
@@ -1083,16 +1193,17 @@ class GPUTileImpl : GPU {
 				flush(); }}
 		flush(); }
 
-	void tile_DrawClipped(const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+	void tile_DrawClipped(void* color0Buf, void* depthBuf, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 
 		if (SCISSOR_ENABLED) {
 			rect = Intersect(rect, gl_offset_and_size_to_irect(state.scissorOrigin, state.scissorSize)); }
 
-		auto& cbc = threadColorBufs_[rclmt::jobsys::threadId];
-		// auto& dbc = threadDepthBufs_[rclmt::jobsys::threadId];
-		const int targetHeightInPixels_ = cbc.height();
+		COLOR_IO colorCursor( color0Buf, tileOrigin );
+		DEPTH_IO depthCursor( depthBuf, tileOrigin );
+
+		const int targetHeightInPixels_ = bufferDimensionsInPixels_.y;
 
 		const auto matrices = MakeMatrices(state);
 		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(uniformsPtr));
@@ -1114,9 +1225,9 @@ class GPUTileImpl : GPU {
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		auto triPgm = TriangleProgram<SHADER, QFloat4CanvasCursor, QFloat4WCanvasCursor, sampler, sampler, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
-			QFloat4CanvasCursor{ cbc, tileOrigin },
-			QFloat4WCanvasCursor{ cbc, tileOrigin },
+		auto triPgm = TriangleProgram<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
+			colorCursor,
+			depthCursor,
 			matrices,
 			VertexFloat1{ dev0.w, dev1.w, dev2.w },
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },

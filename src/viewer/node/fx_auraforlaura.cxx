@@ -97,7 +97,25 @@ public:
 	void Main() override {
 		rclmt::jobsys::run(Compute());}
 
-	void Draw(int pass, rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat, int depth [[maybe_unused]]) override {
+	void DrawDepth(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+		using namespace rglv;
+		auto& dc = *_dc;
+		std::lock_guard<std::mutex> lock(dc.mutex);
+		dc.Enable(GL_CULL_FACE);
+		dc.CullFace(GL_BACK);
+		dc.Enable(GL_DEPTH_TEST);
+		dc.DepthFunc(GL_LESS);
+
+		dc.ViewMatrix(*mvmat);
+		dc.ProjectionMatrix(*pmat);
+		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapXProgram::UniformsSD>();
+		dc.UseUniforms(id);
+
+		dc.UseBuffer(0, *vbo_);
+		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data(), RGL_HINT_DENSE|RGL_HINT_READ4);
+		dc.ResetX(); }
+
+	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		using namespace rglv;
 		auto& dc = *_dc;
 		if (pass != 1) return;

@@ -1,5 +1,7 @@
 #include "src/rgl/rglv/rglv_gpu.hxx"
 
+#include <fmt/format.h>
+
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
 namespace rqdq {
@@ -15,9 +17,10 @@ bool doubleBuffer{true};
 
 GPU::GPU(int concurrency) :
 	concurrency_(concurrency),
-	threadColorBufs_(concurrency),
-	threadDepthBufs_(concurrency),
-	threadStats_(concurrency) {}
+	color0Buf_(kTileColorSizeInBytes * concurrency),
+	depthBuf_(kTileDepthSizeInBytes * concurrency),
+	threadStats_(concurrency)
+	{}
 
 void GPU::Install(int programId, uint32_t stateKey, VertexProgramPtrs ptrs) {
 	uint32_t x = (programId << 24) | stateKey;
@@ -67,9 +70,7 @@ void GPU::Retile() {
 	bufferDimensionsInTiles_ = (bufferDimensionsInPixels_ + (tileDimensionsInPixels_ - ivec2{1, 1})) / tileDimensionsInPixels_;
 
 	for (int ti=0; ti<concurrency_; ++ti) {
-		threadStats_[ti].Reset();
-		threadColorBufs_[ti].resize(tileDimensionsInPixels_);
-		threadDepthBufs_[ti].resize(tileDimensionsInPixels_); }
+		threadStats_[ti].Reset(); }
 
 	auto areaInTiles = Area(bufferDimensionsInTiles_);
 
@@ -163,7 +164,7 @@ void GPU::BinImpl() {
 			// printf(" store swizzled colorbuffer @ %p\n", ptr);
 			for (auto& h : tilesHead_) {
 				AppendByte(&h, cmd);
-				AppendPtr(&h, ptr); }}
+				AppendPtr(&h, ptr); } }
 		else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_TC) {
 			auto enableGamma = cs.consumeByte();
 			auto ptr = cs.consumePtr();
@@ -181,8 +182,8 @@ void GPU::BinImpl() {
 				((*this).*(ptrs.bin_DrawArraysSingle))(count); }
 			else {
 				binState->Dump();
-				std::cerr << "no dispatch entry for " << std::hex << binState->VertexStateKey() << std::dec << " found for CMD_DRAW_ARRAYS\n";
-				std::exit(1); }}
+				fmt::print(stderr, "BIN:DRAW_ARRAYS no dispatch entry for {:x}\n", binState->VertexStateKey());
+				std::exit(1); } }
 		else if (cmd == CMD_DRAW_ARRAYS_INSTANCED) {
 			//auto flags = cs.consumeByte();
 			//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -192,7 +193,8 @@ void GPU::BinImpl() {
 				auto ptrs = found->second;
 				((*this).*(ptrs.bin_DrawArraysInstanced))(count, instanceCnt); }
 			else {
-				std::cerr << "no dispatch entry for " << std::hex << binState->VertexStateKey() << std::dec << "found for CMD_DRAW_ARRAYS_INSTANCED\n"; }}
+				fmt::print(stderr, "BIN:DRAW_ARRAYS_INSTANCED no dispatch entry for {:x}\n", binState->VertexStateKey());
+				std::exit(1); }}
 		else if (cmd == CMD_DRAW_ELEMENTS) {
 			auto flags = cs.consumeByte();
 			assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -204,7 +206,8 @@ void GPU::BinImpl() {
 				auto ptrs = found->second;
 				((*this).*(ptrs.bin_DrawElementsSingle))(count, indices, hint); }
 			else {
-				std::cerr << "no dispatch entry for " << std::hex << binState->VertexStateKey() << std::dec << "found for CMD_DRAW_ELEMENTS\n"; }}
+				fmt::print(stderr, "BIN:DRAW_ELEMENTS no dispatch entry for {:x}\n", binState->VertexStateKey());
+				std::exit(1); }}
 		else if (cmd == CMD_DRAW_ELEMENTS_INSTANCED) {
 			auto flags = cs.consumeByte();
 			assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -216,13 +219,14 @@ void GPU::BinImpl() {
 				auto ptrs = found->second;
 				((*this).*(ptrs.bin_DrawElementsInstanced))(count, indices, instanceCnt); }
 			else {
-				std::cerr << "no dispatch entry for " << std::hex << binState->VertexStateKey() << std::dec << "found for CMD_DRAW_ELEMENTS_INSTANCED\n"; }}}
+				fmt::print(stderr, "BIN:DRAW_ELEMENTS_INSTANCED no dispatch entry for {:x}\n", binState->VertexStateKey());
+				std::exit(1); }}}
 
 	// stats...
 	int total_ = 0;
 	int min_ = 0x7fffffff;
 	int max_ = 0;
-	for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+	for (int t = 0, siz = tilesHead_.size(); t < siz; ++t) {
 		const int thisTileBytes = tilesHead_[t] - WriteRange(t).first;
 		total_ += thisTileBytes;
 		min_ = std::min(min_, thisTileBytes);
@@ -241,14 +245,17 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 	const auto tileOrigin = rect.top_left;
 	threadStats_[tid].tiles.emplace_back(tileIdx);
 
+	const auto color0BufPtr = static_cast<void*>(color0Buf_.data() + kTileColorSizeInBytes*rclmt::jobsys::threadId);
+	const auto depthBufPtr  = static_cast<void*>(depthBuf_.data()  + kTileDepthSizeInBytes*rclmt::jobsys::threadId);
+
 	FastPackedReader cs{ ReadRange(tileIdx).first };
 	int cmdCnt = 0;
 
-	auto& dc = threadDepthBufs_[rclmt::jobsys::threadId];
-	auto& cc = threadColorBufs_[rclmt::jobsys::threadId];
-
 	const GLState* stateptr = nullptr;
 	const void* uniformptr = nullptr;
+	void* eColor0;
+	void* eDepth;
+
 	while (1) {
 		++cmdCnt;
 		auto cmd = cs.ConsumeByte();
@@ -257,26 +264,95 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 			break; }
 		else if (cmd == CMD_STATE) {
 			stateptr = static_cast<const GLState*>(cs.ConsumePtr());
-			uniformptr = cs.ConsumePtr(); }
+			uniformptr = cs.ConsumePtr();
+			eColor0 = nullptr;
+			eDepth = nullptr;
+			if (stateptr->color0AttachmentType == RB_COLOR_DEPTH) {
+				eColor0 = color0BufPtr; }
+			else if (stateptr->color0AttachmentType == RB_RGBAF32) {
+				eColor0 = color0BufPtr; }
+			else if (stateptr->color0AttachmentType == RB_RGBF32) {
+				eColor0 = color0BufPtr; }
+			else {
+				fmt::print(stderr, "RDR:STATE unknown color0 Renderbuffer type {:x}\n", stateptr->color0AttachmentType);
+				std::exit(1); }
+			if (stateptr->depthAttachmentType == RB_COLOR_DEPTH) {
+				assert(stateptr->color0AttachmentType == RB_COLOR_DEPTH);
+				eDepth = color0BufPtr; }
+			else if (stateptr->depthAttachmentType == RB_F32) {
+				eDepth = depthBufPtr; }
+			else {
+				fmt::print(stderr, "RDR:STATE unknown depth Renderbuffer type {:x}\n", stateptr->depthAttachmentType);
+				std::exit(1); }}
 		else if (cmd == CMD_CLEAR) {
 			int bits = cs.ConsumeByte();
-			if ((bits & GL_COLOR_BUFFER_BIT) != 0) {
-				// std::cout << "clearing to " << color << std::endl;
-				Fill(cc, stateptr->clearColor, rect); }
-			if ((bits & GL_DEPTH_BUFFER_BIT) != 0) {
-				Fill(dc, stateptr->clearDepth, rect); }
 			if ((bits & GL_STENCIL_BUFFER_BIT) != 0) {
-				// XXX not implemented
-				assert(false); }}
+				std::cerr << "CLEAR on STENCIL not implemented\n";
+				std::exit(1); }
+			if (stateptr->color0AttachmentType == RB_COLOR_DEPTH) {
+				if (bits != (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)) {
+					std::cerr << "must clear color and depth when using RB_COLOR_DEPTH\n";
+					std::exit(1); }
+				const auto fillValue = rmlv::vec4{ stateptr->clearColor.xyz(), stateptr->clearDepth };
+				rglr::QFloat4Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat4*>(color0BufPtr), 64 };
+				FillAll(cc, fillValue); }
+			else {
+				if ((bits&GL_COLOR_BUFFER_BIT) != 0) {
+					if (stateptr->color0AttachmentType == RB_RGBF32) {
+						const auto fillValue = stateptr->clearColor.xyz();
+						rglr::QFloat3Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat3*>(color0BufPtr), 64 };
+						FillAll(cc, fillValue); }
+					else if (stateptr->color0AttachmentType == RB_RGBAF32) {
+						const auto fillValue = stateptr->clearColor;
+						rglr::QFloat4Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat4*>(color0BufPtr), 64 };
+						FillAll(cc, fillValue); }
+					else {
+						std::cerr << "can't clear color buffer of type RB " << stateptr->color0AttachmentType << "\n";
+						std::exit(1); }}
+				if ((bits & GL_DEPTH_BUFFER_BIT) != 0) {
+					if (stateptr->depthAttachmentType == RB_F32) {
+						const auto fillValue = stateptr->clearDepth;
+						rglr::QFloatCanvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat*>(depthBufPtr), 64 };
+						FillAll(cc, fillValue); }
+					else {
+						std::cerr << "can't clear depth buffer of type RB " << stateptr->depthAttachmentType << "\n";
+						std::exit(1); }}}}
 		else if (cmd == CMD_STORE_COLOR_HALF_LINEAR_FP) {
-			auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
-			Downsample(cc, *dst, rect); }
+			if (stateptr->color0AttachmentType == RB_COLOR_DEPTH || stateptr->color0AttachmentType == RB_RGBAF32) {
+				rglr::QFloat4Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat4*>(color0BufPtr), 64 };
+				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
+				Downsample(cc, *dst, rect); }
+			else if (stateptr->color0AttachmentType == RB_RGBF32) {
+				rglr::QFloat3Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat3*>(color0BufPtr), 64 };
+				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
+				Downsample(cc, *dst, rect); }
+			else {
+				std::cerr << "STORE_COLOR_HALF_LINEAR_FP not implemented for attachment type " << stateptr->color0AttachmentType << "\n";
+				std::exit(1); }}
 		else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_FP) {
-			auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
-			Copy(cc, *dst, rect); }
+			if (stateptr->color0AttachmentType == RB_COLOR_DEPTH || stateptr->color0AttachmentType == RB_RGBAF32) {
+				rglr::QFloat4Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat4*>(color0BufPtr), 64 };
+				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
+				Copy(cc, *dst, rect); }
+			else if (stateptr->color0AttachmentType == RB_RGBF32) {
+				rglr::QFloat3Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat3*>(color0BufPtr), 64 };
+				auto dst = static_cast<rglr::FloatingPointCanvas*>(cs.ConsumePtr());
+				Copy(cc, *dst, rect); }
+			else {
+				std::cerr << "CMD_STORE_COLOR_HALF_LINEAR_FP not implemented for attachment type " << stateptr->color0AttachmentType << "\n";
+				std::exit(1); }}
 		else if (cmd == CMD_STORE_COLOR_FULL_QUADS_FP) {
-			auto dst = static_cast<rglr::QFloat4Canvas*>(cs.ConsumePtr());
-			Copy(cc, *dst, rect); }
+			if (stateptr->color0AttachmentType == RB_COLOR_DEPTH || stateptr->color0AttachmentType == RB_RGBAF32) {
+				rglr::QFloat4Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat4*>(color0BufPtr), 64 };
+				auto dst = static_cast<rglr::QFloat4Canvas*>(cs.ConsumePtr());
+				Copy(cc, *dst, rect); }
+			else if (stateptr->color0AttachmentType == RB_RGBF32) {
+				rglr::QFloat3Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat3*>(color0BufPtr), 64 };
+				auto dst = static_cast<rglr::QFloat4Canvas*>(cs.ConsumePtr());
+				Copy(cc, *dst, rect); }
+			else {
+				std::cerr << "CMD_STORE_COLOR_HALF_LINEAR_FP not implemented for attachment type " << stateptr->color0AttachmentType << "\n";
+				std::exit(1); }}
 		else if (cmd == CMD_STORE_COLOR_FULL_LINEAR_TC) {
 			auto enableGamma = cs.ConsumeByte();
 			auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.ConsumePtr());
@@ -288,10 +364,18 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 				std::cerr << "no dispatch entry for " << std::hex << stateptr->BltStateKey() << std::dec << " found for CMD_STORE_COLOR_FULL_LINEAR_TC\n";
 				std::exit(1); }}
 			// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
+		else if (cmd == CMD_STORE_DEPTH_FULL_LINEAR_FP) {
+			if (stateptr->depthAttachmentType == RB_F32) {
+				rglr::QFloatCanvas src{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat*>(depthBufPtr), 64 };
+				auto dst = rglr::FloatCanvas(256, 256, cs.ConsumePtr(), 256);
+				Copy(src, dst, rect); }
+			else {
+				std::cerr << "STORE_DEPTH_FULL_LINEAR_FP not implemented for attachment type " << stateptr->depthAttachmentType << "\n";
+				std::exit(1); }}
 		else if (cmd == CMD_CLIPPED_TRI) {
 			if (auto found = fragmentDispatch_.find(stateptr->FragmentStateKey());  found != fragmentDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.tile_DrawClipped))(*stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
+				((*this).*(ptrs.tile_DrawClipped))(eColor0, eDepth, *stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
 			else {
 				stateptr->Dump();
 				std::cerr << "no dispatch entry for " << std::hex << stateptr->FragmentStateKey() << std::dec << " found for CMD_CLIPPED_TRI\n";
@@ -299,7 +383,7 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 		else if (cmd == CMD_DRAW_INLINE) {
 			if (auto found = fragmentDispatch_.find(stateptr->FragmentStateKey());  found != fragmentDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.tile_DrawElementsSingle))(*stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
+				((*this).*(ptrs.tile_DrawElementsSingle))(eColor0, eDepth, *stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
 			else {
 				stateptr->Dump();
 				std::cerr << "no dispatch entry for " << std::hex << stateptr->FragmentStateKey() << std::dec << " found for CMD_DRAW_INLINE\n";
@@ -307,7 +391,7 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 		else if (cmd == CMD_DRAW_INLINE_INSTANCED) {
 			if (auto found = fragmentDispatch_.find(stateptr->FragmentStateKey());  found != fragmentDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.tile_DrawElementsInstanced))(*stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
+				((*this).*(ptrs.tile_DrawElementsInstanced))(eColor0, eDepth, *stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
 			else {
 				stateptr->Dump();
 				std::cerr << "no dispatch entry for " << std::hex << stateptr->FragmentStateKey() << std::dec << " found for CMD_DRAW_INLINE_INSTANCED\n";

@@ -19,74 +19,260 @@ inline PixelToaster::TrueColorPixel to_tc_from_fpp(PixelToaster::FloatingPointPi
 		}; }
 
 
-struct QFloatCanvas {
-	QFloatCanvas()  {
-		buffer.reserve(1);
-		_ptr = buffer.data(); }
+class FloatCanvas {
+	int width_{1};
+	int height_{1};
+	int stride_{1};
+	rcls::vector<float> buffer_;
+	float* ptr_;
 
-	QFloatCanvas(const int width, const int height)
-		:_width(width), _height(height), _stride2(width / 2) {
-		buffer.reserve(width * height / 4);
-		_ptr = buffer.data(); }
+public:
+	/*QFloatCanvas()  {
+		buffer_.reserve(1);
+		ptr_ = buffer_.data(); }
 
-	auto data() { return _ptr; }
-	auto cdata() const { return _ptr; }
-	auto width() const { return _width; }
-	auto height() const { return _height; }
-	auto stride2() const { return _stride2; }
-	rmlg::irect rect() const {
-		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{_width, _height} }; }
+	QFloatCanvas(int w, int h) :
+		width_(w),
+		height_(h),
+		stride_(w/2) {
+		buffer_.reserve(w*h / 4);
+		ptr_ = buffer_.data(); }
+
+	QFloatCanvas(int w, int h, rmlv::qfloat* buf) :
+		width_(w),
+		height_(h),
+		stride_(w/2),
+		ptr_(buf) {}*/
+
+	FloatCanvas(int w, int h, void* buf, int stride) :
+		width_(w),
+		height_(h),
+		stride_(stride),
+		ptr_(static_cast<float*>(buf)) {}
+
+	auto data() { return ptr_; }
+	auto cdata() const { return ptr_; }
+	auto width() const { return width_; }
+	auto height() const { return height_; }
+	auto stride() const { return stride_; }
+	auto rect() const -> rmlg::irect {
+		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{width_, height_} }; }
 	float aspect() const {
-		if (_width == 0 || _height == 0) {
+		if (width_ == 0 || height_ == 0) {
 			return 1.0F; }
-		return float(_width) / float(_height); }
+		return float(width_) / float(height_); }
 
-	void resize(int width, int height) {
-		buffer.reserve(width * height / 4);
-		_ptr = buffer.data();
-		_width = width;
-		_height = height;
-		_stride2 = width / 2; }
+	void resize(int w, int h) {
+		buffer_.reserve(w*h/4);
+		ptr_ = buffer_.data();
+		width_ = w;
+		height_ = h;
+		stride_ = w / 2; }
+
+	void resize(rmlv::ivec2 dim) {
+		resize(dim.x, dim.y); } };
+
+
+class QFloatCanvas {
+	int width_{2};
+	int height_{2};
+	int stride_{1};
+	rcls::vector<rmlv::qfloat> buffer_;
+	rmlv::qfloat* ptr_;
+
+public:
+	QFloatCanvas()  {
+		buffer_.reserve(1);
+		ptr_ = buffer_.data(); }
+
+	QFloatCanvas(int w, int h) :
+		width_(w),
+		height_(h),
+		stride_(w/2) {
+		buffer_.reserve(w*h / 4);
+		ptr_ = buffer_.data(); }
+
+	QFloatCanvas(int w, int h, rmlv::qfloat* buf) :
+		width_(w),
+		height_(h),
+		stride_(w/2),
+		ptr_(buf) {}
+
+	QFloatCanvas(int w, int h, rmlv::qfloat* buf, int stride) :
+		width_(w),
+		height_(h),
+		stride_(stride),
+		ptr_(buf) {}
+
+	auto data() { return ptr_; }
+	auto cdata() const { return ptr_; }
+	auto width() const { return width_; }
+	auto height() const { return height_; }
+	auto stride() const { return stride_; }
+	auto rect() const -> rmlg::irect {
+		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{width_, height_} }; }
+	float aspect() const {
+		if (width_ == 0 || height_ == 0) {
+			return 1.0F; }
+		return float(width_) / float(height_); }
+
+	void resize(int w, int h) {
+		buffer_.reserve(w*h/4);
+		ptr_ = buffer_.data();
+		width_ = w;
+		height_ = h;
+		stride_ = w / 2; }
+
+	static inline void Store(__m128 vvvv, rmlv::qfloat* const dst) {
+		_mm_store_ps(reinterpret_cast<float*>(dst), vvvv); }
+
+	void resize(rmlv::ivec2 dim) {
+		resize(dim.x, dim.y); } };
+
+
+class QFloat3Canvas {
+	int width_{0};
+	int height_{0};
+	int stride_{0};
+	rcls::vector<rmlv::qfloat3> buffer_;
+	rmlv::qfloat3* ptr_{nullptr};
+
+public:
+	QFloat3Canvas() = default;
+
+	QFloat3Canvas(int w, int h) :
+		width_(w),
+		height_(h),
+		stride_(w / 2) {
+		buffer_.reserve(w*h/4);
+		ptr_ = buffer_.data(); }
+
+	QFloat3Canvas(int w, int h, rmlv::qfloat3* buf) :
+		width_(w),
+		height_(h),
+		stride_(w / 2),
+		ptr_(buf) {}
+
+	QFloat3Canvas(int w, int h, rmlv::qfloat3* buf, int stride) :
+		width_(w),
+		height_(h),
+		stride_(stride),
+		ptr_(buf) {}
+
+	auto data() { return ptr_; }
+	auto cdata() const { return ptr_; }
+
+	auto width() const { return width_; }
+	auto height() const { return height_; }
+	auto stride() const { return stride_; }
+	rmlg::irect rect() const {
+		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{width_, height_} }; }
+	float aspect() const {
+		if (width_ == 0 || height_ == 0) {
+			return 1.0F; }
+		return float(width_) / float(height_); }
+
+	void resize(int w, int h) {
+		buffer_.reserve(w*h/4);
+		ptr_ = buffer_.data();
+		width_ = w;
+		height_ = h;
+		stride_ = w/2; }
 
 	void resize(rmlv::ivec2 dim) {
 		resize(dim.x, dim.y); }
 
-private:
-	rcls::vector<rmlv::qfloat> buffer;
-	rmlv::qfloat* _ptr;
-	int _width{2};
-	int _height{2};
-	int _stride2{1};
-	};
+	static inline void Load(const rmlv::qfloat3* const src, __m128& rrrr, __m128& gggg, __m128& bbbb) {
+		rrrr = _mm_load_ps(reinterpret_cast<const float*>(&src->r));
+		gggg = _mm_load_ps(reinterpret_cast<const float*>(&src->g));
+		bbbb = _mm_load_ps(reinterpret_cast<const float*>(&src->b)); }
+
+	/*static inline void Load(const rmlv::qfloat4* const src, __m128& rrrr, __m128& gggg, __m128& bbbb, __m128& aaaa) {
+		rrrr = _mm_load_ps(reinterpret_cast<const float*>(&src->r));
+		gggg = _mm_load_ps(reinterpret_cast<const float*>(&src->g));
+		bbbb = _mm_load_ps(reinterpret_cast<const float*>(&src->b));
+		aaaa = _mm_load_ps(reinterpret_cast<const float*>(&src->a)); }*/
+
+	static inline void Store(__m128 rrrr, __m128 gggg, __m128 bbbb, rmlv::qfloat3* const dst) {
+		_mm_store_ps(reinterpret_cast<float*>(&dst->r), rrrr);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->g), gggg);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->b), bbbb); }
+
+	/*static inline void Store(__m128 rrrr, __m128 gggg, __m128 bbbb, __m128 aaaa, rmlv::qfloat4* const dst) {
+		_mm_store_ps(reinterpret_cast<float*>(&dst->r), rrrr);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->g), gggg);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->b), bbbb);
+		_mm_store_ps(reinterpret_cast<float*>(&dst->a), aaaa); }*/
+
+	rmlv::vec3 get_pixel(int x, int y) {
+		const auto* data = reinterpret_cast<const float*>(ptr_);
+		const int channels = 3;
+		const int pixelsPerQuad = 4;
+		const int elemsPerQuad = channels * pixelsPerQuad;
+
+		const int Yquad = y / 2;
+		const int Xquad = x / 2;
+
+		const int quadAddr = (Yquad * stride_ + Xquad) * elemsPerQuad;
+
+		//int cellidx = y / 2 * _stride2 + x / 2;
+		int sy = y % 2;
+		int sx = x % 2;
+		float r = data[ quadAddr +  0 + sy*2 + sx ];
+		float g = data[ quadAddr +  4 + sy*2 + sx ];
+		float b = data[ quadAddr +  8 + sy*2 + sx ];
+		// float a = data[ quadAddr + 12 + sy*2 + sx ];
+		return rmlv::vec3{ r, g, b }; }};
 
 
-struct QFloat4Canvas {
+class QFloat4Canvas {
+	int width_{0};
+	int height_{0};
+	int stride_{0};
+	rcls::vector<rmlv::qfloat4> buffer_;
+	rmlv::qfloat4* ptr_{nullptr};
+
+public:
 	QFloat4Canvas() = default;
 
-	QFloat4Canvas(const int width, const int height)
-		:_width(width), _height(height), _stride2(width / 2) {
-		buffer.reserve(width * height / 4);
-		_ptr = buffer.data();
-	}
-	auto data() { return _ptr; }
-	auto cdata() const { return _ptr; }
+	QFloat4Canvas(int w, int h) :
+		width_(w),
+		height_(h),
+		stride_(w / 2) {
+		buffer_.reserve(w*h/4);
+		ptr_ = buffer_.data(); }
 
-	auto width() const { return _width; }
-	auto height() const { return _height; }
-	auto stride2() const { return _stride2; }
+	QFloat4Canvas(int w, int h, rmlv::qfloat4* buf) :
+		width_(w),
+		height_(h),
+		stride_(w / 2),
+		ptr_(buf) {}
+
+	QFloat4Canvas(int w, int h, rmlv::qfloat4* buf, int stride) :
+		width_(w),
+		height_(h),
+		stride_(stride),
+		ptr_(buf) {}
+
+	auto data() { return ptr_; }
+	auto cdata() const { return ptr_; }
+
+	auto width() const { return width_; }
+	auto height() const { return height_; }
+	auto stride() const { return stride_; }
 	rmlg::irect rect() const {
-		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{_width, _height} }; }
+		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{width_, height_} }; }
 	float aspect() const {
-		if (_width == 0 || _height == 0) {
+		if (width_ == 0 || height_ == 0) {
 			return 1.0F; }
-		return float(_width) / float(_height); }
+		return float(width_) / float(height_); }
 
-	void resize(int width, int height) {
-		buffer.reserve(width * height / 4);
-		_ptr = buffer.data();
-		_width = width;
-		_height = height;
-		_stride2 = width / 2; }
+	void resize(int w, int h) {
+		buffer_.reserve(w*h/4);
+		ptr_ = buffer_.data();
+		width_ = w;
+		height_ = h;
+		stride_ = w/2; }
 
 	void resize(rmlv::ivec2 dim) {
 		resize(dim.x, dim.y); }
@@ -114,16 +300,15 @@ struct QFloat4Canvas {
 		_mm_store_ps(reinterpret_cast<float*>(&dst->a), aaaa); }
 
 	rmlv::vec4 get_pixel(int x, int y) {
-		const auto* data = reinterpret_cast<const float*>(_ptr);
+		const auto* data = reinterpret_cast<const float*>(ptr_);
 		const int channels = 4;
 		const int pixelsPerQuad = 4;
 		const int elemsPerQuad = channels * pixelsPerQuad;
-		const int widthInQuads = _width / 2;
 
 		const int Yquad = y / 2;
 		const int Xquad = x / 2;
 
-		const int quadAddr = (Yquad * widthInQuads + Xquad) * elemsPerQuad;
+		const int quadAddr = (Yquad * stride_ + Xquad) * elemsPerQuad;
 
 		//int cellidx = y / 2 * _stride2 + x / 2;
 		int sy = y % 2;
@@ -132,16 +317,7 @@ struct QFloat4Canvas {
 		float g = data[ quadAddr +  4 + sy*2 + sx ];
 		float b = data[ quadAddr +  8 + sy*2 + sx ];
 		float a = data[ quadAddr + 12 + sy*2 + sx ];
-		return rmlv::vec4{ r, g, b, a }; }
-
-private:
-	rcls::vector<rmlv::qfloat4> buffer;
-	rmlv::qfloat4* _ptr{nullptr};
-	int _width{0};
-	int _height{0};
-	int _stride2{0};
-	};
-
+		return rmlv::vec4{ r, g, b, a }; }};
 
 struct QShort3 {
 	uint16_t r[4];

@@ -82,12 +82,10 @@ void GL::StoreColor(rglr::TrueColorCanvas* dst, bool enableGammaCorrection) {
 	commands_.appendPtr(dst); }
 
 
-/*
-void GL::StoreDepth(rglr::QFloatCanvas* dst) {
-	MaybeUpdatestate();
-	commands_.appendByte(CMD_STORE_DEPTH_FULL_QUADS_FP);
+void GL::StoreDepth(float* dst) {
+	MaybeUpdateState();
+	commands_.appendByte(CMD_STORE_DEPTH_FULL_LINEAR_FP);
 	commands_.appendPtr(dst); }
-*/
 
 
 void GL::Reset() {

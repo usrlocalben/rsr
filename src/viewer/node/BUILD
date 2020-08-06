@@ -137,6 +137,7 @@ cc_library(
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rclx:gason_util",
         "//src/rgl/rglv:gl",
+        "//src/rgl/rglv:gpu",
         "//src/rml/rmlm:mat4",
         "//src/viewer:compile",
         ":base",

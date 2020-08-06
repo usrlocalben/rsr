@@ -47,7 +47,7 @@ void Install(rglv::GPU& gpu) {
 	id = static_cast<int>(ShaderProgramId::Wireframe);
 	gpu.Install(id, 0, rglv::GPUBinImpl<WireframeProgram>::MakeVertexProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
-				rglv::GPUTileImpl<WireframeProgram, false, true, rglv::DepthFuncLess, true, true, rglv::BlendFuncOff>::MakeFragmentProgramPtrs());
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, WireframeProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
 
 	id = static_cast<int>(ShaderProgramId::IQ);
 	gpu.Install(id, 0, rglv::GPUBltImpl<IQPostProgram>::MakeBltProgramPtrs());
@@ -55,35 +55,39 @@ void Install(rglv::GPU& gpu) {
 	id = static_cast<int>(ShaderProgramId::Envmap);
 	gpu.Install(id, 0, rglv::GPUBinImpl<EnvmapProgram>::MakeVertexProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_NOCOLORWRITE,
-				rglv::GPUTileImpl<EnvmapProgram, false, true, rglv::DepthFuncLess, true, false, rglv::BlendFuncOff>::MakeFragmentProgramPtrs());
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, EnvmapProgram, false, true, rglv::DepthLT, true, false, rglv::BlendOff>::MakeFragmentProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_EQUAL_NODEPTHWRITE_COLORWRITE_ALPHA,
-				rglv::GPUTileImpl<EnvmapProgram, false, true, rglv::DepthFuncEqual, false, true, rglv::BlendFuncAlpha>::MakeFragmentProgramPtrs());
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, EnvmapProgram, false, true, rglv::DepthEQ, false, true, rglv::BlendAlpha>::MakeFragmentProgramPtrs());
+	gpu.Install(id, 0x6e2,
+				rglv::GPUTileImpl<rglv::QFloat3RenderbufferCursor, rglv::QFloatRenderbufferCursor, EnvmapProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
-				rglv::GPUTileImpl<EnvmapProgram, false, true, rglv::DepthFuncLess, true, true, rglv::BlendFuncOff>::MakeFragmentProgramPtrs());
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, EnvmapProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_ALPHA,
-				rglv::GPUTileImpl<EnvmapProgram, false, true, rglv::DepthFuncLess, true, true, rglv::BlendFuncAlpha>::MakeFragmentProgramPtrs());
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, EnvmapProgram, false, true, rglv::DepthLT, true, true, rglv::BlendAlpha>::MakeFragmentProgramPtrs());
 	gpu.Install(id, NOSCISSOR_NODEPTH_NODEPTHWRITE_COLORWRITE_ALPHA,
-				rglv::GPUTileImpl<EnvmapProgram, false, false, rglv::DepthFuncLess, false, true, rglv::BlendFuncAlpha>::MakeFragmentProgramPtrs());
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, EnvmapProgram, false, false, rglv::DepthLT, false, true, rglv::BlendAlpha>::MakeFragmentProgramPtrs());
 
 	id = static_cast<int>(ShaderProgramId::Amy);
 	gpu.Install(id, 0, rglv::GPUBinImpl<AmyProgram>::MakeVertexProgramPtrs());
+	gpu.Install(id, 0x6e2,
+				rglv::GPUTileImpl<rglv::QFloat3RenderbufferCursor, rglv::QFloatRenderbufferCursor, AmyProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
-				rglv::GPUTileImpl<AmyProgram, false, true, rglv::DepthFuncLess, true, true, rglv::BlendFuncOff>::MakeFragmentProgramPtrs());
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, AmyProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
 
 	id = static_cast<int>(ShaderProgramId::OBJ1);
 	gpu.Install(id, 0, rglv::GPUBinImpl<OBJ1Program>::MakeVertexProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
-				rglv::GPUTileImpl<OBJ1Program, false, true, rglv::DepthFuncLess, true, true, rglv::BlendFuncOff>::MakeFragmentProgramPtrs());
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, OBJ1Program, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
 
 	id = static_cast<int>(ShaderProgramId::OBJ2);
 	gpu.Install(id, 0, rglv::GPUBinImpl<OBJ2Program>::MakeVertexProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
-				rglv::GPUTileImpl<OBJ2Program, false, true, rglv::DepthFuncLess, true, true, rglv::BlendFuncOff>::MakeFragmentProgramPtrs());
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, OBJ2Program, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
 
 	id = static_cast<int>(ShaderProgramId::Many);
 	gpu.Install(id, 0, rglv::GPUBinImpl<ManyProgram>::MakeVertexProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
-				rglv::GPUTileImpl<ManyProgram, false, true, rglv::DepthFuncLess, true, true, rglv::BlendFuncOff>::MakeFragmentProgramPtrs()); }
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, ManyProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs()); }
 
 
 }  // namespace rqv
