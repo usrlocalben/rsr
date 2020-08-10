@@ -65,12 +65,13 @@ struct BaseProgram {
 		VertexOutputMD& outs [[maybe_unused]]) {
 		gl_Position = m.vpm * v.a0; }
 
-	template <typename TEXTURE_UNIT>
+	template <typename TU0, typename TU1, typename TU3>
 	inline static void ShadeFragment(
 		const Matrices& m [[maybe_unused]],
 		const UniformsMD& u [[maybe_unused]], 
-		const TEXTURE_UNIT& tu0 [[maybe_unused]],
-		const TEXTURE_UNIT& tu1 [[maybe_unused]],
+		const TU0& tu0 [[maybe_unused]],
+		const TU1& tu1 [[maybe_unused]],
+		const TU3& tu3 [[maybe_unused]],
 		const rglv::BaryCoord& BS [[maybe_unused]],
 		const rglv::BaryCoord& BP [[maybe_unused]],
 		const VertexOutputMD& v [[maybe_unused]],

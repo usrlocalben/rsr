@@ -59,7 +59,7 @@ public:
 		using namespace rglv;
 		auto& dc = *_dc;
 		if (pass != 1) return;
-		std::lock_guard<std::mutex> lock(dc.mutex);
+		std::lock_guard lock(dc.mutex);
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 

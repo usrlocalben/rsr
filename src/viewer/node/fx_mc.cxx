@@ -162,7 +162,7 @@ public:
 		using rglv::GL_UNSIGNED_SHORT;
 		using rglv::GL_CULL_FACE;
 		using rglv::GL_TRIANGLES;
-		std::lock_guard<std::mutex> lock(dc.mutex);
+		std::lock_guard lock(dc.mutex);
 
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
@@ -178,17 +178,17 @@ public:
 				dc.UseBuffer(0, vao);
 				dc.DrawArrays(GL_TRIANGLES, 0, elements); }}}
 
-	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
 		auto& dc = *_dc;
 		using rglv::GL_UNSIGNED_SHORT;
 		using rglv::GL_CULL_FACE;
 		using rglv::GL_TRIANGLES;
 		if (pass != 1) return;
-		std::lock_guard<std::mutex> lock(dc.mutex);
+		std::lock_guard lock(dc.mutex);
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 
-		dc.ViewMatrix(*mvmat);
+		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
 		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapProgram::UniformsSD>();
 		dc.UseUniforms(id);

@@ -103,11 +103,8 @@ struct GLState {
 
 	std::array<TextureState, 2> tus;
 
-	const PixelToaster::FloatingPointPixel *texture1Ptr;
-	int texture1Width;
-	int texture1Height;
-	int texture1Stride;
-	int texture1MinFilter;
+	const float* tu3ptr;
+	int tu3dim;
 
 	rmlm::mat4 viewMatrix;
 	rmlm::mat4 normalMatrix;
@@ -170,6 +167,9 @@ struct GLState {
 
 		programId = 0;
 		uniformsOfs = -1;
+
+		tu3ptr = nullptr;
+		tu3dim = 256;
 
 		for (auto& tu : tus) {
 			tu.reset(); }
@@ -272,6 +272,11 @@ public:
 		tu.width = width;
 		tu.height = height;
 		tu.stride = stride; }
+
+	void BindTexture3(const float* ptr, int dim) {
+		dirty_ = true;
+		cs_.tu3ptr = ptr;
+		cs_.tu3dim = dim; }
 
 	void UseBuffer(int idx, const VertexArray_F3F3F3& vao) {
 		dirty_ = true;

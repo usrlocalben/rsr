@@ -64,10 +64,10 @@ public:
 			// XXX increment depth even if matrix/transform stack is not modified?
 			glnode->DrawDepth(dc, pmat, mvmat); }}
 
-	void Draw(int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+	void Draw(int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
 		for (auto glnode : gls_) {
 			// XXX increment depth even if matrix/transform stack is not modified?
-			glnode->Draw(pass, lights, dc, pmat, mvmat); }}
+			glnode->Draw(pass, lights, dc, pmat, vmat, mmat); }}
 
 protected:
 	void AddDeps() override {

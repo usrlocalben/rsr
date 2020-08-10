@@ -42,7 +42,11 @@ struct alignas(64) mat4 {
 	explicit mat4(std::array<float, 16> src) noexcept;
 
     // MANIPULATORS
-    auto operator*=(const mat4& rhs) -> mat4&; };
+    auto operator*=(const mat4& rhs) -> mat4&;
+
+	// ACCESSORS
+	auto position() const -> rmlv::vec3;
+	auto lookDir() const -> rmlv::vec3; };
 	
 // FREE OPERATORS
 auto operator*(const mat4&, const rmlv::vec4&) -> rmlv::vec4;
@@ -169,6 +173,15 @@ auto mat4::operator*=(const mat4& rhs) -> mat4& {
     auto tmp = *this * rhs;
     ff = tmp.ff;
     return *this; }
+
+// ACCESSORS
+inline
+auto mat4::position() const -> rmlv::vec3 {
+	return { cr[3][0], cr[3][1], cr[3][2] }; }
+
+inline
+auto mat4::lookDir() const -> rmlv::vec3 {
+	return { -cr[0][2], -cr[1][2], -cr[2][2] }; }
 
 // FREE OPERATORS
 inline

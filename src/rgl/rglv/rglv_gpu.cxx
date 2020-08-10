@@ -15,8 +15,9 @@ namespace rglv {
  */
 bool doubleBuffer{true};
 
-GPU::GPU(int concurrency) :
+GPU::GPU(int concurrency, std::string guid) :
 	concurrency_(concurrency),
+	guid_(guid),
 	color0Buf_(kTileColorSizeInBytes * concurrency),
 	depthBuf_(kTileDepthSizeInBytes * concurrency),
 	threadStats_(concurrency)
@@ -173,6 +174,11 @@ void GPU::BinImpl() {
 				AppendByte(&h, cmd);
 				AppendByte(&h, enableGamma);
 				AppendPtr(&h, ptr); }}
+		else if (cmd == CMD_STORE_DEPTH_FULL_LINEAR_FP) {
+			auto ptr = cs.consumePtr();
+			for (auto& h : tilesHead_) {
+				AppendByte(&h, cmd);
+				AppendPtr(&h, ptr); }}
 		else if (cmd == CMD_DRAW_ARRAYS) {
 			//auto flags = cs.consumeByte();
 			//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
@@ -182,7 +188,7 @@ void GPU::BinImpl() {
 				((*this).*(ptrs.bin_DrawArraysSingle))(count); }
 			else {
 				binState->Dump();
-				fmt::print(stderr, "BIN:DRAW_ARRAYS no dispatch entry for {:x}\n", binState->VertexStateKey());
+				fmt::print(stderr, "BIN:DRAW_ARRAYS no dispatch entry for 0x{:x}\n", binState->VertexStateKey());
 				std::exit(1); } }
 		else if (cmd == CMD_DRAW_ARRAYS_INSTANCED) {
 			//auto flags = cs.consumeByte();
@@ -193,7 +199,7 @@ void GPU::BinImpl() {
 				auto ptrs = found->second;
 				((*this).*(ptrs.bin_DrawArraysInstanced))(count, instanceCnt); }
 			else {
-				fmt::print(stderr, "BIN:DRAW_ARRAYS_INSTANCED no dispatch entry for {:x}\n", binState->VertexStateKey());
+				fmt::print(stderr, "BIN:DRAW_ARRAYS_INSTANCED no dispatch entry for 0x{:x}\n", binState->VertexStateKey());
 				std::exit(1); }}
 		else if (cmd == CMD_DRAW_ELEMENTS) {
 			auto flags = cs.consumeByte();
@@ -206,7 +212,7 @@ void GPU::BinImpl() {
 				auto ptrs = found->second;
 				((*this).*(ptrs.bin_DrawElementsSingle))(count, indices, hint); }
 			else {
-				fmt::print(stderr, "BIN:DRAW_ELEMENTS no dispatch entry for {:x}\n", binState->VertexStateKey());
+				fmt::print(stderr, "BIN:DRAW_ELEMENTS no dispatch entry for 0x{:x}\n", binState->VertexStateKey());
 				std::exit(1); }}
 		else if (cmd == CMD_DRAW_ELEMENTS_INSTANCED) {
 			auto flags = cs.consumeByte();
@@ -219,7 +225,7 @@ void GPU::BinImpl() {
 				auto ptrs = found->second;
 				((*this).*(ptrs.bin_DrawElementsInstanced))(count, indices, instanceCnt); }
 			else {
-				fmt::print(stderr, "BIN:DRAW_ELEMENTS_INSTANCED no dispatch entry for {:x}\n", binState->VertexStateKey());
+				fmt::print(stderr, "BIN:DRAW_ELEMENTS_INSTANCED no dispatch entry for 0x{:x}\n", binState->VertexStateKey());
 				std::exit(1); }}}
 
 	// stats...
@@ -274,7 +280,7 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 			else if (stateptr->color0AttachmentType == RB_RGBF32) {
 				eColor0 = color0BufPtr; }
 			else {
-				fmt::print(stderr, "RDR:STATE unknown color0 Renderbuffer type {:x}\n", stateptr->color0AttachmentType);
+				fmt::print(stderr, "RDR:STATE unknown color0 Renderbuffer type 0x{:x}\n", stateptr->color0AttachmentType);
 				std::exit(1); }
 			if (stateptr->depthAttachmentType == RB_COLOR_DEPTH) {
 				assert(stateptr->color0AttachmentType == RB_COLOR_DEPTH);
@@ -282,7 +288,7 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 			else if (stateptr->depthAttachmentType == RB_F32) {
 				eDepth = depthBufPtr; }
 			else {
-				fmt::print(stderr, "RDR:STATE unknown depth Renderbuffer type {:x}\n", stateptr->depthAttachmentType);
+				fmt::print(stderr, "RDR:STATE unknown depth Renderbuffer type 0x{:x}\n", stateptr->depthAttachmentType);
 				std::exit(1); }}
 		else if (cmd == CMD_CLEAR) {
 			int bits = cs.ConsumeByte();
@@ -365,9 +371,10 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 				std::exit(1); }}
 			// XXX draw cpu assignment indicators draw_border(rect, cpu_colors[tid], canvas);
 		else if (cmd == CMD_STORE_DEPTH_FULL_LINEAR_FP) {
+			auto p = cs.ConsumePtr();
 			if (stateptr->depthAttachmentType == RB_F32) {
 				rglr::QFloatCanvas src{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat*>(depthBufPtr), 64 };
-				auto dst = rglr::FloatCanvas(256, 256, cs.ConsumePtr(), 256);
+				auto dst = rglr::FloatCanvas(bufferDimensionsInPixels_.x, bufferDimensionsInPixels_.y, p, bufferDimensionsInPixels_.x);
 				Copy(src, dst, rect); }
 			else {
 				std::cerr << "STORE_DEPTH_FULL_LINEAR_FP not implemented for attachment type " << stateptr->depthAttachmentType << "\n";

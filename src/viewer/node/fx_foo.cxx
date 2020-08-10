@@ -40,28 +40,44 @@ public:
 	void DrawDepth(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		using namespace rglv;
 		auto& dc = *_dc;
-		std::lock_guard<std::mutex> lock(dc.mutex);
+		std::lock_guard lock(dc.mutex);
 
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
-		auto [id, ptr] = dc.AllocUniformBuffer<rglv::BaseProgram::UniformsSD>();
-		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, meshVAO_);
 		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data()); }
 
-	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
 		using namespace rglv;
 		auto& dc = *_dc;
 		if (pass != 1) return;
-		std::lock_guard<std::mutex> lock(dc.mutex);
-		if (materialNode_ != nullptr) {
-			materialNode_->Apply(_dc); }
+		std::lock_guard lock(dc.mutex);
+		/*if (materialNode_ != nullptr) {
+			materialNode_->Apply(_dc); }*/
 
-		dc.ViewMatrix(*mvmat);
+		dc.UseProgram(9);
+
+		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
-		auto [id, ptr] = dc.AllocUniformBuffer<rglv::BaseProgram::UniformsSD>();
+		auto [id, ptr] = dc.AllocUniformBuffer<OBJ2SProgram::UniformsSD>();
 		dc.UseUniforms(id);
+
+		/*const rmlm::mat4 ndcToUV{
+			.5F,   0, 0, 0,
+			  0, .5F, 0, 0,
+			  0,   0, 1, 0,
+			.5F, .5F, 0, 1
+		};
+		ptr->modelToShadow = (ndcToUV * lights.pmat[0] * lights.vmat[0] * *mmat);
+		*/
+
+		ptr->modelToShadow = (lights.pmat[0] * lights.vmat[0] * *mmat);
+		ptr->ldir = lights.dir[0];
+		ptr->lpos = lights.pos[0];
+		ptr->lcos = lights.cos[0];
+
+		dc.BindTexture3(lights.map[0], lights.size[0]);
 
 		dc.UseBuffer(0, meshVAO_);
 		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data()); }

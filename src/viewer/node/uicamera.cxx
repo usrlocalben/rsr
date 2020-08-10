@@ -14,7 +14,7 @@ UICamera::UICamera(std::string_view id, InputList inputs, const rglv::HandyCam& 
 
 
 rmlm::mat4 UICamera::ProjectionMatrix(float aspect) const {
-	return rglv::Perspective2(hc_.FieldOfView(), aspect, 1, 1000); }
+	return rglv::Perspective2(hc_.FieldOfView(), aspect, 10, 1000); }
 
 
 rmlm::mat4 UICamera::ViewMatrix() const {

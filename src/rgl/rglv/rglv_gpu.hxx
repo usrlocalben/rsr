@@ -5,6 +5,7 @@
 #include <iostream>
 #include <numeric>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
@@ -50,7 +51,7 @@ extern bool doubleBuffer;
 
 struct ClippedVertex {
 	rmlv::vec4 coord;  // either clip-coord or device-coord
-	uint8_t data[64]; };
+	std::uint8_t data[64]; };
 
 
 struct ThreadStat {
@@ -303,39 +304,42 @@ struct QFloatRenderBufferCursor {
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }};
 
 
-template <typename SHADER, typename COLOR_IO, typename DEPTH_IO, typename TEXTURE_UNIT0, typename TEXTURE_UNIT1, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
+template <typename SHADER, typename COLOR_IO, typename DEPTH_IO, typename TU0, typename TU1, typename TU3, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
 struct TriangleProgram {
 	COLOR_IO cc_;
 	DEPTH_IO dc_;
 	const Matrices matrices_;
-	const rglv::VertexFloat1 oneOverW_;
-	const rglv::VertexFloat1 zOverW_;
+	const rglv::VertexFloat1 invW_;
+	const rglv::VertexFloat1 ndcZ_;
 	const typename SHADER::UniformsMD uniforms_;
 	const typename SHADER::Interpolants vo_;
-	const TEXTURE_UNIT0& tu0_;
-	const TEXTURE_UNIT1& tu1_;
+	const TU0& tu0_;
+	const TU1& tu1_;
+	const TU3& tu3_;
 
 	TriangleProgram(
 		COLOR_IO cc,
 		DEPTH_IO dc,
 		Matrices matrices,
-		VertexFloat1 oneOverW,
-		VertexFloat1 zOverW,
+		VertexFloat1 invW_,
+		VertexFloat1 ndcZ_,
 		typename SHADER::UniformsMD uniforms,
 		typename SHADER::VertexOutputSD computed0,
 		typename SHADER::VertexOutputSD computed1,
 		typename SHADER::VertexOutputSD computed2,
-		const TEXTURE_UNIT0& tu0,
-		const TEXTURE_UNIT1& tu1) :
+		const TU0& tu0,
+		const TU1& tu1,
+		const TU3& tu3) :
 		cc_(cc),
 		dc_(dc),
 		matrices_(matrices),
-		oneOverW_(oneOverW),
-		zOverW_(zOverW),
+		invW_(invW_),
+		ndcZ_(ndcZ_),
 		uniforms_(uniforms),
 		vo_(computed0, computed1, computed2),
 		tu0_(tu0),
-		tu1_(tu1)
+		tu1_(tu1),
+		tu3_(tu3)
 		{}
 
 	void Begin(int x, int y) {
@@ -353,11 +357,9 @@ struct TriangleProgram {
 	void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord BS, const bool frontfacing) {
 		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
 
-		const auto fragDepth = rglv::Interpolate(BS, zOverW_);
-
+		const auto fragDepth = rglv::Interpolate(BS, ndcZ_);
 		qfloat destDepth;
 		rmlv::mvec4i fragMask;
-
 		if (DEPTH_TEST) {
 			dc_.Load(destDepth);
 			const auto depthMask = float2bits(DEPTH_FUNC{}(fragDepth, destDepth));
@@ -370,10 +372,10 @@ struct TriangleProgram {
 
 		// restore perspective
 		if (COLOR_WRITEMASK) {
-			const auto fragW = rmlv::oneover(Interpolate(BS, oneOverW_));
+			const auto fragW = rmlv::oneover(Interpolate(BS, invW_));
 			rglv::BaryCoord BP;
-			BP.x = oneOverW_.v0 * BS.x * fragW;
-			BP.z = oneOverW_.v2 * BS.z * fragW;
+			BP.x = invW_.v0 * BS.x * fragW;
+			BP.z = invW_.v2 * BS.z * fragW;
 			BP.y = 1.0f - BP.x - BP.z;
 
 			auto attrs = vo_.Interpolate(BS, BP);
@@ -382,7 +384,7 @@ struct TriangleProgram {
 			SHADER::ShadeFragment(
 				matrices_,
 				uniforms_,
-				tu0_, tu1_,
+				tu0_, tu1_, tu3_,
 				BS, BP, attrs,
 				fragCoord,
 				/*frontFacing,*/
@@ -440,6 +442,7 @@ private:
 	std::unordered_map<uint32_t, BltProgramPtrs> bltDispatch_{};
 
 	const int concurrency_;
+	const std::string guid_;
 
 protected:
 	rcls::vector<uint8_t> color0Buf_{};
@@ -484,7 +487,7 @@ protected:
 	GPUStats stats1_;
 
 public:
-	GPU(int concurrency);
+	GPU(int concurrency, std::string guid="unnamed");
 	void Install(int programId, uint32_t stateKey, VertexProgramPtrs ptrs);
 	void Install(int programId, uint32_t stateKey, FragmentProgramPtrs ptrs);
 	void Install(int programId, uint32_t stateKey, BltProgramPtrs ptrs);
@@ -1119,6 +1122,8 @@ class GPUTileImpl : GPU {
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
+		const rglr::DepthTextureUnit tu3(state.tu3ptr, state.tu3dim);
+
 		array<typename SHADER::VertexInput, 3> vertex;
 		array<typename SHADER::VertexOutputMD, 3> computed;
 		array<qfloat4, 3> devCoord;
@@ -1136,7 +1141,7 @@ class GPUTileImpl : GPU {
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
-				auto triPgm = TriangleProgram<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
+				auto triPgm = TriangleProgram<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, rglr::DepthTextureUnit, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
 					colorCursor,
 					depthCursor,
 					matrices,
@@ -1144,7 +1149,7 @@ class GPUTileImpl : GPU {
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
 					uniforms,
 					computed[0].Lane(ti), computed[1].Lane(ti), computed[2].Lane(ti),
-					tu0, tu1
+					tu0, tu1, tu3
 					};
 				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
 				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
@@ -1225,7 +1230,9 @@ class GPUTileImpl : GPU {
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
-		auto triPgm = TriangleProgram<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
+		const rglr::DepthTextureUnit tu3(state.tu3ptr, state.tu3dim);
+
+		auto triPgm = TriangleProgram<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, rglr::DepthTextureUnit, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
 			colorCursor,
 			depthCursor,
 			matrices,
@@ -1233,7 +1240,7 @@ class GPUTileImpl : GPU {
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
 			uniforms,
 			data0, data1, data2,
-			tu0, tu1 
+			tu0, tu1, tu3
 			};
 		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
 		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),

@@ -103,6 +103,8 @@ struct qfloat3 {
 	inline qfloat3& operator*=(const qfloat3& rhs) { x*=rhs.x; y*=rhs.y; z*=rhs.z; return *this; }
 	inline qfloat3& operator/=(const qfloat3& rhs) { x/=rhs.x; y/=rhs.y; z/=rhs.z; return *this; }
 
+	inline qfloat3 operator-() const { return { -v[0], -v[1], -v[2] }; }
+
 	inline vec3 lane(const int li) {
 		return vec3{ x.lane[li], y.lane[li], z.lane[li] }; }
 

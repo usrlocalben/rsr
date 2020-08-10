@@ -135,7 +135,7 @@ public:
 	void DrawDepth(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		using namespace rglv;
 		auto& dc = *_dc;
-		std::lock_guard<std::mutex> lock(dc.mutex);
+		std::lock_guard lock(dc.mutex);
 
 		dc.ProjectionMatrix(*pmat);
 		dc.ViewMatrix(*mvmat);
@@ -163,16 +163,16 @@ public:
 		dc.UseBuffer(1, (float*)(mats_.data()+batch+batch));
 		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);} }
 
-	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
 		using namespace rglv;
 		auto& dc = *_dc;
 		if (pass != 1) return;
-		std::lock_guard<std::mutex> lock(dc.mutex);
+		std::lock_guard lock(dc.mutex);
 		if (materialNode_ != nullptr) {
 			materialNode_->Apply(_dc); }
 
 		dc.ProjectionMatrix(*pmat);
-		dc.ViewMatrix(*mvmat);
+		dc.ViewMatrix(*vmat * *mmat);
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
 		ptr->magic = 0.222F;
 		dc.UseUniforms(id);

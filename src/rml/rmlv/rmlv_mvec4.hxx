@@ -439,6 +439,16 @@ inline void store_bytes(uint8_t* dst, const mvec4i a) {
 */
 
 inline
+auto load_lut(const float* bp, mvec4i ofs) -> mvec4f {
+	mvec4f out;
+	out.x = bp[ofs.si[0]];
+	out.y = bp[ofs.si[1]];
+	out.z = bp[ofs.si[2]];
+	out.w = bp[ofs.si[3]];
+	return out; }
+
+
+inline
 auto load_interleaved_lut(const float *bp,
                           mvec4i ofs,
                           mvec4f& v0, mvec4f& v1, mvec4f& v2, mvec4f& v3) -> void {

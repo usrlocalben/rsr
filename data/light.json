@@ -1,6 +1,6 @@
 [{"$truecolor": { "id": "root",
-	"sRGB": true,
-	"program": "Default",
+	"sRGB": false,
+	"program": "IQ",
 	"gpu": {"$gpu": {
 		"targetSize": "globals:windowSize",
 		"layers": ["lEffects"]
@@ -13,25 +13,64 @@
 {"$layer": { "id": "lEffects",
 	"camera": "fixedCamera",
 	"color": "backgroundColor",
-	"gl": [ "sceneGeo" ]}},
+	"gl": [ "sceneGeo", "debugGl" ]}},
 
-{"$perspective": { "id": "fixedCamera",
-	"position": {"$vec3": {"x": 88, "y": 80, "z": 93}},
-	"h": 3.72, "v": -0.35,
+
+{"$translate": {"id": "debugGl",
+	"translate": {"$vec3": {"x": 1, "y": 1, "z": 0}},
+	"scale": {"$vec3": {"x": 1, "y": 1, "z": 1}},
+	"gl": {"$depthDebug": {}}}},
+
+{"$perspective": { "id": "acneCamera",
+	"position": {"$vec3": {"x": 35.5, "y": 20.69, "z": 85.4267}},
+	"h": -7.2650, "v": -0.6592,
 	"fov": 45.0}},
 
+{"$perspective": { "id": "fixedCamera",
+	"position": {"$vec3": {"x": 50, "y": 140, "z": 353}},
+	"h": 3.49, "v": -0.3,
+	"fov": 30.0}},
+
 {"$group": {"id": "sceneGeo",
-	"gl": ["ncolortest", "myLight"]}},
+	"gl": ["colorCubes", "myLight"]}},
 
 {"$translate": {"id": "myLight",
-	"translate": {"$vec3": {"x": 0, "y": 80, "z": 0}},
+	"translate": {"$computedVec3": {
+		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
+		"code": "{sin(t*1.512)*200*1+50, 150, cos(t*1.4243)*200*1-60}"}},
 	"gl": {"$translate": {
-		"rotate": {"$vec3": {"x": -0.25, "y": 0, "z": 0}},
-		"gl": {"$spot": {}}}}}},
+		"rotate": {"$computedVec3": {
+			"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
+			"code": "{sin(t*2)*0.00-0.25, 0.25, sin(t*2)*0.00-0.1}"}},
+		"gl": {"$group": {
+			"gl": ["spot", "spotCone"]}}}}}},
 
-{"$fxFoo": { "id": "ncolortest",
-	"name": "colortest.obj",
-	"material": "mObjPixelLight"}},
+{"$spot": {"id": "spot", "size": 1024, "angle": 70.0}},
+{"$fxFoo": {"id": "spotCone", "name": "cone.obj", "material": "mWire"}},
+
+{"$translate": {"id": "colorCubesX",
+	"translate": {"$vec3": {"x": -150, "y": 0, "z": 0}},
+	"gl": {"$repeat": {
+		"many": 1,
+		"translate": {"$vec3": {"x": 0, "y": 0, "z": -150}},
+		"gl": {"$repeat": {
+			"many": 1,
+			"translate": {"$vec3": {"x": -150, "y": 0, "z": 0}},
+			"gl": {"$fxFoo": {
+				"name": "colortest.obj",
+				"material": "mObjPixelLight"}}}}}}}},
+
+{"$translate": {"id": "colorCubes",
+	"translate": {"$vec3": {"x": 150, "y": 0, "z": 150}},
+	"gl": {"$repeat": {
+		"many": 4,
+		"translate": {"$vec3": {"x": 0, "y": 0, "z": -150}},
+		"gl": {"$repeat": {
+			"many": 4,
+			"translate": {"$vec3": {"x": -150, "y": 0, "z": 0}},
+			"gl": {"$fxFoo": {
+				"name": "colortest.obj",
+				"material": "mObjPixelLight"}}}}}}}},
 
 {"$material": {"id": "mWire", "program": "Wireframe"}},
 {"$material": {"id": "mObjVertexLight", "program": "OBJ1"}},

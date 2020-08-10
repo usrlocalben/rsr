@@ -31,22 +31,13 @@ class Impl : public ILayer {
 	IValue* colorNode_{nullptr};
 	std::string colorSlot_{};
 	std::vector<rcls::vector<float>> lightmaps_{};
-	rglv::GPU gpu_{ jobsys::numThreads };
+	rglv::GPU gpu_{ jobsys::numThreads, std::string{"gllayer"} };
 
 public:
 	Impl(std::string_view id, InputList inputs) :
 		ILayer(id, std::move(inputs)) {
-		int id = 0;
-
-	id = static_cast<int>(ShaderProgramId::Default);
-	gpu.Install(id, 0, rglv::GPUBltImpl<DefaultPostProgram>::MakeBltProgramPtrs());
-
-	id = static_cast<int>(ShaderProgramId::Wireframe);
-	gpu.Install(id, 0, rglv::GPUBinImpl<WireframeProgram>::MakeVertexProgramPtrs());
-	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
-				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, WireframeProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
-
-	}
+		gpu_.Install(0, 0, rglv::GPUBinImpl<rglv::BaseProgram>::MakeVertexProgramPtrs());
+		gpu_.Install(0, 0x6a2, rglv::GPUTileImpl<rglv::QFloat3RenderbufferCursor, rglv::QFloatRenderbufferCursor, rglv::BaseProgram, false, true, rglv::DepthLT, true, false, rglv::BlendOff>::MakeFragmentProgramPtrs()); }
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "camera") {
@@ -103,45 +94,75 @@ public:
 		using namespace rglv;
 
 		auto& pmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
-		auto& mvmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
+		auto& vmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
+		auto& mmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
 		if (cameraNode_ != nullptr) {
 			pmat = cameraNode_->ProjectionMatrix(aspect);
-			mvmat = cameraNode_->ViewMatrix(); }
+			vmat = cameraNode_->ViewMatrix(); }
 		else {
 			pmat = mat4{1};
-			mvmat = mat4{1}; }
+			vmat = mat4{1}; }
+		mmat = mat4{1};
 
 		auto& lights = *static_cast<LightPack*>(rclma::framepool::Allocate(sizeof(LightPack)));
 		lights = LightPack{};
 		for (auto gl : gls_) {
 			lights = Merge(lights, gl->Lights(mat4{1})); }
 		for (int i = 0; i < lights.cnt; ++i) {
-			lights.pmat[i] = rglv::Perspective2(lights.angle[i], 1.0, 1, 1000);
-			lights.mvmat[i] = rmlm::inverse(lights.mvmat[i]);
+			auto lightToView = vmat * lights.vmat[i]; // lights.vmat is actually model matrix here (**)
+			auto viewToLight = inverse(lightToView);
+			auto pos = lightToView.position();
+			auto dir = viewToLight.lookDir();
+
+			lights.pmat[i] = rglv::Perspective2(lights.angle[i], 1.0, 20, 500);
+			lights.vmat[i] = rmlm::inverse(lights.vmat[i]);  // now vmat is really viewmatrix (**)
+			lights.pos[i] = pos;
+			lights.dir[i] = dir;
+			lights.cos[i] = std::cosf(lights.angle[i]/2.0F * 3.141592/180);
+
+			assert(popcnt(lights.size[i]) == 1);
 			if (i >= int(lightmaps_.size())) {
-				lightmaps_.emplace_back(256*256); }
+				lightmaps_.emplace_back(); }
+			lightmaps_[i].reserve(lights.size[i]*lights.size[i]);
 			lights.map[i] = lightmaps_[i].data(); }
 
-		jobsys::Job* lightJob{nullptr};
-		if (lights.cnt) {
-			gpu_.Reset({ 256, 256 }, { 8, 8 });
+		std::array<jobsys::Job*, kMaxLights> lightJobs;
+		std::fill(begin(lightJobs), end(lightJobs), nullptr);
+		for (int li=0; li<lights.cnt; ++li) {
+			auto& light_pmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
+			auto& light_vmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
+			light_pmat = lights.pmat[li];
+			light_vmat = lights.vmat[li];
+
+			auto dim = lights.size[li];
+
+			gpu_.Reset({ dim, dim }, { 8, 8 });
 			auto& ic = gpu_.IC();
-			ic.RenderbufferType(rglv::GL_COLOR_ATTACHMENT0, rglv::RB_RGBAF32);
+			ic.RenderbufferType(rglv::GL_COLOR_ATTACHMENT0, rglv::RB_RGBF32);
 			ic.RenderbufferType(rglv::GL_DEPTH_ATTACHMENT, rglv::RB_F32);
 			ic.ColorWriteMask(false);
+			ic.DepthWriteMask(true);
+			ic.DepthFunc(GL_LESS);
+			ic.Enable(GL_CULL_FACE);
+			ic.CullFace(GL_FRONT);
 			ic.ClearDepth(1.0F);
 			ic.Clear(rglv::GL_DEPTH_BUFFER_BIT);
+			ic.UseProgram(0);
 			for (auto gl : gls_) {
-				gl->DrawDepth(&ic, &lights.pmat[0], &lights.mvmat[0]); }
-			ic.StoreDepth(lights.map[0]);
+				gl->DrawDepth(&ic, &light_pmat, &light_vmat); }
+			ic.StoreDepth(lights.map[li]);
 			ic.Finish();
-			lightJob = gpu_.Run();
-			jobsys::run(lightJob); }
+			lightJobs[li] = jobsys::make_job(jobsys::noop);
+			auto tmp = gpu_.Run();
+			jobsys::add_link(tmp, lightJobs[li]);
+			jobsys::run(tmp); }
 
 		for (auto gl : gls_) {
-			gl->Draw(pass, lights, dc, &pmat, &mvmat);}
+			gl->Draw(pass, lights, dc, &pmat, &vmat, &mmat);}
 
-		jobsys::wait(lightJob); }
+		for (int li=0; li<lights.cnt; ++li) {
+			if (lightJobs[li] != nullptr) {
+				jobsys::wait(lightJobs[li]); }}}
 
 protected:
 	void AddDeps() override {

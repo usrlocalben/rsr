@@ -14,9 +14,14 @@ constexpr int kMaxLights = 4;
 
 struct LightPack {
 	int cnt{0};
-	rmlm::mat4 pmat[kMaxLights];
-	rmlm::mat4 mvmat[kMaxLights];
+	rmlm::mat4 vmat[kMaxLights];
 	float angle[kMaxLights];
+	int size[kMaxLights];
+
+	rmlv::vec3 pos[kMaxLights];
+	rmlv::vec3 dir[kMaxLights];
+	rmlm::mat4 pmat[kMaxLights];
+	float cos[kMaxLights];
 	float* map[kMaxLights]; };
 
 
@@ -26,8 +31,9 @@ auto Merge(LightPack a, LightPack b) {
 		if (a.cnt >= kMaxLights) {
 			std::cerr << "some lights were dropped\n";
 			break; }
-		a.mvmat[a.cnt] = b.mvmat[i];
+		a.vmat[a.cnt] = b.vmat[i];
 		a.angle[a.cnt] = b.angle[i];
+		a.size[a.cnt] = b.size[i];
 		++a.cnt; }
 	return a; }
 
@@ -35,7 +41,7 @@ auto Merge(LightPack a, LightPack b) {
 class IGl : public NodeBase {
 public:
 	using NodeBase::NodeBase;
-	virtual void Draw(int /*pass*/, const LightPack& /*lights*/, rglv::GL* /*dc*/, const rmlm::mat4* /*pmat*/, const rmlm::mat4* /*mvmat*/) {}
+	virtual void Draw(int /*pass*/, const LightPack& /*lights*/, rglv::GL* /*dc*/, const rmlm::mat4* /*pmat*/, const rmlm::mat4* /*vmat*/, const rmlm::mat4* /*mmat*/) {}
 	virtual void DrawDepth(rglv::GL* /*dc*/, const rmlm::mat4* /*pmat*/, const rmlm::mat4* /*mvmat*/) {}
 	virtual auto Lights(rmlm::mat4 mvmat [[maybe_unused]]) -> LightPack { return {}; } };
 

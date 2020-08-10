@@ -21,14 +21,16 @@ ShaderProgramId ShaderProgramNameSerializer::Deserialize(std::string_view text) 
 		return ShaderProgramId::Envmap; }
 	if (text == "Amy") {
 		return ShaderProgramId::Amy; }
-	if (text == "EnvmapX") {
-		return ShaderProgramId::EnvmapX; }
+	if (text == "Depth") {
+		return ShaderProgramId::Depth; }
+	if (text == "Many") {
+		return ShaderProgramId::Many; }
 	if (text == "OBJ1") {
 		return ShaderProgramId::OBJ1; }
 	if (text == "OBJ2") {
 		return ShaderProgramId::OBJ2; }
-	if (text == "Many") {
-		return ShaderProgramId::Many; }
+	if (text == "OBJ2S") {
+		return ShaderProgramId::OBJ2S; }
 	cout << "can't deserialize shader program \""s << text << "\", using Default"s << endl;
 	return ShaderProgramId::Default; }
 
@@ -74,6 +76,16 @@ void Install(rglv::GPU& gpu) {
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
 				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, AmyProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
 
+	id = static_cast<int>(ShaderProgramId::Depth);
+	gpu.Install(id, 0, rglv::GPUBinImpl<DepthProgram>::MakeVertexProgramPtrs());
+	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, DepthProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
+
+	id = static_cast<int>(ShaderProgramId::Many);
+	gpu.Install(id, 0, rglv::GPUBinImpl<ManyProgram>::MakeVertexProgramPtrs());
+	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, ManyProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
+
 	id = static_cast<int>(ShaderProgramId::OBJ1);
 	gpu.Install(id, 0, rglv::GPUBinImpl<OBJ1Program>::MakeVertexProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
@@ -84,10 +96,12 @@ void Install(rglv::GPU& gpu) {
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
 				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, OBJ2Program, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
 
-	id = static_cast<int>(ShaderProgramId::Many);
-	gpu.Install(id, 0, rglv::GPUBinImpl<ManyProgram>::MakeVertexProgramPtrs());
+	id = static_cast<int>(ShaderProgramId::OBJ2S);
+	gpu.Install(id, 0, rglv::GPUBinImpl<OBJ2SProgram>::MakeVertexProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
-				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, ManyProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs()); }
+				rglv::GPUTileImpl<rglv::QFloat4RGBRenderbufferCursor, rglv::QFloat4ARenderbufferCursor, OBJ2SProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeFragmentProgramPtrs());
+
+	}
 
 
 }  // namespace rqv

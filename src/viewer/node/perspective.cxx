@@ -32,7 +32,7 @@ public:
 		return ICamera::Connect(attr, other, slot); }
 
 	rmlm::mat4 ProjectionMatrix(float aspect) const override {
-		rmlm::mat4 m = rglv::Perspective2(fov, aspect, 1, 1000);
+		rmlm::mat4 m = rglv::Perspective2(fov, aspect, 10, 1000);
 		m = rmlm::mat4::translate(origin.x, origin.y, 0) * m;
 		return m; }
 

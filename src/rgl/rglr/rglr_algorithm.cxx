@@ -226,8 +226,8 @@ void Copy(const QFloatCanvas& src, FloatCanvas& dst, const rmlg::irect rect) {
 		auto srcX   = srcLeft;
 
 		for (int x = rect.left.x; x < rect.right.x; x+=4, dstXr1+=4, dstXr2+=4, srcX+=2) {
-			__m128 l = _mm_load_ps((float*)srcX);
-			__m128 r = _mm_load_ps((float*)srcX+1);
+			__m128 l = _mm_load_ps(reinterpret_cast<float*>(srcX));
+			__m128 r = _mm_load_ps(reinterpret_cast<float*>(srcX+1));
 
 			__m128 top = _mm_movelh_ps(l, r);
 			__m128 bot = _mm_movehl_ps(r, l);
