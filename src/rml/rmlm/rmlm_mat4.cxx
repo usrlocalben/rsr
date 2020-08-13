@@ -158,7 +158,7 @@ mat4 inverse(const mat4 src) {
 		m[ 8] * m[ 2] * m[ 5]);
 
 	const auto det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
-	assert(det != 0);
+	// XXX assert(det != 0);
 	const auto invdet = 1.0F / det;
 
 	for (auto& val : dst.ff) {

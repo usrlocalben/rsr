@@ -36,6 +36,88 @@ auto LevelOfDetail(rmlv::qfloat2 uvPx) -> int {
 
 namespace rglr {
 
+
+
+/**
+ * texture unit for FloatingPointPixel buffers
+ *
+ * will WRAP_X & WRAP_Y
+ *
+ * wants power-of-2 size with mipmaps, stacked top (NxN) to bottom (1x1)
+ * supports nearest and bilinear filtering
+ * equvalent to GL_NEAREST_MIPMAP_NEAREST and GL_NEAREST_MIPMAP_LINEAR
+ *
+ * non-power-of-2 (or stride != width) revert to a basic sampler without
+ * mipmaps or filtering
+ */
+template <int POWER>
+class FooUnit : public TextureUnit {
+	const PixelToaster::FloatingPointPixel* const buf_;
+	const rmlv::qfloat baseDim_;
+
+public:
+	FooUnit(const PixelToaster::FloatingPointPixel* buf, int dim) :
+		TextureUnit(),
+		buf_(buf),
+		baseDim_(float(1<<POWER)) {}
+
+	void sample(const rmlv::qfloat2& uv, rmlv::qfloat4& out) const override {
+		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::sar, rmlv::qfloat4, rmlv::qfloat;
+
+		// const auto baseDim = qfloat{ float(1<<POWER) };
+		const auto baseTexCoord = rmlv::qfloat2{ uv.s * baseDim_, uv.t * baseDim_ };
+
+		const int lod = std::clamp(LevelOfDetail(baseTexCoord), 0, POWER);
+
+		const mvec4f levelDim{ float(1 << (POWER-lod)) };
+
+		const auto levelBeginRow = (0xfffffffe << (POWER-lod)) & ((1<<(POWER+1))-1);
+
+		// flip Y and convert to mipmap coords
+		auto levelX = ftoi(        fract(uv.x+10.0F)  * levelDim);
+		auto levelY = ftoi((1.0F - fract(uv.y+10.0F)) * levelDim);
+
+		auto bufferX = levelX;
+		auto bufferY = levelBeginRow + levelY;
+
+#ifdef TILES
+		const auto tileX = sar<2>(bufferX);
+		const auto tileY = sar<2>(bufferY);
+		const auto inTileX = bufferX & mvec4i{0x3};
+		const auto inTileY = bufferY & mvec4i{0x3};
+
+		auto ofs = shl<4>(shl<POWER-2>(tileY) + tileX)
+				   + shl<2>(inTileY)
+				   + inTileX;
+#else
+		auto ofs = shl<POWER>(bufferY) + bufferX;
+#endif
+
+		ofs = shl<2>(ofs); // 4 interleaved channels
+
+		load_interleaved_lut(reinterpret_cast<const float*>(buf_), ofs, out); }};
+
+
+auto MakeTextureUnit(const PixelToaster::FloatingPointPixel* buf, int dim) -> std::unique_ptr<TextureUnit> {
+	switch (dim) {
+	case    1: return std::make_unique<FooUnit< 0>>(buf, dim);
+	case    2: return std::make_unique<FooUnit< 1>>(buf, dim);
+	case    4: return std::make_unique<FooUnit< 2>>(buf, dim);
+	case    8: return std::make_unique<FooUnit< 3>>(buf, dim);
+	case   16: return std::make_unique<FooUnit< 4>>(buf, dim);
+	case   32: return std::make_unique<FooUnit< 5>>(buf, dim);
+	case   64: return std::make_unique<FooUnit< 6>>(buf, dim);
+	case  128: return std::make_unique<FooUnit< 7>>(buf, dim);
+	case  256: return std::make_unique<FooUnit< 8>>(buf, dim);
+	case  512: return std::make_unique<FooUnit< 9>>(buf, dim);
+	case 1024: return std::make_unique<FooUnit<10>>(buf, dim);
+	case 2048: return std::make_unique<FooUnit<11>>(buf, dim);
+	case 4096: return std::make_unique<FooUnit<12>>(buf, dim);
+	default:
+		std::cerr << "can't make FooUnit for size " << dim << "\n";
+		std::exit(1); }}
+
+
 FloatingPointPixelUnit::FloatingPointPixelUnit(
 	const PixelToaster::FloatingPointPixel* ptr,
 	int width, int height, int stride, int mode) :

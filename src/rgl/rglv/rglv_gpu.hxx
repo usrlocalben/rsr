@@ -313,8 +313,8 @@ struct TriangleProgram {
 	const rglv::VertexFloat1 ndcZ_;
 	const typename SHADER::UniformsMD uniforms_;
 	const typename SHADER::Interpolants vo_;
-	const TU0& tu0_;
-	const TU1& tu1_;
+	const TU0 tu0_;
+	const TU1 tu1_;
 	const TU3& tu3_;
 
 	TriangleProgram(
@@ -327,8 +327,8 @@ struct TriangleProgram {
 		typename SHADER::VertexOutputSD computed0,
 		typename SHADER::VertexOutputSD computed1,
 		typename SHADER::VertexOutputSD computed2,
-		const TU0& tu0,
-		const TU1& tu1,
+		const TU0 tu0,
+		const TU1 tu1,
 		const TU3& tu3) :
 		cc_(cc),
 		dc_(dc),
@@ -1118,9 +1118,9 @@ class GPUTileImpl : GPU {
 		const auto matrices = MakeMatrices(state);
 		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(uniformsPtr));
 
-		using sampler = rglr::FloatingPointPixelUnit;
-		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
-		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
+		using sampler = rglr::TextureUnit*;
+		const auto tu0 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width);
+		const auto tu1 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width);
 
 		const rglr::DepthTextureUnit tu3(state.tu3ptr, state.tu3dim);
 
@@ -1149,7 +1149,7 @@ class GPUTileImpl : GPU {
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
 					uniforms,
 					computed[0].Lane(ti), computed[1].Lane(ti), computed[2].Lane(ti),
-					tu0, tu1, tu3
+					tu0.get(), tu1.get(), tu3
 					};
 				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
 				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
@@ -1226,9 +1226,9 @@ class GPUTileImpl : GPU {
 		auto& data1 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i1].data));
 		auto& data2 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i2].data));
 
-		using sampler = rglr::FloatingPointPixelUnit;
-		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
-		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
+		using sampler = rglr::TextureUnit*;
+		const auto tu0 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width);
+		const auto tu1 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width);
 
 		const rglr::DepthTextureUnit tu3(state.tu3ptr, state.tu3dim);
 
@@ -1240,7 +1240,7 @@ class GPUTileImpl : GPU {
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
 			uniforms,
 			data0, data1, data2,
-			tu0, tu1, tu3
+			tu0.get(), tu1.get(), tu3
 			};
 		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
 		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),

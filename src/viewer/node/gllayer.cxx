@@ -120,7 +120,7 @@ public:
 			lights.dir[i] = dir;
 			lights.cos[i] = std::cosf(lights.angle[i]/2.0F * 3.141592/180);
 
-			assert(popcnt(lights.size[i]) == 1);
+			// XXX assert(popcnt(lights.size[i]) == 1);
 			if (i >= int(lightmaps_.size())) {
 				lightmaps_.emplace_back(); }
 			lightmaps_[i].reserve(lights.size[i]*lights.size[i]);

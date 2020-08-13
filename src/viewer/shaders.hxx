@@ -52,8 +52,8 @@ struct WireframeProgram final : public rglv::BaseProgram {
 	inline static void ShadeFragment(
 		const rglv::Matrices& mats,
 		const rglv::BaseProgram::UniformsMD& u,
-		const TU0& tu0,
-		const TU1& tu1,
+		const TU0 tu0,
+		const TU1 tu1,
 		const TU3& tu3,
 		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
@@ -170,8 +170,8 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 	inline static void ShadeFragment(
 		const rglv::Matrices& mats [[maybe_unused]],
 		const UniformsMD& u [[maybe_unused]],
-		const TU0& tu0 [[maybe_unused]],
-		const TU1& tu1 [[maybe_unused]],
+		const TU0 tu0 [[maybe_unused]],
+		const TU1 tu1 [[maybe_unused]],
 		const TU3& tu3 [[maybe_unused]],
 		const rglv::BaryCoord& BS [[maybe_unused]],
 		const rglv::BaryCoord& BP [[maybe_unused]],
@@ -180,7 +180,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth [[maybe_unused]],
 		rmlv::qfloat4& gl_FragColor) {
-		gl_FragColor = tu0.sample({ outs.envmapUV.x, outs.envmapUV.y });
+		tu0->sample({ outs.envmapUV.x, outs.envmapUV.y }, gl_FragColor);
 		gl_FragColor.w = 0.5F;
 	} };
 
@@ -243,8 +243,8 @@ struct AmyProgram final : public rglv::BaseProgram {
 	inline static void ShadeFragment(
 		const rglv::Matrices& mats,
 		const rglv::BaseProgram::UniformsMD& u,
-		const TU0& tu0,
-		const TU1& tu1,
+		const TU0 tu0,
+		const TU1 tu1,
 		const TU3& tu3 [[maybe_unused]],
 		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
@@ -253,7 +253,11 @@ struct AmyProgram final : public rglv::BaseProgram {
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth,
 		rmlv::qfloat4& gl_FragColor) {
-		gl_FragColor = tu0.sample({ outs.uv.x, outs.uv.y }); } };
+		// gl_FragColor = { 0.5F, 0.5F, 0.5F, 1.0F };
+		// fmt::print(std::cerr, "tu0 is {}\n", reinterpret_cast<const void*>(tu0));
+		rmlv::qfloat2 tmp{ outs.uv.x, outs.uv.y };
+		tu0->sample(tmp, gl_FragColor);
+		} };
 
 
 struct DepthProgram final : public rglv::BaseProgram {
@@ -314,8 +318,8 @@ struct DepthProgram final : public rglv::BaseProgram {
 	inline static void ShadeFragment(
 		const rglv::Matrices& mats,
 		const UniformsMD& u,
-		const TU0& tu0,
-		const TU1& tu1,
+		const TU0 tu0,
+		const TU1 tu1,
 		const TU3& tu3 [[maybe_unused]],
 		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
@@ -410,8 +414,8 @@ struct ManyProgram final : public rglv::BaseProgram {
 	inline static void ShadeFragment(
 		const rglv::Matrices& mats,
 		const UniformsMD& u,
-		const TU0& tu0,
-		const TU1& tu1,
+		const TU0 tu0,
+		const TU1 tu1,
 		const TU3& tu3 [[maybe_unused]],
 		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
@@ -496,8 +500,8 @@ struct OBJ1Program final : public rglv::BaseProgram {
 	inline static void ShadeFragment(
 		const rglv::Matrices& mats,
 		const UniformsMD& u,
-		const TU0& tu0,
-		const TU1& tu1,
+		const TU0 tu0,
+		const TU1 tu1,
 		const TU3& tu3 [[maybe_unused]],
 		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
@@ -578,8 +582,8 @@ struct OBJ2Program final : public rglv::BaseProgram {
 	inline static void ShadeFragment(
 		const rglv::Matrices& mats,
 		const UniformsMD& u,
-		const TU0& tu0,
-		const TU1& tu1,
+		const TU0 tu0,
+		const TU1 tu1,
 		const TU3& tu3 [[maybe_unused]],
 		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
@@ -699,8 +703,8 @@ struct OBJ2SProgram final : public rglv::BaseProgram {
 	inline static void ShadeFragment(
 		const rglv::Matrices& mats,
 		const UniformsMD& u,
-		const TU0& tu0,
-		const TU1& tu1,
+		const TU0 tu0,
+		const TU1 tu1,
 		const TU3& tu3 [[maybe_unused]],
 		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
