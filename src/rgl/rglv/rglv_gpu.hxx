@@ -1118,7 +1118,7 @@ class GPUTileImpl : GPU {
 		const auto matrices = MakeMatrices(state);
 		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(uniformsPtr));
 
-		using sampler = rglr::ts_pow2_mipmap;
+		using sampler = rglr::FloatingPointPixelUnit;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 
@@ -1226,7 +1226,7 @@ class GPUTileImpl : GPU {
 		auto& data1 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i1].data));
 		auto& data2 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i2].data));
 
-		using sampler = rglr::ts_pow2_mipmap;
+		using sampler = rglr::FloatingPointPixelUnit;
 		const sampler tu0(state.tus[0].ptr, state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter);
 		const sampler tu1(state.tus[1].ptr, state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter);
 

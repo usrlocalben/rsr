@@ -10,205 +10,43 @@
 namespace rqdq {
 namespace rglr {
 
-template <int dim>
-inline int levelOfDetail(const rmlv::qfloat uCoord, const rmlv::qfloat vCoord) {
-	const rmlv::qfloat dimension{ float(dim) };
-	const auto pixelUCoord = uCoord * dimension;
-	const auto pixelVCoord = vCoord * dimension;
+/**
+ * texture unit for FloatingPointPixel buffers
+ *
+ * will WRAP_X & WRAP_Y
+ *
+ * wants power-of-2 size with mipmaps, stacked top (NxN) to bottom (1x1)
+ * supports nearest and bilinear filtering
+ * equvalent to GL_NEAREST_MIPMAP_NEAREST and GL_NEAREST_MIPMAP_LINEAR
+ *
+ * non-power-of-2 (or stride != width) revert to a basic sampler without
+ * mipmaps or filtering
+ */
+class FloatingPointPixelUnit {
+	const PixelToaster::FloatingPointPixel* const buf_;
+	const rmlv::mvec4i stride_;
+	const rmlv::mvec4f height_;
+	const rmlv::mvec4f width_;
+	const int power_;
+	const bool isPowerOf2_;
+	const rmlv::qfloat baseDim_;
 
-	auto duxduy = pixelUCoord.yzxw() - pixelUCoord.xxxx();
-	duxduy = duxduy * duxduy;
-	const auto dot_u = duxduy.xxxx() + duxduy.yyyy();
+	rmlv::qfloat4(FloatingPointPixelUnit::*sampleFunc_)(const rmlv::qfloat2& texcoord) const;
 
-	auto dvxdvy = pixelVCoord.yzxw() - pixelVCoord.xxxx();
-	dvxdvy = dvxdvy * dvxdvy;
-	const auto dot_v = dvxdvy.xxxx() + dvxdvy.yyyy();
+public:
+	FloatingPointPixelUnit(const PixelToaster::FloatingPointPixel*,
+	                       int width, int height, int stride, int mode);
 
-	float delta_max_sqr = vmax(dot_u, dot_v).get_x();
-	int level;
+	auto sample(const rmlv::qfloat2&) const -> rmlv::qfloat4;
 
-	// http://hugi.scene.org/online/coding/hugi%2014%20-%20comipmap.htm
-	level = ((*reinterpret_cast<int*>(&delta_max_sqr)) - (127 << 23)) >> 24;
+private:
+	template <int POWER>
+	auto sample_nearest(const rmlv::qfloat2& uv) const -> rmlv::qfloat4;
 
-	//level = int(0.5f * mFast_Log2(delta_max_sqr));
-
-	level = std::max(level, 0);
-	return level; }
-
-
-struct ts_pow2_mipmap {
-	const PixelToaster::FloatingPointPixel* const d_bitmap;
-
-	rmlv::mvec4i d_stride;
-	rmlv::mvec4f d_height;
-	rmlv::mvec4f d_width;
-	rmlv::mvec4i d_uLastRow;
-
-	rqdq::rmlv::qfloat4(rqdq::rglr::ts_pow2_mipmap::*d_func)(const rqdq::rmlv::qfloat2& texcoord) const;
-
-	// only for mipmaps
-	rmlv::qfloat d_baseDimf;
-	int rowlut[16];
-	int d_power;
-
-	ts_pow2_mipmap(
-		const PixelToaster::FloatingPointPixel* ptr,
-		int width, int height, int row_stride, int mode
-	) :d_bitmap(ptr) {
-		d_stride = row_stride;
-		if (rmlg::is_pow2(width) && width == height && row_stride == width) {
-			// power-of-2 texture
-			d_power = rmlg::ilog2(width);
-			d_baseDimf = float(width);
-			assert(d_power >= 2 && d_power <= 12);
-
-			int x = 0;
-			for (int p = d_power; p >= 0; p--) {
-				int siz = 1 << p;
-			rowlut[d_power - p] = x + siz - 1;
-				x += siz; }
-
-			if (mode == 0) {
-				switch (d_power) {
-				case 12: d_func = &ts_pow2_mipmap::sample_nearest_nearest<12>; break;
-				case 11: d_func = &ts_pow2_mipmap::sample_nearest_nearest<11>; break;
-				case 10: d_func = &ts_pow2_mipmap::sample_nearest_nearest<10>; break;
-				case 9: d_func = &ts_pow2_mipmap::sample_nearest_nearest<9>; break;
-				case 8: d_func = &ts_pow2_mipmap::sample_nearest_nearest<8>; break;
-				case 7: d_func = &ts_pow2_mipmap::sample_nearest_nearest<7>; break;
-				case 6: d_func = &ts_pow2_mipmap::sample_nearest_nearest<6>; break;
-				case 5: d_func = &ts_pow2_mipmap::sample_nearest_nearest<5>; break;
-				case 4: d_func = &ts_pow2_mipmap::sample_nearest_nearest<4>; break;
-				case 3: d_func = &ts_pow2_mipmap::sample_nearest_nearest<3>; break;
-				case 2: d_func = &ts_pow2_mipmap::sample_nearest_nearest<2>; break;
-				default: assert(false); }}
-			else if (mode == 1) {
-				switch (d_power) {
-				case 12: d_func = &ts_pow2_mipmap::sample_nearest_linear<12>; break;
-				case 11: d_func = &ts_pow2_mipmap::sample_nearest_linear<11>; break;
-				case 10: d_func = &ts_pow2_mipmap::sample_nearest_linear<10>; break;
-				case 9: d_func = &ts_pow2_mipmap::sample_nearest_linear<9>; break;
-				case 8: d_func = &ts_pow2_mipmap::sample_nearest_linear<8>; break;
-				case 7: d_func = &ts_pow2_mipmap::sample_nearest_linear<7>; break;
-				case 6: d_func = &ts_pow2_mipmap::sample_nearest_linear<6>; break;
-				case 5: d_func = &ts_pow2_mipmap::sample_nearest_linear<5>; break;
-				case 4: d_func = &ts_pow2_mipmap::sample_nearest_linear<4>; break;
-				case 3: d_func = &ts_pow2_mipmap::sample_nearest_linear<3>; break;
-				case 2: d_func = &ts_pow2_mipmap::sample_nearest_linear<2>; break;
-				default: assert(false); }}}
-		else {
-			// non power-of-2 texture
-			d_height = height;
-			d_uLastRow = rmlv::mvec4i{height - 1};
-			d_width = width;
-			d_func = &ts_pow2_mipmap::sample_zero_nearest_nonpow2;
-			}}
-
-	inline rmlv::qfloat4 sample(const rmlv::qfloat2& texcoord) const {
-		return ((*this).*d_func)(texcoord); }
+	auto sample_nearest_nonpow2(const rmlv::qfloat2& texcoord) const -> rmlv::qfloat4;
 
 	template <int POWER>
-	rmlv::qfloat4 sample_nearest_nearest(const rmlv::qfloat2& texcoord) const {
-		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
-
-		const int level = std::min(levelOfDetail<1 << POWER>(texcoord.s, texcoord.t), POWER);
-
-		const int levelDim = 1 << (POWER - level);
-		const mvec4f levelDim_vf{ float(levelDim) };
-		const mvec4i wrapMask{ levelDim - 1 };
-
-		mvec4i lastRow{ rowlut[level] };
-
-		auto mmu = ftoi(texcoord.s * levelDim_vf) & wrapMask;
-		auto mmv = ftoi(texcoord.t * levelDim_vf) & wrapMask;
-
-		auto ofs = (lastRow - mmv);
-		ofs = shl<POWER>(ofs);
-		ofs += mmu;
-		ofs = shl<2>(ofs);  // 4 channels
-
-		qfloat4 color;
-		load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, color);
-		return color; }
-
-	rmlv::qfloat4 sample_zero_nearest_nonpow2(const rmlv::qfloat2& texcoord) const {
-		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
-
-		auto pxU = ftoi(fract(texcoord.s) * d_width); // XXX floor?
-		auto pxV = ftoi(fract(texcoord.t) * d_height);
-
-		auto ofs = (d_uLastRow - pxV)*d_stride + pxU;
-		ofs = shl<2>(ofs);  // 4 channels
-
-		qfloat4 color;
-		load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, color);
-		return color; }
-
-	template <int POWER>
-	rmlv::qfloat4 sample_nearest_linear(const rmlv::qfloat2& texcoord) const {
-		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
-
-		const int level = std::min(levelOfDetail<1 << POWER>(texcoord.s, texcoord.t), POWER);
-
-		const int levelDim = 1 << (POWER - level);
-		const mvec4f levelDim_vf{ float(levelDim) };
-		const mvec4i wrapMask{ levelDim - 1 };
-
-		mvec4i lastRow{ rowlut[level] };
-
-		auto up = texcoord.s * levelDim_vf;
-		auto vp = texcoord.t * levelDim_vf;
-
-		auto tx0 = ftoi(up);
-		auto ty0 = ftoi(vp);
-		auto tx1 = tx0 + mvec4i{1};
-		auto ty1 = ty0 + mvec4i{1};
-
-		auto fx = up - itof(tx0);
-		auto fy = vp - itof(ty0);
-		auto fx1 = mvec4f{1.0F} - fx;
-		auto fy1 = mvec4f{1.0F} - fy;
-
-		auto w1 = fx1 * fy1;
-		auto w2 = fx  * fy1;
-		auto w3 = fx1 * fy;
-		auto w4 = fx  * fy;
-
-		qfloat4 out;
-		qfloat4 px;
-
-		tx0 = tx0 & wrapMask;  ty0 = ty0 & wrapMask;
-		tx1 = tx1 & wrapMask;  ty1 = ty1 & wrapMask;
-		{
-			auto ofs = lastRow - ty0;
-			ofs = shl<POWER>(ofs);
-			ofs += tx0;
-			ofs = shl<2>(ofs);
-			load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, px);
-			out = px * w1; }
-		{
-			auto ofs = lastRow - ty0;
-			ofs = shl<POWER>(ofs);
-			ofs += tx1;
-			ofs = shl<2>(ofs);
-			load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, px);
-			out += px * w2; }
-		{
-			auto ofs = lastRow - ty1;
-			ofs = shl<POWER>(ofs);
-			ofs += tx0;
-			ofs = shl<2>(ofs);
-			load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, px);
-			out += px * w3; }
-		{
-			auto ofs = lastRow - ty1;
-			ofs = shl<POWER>(ofs);
-			ofs += tx1;
-			ofs = shl<2>(ofs);
-			load_interleaved_lut(reinterpret_cast<const float*>(d_bitmap), ofs, px);
-			out += px * w4; }
-
-		return out; } };
+	auto sample_linear(const rmlv::qfloat2& uv) const -> rmlv::qfloat4; };
 
 
 /**
@@ -228,31 +66,54 @@ class DepthTextureUnit {
 	const rmlv::mvec4i mask_;
 
 public:
-	DepthTextureUnit(const float* buf, int dim) :
+	DepthTextureUnit(const float* buf, int dim);
+
+	void sample(rmlv::qfloat2 coord, rmlv::qfloat& out) const; };
+
+
+//=============================================================================
+//							INLINE DEFINITIONS
+//=============================================================================
+
+						// -----------------------
+						// class FloatingPointUnit
+						// -----------------------
+inline
+auto FloatingPointPixelUnit::sample(const rmlv::qfloat2& texcoord) const -> rmlv::qfloat4 {
+	return ((*this).*sampleFunc_)(texcoord); }
+
+
+						// ----------------------
+						// class DepthTextureUnit
+						// ----------------------
+
+inline
+DepthTextureUnit::DepthTextureUnit(const float* buf, int dim) :
 		buf_(buf),
 		dim_(dim),
 		dimf_(static_cast<float>(dim)),
 		mask_(dim*dim-1) {}
 
-	void sample(rmlv::qfloat2 coord, rmlv::qfloat& out) const {
-		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
+inline
+void DepthTextureUnit::sample(rmlv::qfloat2 coord, rmlv::qfloat& out) const {
+	using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::qfloat4;
 
-		const auto _0_ = _mm_setzero_ps();
-		const auto _1_ = rmlv::mvec4f(1.0F);
-		const auto borderColor = rmlv::mvec4f(-1.0F);
+	const auto _0_ = _mm_setzero_ps();
+	const auto _1_ = rmlv::mvec4f(1.0F);
+	const auto borderColor = rmlv::mvec4f(-1.0F);
 
-		auto xHit = cmpge(coord.x, _0_) & cmplt(coord.x, _1_);
-		auto yHit = cmpge(coord.y, _0_) & cmplt(coord.y, _1_);
-		auto hit = xHit & yHit;
+	auto xHit = cmpge(coord.x, _0_) & cmplt(coord.x, _1_);
+	auto yHit = cmpge(coord.y, _0_) & cmplt(coord.y, _1_);
+	auto hit = xHit & yHit;
 
-		auto px = ftoi(     coord.x  * dimf_);
-		auto py = ftoi((_1_-coord.y) * dimf_);
+	auto px = ftoi(     coord.x  * dimf_);
+	auto py = ftoi((_1_-coord.y) * dimf_);
 
-		auto ofs = py * dim_ + px;
-		ofs = ofs & mask_;
+	auto ofs = py * dim_ + px;
+	ofs = ofs & mask_;
 
-		auto color = load_lut(buf_, ofs);
-		out = rmlv::selectbits(borderColor, color, hit); }};
+	auto color = load_lut(buf_, ofs);
+	out = rmlv::selectbits(borderColor, color, hit); }
 
 
 }  // namespace rglr

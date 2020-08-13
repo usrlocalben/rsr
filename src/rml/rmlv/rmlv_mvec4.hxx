@@ -545,7 +545,13 @@ auto saturate(mvec4f a) -> mvec4f {
 
 inline
 auto fract(mvec4f a) -> mvec4f {
-	return a - itof(ftoi_round(a - mvec4f{0.5F})); }
+#if 1
+	__m128 ipart = _mm_cvtepi32_ps(_mm_cvttps_epi32(a.v));
+	return _mm_sub_ps(a.v, ipart); 
+#else
+	return a - itof(ftoi_round(a - mvec4f{0.5F}));
+#endif
+	}
 
 inline
 auto selectbits(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f {
