@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 #include <iostream>
+#include <memory_resource>
 #include <numeric>
 #include <optional>
 #include <string>
@@ -1118,11 +1119,13 @@ class GPUTileImpl : GPU {
 		const auto matrices = MakeMatrices(state);
 		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(uniformsPtr));
 
-		using sampler = rglr::TextureUnit*;
-		const auto tu0 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width);
-		const auto tu1 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width);
+		using sampler = const rglr::TextureUnit*;
 
-		const rglr::DepthTextureUnit tu3(state.tu3ptr, state.tu3dim);
+		__declspec(align(64)) std::byte tu0mem[128];
+		__declspec(align(64)) std::byte tu1mem[128];
+		const auto tu0 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width, &tu0mem);
+		const auto tu1 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width, &tu1mem);
+		const auto tu3 = rglr::DepthTextureUnit(state.tu3ptr, state.tu3dim);
 
 		array<typename SHADER::VertexInput, 3> vertex;
 		array<typename SHADER::VertexOutputMD, 3> computed;
@@ -1149,7 +1152,7 @@ class GPUTileImpl : GPU {
 					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
 					uniforms,
 					computed[0].Lane(ti), computed[1].Lane(ti), computed[2].Lane(ti),
-					tu0.get(), tu1.get(), tu3
+					tu0, tu1, tu3
 					};
 				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
 				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
@@ -1226,11 +1229,12 @@ class GPUTileImpl : GPU {
 		auto& data1 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i1].data));
 		auto& data2 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i2].data));
 
-		using sampler = rglr::TextureUnit*;
-		const auto tu0 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width);
-		const auto tu1 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width);
-
-		const rglr::DepthTextureUnit tu3(state.tu3ptr, state.tu3dim);
+		using sampler = const rglr::TextureUnit*;
+		__declspec(align(64)) std::byte tu0mem[128];
+		__declspec(align(64)) std::byte tu1mem[128];
+		const auto tu0 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width, &tu0mem);
+		const auto tu1 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width, &tu1mem);
+		const auto tu3 = rglr::DepthTextureUnit(state.tu3ptr, state.tu3dim);
 
 		auto triPgm = TriangleProgram<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, rglr::DepthTextureUnit, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
 			colorCursor,
@@ -1240,7 +1244,7 @@ class GPUTileImpl : GPU {
 			VertexFloat1{ dev0.z, dev1.z, dev2.z },
 			uniforms,
 			data0, data1, data2,
-			tu0.get(), tu1.get(), tu3
+			tu0, tu1, tu3
 			};
 		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
 		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),

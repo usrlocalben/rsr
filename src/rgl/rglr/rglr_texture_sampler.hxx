@@ -17,7 +17,7 @@ public:
 	virtual void sample(const rmlv::qfloat2&, rmlv::qfloat4&) const = 0; };
 
 
-auto MakeTextureUnit(const PixelToaster::FloatingPointPixel*, int) -> std::unique_ptr<TextureUnit>;
+auto MakeTextureUnit(const PixelToaster::FloatingPointPixel*, int, void*) -> const TextureUnit*;
 
 /**
  * texture unit for FloatingPointPixel buffers

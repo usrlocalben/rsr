@@ -1,5 +1,7 @@
 #include "src/rgl/rglr/rglr_texture_sampler.hxx"
 
+#include <memory_resource>
+
 // #define TILES
 
 namespace rqdq {
@@ -52,14 +54,14 @@ namespace rglr {
  */
 template <int POWER>
 class FooUnit : public TextureUnit {
-	const PixelToaster::FloatingPointPixel* const buf_;
 	const rmlv::qfloat baseDim_;
+	const PixelToaster::FloatingPointPixel* const buf_;
 
 public:
-	FooUnit(const PixelToaster::FloatingPointPixel* buf, int dim) :
+	FooUnit(const PixelToaster::FloatingPointPixel* buf) :
 		TextureUnit(),
-		buf_(buf),
-		baseDim_(float(1<<POWER)) {}
+		baseDim_(float(1<<POWER)),
+		buf_(buf) {}
 
 	void sample(const rmlv::qfloat2& uv, rmlv::qfloat4& out) const override {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::sar, rmlv::qfloat4, rmlv::qfloat;
@@ -98,24 +100,29 @@ public:
 		load_interleaved_lut(reinterpret_cast<const float*>(buf_), ofs, out); }};
 
 
-auto MakeTextureUnit(const PixelToaster::FloatingPointPixel* buf, int dim) -> std::unique_ptr<TextureUnit> {
+auto MakeTextureUnit(const PixelToaster::FloatingPointPixel* buf, int dim, void* mem) -> const TextureUnit* {
+#define DIMS \
+	X(   1,  0) \
+	X(   2,  1) \
+	X(   4,  2) \
+	X(   8,  3) \
+	X(  16,  4) \
+	X(  32,  5) \
+	X(  64,  6) \
+	X( 128,  7) \
+	X( 256,  8) \
+	X( 512,  9) \
+	X(1024, 10)
+
 	switch (dim) {
-	case    1: return std::make_unique<FooUnit< 0>>(buf, dim);
-	case    2: return std::make_unique<FooUnit< 1>>(buf, dim);
-	case    4: return std::make_unique<FooUnit< 2>>(buf, dim);
-	case    8: return std::make_unique<FooUnit< 3>>(buf, dim);
-	case   16: return std::make_unique<FooUnit< 4>>(buf, dim);
-	case   32: return std::make_unique<FooUnit< 5>>(buf, dim);
-	case   64: return std::make_unique<FooUnit< 6>>(buf, dim);
-	case  128: return std::make_unique<FooUnit< 7>>(buf, dim);
-	case  256: return std::make_unique<FooUnit< 8>>(buf, dim);
-	case  512: return std::make_unique<FooUnit< 9>>(buf, dim);
-	case 1024: return std::make_unique<FooUnit<10>>(buf, dim);
-	case 2048: return std::make_unique<FooUnit<11>>(buf, dim);
-	case 4096: return std::make_unique<FooUnit<12>>(buf, dim);
+#define X(DIM, POWER) case DIM: return new(mem) FooUnit<POWER>(buf);
+		DIMS
+#undef X
 	default:
 		std::cerr << "can't make FooUnit for size " << dim << "\n";
-		std::exit(1); }}
+		std::exit(1); }
+#undef DIMS
+	}
 
 
 FloatingPointPixelUnit::FloatingPointPixelUnit(
