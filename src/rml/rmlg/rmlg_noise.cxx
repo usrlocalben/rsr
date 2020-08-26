@@ -1,6 +1,7 @@
 #include "src/rml/rmlg/rmlg_noise.hxx"
 
 #include <array>
+#include <cstdint>
 
 namespace rqdq {
 namespace {
