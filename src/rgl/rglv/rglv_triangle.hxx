@@ -27,6 +27,19 @@ auto ScissorFlags(const rmlg::irect& rect) -> int {
 	int fRight  = ((rect.right.x  & 1) > 0) << 3;
 	return fTop | fBottom | fLeft | fRight; }
 
+/*
+struct BlahFp {
+	auto Begin(int x [[maybe_unused]], int y [[maybe_unused]]) -> void {};
+	auto CR() -> void {};
+	auto Right2() -> void {};
+	auto Render(rmlv::qfloat2 frag_coord, rmlv::mvec4i trimask, rglv::BaryCoord BS, bool frontfacing) -> void {}; };
+*/
+
+constexpr int FP_BITS = 8;
+constexpr int FP_MASK = 0xff;
+constexpr float FP_MUL = 256.0F;
+
+
 template <bool SCISSOR_TEST, typename FRAGMENT_PROCESSOR>
 class TriangleRasterizer {
 
@@ -46,12 +59,12 @@ public:
 
 	// MANIPULATORS
 	void Draw(rmlv::vec4 s1, rmlv::vec4 s2, rmlv::vec4 s3, const bool frontfacing) {
-		int x1 = int(16.0f * (s1.x - 0.5f));
-		int x2 = int(16.0f * (s2.x - 0.5f));
-		int x3 = int(16.0f * (s3.x - 0.5f));
-		int y1 = int(16.0f * (s1.y - 0.5f));
-		int y2 = int(16.0f * (s2.y - 0.5f));
-		int y3 = int(16.0f * (s3.y - 0.5f));
+		int x1 = int(FP_MUL * (s1.x - 0.5f));
+		int x2 = int(FP_MUL * (s2.x - 0.5f));
+		int x3 = int(FP_MUL * (s3.x - 0.5f));
+		int y1 = int(FP_MUL * (s1.y - 0.5f));
+		int y2 = int(FP_MUL * (s2.y - 0.5f));
+		int y3 = int(FP_MUL * (s3.y - 0.5f));
 		Draw(x1, x2, x3, y1, y2, y3, frontfacing); }
 
 	void Draw(int x1, int x2, int x3, int y1, int y2, int y3, const bool frontfacing) {
@@ -61,32 +74,37 @@ public:
 
 		const int q = 2; // block size is 2x2
 
-		int minx = max((rmlv::Min(x1, x2, x3) + 0xf) >> 4, rect_.left.x);
-		int endx = min((rmlv::Max(x1, x2, x3) + 0xf) >> 4, rect_.right.x);
-		int miny = max((rmlv::Min(y1, y2, y3) + 0xf) >> 4, rect_.top.y);
-		int endy = min((rmlv::Max(y1, y2, y3) + 0xf) >> 4, rect_.bottom.y);
+		int minx = max((rmlv::Min(x1, x2, x3) + FP_MASK) >> FP_BITS, rect_.left.x);
+		int endx = min((rmlv::Max(x1, x2, x3) + FP_MASK) >> FP_BITS, rect_.right.x);
+		int miny = max((rmlv::Min(y1, y2, y3) + FP_MASK) >> FP_BITS, rect_.top.y);
+		int endy = min((rmlv::Max(y1, y2, y3) + FP_MASK) >> FP_BITS, rect_.bottom.y);
 		minx &= ~(q - 1); // align to 2x2 block
 		miny &= ~(q - 1);
 
-		int dx12 = x1 - x2, dy12 = y2 - y1;
-		int dx23 = x2 - x3, dy23 = y3 - y2;
-		int dx31 = x3 - x1, dy31 = y1 - y3;
-		int c1 = dy12*((minx<<4) - x1) + dx12*((miny<<4)-y1);
-		int c2 = dy23*((minx<<4) - x2) + dx23*((miny<<4)-y2);
-		int c3 = dy31*((minx<<4) - x3) + dx31*((miny<<4)-y3);
-		if (dy12 > 0 || (dy12==0 && dx12>0)) c1++;
-		if (dy23 > 0 || (dy23==0 && dx23>0)) c2++;
-		if (dy31 > 0 || (dy31==0 && dx31>0)) c3++;
-		c1 = (c1 - 1) >> 4;
-		c2 = (c2 - 1) >> 4;
-		c3 = (c3 - 1) >> 4;
+		int64_t dx12 = x1 - x2, dy12 = y2 - y1;
+		int64_t dx23 = x2 - x3, dy23 = y3 - y2;
+		int64_t dx31 = x3 - x1, dy31 = y1 - y3;
 
-		auto cb1 = mvec4i{c1} + mvec4i{0,dy12,0,dy12} + mvec4i{0,0,dx12,dx12};
-		auto cb2 = mvec4i{c2} + mvec4i{0,dy23,0,dy23} + mvec4i{0,0,dx23,dx23};
-		auto cb3 = mvec4i{c3} + mvec4i{0,dy31,0,dy31} + mvec4i{0,0,dx31,dx31};
-		auto cb1dydx = mvec4i{dy12*2}; auto cb1dxdy = mvec4i{dx12*2};
-		auto cb2dydx = mvec4i{dy23*2}; auto cb2dxdy = mvec4i{dx23*2};
-		auto cb3dydx = mvec4i{dy31*2}; auto cb3dxdy = mvec4i{dx31*2};
+		// setup edge values at the starting point
+		int64_t c1 = dy12*((minx<<FP_BITS) - x1) + dx12*((miny<<FP_BITS)-y1);
+		int64_t c2 = dy23*((minx<<FP_BITS) - x2) + dx23*((miny<<FP_BITS)-y2);
+		int64_t c3 = dy31*((minx<<FP_BITS) - x3) + dx31*((miny<<FP_BITS)-y3);
+
+		// correct for top-left fill
+		if (dy12 > 0 || (dy12==0 && dx12>0)) c1++;  --c1;
+		if (dy23 > 0 || (dy23==0 && dx23>0)) c2++;  --c2;
+		if (dy31 > 0 || (dy31==0 && dx31>0)) c3++;  --c3;
+
+		c1 >>= FP_BITS;
+		c2 >>= FP_BITS;
+		c3 >>= FP_BITS;
+
+		auto cb1 = mvec4i(c1) + mvec4i(0,dy12,0,dy12) + mvec4i(0,0,dx12,dx12);
+		auto cb2 = mvec4i(c2) + mvec4i(0,dy23,0,dy23) + mvec4i(0,0,dx23,dx23);
+		auto cb3 = mvec4i(c3) + mvec4i(0,dy31,0,dy31) + mvec4i(0,0,dx31,dx31);
+		auto cb1dydx = mvec4i(dy12*2); auto cb1dxdy = mvec4i(dx12*2);
+		auto cb2dydx = mvec4i(dy23*2); auto cb2dxdy = mvec4i(dx23*2);
+		auto cb3dydx = mvec4i(dy31*2); auto cb3dxdy = mvec4i(dx31*2);
 
 		mvec4f scale{1.0f / (c1 + c2 + c3)};
 

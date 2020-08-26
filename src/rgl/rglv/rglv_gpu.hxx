@@ -1139,8 +1139,8 @@ class GPUTileImpl : GPU {
 				qfloat4 gl_Position;
 				SHADER::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
 				devCoord[i] = pdiv(gl_Position);
-				fx[i] = ftoi(16.0F * ((devCoord[i].x+_1) * DS.x + DO.x));
-				fy[i] = ftoi(16.0F * ((devCoord[i].y+_1) * DS.y + DO.y)); }
+				fx[i] = ftoi(rglv::FP_MUL * ((devCoord[i].x+_1) * DS.x + DO.x));
+				fy[i] = ftoi(rglv::FP_MUL * ((devCoord[i].y+_1) * DS.y + DO.y)); }
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {
@@ -1247,8 +1247,8 @@ class GPUTileImpl : GPU {
 			tu0, tu1, tu3
 			};
 		auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
-		rasterizer.Draw(int(dev0.x*16.0F), int(dev1.x*16.0F), int(dev2.x*16.0F),
-		                int(dev0.y*16.0F), int(dev1.y*16.0F), int(dev2.y*16.0F),
+		rasterizer.Draw(int(dev0.x*rglv::FP_MUL), int(dev1.x*rglv::FP_MUL), int(dev2.x*rglv::FP_MUL),
+		                int(dev0.y*rglv::FP_MUL), int(dev1.y*rglv::FP_MUL), int(dev2.y*rglv::FP_MUL),
 		                !backfacing);}
 
 public:
