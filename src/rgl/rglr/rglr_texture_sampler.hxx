@@ -17,45 +17,7 @@ public:
 	virtual void sample(const rmlv::qfloat2&, rmlv::qfloat4&) const = 0; };
 
 
-auto MakeTextureUnit(const PixelToaster::FloatingPointPixel*, int, void*) -> const TextureUnit*;
-
-/**
- * texture unit for FloatingPointPixel buffers
- *
- * will WRAP_X & WRAP_Y
- *
- * wants power-of-2 size with mipmaps, stacked top (NxN) to bottom (1x1)
- * supports nearest and bilinear filtering
- * equvalent to GL_NEAREST_MIPMAP_NEAREST and GL_NEAREST_MIPMAP_LINEAR
- *
- * non-power-of-2 (or stride != width) revert to a basic sampler without
- * mipmaps or filtering
- */
-class FloatingPointPixelUnit {
-	const PixelToaster::FloatingPointPixel* const buf_;
-	const rmlv::mvec4i stride_;
-	const rmlv::mvec4f height_;
-	const rmlv::mvec4f width_;
-	const int power_;
-	const bool isPowerOf2_;
-	const rmlv::qfloat baseDim_;
-
-	rmlv::qfloat4(FloatingPointPixelUnit::*sampleFunc_)(const rmlv::qfloat2& texcoord) const;
-
-public:
-	FloatingPointPixelUnit(const PixelToaster::FloatingPointPixel*,
-	                       int width, int height, int stride, int mode);
-
-	auto sample(const rmlv::qfloat2&) const -> rmlv::qfloat4;
-
-private:
-	template <int POWER>
-	auto sample_nearest(const rmlv::qfloat2& uv) const -> rmlv::qfloat4;
-
-	auto sample_nearest_nonpow2(const rmlv::qfloat2& texcoord) const -> rmlv::qfloat4;
-
-	template <int POWER>
-	auto sample_linear(const rmlv::qfloat2& uv) const -> rmlv::qfloat4; };
+auto MakeTextureUnit(const float*, int, int, int, bool, void*) -> const TextureUnit*;
 
 
 /**
@@ -83,14 +45,6 @@ public:
 //=============================================================================
 //							INLINE DEFINITIONS
 //=============================================================================
-
-						// -----------------------
-						// class FloatingPointUnit
-						// -----------------------
-inline
-auto FloatingPointPixelUnit::sample(const rmlv::qfloat2& texcoord) const -> rmlv::qfloat4 {
-	return ((*this).*sampleFunc_)(texcoord); }
-
 
 						// ----------------------
 						// class DepthTextureUnit

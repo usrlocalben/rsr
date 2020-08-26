@@ -1123,8 +1123,8 @@ class GPUTileImpl : GPU {
 
 		__declspec(align(64)) std::byte tu0mem[128];
 		__declspec(align(64)) std::byte tu1mem[128];
-		const auto tu0 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width, &tu0mem);
-		const auto tu1 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width, &tu1mem);
+		const auto tu0 = rglr::MakeTextureUnit(reinterpret_cast<const float*>(state.tus[0].ptr), state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter, &tu0mem);
+		const auto tu1 = rglr::MakeTextureUnit(reinterpret_cast<const float*>(state.tus[1].ptr), state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter, &tu1mem);
 		const auto tu3 = rglr::DepthTextureUnit(state.tu3ptr, state.tu3dim);
 
 		array<typename SHADER::VertexInput, 3> vertex;
@@ -1232,8 +1232,8 @@ class GPUTileImpl : GPU {
 		using sampler = const rglr::TextureUnit*;
 		__declspec(align(64)) std::byte tu0mem[128];
 		__declspec(align(64)) std::byte tu1mem[128];
-		const auto tu0 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width, &tu0mem);
-		const auto tu1 = rglr::MakeTextureUnit(state.tus[0].ptr, state.tus[0].width, &tu1mem);
+		const auto tu0 = rglr::MakeTextureUnit(reinterpret_cast<const float*>(state.tus[0].ptr), state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter, &tu0mem);
+		const auto tu1 = rglr::MakeTextureUnit(reinterpret_cast<const float*>(state.tus[1].ptr), state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter, &tu1mem);
 		const auto tu3 = rglr::DepthTextureUnit(state.tu3ptr, state.tu3dim);
 
 		auto triPgm = TriangleProgram<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, rglr::DepthTextureUnit, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
