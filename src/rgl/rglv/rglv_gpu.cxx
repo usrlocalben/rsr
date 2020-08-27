@@ -49,7 +49,7 @@ void GPU::Install(int programId, uint32_t stateKey, BltProgramPtrs ptrs) {
 
 void GPU::Reset(rmlv::ivec2 newBufferDimensionsInPixels, rmlv::ivec2 newTileDimensionsInBlocks) {
 	SetSize(newBufferDimensionsInPixels, newTileDimensionsInBlocks);
-	for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+	for (int t=0, siz=static_cast<int>(tilesHead_.size()); t<siz; ++t) {
 		tilesHead_[t] = WriteRange(t).first; }
 	clippedVertexBuffer0_.clear();
 	stats0_ = GPUStats{};
@@ -99,7 +99,7 @@ void GPU::RunImpl(rclmt::jobsys::Job* job) {
 
 	// sort tiles by their estimated cost before queueing
 	tileStats_.clear();
-	for (int t=0, siz=tilesHead_.size(); t<siz; ++t) {
+	for (int t=0, siz=static_cast<int>(tilesHead_.size()); t<siz; ++t) {
 		tileStats_.push_back({ t, RenderCost(t) }); }
 	rclr::sort(tileStats_, [](auto a, auto b) { return a.cost > b.cost; });
 	// std::rotate(tileStats_.begin(), tileStats_.begin() + 1, tileStats_.end())
@@ -111,8 +111,8 @@ void GPU::RunImpl(rclmt::jobsys::Job* job) {
 	if (doubleBuffer) {
 		allJobs.push_back(Bin(finalizeJob)); }
 
-	for (auto& job : allJobs) {
-		jobsys::run(job); }
+	for (auto& j : allJobs) {
+		jobsys::run(j); }
 	jobsys::run(finalizeJob); }
 
 
@@ -232,12 +232,12 @@ void GPU::BinImpl() {
 	int total_ = 0;
 	int min_ = 0x7fffffff;
 	int max_ = 0;
-	for (int t = 0, siz = tilesHead_.size(); t < siz; ++t) {
-		const int thisTileBytes = tilesHead_[t] - WriteRange(t).first;
+	for (int t = 0, siz = static_cast<int>(tilesHead_.size()); t < siz; ++t) {
+		const int thisTileBytes = static_cast<int>(tilesHead_[t] - WriteRange(t).first);
 		total_ += thisTileBytes;
 		min_ = std::min(min_, thisTileBytes);
 		max_ = std::max(max_, thisTileBytes); }
-	stats0_.totalTiles = tilesHead_.size();
+	stats0_.totalTiles = static_cast<int>(tilesHead_.size());
 	stats0_.totalCommands = totalCommands;
 	// stats0_.totalStates = IC().d_si;
 	stats0_.totalCommandBytes = cs.size();
@@ -259,8 +259,8 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 
 	const GLState* stateptr = nullptr;
 	const void* uniformptr = nullptr;
-	void* eColor0;
-	void* eDepth;
+	void* eColor0{nullptr};
+	void* eDepth{nullptr};
 
 	while (1) {
 		++cmdCnt;

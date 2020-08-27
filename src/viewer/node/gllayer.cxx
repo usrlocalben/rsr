@@ -118,7 +118,7 @@ public:
 			lights.vmat[i] = rmlm::inverse(lights.vmat[i]);  // now vmat is really viewmatrix (**)
 			lights.pos[i] = pos;
 			lights.dir[i] = dir;
-			lights.cos[i] = std::cosf(lights.angle[i]/2.0F * 3.141592/180);
+			lights.cos[i] = std::cosf(lights.angle[i]/2.0F * 3.141592F/180);
 
 			// XXX assert(popcnt(lights.size[i]) == 1);
 			if (i >= int(lightmaps_.size())) {

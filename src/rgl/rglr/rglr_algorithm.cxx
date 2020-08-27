@@ -1,6 +1,7 @@
 #include "src/rgl/rglr/rglr_algorithm.hxx"
 
 #include <algorithm>
+#include <cstdint>
 
 #include "src/rgl/rglr/rglr_canvas.hxx"
 #include "src/rml/rmlg/rmlg_irect.hxx"
@@ -9,6 +10,13 @@
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 
 namespace rqdq {
+namespace {
+
+auto float_to_word(float x) -> uint16_t {
+	return static_cast<uint16_t>(x * 65535.0F); }
+
+}
+
 namespace rglr {
 
 void Fill(QFloatCanvas& dst, const float value, const rmlg::irect rect) {
@@ -80,9 +88,9 @@ void Fill(QShort3Canvas& dst, const rmlv::vec4 value, const rmlg::irect rect) {
 
 	QShort3 foo;
 	for (int i=0; i<4; i++) {
-		foo.r[i] = value.x * QShort3Canvas::scale;
-		foo.g[i] = value.y * QShort3Canvas::scale;
-		foo.b[i] = value.z * QShort3Canvas::scale; }
+		foo.r[i] = float_to_word(value.x);
+		foo.g[i] = float_to_word(value.y);
+		foo.b[i] = float_to_word(value.z); }
 
 	auto* p = dst.data() + rect.top.y/2*dst.stride2() + rect.left.x/2;
 	int rowIncr = dst.stride2() - rectWidthInQuads;

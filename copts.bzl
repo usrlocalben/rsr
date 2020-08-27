@@ -6,12 +6,15 @@ MSVC_FLAGS = [
 
     "/W4",
     "/WX",
+    "/wd4324",  # structure padded due to alignment specifier
     #"/wd4305",  # "truncation from 'double' to 'float'
     #"/wd4244",  # "conversion from 'double' to 'float' possible loss of data
     #"/wd4005",  # macro redefinition
     #"/wd4267",  # conversion from 'size_t' to 'type', possible loss of data
 
     # for clang-cl
+    #"-Wno-unused-parameter",
+    #"-Wno-unused-variable",
     #"-Wno-builtin-macro-redefined",
     #"-Wno-unused-command-line-argument",  # rocket .c sources don't use /std:c++17
 

@@ -333,7 +333,7 @@ struct QShort4 {
 
 
 struct QShort3Canvas {
-	static constexpr float scale{255.0F};
+	static constexpr float scale{65535.0F};
 	QShort3Canvas() = default;
 
 	QShort3Canvas(const int width, const int height) :

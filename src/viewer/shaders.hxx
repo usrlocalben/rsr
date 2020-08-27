@@ -368,8 +368,8 @@ struct ManyProgram final : public rglv::BaseProgram {
 			assert(formats[1] == rglv::AF_FLOAT);
 			assert(buffers[1] != nullptr); }
 		int Size() const { return vbo_.size(); }
-		void LoadInstance(int id, VertexInput& vi) {
-			vi.imat = rmlm::qmat4{ mats_[id] }; }
+		void LoadInstance(int idx, VertexInput& vi) {
+			vi.imat = rmlm::qmat4{ mats_[idx] }; }
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.position = vbo_.a0.loadxyz1(idx);
 			vi.normal   = vbo_.a1.loadxyz0(idx);
@@ -442,7 +442,7 @@ struct OBJ1Program final : public rglv::BaseProgram {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);
 			assert(buffers[0] != nullptr); }
 		int Size() const { return vbo_.size(); }
-		void LoadInstance(int id [[maybe_unused]], VertexInput& vi [[maybe_unused]]) {}
+		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.position = vbo_.a0.loadxyz1(idx);
 			vi.normal   = vbo_.a1.loadxyz0(idx);
@@ -528,7 +528,7 @@ struct OBJ2Program final : public rglv::BaseProgram {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);
 			assert(buffers[0] != nullptr); }
 		int Size() const { return vbo_.size(); }
-		void LoadInstance(int id [[maybe_unused]], VertexInput& vi [[maybe_unused]]) {}
+		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.position = vbo_.a0.loadxyz1(idx);
 			vi.normal   = vbo_.a1.loadxyz0(idx);
@@ -638,7 +638,7 @@ struct OBJ2SProgram final : public rglv::BaseProgram {
 			assert(formats[0] == rglv::AF_VAO_F3F3F3);
 			assert(buffers[0] != nullptr); }
 		int Size() const { return vbo_.size(); }
-		void LoadInstance(int id [[maybe_unused]], VertexInput& vi [[maybe_unused]]) {}
+		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
 			vi.position = vbo_.a0.load(idx);
 			vi.normal   = vbo_.a1.load(idx);

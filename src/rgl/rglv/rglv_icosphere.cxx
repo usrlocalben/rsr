@@ -22,17 +22,17 @@ Icosphere::Icosphere(int divs, int reqColor) {
 		tmpt.emplace_back(color); };
 
 	// 1. Create an icosohedron
-	const float t = (1.0F + sqrt(5.0)) / 2.0F;
+	const float t = (1.0F + sqrt(5.0F)) / 2.0F;
 
 	const auto p0 = AP( -1.0F,  t, 0.0F );
 	const auto p1 = AP(  1.0F,  t, 0.0F );
 	const auto p2 = AP( -1.0F, -t, 0.0F );
 	const auto p3 = AP(  1.0F, -t, 0.0F );
 
-	const auto p4 = AP( 0.0F, -1,  t );
-	const auto p5 = AP( 0.0F,  1,  t );
-	const auto p6 = AP( 0.0F, -1, -t );
-	const auto p7 = AP( 0.0F,  1, -t );
+	const auto p4 = AP( 0, -1,  t );
+	const auto p5 = AP( 0,  1,  t );
+	const auto p6 = AP( 0, -1, -t );
+	const auto p7 = AP( 0,  1, -t );
 
 	const auto p8 = AP(    t, 0, -1 );
 	const auto p9 = AP(    t, 0,  1 );
@@ -71,7 +71,7 @@ Icosphere::Icosphere(int divs, int reqColor) {
 
 	// 2. subdivide divs# of times
 	for (int dnum{0}; dnum<divs; ++dnum) {
-		int numTris = tris_.size() / 3;
+		int numTris = static_cast<int>(tris_.size()) / 3;
 		int newTris = numTris * 4;
 		tmpt.reserve(newTris * 3);
 
@@ -79,11 +79,9 @@ Icosphere::Icosphere(int divs, int reqColor) {
 			auto i0=tris_[i+0], i1=tris_[i+1], i2=tris_[i+2];
 			auto color = tris_[i+3];
 
-			auto p0=GP(i0), p1=GP(i1), p2=GP(i2);
-
-			auto i0i1 = MP(i0, i1, p0, p1);
-			auto i1i2 = MP(i1, i2, p1, p2);
-			auto i2i0 = MP(i2, i0, p2, p0);
+			auto i0i1 = MP(i0, i1, GP(i0), GP(i1));
+			auto i1i2 = MP(i1, i2, GP(i1), GP(i2));
+			auto i2i0 = MP(i2, i0, GP(i2), GP(i0));
 
 			/*
 			 *       i0
@@ -134,7 +132,7 @@ Icosphere::Icosphere(int divs, int reqColor) {
 	swap(tris_, tmpt);
 
 	// 4b. record the number of indices to use when rendering
-	numRenderIndices_ = tris_.size();
+	numRenderIndices_ = static_cast<int>(tris_.size());
 
 	// 4c. append the fringe tris, for e.g. vertex normal calc
 	tris_.insert(end(tris_), begin(fringe), end(fringe));
@@ -142,7 +140,7 @@ Icosphere::Icosphere(int divs, int reqColor) {
 	// 5. finalize
 	Optimize();
 	Sphereize();
-	vCnt_ = px.size();
+	vCnt_ = static_cast<int>(px.size());
 	Pad(); }
 
 
@@ -159,11 +157,11 @@ void Icosphere::Sphereize() {
  * pad point lists for sse reads
  */
 void Icosphere::Pad() {
-	int target = (px.size() + 3) / 4;
+	int target = (static_cast<int>(px.size()) + 3) / 4;
 	while (int(px.size()) < target) {
-		px.emplace_back(0);
-		py.emplace_back(0);
-		pz.emplace_back(0); }}
+		px.emplace_back(0.0F);
+		py.emplace_back(0.0F);
+		pz.emplace_back(0.0F); }}
 	
 
 /**
@@ -172,7 +170,7 @@ void Icosphere::Pad() {
  */
 void Icosphere::Optimize() {
 	int seq=0;
-	const int vcnt = px.size();
+	const int vcnt = static_cast<int>(px.size());
 	std::vector<int> access(vcnt, -1);
 	for (int i=0; i<int(tris_.size()); i+=3) {
 		int i0=tris_[i], i1=tris_[i+1], i2=tris_[i+2];
@@ -207,7 +205,7 @@ void Icosphere::Optimize() {
  * add a point, return its index
  */
 inline int Icosphere::AP(float x, float y, float z) {
-	int idx = px.size();
+	int idx = static_cast<int>(px.size());
 	px.emplace_back(x);
 	py.emplace_back(y);
 	pz.emplace_back(z);

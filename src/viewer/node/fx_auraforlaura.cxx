@@ -56,7 +56,9 @@ public:
 
 		indices_.resize(mesh_.GetNumIndices());
 		for (int i=0; i<int(indices_.size()); ++i) {
-			indices_[i] = mesh_.GetIndices()[i]; }}
+			auto idx = mesh_.GetIndices()[i];
+			assert(0 <= idx && idx < 65536);
+			indices_[i] = static_cast<uint16_t>(idx); }}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "material") {

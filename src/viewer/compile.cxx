@@ -139,9 +139,9 @@ optional<tuple<NodeRegistry::FactoryFunc, JsonValue, std::string>> IdentifyNode(
 
 CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore) {
 	if (auto info = IdentifyNode(data)) {
-		const auto[compilerFactory, data, guid] = *info;
+		const auto[compilerFactory, innerData, guid] = *info;
 		auto nodeCompiler = compilerFactory();
-		return nodeCompiler->Compile(guid, data, meshStore); }
+		return nodeCompiler->Compile(guid, innerData, meshStore); }
 	return {}; }
 
 

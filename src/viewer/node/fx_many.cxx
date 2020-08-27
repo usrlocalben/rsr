@@ -145,7 +145,7 @@ public:
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+0));
-		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
+		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
 		ptr->magic = 0.555F;
@@ -153,7 +153,7 @@ public:
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+batch));
-		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
+		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
 		ptr->magic = 0.888F;
@@ -161,7 +161,7 @@ public:
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+batch+batch));
-		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);} }
+		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);} }
 
 	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
 		using namespace rglv;
@@ -179,7 +179,7 @@ public:
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+0));
-		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
+		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
 		ptr->magic = 0.555F;
@@ -187,7 +187,7 @@ public:
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+batch));
-		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
+		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
 		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
 		ptr->magic = 0.888F;
@@ -195,7 +195,7 @@ public:
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+batch+batch));
-		dc.DrawElementsInstanced(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
+		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 		}
 
 public:

@@ -14,6 +14,20 @@ namespace rmlv {
 using qfloat = mvec4f;
 
 struct qfloat2 {
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4201)
+#endif
+	union {
+		struct { mvec4f x, y; };
+		struct { mvec4f s, t; };
+		//struct { mvec4f u, v; };
+		mvec4f v[2]; };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 	inline qfloat2() = default;
 	inline qfloat2(const vec2& a) noexcept :x(a.x), y(a.y) {}
 	inline qfloat2(const mvec4f& a) noexcept :x(a.xxxx()), y(a.yyyy()) {}
@@ -65,33 +79,38 @@ struct qfloat2 {
 			_mm_stream_ps(ydst, y.v); }
 		else {
 			_mm_store_ps(xdst, x.v);
-			_mm_store_ps(ydst, y.v); }}
-
-	union {
-		struct { mvec4f x, y; };
-		struct { mvec4f s, t; };
-		//struct { mvec4f u, v; };
-		mvec4f v[2];
-		};
-	};
+			_mm_store_ps(ydst, y.v); }} };
 
 
 struct qfloat3 {
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4201)
+#endif
+	union {
+		struct { mvec4f x, y, z; };
+		struct { mvec4f r, g, b; };
+		mvec4f v[3]; };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 	inline qfloat3() = default;
 	inline qfloat3(const vec3& a) noexcept : x(a.x), y(a.y), z(a.z) {}
 	inline qfloat3(const mvec4f& a) noexcept :x(a.xxxx()), y(a.yyyy()), z(a.zzzz()) {}
 	inline qfloat3(const float x, const float y, const float z) noexcept :x(x), y(y), z(z) {}
 	inline qfloat3(const mvec4f& x, const mvec4f& y, const mvec4f& z) noexcept :x(x), y(y), z(z) {}
 
-	inline qfloat3 operator+(const qfloat3& b) const { return{v[0]+b.v[0], v[1]+b.v[1], v[2]+b.v[2] }; }
-	inline qfloat3 operator-(const qfloat3& b) const { return{v[0]-b.v[0], v[1]-b.v[1], v[2]-b.v[2] }; }
-	inline qfloat3 operator*(const qfloat3& b) const { return{v[0]*b.v[0], v[1]*b.v[1], v[2]*b.v[2] }; }
-	inline qfloat3 operator/(const qfloat3& b) const { return{v[0]/b.v[0], v[1]/b.v[1], v[2]/b.v[2] }; }
+	inline qfloat3 operator+(const qfloat3& rhs) const { return{v[0]+rhs.v[0], v[1]+rhs.v[1], v[2]+rhs.v[2] }; }
+	inline qfloat3 operator-(const qfloat3& rhs) const { return{v[0]-rhs.v[0], v[1]-rhs.v[1], v[2]-rhs.v[2] }; }
+	inline qfloat3 operator*(const qfloat3& rhs) const { return{v[0]*rhs.v[0], v[1]*rhs.v[1], v[2]*rhs.v[2] }; }
+	inline qfloat3 operator/(const qfloat3& rhs) const { return{v[0]/rhs.v[0], v[1]/rhs.v[1], v[2]/rhs.v[2] }; }
 
-	inline qfloat3 operator+(const qfloat& b) const { return{v[0]+b, v[1]+b, v[2]+b }; }
-	inline qfloat3 operator-(const qfloat& b) const { return{v[0]-b, v[1]-b, v[2]-b }; }
-	inline qfloat3 operator*(const qfloat& b) const { return{v[0]*b, v[1]*b, v[2]*b }; }
-	inline qfloat3 operator/(const qfloat& b) const { return{v[0]/b, v[1]/b, v[2]/b }; }
+	inline qfloat3 operator+(const qfloat& rhs) const { return{v[0]+rhs, v[1]+rhs, v[2]+rhs }; }
+	inline qfloat3 operator-(const qfloat& rhs) const { return{v[0]-rhs, v[1]-rhs, v[2]-rhs }; }
+	inline qfloat3 operator*(const qfloat& rhs) const { return{v[0]*rhs, v[1]*rhs, v[2]*rhs }; }
+	inline qfloat3 operator/(const qfloat& rhs) const { return{v[0]/rhs, v[1]/rhs, v[2]/rhs }; }
 
 	inline qfloat3& operator+=(const qfloat& rhs) { x+=rhs; y+=rhs; z+=rhs; return *this; }
 	inline qfloat3& operator-=(const qfloat& rhs) { x-=rhs; y-=rhs; z-=rhs; return *this; }
@@ -113,17 +132,23 @@ struct qfloat3 {
 		y.lane[li] = a.y;
 		z.lane[li] = a.z; }
 
-	inline qfloat2 xy() const { return{ x, y }; }
-
-	union {
-		struct { mvec4f x, y, z; };
-		struct { mvec4f r, g, b; };
-		mvec4f v[3];
-		};
-	};
+	inline qfloat2 xy() const { return{ x, y }; } };
 
 
 struct qfloat4 {
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4201)
+#endif
+	union {
+		struct { mvec4f x, y, z, w; };
+		struct { mvec4f r, g, b, a; };
+		mvec4f v[4]; };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 	inline qfloat4() = default;
 	inline qfloat4(const vec3& a, const float w) noexcept :x(a.x), y(a.y), z(a.z), w(w) {}
 	inline qfloat4(const vec4& a) noexcept :x(a.x), y(a.y), z(a.z), w(a.w) {}
@@ -143,11 +168,11 @@ struct qfloat4 {
 	inline vec4 lane(const int li) {
 		return vec4{ x.lane[li], y.lane[li], z.lane[li], w.lane[li] }; }
 
-	inline void setLane(const int li, const vec4 a) {
-		x.lane[li] = a.x;
-		y.lane[li] = a.y;
-		z.lane[li] = a.z;
-		w.lane[li] = a.w; }
+	inline void setLane(const int li, const vec4 value) {
+		x.lane[li] = value.x;
+		y.lane[li] = value.y;
+		z.lane[li] = value.z;
+		w.lane[li] = value.w; }
 
 	/*
 	 * destructive store
@@ -157,14 +182,7 @@ struct qfloat4 {
 		_mm_store_ps(reinterpret_cast<float*>(&dst[0]), x.v);
 		_mm_store_ps(reinterpret_cast<float*>(&dst[1]), y.v);
 		_mm_store_ps(reinterpret_cast<float*>(&dst[2]), z.v);
-		_mm_store_ps(reinterpret_cast<float*>(&dst[3]), w.v); }
-
-	union {
-		struct { mvec4f x, y, z, w; };
-		struct { mvec4f r, g, b, a; };
-		mvec4f v[4];
-		};
-	};
+		_mm_store_ps(reinterpret_cast<float*>(&dst[3]), w.v); } };
 
 
 inline qfloat3 operator*(const float& lhs, const qfloat3& rhs) { return qfloat3{ lhs * rhs.x, lhs * rhs.y, lhs * rhs.z }; }
@@ -185,9 +203,9 @@ inline qfloat4 rsqrt(qfloat4 a) { return{ rsqrt(a.x), rsqrt(a.y), rsqrt(a.z), rs
 */
 
 // dot
-inline qfloat dot(const qfloat2& a, const qfloat2& b) { return a.x*b.x + a.y*b.y; }
-inline qfloat dot(const qfloat3& a, const qfloat3& b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
-inline qfloat dot(const qfloat4& a, const qfloat4& b) { return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w; }
+inline qfloat dot(const qfloat2& a, const qfloat2& b_) { return a.x*b_.x + a.y*b_.y; }
+inline qfloat dot(const qfloat3& a, const qfloat3& b_) { return a.x*b_.x + a.y*b_.y + a.z*b_.z; }
+inline qfloat dot(const qfloat4& a, const qfloat4& b_) { return a.x*b_.x + a.y*b_.y + a.z*b_.z + a.w*b_.w; }
 
 
 // length (_not_ using rsqrt!)

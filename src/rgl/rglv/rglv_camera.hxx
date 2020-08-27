@@ -63,10 +63,10 @@ private:
 		auto z = cos(angleInRadians_.x - 3.14F / 2.0F);
 		return rmlv::vec3{ x, y, z }; }
 
-	const double mouseSpeedMagic_{0.010};
+	static constexpr float mouseSpeedMagic_{0.010F};
 	rmlv::vec3 eyePosition_{ 0, 0, 5 };
-	rmlv::vec2 angleInRadians_{ 3.14, 0 };
-	double fieldOfViewInDegrees_{ 45.0 }; };
+	rmlv::vec2 angleInRadians_{ 3.14F, 0 };
+	float fieldOfViewInDegrees_{ 45.0F }; };
 
 
 }  // namespace rglv

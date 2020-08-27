@@ -566,11 +566,11 @@ protected:
 		*h -= many; }
 
 	auto Mark(uint8_t** h) {
-		int dist = h - tilesHead_.data();
+		auto dist = h - tilesHead_.data();
 		tilesMark_[dist] = *h; }
 
 	auto Touched(uint8_t** h) const -> bool {
-		int dist = h - tilesHead_.data();
+		auto dist = h - tilesHead_.data();
 		return tilesMark_[dist] != *h; }
 
 	/* XXX bool Eof(int t) const {
@@ -581,7 +581,7 @@ protected:
 	 */
 	auto RenderCost(int t) const -> int {
 		auto begin = WriteRange(t).first;
-		return tilesHead_[t] - begin; }
+		return static_cast<int>(tilesHead_[t] - begin); }
 
 	auto WriteRange(int t) const -> std::pair<uint8_t*, uint8_t*> {
 		uint8_t* begin = const_cast<uint8_t*>(tilesMem0_.data()) + t*kMaxSizeInBytes;
@@ -603,8 +603,8 @@ protected:
 	auto DSDO(const GLState& s) const -> std::pair<rmlv::qfloat2, rmlv::qfloat2> {
 		auto vsz = s.viewportSize.value_or(bufferDimensionsInPixels_);
 		auto vpx = s.viewportOrigin;
-		auto DS = rmlv::qfloat2( vsz.x/2, -vsz.y/2 );
-		auto DO = rmlv::qfloat2( vsz.x/2+vpx.x, bufferDimensionsInPixels_.y-(vsz.y/2+vpx.y) );
+		auto DS = rmlv::qfloat2( static_cast<float>(vsz.x/2), static_cast<float>(-vsz.y/2) );
+		auto DO = rmlv::qfloat2( static_cast<float>(vsz.x/2+vpx.x), static_cast<float>(bufferDimensionsInPixels_.y-(vsz.y/2+vpx.y)) );
 		return { DS, DO }; }
 
 	auto ScissorRect(const GLState& s) const -> rmlg::irect {
@@ -709,10 +709,10 @@ class GPUBinImpl : GPU {
 		typename SHADER::VertexInput vertex;
 
 		clipQueue_.clear();
-		int siz = (loader.Size() + 3) & (~0x3);
-		clipFlagBuffer_.reserve(siz);
-		devCoordXBuffer_.reserve(siz);
-		devCoordYBuffer_.reserve(siz);
+		int paddedSize = (loader.Size() + 3) & (~0x3);
+		clipFlagBuffer_.reserve(paddedSize);
+		devCoordXBuffer_.reserve(paddedSize);
+		devCoordYBuffer_.reserve(paddedSize);
 
 		const auto scissorRect = ScissorRect(state);
 
@@ -754,9 +754,9 @@ class GPUBinImpl : GPU {
 			for (int ti=0; ti<count; ti+=3) {
 				stats0_.totalTrianglesSubmitted++;
 
-				uint16_t i0 = indexSource(ti);
-				uint16_t i1 = indexSource(ti+1);
-				uint16_t i2 = indexSource(ti+2);
+				auto i0 = static_cast<uint16_t>(indexSource(ti));
+				auto i1 = static_cast<uint16_t>(indexSource(ti+1));
+				auto i2 = static_cast<uint16_t>(indexSource(ti+2));
 
 				// check for triangles that need clipping
 				const auto cf0 = clipFlagBuffer_.data()[i0];
@@ -791,10 +791,11 @@ class GPUBinImpl : GPU {
 
 				ForEachCoveredTile(scissorRect, dc0, dc1, dc2, [&](uint8_t** th) {
 					if (INSTANCED) {
-						AppendUShort(th, iid);}
-					AppendUShort(th, i0);  // also includes backfacing flag
-					AppendUShort(th, i1);
-					AppendUShort(th, i2); }); }
+						assert(0 <= iid && iid < 65536);
+						AppendUShort(th, static_cast<uint16_t>(iid));}
+					AppendUShort(th, static_cast<uint16_t>(i0));  // also includes backfacing flag
+					AppendUShort(th, static_cast<uint16_t>(i1));
+					AppendUShort(th, static_cast<uint16_t>(i2)); }); }
 
 			}  // instance loop
 
@@ -806,7 +807,7 @@ class GPUBinImpl : GPU {
 				// that weren't covered by this draw
 				Unappend(&h, 1); }}
 
-		stats0_.totalTrianglesClipped = clipQueue_.size();
+		stats0_.totalTrianglesClipped = static_cast<int>(clipQueue_.size());
 		if (!clipQueue_.empty()) {
 			bin_DrawElementsClipped<INSTANCED>(state); }}
 
@@ -902,10 +903,11 @@ class GPUBinImpl : GPU {
 
 					ForEachCoveredTile(scissorRect, dc0, dc1, dc2, [&](uint8_t** th) {
 						if (INSTANCED) {
-							AppendUShort(th, iid); }
-						AppendUShort(th, i0);  // also includes backfacing flag
-						AppendUShort(th, i1);
-						AppendUShort(th, i2); }); }
+							assert(0 <= iid && iid < 65536);
+							AppendUShort(th, static_cast<uint16_t>(iid)); }
+						AppendUShort(th, static_cast<uint16_t>(i0));  // also includes backfacing flag
+						AppendUShort(th, static_cast<uint16_t>(i1));
+						AppendUShort(th, static_cast<uint16_t>(i2)); }); }
 
 				// reset the SIMD lane counter
 				li = 0; };
@@ -913,9 +915,9 @@ class GPUBinImpl : GPU {
 			for (int ti=0; ti<count; ti+=3) {
 				stats0_.totalTrianglesSubmitted++;
 
-				uint16_t i0 = indexSource(ti);
-				uint16_t i1 = indexSource(ti+1);
-				uint16_t i2 = indexSource(ti+2);
+				auto i0 = static_cast<uint16_t>(indexSource(ti));
+				auto i1 = static_cast<uint16_t>(indexSource(ti+1));
+				auto i2 = static_cast<uint16_t>(indexSource(ti+2));
 				srcIdx[0][li] = i0;
 				srcIdx[1][li] = i1;
 				srcIdx[2][li] = i2;
@@ -934,7 +936,7 @@ class GPUBinImpl : GPU {
 				// that weren't covered by this draw
 				Unappend(&h, 1); }}
 
-		stats0_.totalTrianglesClipped = clipQueue_.size();
+		stats0_.totalTrianglesClipped = static_cast<int>(clipQueue_.size());
 		if (!clipQueue_.empty()) {
 			bin_DrawElementsClipped<INSTANCED>(state); }}
 
@@ -1045,9 +1047,9 @@ class GPUBinImpl : GPU {
 				int i0{0}, i1{vi}, i2{vi+1};
 				ForEachCoveredTile(scissorRect, clipA_[i0].coord.xy(), clipA_[i1].coord.xy(), clipA_[i2].coord.xy(), [&](uint8_t** th) {
 					AppendByte(th, CMD_CLIPPED_TRI);
-					AppendUShort(th, (bi+i0) | (backfacing ? 0x8000 : 0));
-					AppendUShort(th, bi+i1);
-					AppendUShort(th, bi+i2); }); }}}
+					AppendUShort(th, static_cast<uint16_t>((bi+i0) | (backfacing ? 0x8000 : 0)));
+					AppendUShort(th, static_cast<uint16_t>(bi+i1));
+					AppendUShort(th, static_cast<uint16_t>(bi+i2)); }); }}}
 
 	template <typename FUNC>
 	auto ForEachCoveredTile(const rmlg::irect rect, const rmlv::vec2 dc0, const rmlv::vec2 dc1, const rmlv::vec2 dc2, FUNC func) -> int {

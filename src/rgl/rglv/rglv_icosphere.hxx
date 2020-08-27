@@ -25,7 +25,7 @@ public:
 		return vCnt_; }
 
 	int GetNumIndices() const {
-		return tris_.size(); }
+		return static_cast<int>(tris_.size()); }
 
 	int GetNumRenderIndices() const {
 		return numRenderIndices_; }

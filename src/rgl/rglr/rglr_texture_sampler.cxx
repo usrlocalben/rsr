@@ -308,9 +308,18 @@ auto MakeTextureUnit(const float* buf, int width, int height, int stride, bool f
 	if (!isPowerOf2) {
 		return new(mem) TextureUnitRGBAF32_NM_ONEMAP_WRAP_NEAREST(buf, width, height, stride); }
 
+/**
+ * tiles are 4x4, so powers < 2 are not allowed
+ * X(   1,  0) \
+ * X(   2,  1) \
+ * XXX MSVC has sort of a bug:
+ * compiler warns about instantiation of shl<POWER-2>(x)
+ * (which would rightly be an error) but
+ * static control-flow in the template would
+ * never result in that call
+ */
+
 #define DIMS \
-	X(   1,  0) \
-	X(   2,  1) \
 	X(   4,  2) \
 	X(   8,  3) \
 	X(  16,  4) \

@@ -149,7 +149,7 @@ public:
 		auto& [self] = *data;
 		self->DrawImpl(); }
 	void DrawImpl() {
-		pcnt_ = layers_.size();
+		pcnt_ = static_cast<int>(layers_.size());
 		jobsys::Job *postJob = Post();
 		AddLinksTo(postJob);
 		for (auto layer : layers_) {

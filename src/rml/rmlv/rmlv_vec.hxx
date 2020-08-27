@@ -98,9 +98,17 @@ struct alignas(8) vec2 {
 
 	bool operator==(vec2 rhs) const { return x==rhs.x && y==rhs.y; }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4201)
+#endif
 	union {
 		struct { float x, y; };
-		std::array<float, 2> arr; }; };
+		float arr[2]; };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	};
 
 
 struct alignas(4) vec3 {
@@ -134,9 +142,17 @@ struct alignas(4) vec3 {
 
 	vec2 xy() const { return { x, y }; }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4201)
+#endif
 	union {
 		struct { float x, y, z; };
-		std::array<float, 3> arr; }; };
+		std::array<float, 3> arr; };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	};
 
 
 struct alignas(16) vec4 {
@@ -168,9 +184,17 @@ struct alignas(16) vec4 {
 	vec2 xy() const { return { x, y }; }
 	vec3 xyz() const { return { x, y, z }; }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4201)
+#endif
 	union {
 		struct { float x, y, z, w; };
-		std::array<float, 3> arr; }; };
+		std::array<float, 3> arr; };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	};
 
 
 struct alignas(8) ivec2 {
@@ -209,9 +233,17 @@ struct ivec4 {
 	ivec4& operator-=(const ivec4& b) { x -= b.x; y -= b.y; z -= b.z; return *this; }
 	ivec4& operator*=(const ivec4& b) { x *= b.x; y *= b.y; z *= b.z; return *this; }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4201)
+#endif
 	union {
 		struct { int x, y, z, w; };
-		int32_t si[4]; }; };
+		int32_t si[4]; };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+	};
 
 
 // float * vec

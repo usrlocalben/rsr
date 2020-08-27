@@ -222,7 +222,7 @@ namespace PixelToaster
 
 		// put window in fullscreen mode
 
-		void fullscreen(int width, int height)
+		void fullscreen(int reqWidth, int reqHeight)
 		{
 			// 1. hide window
 			// 2. hide mouse cursor
@@ -231,8 +231,8 @@ namespace PixelToaster
 			// 5. show window
 			// 6. update system menu
 
-			this->width = width;
-			this->height = height;
+			this->width = reqWidth;
+			this->height = reqHeight;
 			
 			hide();
 
@@ -243,11 +243,11 @@ namespace PixelToaster
 			int w = GetSystemMetrics( SM_CXSCREEN );
 			int h = GetSystemMetrics( SM_CYSCREEN );
 
-			if ( width > w )
-				w = width;
+			if ( reqWidth > w )
+				w = reqWidth;
 
-			if ( height > h )
-				h = height;
+			if ( reqHeight > h )
+				h = reqHeight;
 
 			SetWindowPos( window, 0, 0, 0, w, h, SWP_NOZORDER );
 
@@ -259,7 +259,7 @@ namespace PixelToaster
 
 		// put window in windowed mode
 
-		void windowed( int width, int height )
+		void windowed( int reqWidth, int reqHeight )
 		{
 			// 1. hide window
 			// 2. overlapped window style
@@ -268,8 +268,8 @@ namespace PixelToaster
 			// 5. show mouse cursor
 			// 6. update system menu
 
-			this->width = width;
-			this->height = height;
+			this->width = reqWidth;
+			this->height = reqHeight;
 			
 			hide();
 
@@ -296,11 +296,11 @@ namespace PixelToaster
 			RECT rect;
 			GetWindowRect( window, &rect );
 			
-			const int width = rect.right - rect.left;
-			const int height = rect.bottom - rect.top;
+			const int curWidth = rect.right - rect.left;
+			const int curHeight = rect.bottom - rect.top;
 			
-			int x = ( GetSystemMetrics(SM_CXSCREEN) - width ) >> 1;
-			int y = ( GetSystemMetrics(SM_CYSCREEN) - height ) >> 1;
+			int x = ( GetSystemMetrics(SM_CXSCREEN) - curWidth ) >> 1;
+			int y = ( GetSystemMetrics(SM_CYSCREEN) - curHeight ) >> 1;
 			
 			if ( x < 0 )
 				x = 0;
@@ -308,7 +308,7 @@ namespace PixelToaster
 			if ( y < 0 )
 				y = 0;
 		
-			SetWindowPos( window, 0, x, y, width, height, SWP_NOZORDER );
+			SetWindowPos( window, 0, x, y, curWidth, curHeight, SWP_NOZORDER );
 
 			centered = true;
 
@@ -1267,26 +1267,26 @@ namespace PixelToaster
 				*(memory++) = 0; 
 		}
 
-		bool createDevice( LPDIRECT3D9 direct3d, int width, int height, Format format, bool windowed, D3DDEVTYPE devType = D3DDEVTYPE_HAL )
+		bool createDevice( LPDIRECT3D9 dx, int reqWidth, int reqHeight, Format format, bool reqWindowed, D3DDEVTYPE devType = D3DDEVTYPE_HAL )
 		{
 			this->deviceFormat = format;
 
 			const D3DFORMAT fmt = convertFormat( format );
 
-			if ( !windowed )
+			if ( !reqWindowed )
 			{
 				// round up to nearest resolution
 				
 				int bestWidth = 0, bestHeight = 0;
-				const UINT n = direct3d->GetAdapterModeCount( D3DADAPTER_DEFAULT, fmt );
+				const UINT n = dx->GetAdapterModeCount( D3DADAPTER_DEFAULT, fmt );
 				for ( UINT i = 0; i < n; ++i )
 				{
-					D3DDISPLAYMODE mode;
-					if ( SUCCEEDED( direct3d->EnumAdapterModes( D3DADAPTER_DEFAULT, fmt, i, &mode ) ) )
+					D3DDISPLAYMODE displayMode;
+					if ( SUCCEEDED( dx->EnumAdapterModes( D3DADAPTER_DEFAULT, fmt, i, &displayMode ) ) )
 					{
-						const auto mode_width = int(mode.Width);
-						const auto mode_height = int(mode.Height);
-						if ( mode_width >= width && mode_height >= height && ( bestWidth == 0 || (mode_width <= bestWidth && mode_height <= bestHeight) ) )
+						const auto mode_width = int(displayMode.Width);
+						const auto mode_height = int(displayMode.Height);
+						if ( mode_width >= reqWidth && mode_height >= reqHeight && ( bestWidth == 0 || (mode_width <= bestWidth && mode_height <= bestHeight) ) )
 						{
 							if ( modeset_enable ) {
 								if ( mode_height == modeset_height && mode_width == modeset_width ) {
@@ -1304,19 +1304,19 @@ namespace PixelToaster
 				if ( bestWidth == 0 )
 					return false;
 
-				scalesUp = width != bestWidth || height != bestHeight;
+				scalesUp = width != bestWidth || reqHeight != bestHeight;
 				drawAsQuad |= scalesUp;
-				width = bestWidth;
-				height = bestHeight;
+				reqWidth = bestWidth;
+				reqHeight = bestHeight;
 			}
 
 			// triple buffered device
 
 			zeroMemory( (char*) &presentation, sizeof(presentation) );
 
-			presentation.BackBufferWidth = width;
-			presentation.BackBufferHeight = height;
-			presentation.Windowed = windowed;
+			presentation.BackBufferWidth = reqWidth;
+			presentation.BackBufferHeight = reqHeight;
+			presentation.Windowed = reqWindowed;
 			presentation.SwapEffect = D3DSWAPEFFECT_DISCARD;
 			presentation.BackBufferFormat = convertFormat(format);
 			presentation.hDeviceWindow = window;
@@ -1324,20 +1324,21 @@ namespace PixelToaster
 
 			device.reset();
 
-			if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_HARDWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
-				if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_MIXED_VERTEXPROCESSING, &presentation, device.address() ) ) )
-					if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
+			if ( FAILED( dx->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_HARDWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
+				if ( FAILED( dx->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_MIXED_VERTEXPROCESSING, &presentation, device.address() ) ) )
+					if ( FAILED( dx->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
 						device.reset();
 
 			// double buffered fallback
 
 			if ( !device )
 			{
+				std::cerr << "failed to create triple-buffered device, falling back to double\n";
 				presentation.BackBufferCount = 1;
 
-				if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_HARDWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
-					if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_MIXED_VERTEXPROCESSING, &presentation, device.address() ) ) )
-						if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
+				if ( FAILED( dx->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_HARDWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
+					if ( FAILED( dx->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_MIXED_VERTEXPROCESSING, &presentation, device.address() ) ) )
+						if ( FAILED( dx->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
 							device.reset();
 			}
 
@@ -1349,7 +1350,7 @@ namespace PixelToaster
 			return true;
 		}
 
-		bool createTexture( const SmartI<IDirect3DDevice9>& device, int width, int height, Format format )
+		bool createTexture( const SmartI<IDirect3DDevice9>& dxd, int reqWidth, int reqHeight, Format format )
 		{
 			this->textureFormat = format;
 			D3DFORMAT fmt = convertFormat(format);
@@ -1358,12 +1359,12 @@ namespace PixelToaster
 
 			if ( textureFormat == Format::XBGRFFFF || textureFormat != deviceFormat )
 			{
-				if ( FAILED( device->CreateTexture( width, height, 1, D3DUSAGE_DYNAMIC, fmt, D3DPOOL_DEFAULT, primaryTexture.address(), NULL ) ) )
+				if ( FAILED( dxd->CreateTexture( reqWidth, reqHeight, 1, D3DUSAGE_DYNAMIC, fmt, D3DPOOL_DEFAULT, primaryTexture.address(), NULL ) ) )
 					primaryTexture.reset();
 			}
 			else
 			{
-				if ( FAILED( device->CreateTexture( width, height, 1, 0, fmt, D3DPOOL_SYSTEMMEM, primaryTexture.address(), NULL ) ) )
+				if ( FAILED( dxd->CreateTexture( reqWidth, reqHeight, 1, 0, fmt, D3DPOOL_SYSTEMMEM, primaryTexture.address(), NULL ) ) )
 					primaryTexture.reset();
 			}
 

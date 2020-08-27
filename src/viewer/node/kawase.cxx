@@ -96,9 +96,9 @@ public:
 				first = false;
 				src_ = &cb_; }
 
-			{auto* tmp = const_cast<rglr::FloatingPointCanvas*>(src_);
+			{auto* msrc = const_cast<rglr::FloatingPointCanvas*>(src_);
 			src_ = dst_;
-			dst_ = tmp;}}
+			dst_ = msrc;}}
 
 		output_ = src_;
 		RunLinks(); }

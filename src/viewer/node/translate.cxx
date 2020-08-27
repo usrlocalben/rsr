@@ -19,6 +19,7 @@ namespace {
 
 using namespace rqv;
 
+constexpr float kTau = static_cast<float>(rmlv::M_PI * 2.0);
 // constexpr int kForkUntilDepth = 100;
 
 class RepeatOp final : public IGl {
@@ -88,7 +89,6 @@ public:
 
 	void DrawDepth(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		using rmlm::mat4;
-		using rmlv::M_PI;
 		namespace jobsys = rclmt::jobsys;
 
 		auto translate = rmlv::vec3{0,0,0};
@@ -104,15 +104,16 @@ public:
 		if (cnt_ == 0) {
 			return; }
 
+
 		rmlv::vec3 p{0,0,0};
 		rmlv::vec3 r{0,0,0};
 		rmlv::vec3 s{1,1,1};
 		for (int i=0; i<cnt_; ++i, p+=translate, r+=rotate, s*=scale) {
 			auto& M = *static_cast<mat4*>(rclma::framepool::Allocate(64));
 			M = *mvmat;
-			M = M * mat4::rotate(r.x * M_PI * 2, 1, 0, 0);
-			M = M * mat4::rotate(r.y * M_PI * 2, 0, 1, 0);
-			M = M * mat4::rotate(r.z * M_PI * 2, 0, 0, 1);
+			M = M * mat4::rotate(r.x * kTau, 1, 0, 0);
+			M = M * mat4::rotate(r.y * kTau, 0, 1, 0);
+			M = M * mat4::rotate(r.z * kTau, 0, 0, 1);
 			M = M * mat4::translate(p);
 			M = M * mat4::scale(s);
 
@@ -120,7 +121,6 @@ public:
 
 	void Draw(int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
 		using rmlm::mat4;
-		using rmlv::M_PI;
 		namespace jobsys = rclmt::jobsys;
 
 		auto translate = rmlv::vec3{0,0,0};
@@ -147,9 +147,9 @@ public:
 		for (int i=0; i<cnt_; ++i, p+=translate, r+=rotate, s*=scale) {
 			auto& M = *static_cast<mat4*>(rclma::framepool::Allocate(64));
 			M = *mmat;
-			M = M * mat4::rotate(r.x * M_PI * 2, 1, 0, 0);
-			M = M * mat4::rotate(r.y * M_PI * 2, 0, 1, 0);
-			M = M * mat4::rotate(r.z * M_PI * 2, 0, 0, 1);
+			M = M * mat4::rotate(r.x * kTau, 1, 0, 0);
+			M = M * mat4::rotate(r.y * kTau, 0, 1, 0);
+			M = M * mat4::rotate(r.z * kTau, 0, 0, 1);
 			M = M * mat4::translate(p);
 			M = M * mat4::scale(s);
 
@@ -246,7 +246,6 @@ public:
 
 	auto Apply(rmlm::mat4 a) -> rmlm::mat4 {
 		using rmlm::mat4;
-		using rmlv::M_PI;
 		auto scale = rmlv::vec3{1.0F, 1.0F, 1.0F};
 		if (scaleNode_ != nullptr) {
 			scale = scaleNode_->Eval(scaleSlot_).as_vec3(); }
@@ -260,9 +259,9 @@ public:
 			translate = translateNode_->Eval(translateSlot_).as_vec3(); }
 
 		a = a * mat4::translate(translate);
-		a = a * mat4::rotate(rotate.z * M_PI * 2, 0, 0, 1);
-		a = a * mat4::rotate(rotate.y * M_PI * 2, 0, 1, 0);
-		a = a * mat4::rotate(rotate.x * M_PI * 2, 1, 0, 0);
+		a = a * mat4::rotate(rotate.z * kTau, 0, 0, 1);
+		a = a * mat4::rotate(rotate.y * kTau, 0, 1, 0);
+		a = a * mat4::rotate(rotate.x * kTau, 1, 0, 0);
 		a = a * mat4::scale(scale);
 		return a; } };
 

@@ -115,14 +115,16 @@ public:
 		c2 >>= FP_BITS;
 		c3 >>= FP_BITS;
 
-		auto cb1 = mvec4i(c1) + mvec4i(0,dy12,0,dy12) + mvec4i(0,0,dx12,dx12);
-		auto cb2 = mvec4i(c2) + mvec4i(0,dy23,0,dy23) + mvec4i(0,0,dx23,dx23);
-		auto cb3 = mvec4i(c3) + mvec4i(0,dy31,0,dy31) + mvec4i(0,0,dx31,dx31);
-		// std::cerr << "dydx(" << dy12 << ", " << dy23 << ", " << dy31 << ")\n";
-		// std::exit(1);
-		auto cb1dydx = mvec4i(dy12*2); auto cb1dxdy = mvec4i(dx12*2);
-		auto cb2dydx = mvec4i(dy23*2); auto cb2dxdy = mvec4i(dx23*2);
-		auto cb3dydx = mvec4i(dy31*2); auto cb3dxdy = mvec4i(dx31*2);
+		auto cb1 = mvec4i((int)c1,        (int)(c1+dy12),
+		                  (int)(c1+dx12), (int)(c1+dx12+dy12));
+		auto cb2 = mvec4i((int)c2,        (int)(c2+dy23),
+		                  (int)(c2+dx23), (int)(c2+dx23+dy23));
+		auto cb3 = mvec4i((int)c3,        (int)(c3+dy31),
+		                  (int)(c3+dx31), (int)(c3+dx31+dy31));
+
+		auto cb1dydx = mvec4i((int)dy12*2); auto cb1dxdy = mvec4i((int)dx12*2);
+		auto cb2dydx = mvec4i((int)dy23*2); auto cb2dxdy = mvec4i((int)dx23*2);
+		auto cb3dydx = mvec4i((int)dy31*2); auto cb3dxdy = mvec4i((int)dx31*2);
 
 		mvec4f scale{1.0f / (c1 + c2 + c3)};
 		// std::cerr << "scale(" << scale.get_x() << ")\n";

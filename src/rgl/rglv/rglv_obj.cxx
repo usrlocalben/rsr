@@ -223,7 +223,7 @@ auto LoadOBJ(const std::string& prepend, const std::string& fn) -> Mesh {
 			if (found == end(mesh.material_)) {
 				std::cout << "usemtl \"" << material_name << "\" not found in mtl\n";
 				throw std::runtime_error("usemtl not found"); }
-			material_idx = std::distance(begin(mesh.material_), found); }
+			material_idx = static_cast<int>(std::distance(begin(mesh.material_), found)); }
 
 		else if (cmd == "v") {
 			// vertex

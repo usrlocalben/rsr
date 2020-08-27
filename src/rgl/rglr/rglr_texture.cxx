@@ -23,8 +23,8 @@ Texture ensurePowerOf2(Texture& src) {
 
 	for (int iy = 0; iy < dim; iy++) {
 		for (int ix = 0; ix < dim; ix++) {
-			auto sy = double(iy) / double(dim-1) * double(src.height-1);
-			auto sx = double(ix) / double(dim-1) * double(src.width-1);
+			auto sy = static_cast<int>(double(iy) / double(dim-1) * double(src.height-1));
+			auto sx = static_cast<int>(double(ix) / double(dim-1) * double(src.width -1));
 			img[iy*dim + ix] = src.buf[sy*src.width + sx]; } }
 
 	return Texture{ img, dim, dim, dim, src.name, -1, false }; }

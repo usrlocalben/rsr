@@ -5,6 +5,11 @@
 #ifndef PIXELTOASTER_CONVERSION_H
 #define PIXELTOASTER_CONVERSION_H
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4244)
+#endif
+
 #include "PixelToaster.h"
 
 #ifndef PIXELTOASTER_NO_CRT
@@ -529,5 +534,9 @@ namespace PixelToaster
 
 	#undef CONVERTER
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif

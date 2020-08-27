@@ -19,12 +19,19 @@ namespace rmlv {
 struct alignas(16) mvec4i {
 
 	// DATA
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4201)
+#endif
 	union {
 		__m128i v;
 		__m128 f;
 		struct { int x, y, z, w; };
 		uint32_t ui[4];
 		int32_t si[4]; };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 	// CLASS METHODS
 	static auto zero() -> mvec4i;
@@ -56,11 +63,18 @@ struct alignas(16) mvec4i {
 struct alignas(16) mvec4f {
 
 	// DATA
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4201)
+#endif
 	union {
 		__m128 v;
 		struct { float x, y, z, w; };
 		struct { float r, g, b, a; };
 		float lane[4]; };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 	// CLASS METHODS
 	static auto zero() -> mvec4f;
@@ -336,21 +350,21 @@ inline auto mvec4f::operator/=(float rhs) -> mvec4f& { v = _mm_div_ps(v, _mm_set
 // ACCESSORS
 inline
 auto mvec4f::as_vec2() const -> vec2 {
-	__declspec(align(32)) float a[4];
-	_mm_store_ps(reinterpret_cast<float*>(a), v);
-	return vec2{ a[0], a[1] }; }
+	__declspec(align(16)) float tmp[4];
+	_mm_store_ps(reinterpret_cast<float*>(tmp), v);
+	return vec2{ tmp[0], tmp[1] }; }
 
 inline
 auto mvec4f::as_vec3() const -> vec3 {
-	__declspec(align(32)) float a[4];
-	_mm_store_ps(reinterpret_cast<float*>(a), v);
-	return vec3{ a[0], a[1], a[2] }; }
+	__declspec(align(16)) float tmp[4];
+	_mm_store_ps(reinterpret_cast<float*>(tmp), v);
+	return vec3{ tmp[0], tmp[1], tmp[2] }; }
 
 inline
 auto mvec4f::as_vec4() const -> vec4 {
-	vec4 a;
-	_mm_store_ps(reinterpret_cast<float*>(&a), v);
-	return a; }
+	vec4 tmp;
+	_mm_store_ps(reinterpret_cast<float*>(&tmp), v);
+	return tmp; }
 
 inline auto mvec4f::xxxx() const -> mvec4f { return _mm_shuffle_ps(v, v, _MM_SHUFFLE(0, 0, 0, 0)); }
 inline auto mvec4f::yyyy() const -> mvec4f { return _mm_shuffle_ps(v, v, _MM_SHUFFLE(1, 1, 1, 1)); }
@@ -425,10 +439,10 @@ inline
 auto store_bytes(uint8_t* dst, mvec4i a) -> void {
 	//alignas(16) uint8_t data[16];
 	//_mm_store_si128(reinterpret_cast<__m128i*>(data), a.v);
-	dst[0] = a.ui[0];
-	dst[1] = a.ui[1];
-	dst[2] = a.ui[2];
-	dst[3] = a.ui[3]; }
+	dst[0] = static_cast<uint8_t>(a.ui[0]);
+	dst[1] = static_cast<uint8_t>(a.ui[1]);
+	dst[2] = static_cast<uint8_t>(a.ui[2]);
+	dst[3] = static_cast<uint8_t>(a.ui[3]); }
 
 /*
 inline void store_bytes(uint8_t* dst, const mvec4i a) {

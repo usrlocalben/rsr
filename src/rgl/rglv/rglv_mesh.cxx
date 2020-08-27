@@ -235,7 +235,8 @@ void MakeArray(const Mesh& m, const std::string& spec, VertexArray_F3F3& buffer,
 				vertexIdx = found->second; }
 			else {
 				vertexIdx = vertexMap[key] = buffer.append(d[0], d[1]); }
-			idx.push_back(vertexIdx); }}
+			assert(0 <= vertexIdx && vertexIdx < 65536);
+			idx.push_back(static_cast<uint16_t>(vertexIdx)); }}
 
 	buffer.pad(); }
 
@@ -291,7 +292,8 @@ void MakeArray(const Mesh& m, const std::string& spec, VertexArray_F3F3F3& buffe
 				vertexIdx = found->second; }
 			else {
 				vertexIdx = vertexMap[key] = buffer.append(d[0], d[1], d[2]); }
-			idx.push_back(vertexIdx); }}
+			assert(0 <= vertexIdx && vertexIdx < 65536);
+			idx.push_back(static_cast<uint16_t>(vertexIdx)); }}
 
 	buffer.pad(); }
 

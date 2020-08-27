@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cstdint>
 #include <deque>
 #include <mutex>
 #include <stdexcept>
@@ -133,7 +134,7 @@ struct GLState {
 
 	auto FragmentStateKey() const -> uint32_t {
 		uint32_t key = programId << 24;
-		key |= scissorEnabled;
+		key |= static_cast<uint32_t>(scissorEnabled);
 		key |= depthTestEnabled<<1;
 		if (depthTestEnabled) key |= depthFunc<<2;
 		key |= blendingEnabled<<4;
@@ -253,7 +254,7 @@ public:
 	template <typename T>
 	std::pair<int, T*> AllocUniformBuffer() {
 		const int amt = (sizeof(T) + 0xf) & 0xfffffff0;
-		int idx = ubuf_.size();
+		int idx = static_cast<int>(ubuf_.size());
 		for (int i=0; i<amt; i++) { ubuf_.emplace_back(); }
 		auto* ptr = reinterpret_cast<T*>(ubuf_.data() + idx);
 		return { idx, ptr }; }
@@ -322,7 +323,7 @@ public:
 	void DrawArrays(int mode, int start, int count);
 	void DrawElementsInstanced(int mode, int count, int type, const uint16_t* indices, int instanceCnt);
 	void DrawArraysInstanced(int mode, int start, int count, int instanceCnt);
-	void Clear(int bits);
+	void Clear(uint8_t bits);
 	void StoreColor(rglr::FloatingPointCanvas *dst, bool downsample);
 	void StoreColor(rglr::QFloat4Canvas *dst);
 	void StoreColor(rglr::TrueColorCanvas *dst, bool enableGammaCorrection);

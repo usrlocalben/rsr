@@ -45,7 +45,7 @@ void JSONFile::Reload() {
 	d_bytes.clear();
 
 	rcls::LoadBytes(d_path, d_bytes);
-	d_bytes.emplace_back(0);
+	d_bytes.emplace_back(static_cast<char>(0));
 	char* dataBegin = d_bytes.data();
 	char* dataEnd;
 

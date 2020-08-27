@@ -46,7 +46,7 @@ public:
 		dc.ProjectionMatrix(*pmat);
 
 		dc.UseBuffer(0, meshVAO_);
-		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data()); }
+		dc.DrawElements(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data()); }
 
 	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
 		using namespace rglv;
@@ -80,7 +80,7 @@ public:
 		dc.BindTexture3(lights.map[0], lights.size[0]);
 
 		dc.UseBuffer(0, meshVAO_);
-		dc.DrawElements(GL_TRIANGLES, meshIndices_.size(), GL_UNSIGNED_SHORT, meshIndices_.data()); }
+		dc.DrawElements(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data()); }
 
 private:
 	// config

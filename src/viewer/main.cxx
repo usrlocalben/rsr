@@ -34,10 +34,10 @@ int main() {
 
 	try {
 		auto app = Application();
+		bool nice{false};
 		if (auto jv = jv_find(config_json.GetRoot(), "nice", JSON_TRUE)) {
-			app.SetNice(true); }
-		else if (auto jv = jv_find(config_json.GetRoot(), "nice", JSON_FALSE)) {
-			app.SetNice(false); }
+			nice = true; }
+		app.SetNice(nice);
 		app.Run(); }
 	catch (const std::exception& err) {
 		std::cout << "exception: " << err.what() << std::endl; }

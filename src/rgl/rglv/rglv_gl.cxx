@@ -1,6 +1,7 @@
 #include "src/rgl/rglv/rglv_gl.hxx"
 
 #include <cassert>
+#include <cstdint>
 
 #include "src/rgl/rglv/rglv_gpu_protocol.hxx"
 #include "src/rgl/rglv/rglv_packed_stream.hxx"
@@ -54,7 +55,7 @@ void GL::DrawElementsInstanced(const int mode [[maybe_unused]], const int count,
 	commands_.appendInt(instanceCnt); }
 
 
-void GL::Clear(const int bits) {
+void GL::Clear(const uint8_t bits) {
 	MaybeUpdateState();
 	commands_.appendByte(CMD_CLEAR);
 	commands_.appendByte(bits); }

@@ -304,8 +304,8 @@ public:
 
 				// update globals
 				globalsNode_->Upsert("wallclock", isPaused_ ? float(0) : float(wallClock_.time()));
-				globalsNode_->Upsert("windowSize", rmlv::vec2(cur_mode.width_in_pixels, cur_mode.height_in_pixels));
-				globalsNode_->Upsert("tileSize", rmlv::vec2(tile_dim.x, tile_dim.y));
+				globalsNode_->Upsert("windowSize", rmlv::vec2(float(cur_mode.width_in_pixels), float(cur_mode.height_in_pixels)));
+				globalsNode_->Upsert("tileSize", rmlv::vec2(float(tile_dim.x), float(tile_dim.y)));
 				globalsNode_->Upsert("windowAspect", float(cur_mode.width_in_pixels) / float(cur_mode.height_in_pixels));
 
 				ComputeAndRenderFrame(canvas);
