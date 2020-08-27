@@ -604,7 +604,7 @@ protected:
 		auto vsz = s.viewportSize.value_or(bufferDimensionsInPixels_);
 		auto vpx = s.viewportOrigin;
 		auto DS = rmlv::qfloat2( vsz.x/2, -vsz.y/2 );
-		auto DO = rmlv::qfloat2( vpx.x, bufferDimensionsInPixels_.y-vpx.y );
+		auto DO = rmlv::qfloat2( vsz.x/2+vpx.x, bufferDimensionsInPixels_.y-(vsz.y/2+vpx.y) );
 		return { DS, DO }; }
 
 	auto ScissorRect(const GLState& s) const -> rmlg::irect {
@@ -747,7 +747,7 @@ class GPUBinImpl : GPU {
 				auto flags = frustum.Test(coord);
 				store_bytes(clipFlagBuffer_.data() + vi, flags);
 
-				auto devCoord = (pdiv(coord).xy() + _1) * DS + DO;
+				auto devCoord = pdiv(coord).xy() * DS + DO;
 				devCoord.template store<false>(devCoordXBuffer_.data() + vi,
 				                               devCoordYBuffer_.data() + vi); }
 
@@ -861,7 +861,7 @@ class GPUBinImpl : GPU {
 					qfloat4 gl_Position;
 					SHADER::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
 					clipFlags[i] = frustum.Test(gl_Position);
-					devCoord[i] = (pdiv(gl_Position).xy() + _1) * DS + DO;
+					devCoord[i] = pdiv(gl_Position).xy() * DS + DO;
 					/* todo compute 4x triangle area here */ }
 
 				for (int ti{0}; ti<li; ++ti) {
@@ -1020,8 +1020,8 @@ class GPUBinImpl : GPU {
 			for (auto& vertex : clipA_) {
 				// convert clip-coord to device-coord
 				vertex.coord = pdiv(vertex.coord);
-				vertex.coord.x = ((vertex.coord.x+1) * DS.x + DO.x).get_x();
-				vertex.coord.y = ((vertex.coord.y+1) * DS.y + DO.y).get_x(); }
+				vertex.coord.x = (vertex.coord.x * DS.x + DO.x).get_x();
+				vertex.coord.y = (vertex.coord.y * DS.y + DO.y).get_x(); }
 			// end of phase 2: poly contains a clipped N-gon
 
 			// check direction, maybe cull, maybe reorder
@@ -1139,8 +1139,8 @@ class GPUTileImpl : GPU {
 				qfloat4 gl_Position;
 				SHADER::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
 				devCoord[i] = pdiv(gl_Position);
-				fx[i] = ftoi(rglv::FP_MUL * ((devCoord[i].x+_1) * DS.x + DO.x));
-				fy[i] = ftoi(rglv::FP_MUL * ((devCoord[i].y+_1) * DS.y + DO.y)); }
+				fx[i] = ftoi(rglv::FP_MUL * (devCoord[i].x * DS.x + DO.x));
+				fy[i] = ftoi(rglv::FP_MUL * (devCoord[i].y * DS.y + DO.y)); }
 
 			// draw up to 4 triangles
 			for (int ti=0; ti<li; ti++) {

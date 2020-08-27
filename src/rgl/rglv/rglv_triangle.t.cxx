@@ -264,7 +264,7 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 	rglr::QFloat4Canvas cbc(8, 8);
 	rglr::QFloatCanvas dbc(8, 8);
 
-	rglr::Fill(cbc, vec4{ 0, 0, 0, 1.0F }, cbc.rect());
+	rglr::Fill(cbc, vec4{ 0, 0, 0, 1.0F });
 
 	bool frontfacing = true;
 
@@ -275,7 +275,7 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 		DebugWithBary::VertexOutputSD{},
 		DebugWithBary::VertexOutputSD{},
 		DebugWithBary::VertexOutputSD{});
-	rglv::TriangleRasterizer tr(target_program, cbc.rect(), cbc.height());
+	rglv::TriangleRasterizer<false, decltype(target_program)> tr(target_program, cbc.rect(), cbc.height());
 	tr.Draw(points[0], points[1], points[2], frontfacing);
 
 	// compare
@@ -296,28 +296,31 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
  * verify that the target is filled with the correct u,v values within 0.01f
  */
 bool check_triangle_uv() {
-	/*const int width = 2560;
-	const int height = 2560;
-	const float fwidth = 2560.0f;
-	const float fheight = 2560.0f;
-	const float right = 2560.5f;
-	const float bottom = 2560.5f;*/
-	const int width = 16;
-	const int height = 16;
-	const float fwidth = 16.0F;
-	const float fheight = 16.0F;
-	const float right = 16.5F;
-	const float bottom = 16.5F;
+#if 0
+	const int width = 256;
+	const int height = 256;
+	const float fwidth = 256.0f;
+	const float fheight = 256.0f;
+	const float right = 256.5f;
+	const float bottom = 256.5f;
+#else
+	const int dim = 2560;
+	const int w = dim;
+	const int h = dim;
+#endif
 
-	rglr::QFloat4Canvas cbc(width, height);
-	rglr::QFloatCanvas dbc(width, height);
+	rglr::QFloat4Canvas cbc(w, h);
+	rglr::QFloatCanvas dbc(w, h);
 
-	rglr::Fill(cbc, vec4{ 0, 0, 0, 1.0F }, cbc.rect());
+	rglr::Fill(cbc, vec4{ 0, 0, 0, 1.0F });
 
 	bool frontfacing = true;
 
-	vec4 ulp{ 0.5, 0.5, 0, 1 };     vec2 uluv{ 0.0, fheight };  vec4 urp{ right,    0.5, 0, 1 };  vec2 uruv{ fwidth, fheight };
-	vec4 llp{ 0.5, bottom, 0, 1 };  vec2 lluv{ 0.0,    0.0 };  vec4 lrp{ right, bottom, 0, 1 };  vec2 lruv{ fwidth,   0.0 };
+	vec4 ulp( 0, 0, 0, 1 ); vec4 urp( w, 0, 0, 1 );
+	vec4 llp( 0, h, 0, 1 ); vec4 lrp( w, h, 0, 1 );
+
+	vec2 uluv( 0, h ); vec2 uruv( w, h );
+	vec2 lluv( 0, 0 ); vec2 lruv( w, 0 );
 
 	array<vec4, 3> points_upper_left = { ulp, llp, urp, };
 	array<vec2, 3> uv_upper_left = { uluv, lluv, uruv, };
@@ -335,7 +338,7 @@ bool check_triangle_uv() {
 			VertexFloat1{ points[0].w, points[1].w, points[2].w },
 			VertexFloat1{ points[0].z, points[1].z, points[2].z },
 			computed1, computed2, computed3);
-		rglv::TriangleRasterizer tr(target_program, cbc.rect(), cbc.height());
+		rglv::TriangleRasterizer<false, decltype(target_program)> tr(target_program, cbc.rect(), cbc.height());
 		tr.Draw(points[0], points[1], points[2], frontfacing); }
 	{
 		auto& points = points_lower_right;
@@ -348,31 +351,33 @@ bool check_triangle_uv() {
 			VertexFloat1{ points[0].w, points[1].w, points[2].w },
 			VertexFloat1{ points[0].z, points[1].z, points[2].z },
 			computed1, computed2, computed3);
-		rglv::TriangleRasterizer tr(target_program, cbc.rect(), cbc.height());
+		rglv::TriangleRasterizer<false, decltype(target_program)> tr(target_program, cbc.rect(), cbc.height());
 		tr.Draw(points[0], points[1], points[2], frontfacing); }
+
+	auto almostEqual = [](float a, float b) {
+		constexpr float ep = 0.01F;
+		return (b-ep < a && a < b+ep); };
 
 
 	// cout << "=========== data ============\n";
-	const float expected_accuracy = 0.01F;
-	for (int yy = 0; yy < height; yy++) {
-		for (int xx = 0; xx < width; xx++) {
+	for (int yy = 0; yy < h; yy++) {
+		for (int xx = 0; xx < w; xx++) {
 			auto px = cbc.get_pixel(xx, yy);
 
-			int iu = int(px.x + expected_accuracy);
-			int iv = int(px.y + expected_accuracy);
+			// expected values
+			auto ex =   xx   + 0.5F;
+			auto ey = (h-yy) - 0.5F;
 
-			//float dx = float(xx) - px.x;
-			//float dy = float(height - yy) - px.y;
-			//cout << "(" << dx << "," << dy << ") ";
-			// cout << "(" << int(px.x+0.01f) << "," << int(px.y+0.01f) << ") ";
-			if (iu != xx) {
-				// verify U is 0,1,2,3,4,5,6,7 from lef to right
+			// cerr << "xx(" << xx << ") yy(" << yy << ") px(" << px.x << ", " << px.y << ") expected(" << ex << ", " << ey << ")\n";
+
+			if (!almostEqual(px.x, ex)) {
+				// verify U is [0.5 1.5, 2.5, ... w-0.5] left to right
 				return false; }
-			if (iv != (height - yy)) {
-				// verify V is 8,7,6,5,4,3,2,1 from top to bottom
+			if (!almostEqual(px.y, ey)) {
+				// verify V is [h-0.5, ... 2.5, 1.5, 0.5] top to bottom
 				return false; }
 		}
-		//cout << "\n";
+		//cerr << "\n";
 	}
 	return true; }
 

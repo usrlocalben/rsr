@@ -9,9 +9,9 @@
 namespace rqdq {
 namespace rglr {
 
-void FillAll(QFloatCanvas& dst, float value);
-void FillAll(QFloat3Canvas& dst, rmlv::vec3 value);
-void FillAll(QFloat4Canvas& dst, rmlv::vec4 value);
+void Fill(QFloatCanvas& dst, float value);
+void Fill(QFloat3Canvas& dst, rmlv::vec3 value);
+void Fill(QFloat4Canvas& dst, rmlv::vec4 value);
 
 void Fill(QFloatCanvas& dst, float value, rmlg::irect rect);
 void Fill(QFloat4Canvas& dst, rmlv::vec4 value, rmlg::irect rect);

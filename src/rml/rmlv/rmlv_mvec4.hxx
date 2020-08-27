@@ -578,7 +578,25 @@ auto select_by_sign(mvec4f a, mvec4f b, mvec4f mask) -> mvec4f {
 
 inline
 auto oneover(mvec4f a) -> mvec4f {
-	return _mm_rcp_ps(a.v); }
+	__m128 res;
+
+	// IEEE 
+#if 0
+	res = _mm_div_ps(_mm_set1_ps(1.0F), a.v);
+#endif
+
+	// SSE approx
+#if 0
+	res = _mm_rcp_ps(a.v);
+#endif
+
+	// approx + one NR iter
+#if 1
+	res = _mm_rcp_ps(a.v);
+	__m128 muls = _mm_mul_ps(a.v, _mm_mul_ps(res, res));
+	res = _mm_sub_ps(_mm_add_ps(res, res), muls);
+#endif
+	return res; }
 
 inline
 auto pow(mvec4f x, mvec4f y) -> mvec4f {

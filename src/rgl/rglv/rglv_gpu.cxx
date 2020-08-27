@@ -301,17 +301,17 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 					std::exit(1); }
 				const auto fillValue = rmlv::vec4{ stateptr->clearColor.xyz(), stateptr->clearDepth };
 				rglr::QFloat4Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat4*>(color0BufPtr), 64 };
-				FillAll(cc, fillValue); }
+				Fill(cc, fillValue); }
 			else {
 				if ((bits&GL_COLOR_BUFFER_BIT) != 0) {
 					if (stateptr->color0AttachmentType == RB_RGBF32) {
 						const auto fillValue = stateptr->clearColor.xyz();
 						rglr::QFloat3Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat3*>(color0BufPtr), 64 };
-						FillAll(cc, fillValue); }
+						Fill(cc, fillValue); }
 					else if (stateptr->color0AttachmentType == RB_RGBAF32) {
 						const auto fillValue = stateptr->clearColor;
 						rglr::QFloat4Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat4*>(color0BufPtr), 64 };
-						FillAll(cc, fillValue); }
+						Fill(cc, fillValue); }
 					else {
 						std::cerr << "can't clear color buffer of type RB " << stateptr->color0AttachmentType << "\n";
 						std::exit(1); }}
@@ -319,7 +319,7 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 					if (stateptr->depthAttachmentType == RB_F32) {
 						const auto fillValue = stateptr->clearDepth;
 						rglr::QFloatCanvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, static_cast<rmlv::qfloat*>(depthBufPtr), 64 };
-						FillAll(cc, fillValue); }
+						Fill(cc, fillValue); }
 					else {
 						std::cerr << "can't clear depth buffer of type RB " << stateptr->depthAttachmentType << "\n";
 						std::exit(1); }}}}

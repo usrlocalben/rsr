@@ -27,7 +27,7 @@ void Fill(QFloatCanvas& dst, const float value, const rmlg::irect rect) {
 
 // xxx this Fill ignores _rect_ and assumes that the canvas _dst_
 // is a tile
-void FillAll(QFloatCanvas& dst, const float value) { //, const rmlg::irect) {
+void Fill(QFloatCanvas& dst, const float value) { //, const rmlg::irect) {
 	const __m128 vvvv   = _mm_set1_ps(value);
 
 	auto dstLeft = dst.data();
@@ -41,7 +41,7 @@ void FillAll(QFloatCanvas& dst, const float value) { //, const rmlg::irect) {
 			QFloatCanvas::Store(vvvv, p); }}}
 
 
-void FillAll(QFloat4Canvas& dst, const rmlv::vec4 value) { //, const rmlg::irect) {
+void Fill(QFloat4Canvas& dst, const rmlv::vec4 value) { //, const rmlg::irect) {
 	const __m128 red   = _mm_set1_ps(value.x);
 	const __m128 green = _mm_set1_ps(value.y);
 	const __m128 blue  = _mm_set1_ps(value.z);
@@ -58,7 +58,7 @@ void FillAll(QFloat4Canvas& dst, const rmlv::vec4 value) { //, const rmlg::irect
 			QFloat4Canvas::Store(red, green, blue, alpha, p); }}}
 
 
-void FillAll(QFloat3Canvas& dst, const rmlv::vec3 value) { //, const rmlg::irect) {
+void Fill(QFloat3Canvas& dst, const rmlv::vec3 value) { //, const rmlg::irect) {
 	const __m128 red   = _mm_set1_ps(value.x);
 	const __m128 green = _mm_set1_ps(value.y);
 	const __m128 blue  = _mm_set1_ps(value.z);
