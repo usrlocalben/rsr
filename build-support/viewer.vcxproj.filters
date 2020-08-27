@@ -1,31 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="$(SolutionDir)\src\viewer\main.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\app.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\compile.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\cpu_colors.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\jobsys_vis.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\resource.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\shaders.cxx" />
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\base.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_auraforlaura.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_carpet.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_foo.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_mc.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_xyquad.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
     <ClCompile Include="$(SolutionDir)\src\ral\ralio\ralio_audio_controller.cxx">
       <Filter>ral</Filter>
     </ClCompile>
@@ -52,9 +27,6 @@
     </ClCompile>
     <ClCompile Include="$(SolutionDir)\src\rcl\rclx\rclx_jsonfile.cxx">
       <Filter>rcl</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_blend.cxx">
-      <Filter>rgl</Filter>
     </ClCompile>
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_canvas.cxx">
       <Filter>rgl</Filter>
@@ -158,86 +130,77 @@
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_vec.cxx">
       <Filter>rml</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\computed.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\gllayer.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\gpu.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\group.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\image.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\layer_select.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\material.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\multivalue.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\orthographic.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\perspective.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\render.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\rendertotexture.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\translate.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\uicamera.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\value.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_camera.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_gl.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_gpu.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_layer.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_material.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_texture.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_value.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_output.cxx">
-      <Filter>node</Filter>
-    </ClCompile>
     <ClCompile Include="$(SolutionDir)\src\rml\rmlg\rmlg_noise.cxx">
       <Filter>rml</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\noise.cxx">
-      <Filter>node</Filter>
+    <ClCompile Include="$(SolutionDir)\src\viewer\shaders.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\resource.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\main.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\jobsys_vis.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\cpu_colors.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\compile.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\app.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gpu_shaders.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_icosphere.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_interpolate.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_view_frustum.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlm\rmlm_mat4.t.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlm\rmlm_matrixstack.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlm\rmlm_soa.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmls\rmls_bench.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\base.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\buffers.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\computed.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_auraforlaura.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_foo.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_many.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_mc.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\gllayer.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\glow.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\gpu.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\group.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_camera.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_canvas.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_gl.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_gpu.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_layer.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_material.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_output.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_texture.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_value.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\image.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\kawase.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\layer_select.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\material.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\multivalue.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\noise.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\orthographic.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\perspective.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\plane.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\rendertotexture.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\translate.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\truecolor.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\uicamera.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\value.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_algorithm.cxx">
+      <Filter>rgl</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="node">
-      <UniqueIdentifier>{4b7e2372-69d2-4e28-a380-de24da1bcd94}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ral">
       <UniqueIdentifier>{e3bad9c3-5c68-44bf-9110-402188ce1226}</UniqueIdentifier>
     </Filter>
@@ -249,6 +212,12 @@
     </Filter>
     <Filter Include="rml">
       <UniqueIdentifier>{a3d625e4-da2e-471c-992e-17da3668ec6a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="viewer">
+      <UniqueIdentifier>{5c5793ee-7af8-4f65-a5fd-a5e248890638}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="viewer\node">
+      <UniqueIdentifier>{4b7e2372-69d2-4e28-a380-de24da1bcd94}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
