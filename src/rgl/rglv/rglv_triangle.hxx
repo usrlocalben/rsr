@@ -85,11 +85,13 @@ public:
 
 		auto Ceil = [](int x) -> int {
 			return (x + FP_MASK) >> FP_BITS; };
+		auto Floor = [](int x) -> int {
+			return x >> FP_BITS; };
 
-		int minx = max(Ceil(rmlv::Min(x1, x2, x3)), rect_.left.x);
-		int endx = min(Ceil(rmlv::Max(x1, x2, x3)), rect_.right.x);
-		int miny = max(Ceil(rmlv::Min(y1, y2, y3)), rect_.top.y);
-		int endy = min(Ceil(rmlv::Max(y1, y2, y3)), rect_.bottom.y);
+		int minx = max(Floor(rmlv::Min(x1, x2, x3)), rect_.left.x);
+		int endx = min( Ceil(rmlv::Max(x1, x2, x3)), rect_.right.x);
+		int miny = max(Floor(rmlv::Min(y1, y2, y3)), rect_.top.y);
+		int endy = min( Ceil(rmlv::Max(y1, y2, y3)), rect_.bottom.y);
 		minx &= ~(q - 1); // align to 2x2 block
 		miny &= ~(q - 1);
 
@@ -98,12 +100,12 @@ public:
 		int64_t dx31 = x3-x1, dy31 = y1-y3;
 
 		// setup edge values at the starting point
-		int64_t sx = minx<<FP_BITS;
-		int64_t sy = miny<<FP_BITS;
-		const int64_t offset = FP_HALF;
-		int64_t c1 = dy12*(sx-x1+offset) + dx12*(sy-y1+offset);
-		int64_t c2 = dy23*(sx-x2+offset) + dx23*(sy-y2+offset);
-		int64_t c3 = dy31*(sx-x3+offset) + dx31*(sy-y3+offset);
+		// offset by FP_HALF to evaluate pixel centers
+		int64_t sx = (minx<<FP_BITS) + FP_HALF;
+		int64_t sy = (miny<<FP_BITS) + FP_HALF;
+		int64_t c1 = dy12*(sx-x1) + dx12*(sy-y1);
+		int64_t c2 = dy23*(sx-x2) + dx23*(sy-y2);
+		int64_t c3 = dy31*(sx-x3) + dx31*(sy-y3);
 
 		// correct for top-left fill
 #if 1
