@@ -30,7 +30,7 @@
 		"fov": 55.0}},
 
 	{"$translate": {"id": "nAmy",
-		"translate": {"$vec3": {"x": 12.5, "y": 4.5, "z": 1.0}},
+		"translate": {"$vec3": {"x": 12.5, "y": 4.5, "z": 0.999}},
 		"gl": {"$translate": {
 			"scale": {"$vec3": {"x": 9.0, "y": 9.0, "z": 1.0}},
 			"gl": {"$plane": {"material": "mAmy"}}}}}},
