@@ -17,9 +17,10 @@ namespace rglv {
  *   x/w, y/w, z/w, 1/w
  */
 inline rmlv::qfloat4 pdiv(rmlv::qfloat4 p) {
-	__m128 invw = _mm_rcp_ps(p.w.v);
+	auto iw = oneover(p.w);
+	//__m128 iw = _mm_rcp_ps(p.w.v);
 	//__m128 r1 = _mm_div_ps(_mm_set1_ps(1.0f), p.w.v);
-	return{ p.x * invw, p.y * invw, p.z * invw, invw }; }
+	return{ p.x * iw, p.y * iw, p.z * iw, iw }; }
 
 /*
  * Perspective Divide (scalar version)
@@ -27,11 +28,15 @@ inline rmlv::qfloat4 pdiv(rmlv::qfloat4 p) {
  * float operations _must_ match SoA version !
  */
 inline rmlv::vec4 pdiv(rmlv::vec4 p) {
-	float invw;
-	_mm_store_ss(&invw, _mm_rcp_ss(_mm_set_ss(p.w)));
-	// auto bias_z = 0.5F * (p.z * invw) + 0.5F;
-	// return rmlv::vec4{ p.x*invw, p.y*invw, bias_z, invw };
-	return rmlv::vec4{ p.x*invw, p.y*invw, p.z*invw, invw }; }
+
+	float iw = oneover(rmlv::mvec4f(p.w)).get_x();
+
+	// float iw;
+	// _mm_store_ss(&iw, _mm_rcp_ss(_mm_set_ss(p.w)));
+
+	// auto bias_z = 0.5F * (p.z * iw) + 0.5F;
+	// return rmlv::vec4{ p.x*iw, p.y*iw, bias_z, iw };
+	return rmlv::vec4{ p.x*iw, p.y*iw, p.z*iw, iw }; }
 
 
 inline rmlv::vec3 reflect(rmlv::vec3 i, rmlv::vec3 n) {
