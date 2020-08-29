@@ -52,12 +52,12 @@ extern bool doubleBuffer;
 
 struct ClippedVertex {
 	rmlv::vec4 coord;  // either clip-coord or device-coord
-	std::uint8_t data[64]; };
+	std::byte data[64]; };
 
 
 struct ThreadStat {
 	std::vector<int> tiles;
-	uint8_t padding[64 - sizeof(std::vector<int>)];
+	std::byte padding[64 - sizeof(std::vector<int>)];
 
 	void Reset() {
 		tiles.clear(); } };
@@ -717,8 +717,6 @@ class GPUBinImpl : GPU {
 		const auto scissorRect = ScissorRect(state);
 
 		const auto [DS, DO] = DSDO(state);
-		const auto one = rmlv::mvec4f{ 1.0F };
-		const auto _1 = rmlv::qfloat2{ one, one };
 
 		if (!INSTANCED) {
 			// coding error if this is not true
@@ -829,8 +827,6 @@ class GPUBinImpl : GPU {
 		// XXX workaround for lambda-capture of vars from structured binding
 		rmlv::qfloat2 DS, DO; std::tie(DS, DO) = DSDO(state);
 		// const auto [DS, DO] = DSDO(state);
-		const auto one = rmlv::mvec4f{ 1.0F };
-		const auto _1 = rmlv::qfloat2{ one, one };
 
 		const auto scissorRect = ScissorRect(state);
 
@@ -1117,15 +1113,14 @@ class GPUTileImpl : GPU {
 		// XXX workaround for lambda-capture of vars from structured binding
 		rmlv::qfloat2 DS, DO; std::tie(DS, DO) = DSDO(state);
 		// const auto [DS, DO] = DSDO(state);
-		const auto _1 = rmlv::mvec4f{ 1.0F };
 
 		const auto matrices = MakeMatrices(state);
 		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(uniformsPtr));
 
 		using sampler = const rglr::TextureUnit*;
 
-		__declspec(align(64)) std::byte tu0mem[128];
-		__declspec(align(64)) std::byte tu1mem[128];
+		alignas(64) std::byte tu0mem[128];
+		alignas(64) std::byte tu1mem[128];
 		const auto tu0 = rglr::MakeTextureUnit(reinterpret_cast<const float*>(state.tus[0].ptr), state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter, &tu0mem);
 		const auto tu1 = rglr::MakeTextureUnit(reinterpret_cast<const float*>(state.tus[1].ptr), state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter, &tu1mem);
 		const auto tu3 = rglr::DepthTextureUnit(state.tu3ptr, state.tu3dim);
@@ -1233,8 +1228,8 @@ class GPUTileImpl : GPU {
 		auto& data2 = *reinterpret_cast<typename SHADER::VertexOutputSD*>(&(clippedVertexBuffer1_[i2].data));
 
 		using sampler = const rglr::TextureUnit*;
-		__declspec(align(64)) std::byte tu0mem[128];
-		__declspec(align(64)) std::byte tu1mem[128];
+		alignas(64) std::byte tu0mem[128];
+		alignas(64) std::byte tu1mem[128];
 		const auto tu0 = rglr::MakeTextureUnit(reinterpret_cast<const float*>(state.tus[0].ptr), state.tus[0].width, state.tus[0].height, state.tus[0].stride, state.tus[0].filter, &tu0mem);
 		const auto tu1 = rglr::MakeTextureUnit(reinterpret_cast<const float*>(state.tus[1].ptr), state.tus[1].width, state.tus[1].height, state.tus[1].stride, state.tus[1].filter, &tu1mem);
 		const auto tu3 = rglr::DepthTextureUnit(state.tu3ptr, state.tu3dim);

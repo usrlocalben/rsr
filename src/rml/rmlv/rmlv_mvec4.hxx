@@ -350,14 +350,14 @@ inline auto mvec4f::operator/=(float rhs) -> mvec4f& { v = _mm_div_ps(v, _mm_set
 // ACCESSORS
 inline
 auto mvec4f::as_vec2() const -> vec2 {
-	__declspec(align(16)) float tmp[4];
-	_mm_store_ps(reinterpret_cast<float*>(tmp), v);
+	alignas(16) float tmp[4];
+	_mm_store_ps(tmp, v);
 	return vec2{ tmp[0], tmp[1] }; }
 
 inline
 auto mvec4f::as_vec3() const -> vec3 {
-	__declspec(align(16)) float tmp[4];
-	_mm_store_ps(reinterpret_cast<float*>(tmp), v);
+	alignas(16) float tmp[4];
+	_mm_store_ps(tmp, v);
 	return vec3{ tmp[0], tmp[1], tmp[2] }; }
 
 inline
@@ -466,8 +466,8 @@ inline
 auto load_interleaved_lut(const float *bp,
                           mvec4i ofs,
                           mvec4f& v0, mvec4f& v1, mvec4f& v2, mvec4f& v3) -> void {
-	__declspec(align(32)) int idx[4];
-	_mm_store_si128(reinterpret_cast<__m128i*>(&idx[0]), ofs.v);
+	alignas(16) int idx[4];
+	_mm_store_si128(reinterpret_cast<__m128i*>(idx), ofs.v);
 	v0 = _mm_load_ps(bp + idx[0]);
 	v1 = _mm_load_ps(bp + idx[1]);
 	v2 = _mm_load_ps(bp + idx[2]);
