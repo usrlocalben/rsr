@@ -1059,10 +1059,10 @@ class GPUBinImpl : GPU {
 		const ivec2 idev1{ dc1 };
 		const ivec2 idev2{ dc2 };
 
-		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x), rect.top_left.x);
-		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y), rect.top_left.y);
-		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x), rect.bottom_right.x-1);
-		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y), rect.bottom_right.y-1);
+		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x),   rect.top_left.x);
+		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y),   rect.top_left.y);
+		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x)+1, rect.bottom_right.x-1);
+		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y)+1, rect.bottom_right.y-1);
 
 		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
 		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;
