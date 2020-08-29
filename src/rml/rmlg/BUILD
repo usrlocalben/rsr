@@ -18,6 +18,7 @@ cc_library(
     hdrs = ["rmlg_triangle.hxx"],
     deps = [
         "//src/rml/rmlv:vec",
+        "//src/rml/rmlv:soa",
         ],
     copts = RSR_DEFAULT_COPTS,
     )

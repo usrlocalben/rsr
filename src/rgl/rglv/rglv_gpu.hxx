@@ -776,7 +776,7 @@ class GPUBinImpl : GPU {
 				auto dc2 = rmlv::vec2{ devCoordXBuffer_.data()[i2], devCoordYBuffer_.data()[i2] };
 
 				// handle backfacing tris and culling
-				const bool backfacing = rmlg::triangle2Area(dc0, dc1, dc2) < 0;
+				const bool backfacing = rmlg::Area(dc0, dc1, dc2) < 0;
 				if (backfacing) {
 					if (cullingEnabled && cullFace == GL_BACK) {
 						stats0_.totalTrianglesCulled++;
@@ -862,8 +862,10 @@ class GPUBinImpl : GPU {
 					qfloat4 gl_Position;
 					SHADER::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
 					clipFlags[i] = frustum.Test(gl_Position);
-					devCoord[i] = pdiv(gl_Position).xy() * DS + DO;
-					/* todo compute 4x triangle area here */ }
+					devCoord[i] = pdiv(gl_Position).xy() * DS + DO; }
+
+				auto area2 = rmlg::Area(devCoord[0], devCoord[1], devCoord[2]);
+				auto backfacing = float2bits(cmplt(area2, rmlv::mvec4f::zero()));
 
 				for (int ti{0}; ti<li; ++ti) {
 					stats0_.totalTrianglesSubmitted++;
@@ -889,8 +891,7 @@ class GPUBinImpl : GPU {
 						clipQueue_.push_back({ iid, i0, i1, i2 });
 						continue; }
 
-					const bool backfacing = rmlg::triangle2Area(dc0, dc1, dc2) < 0;
-					if (backfacing) {
+					if (backfacing.ui[ti]) {
 						if (cullingEnabled && cullFace == GL_BACK) {
 							stats0_.totalTrianglesCulled++;
 							continue; }
@@ -1027,7 +1028,7 @@ class GPUBinImpl : GPU {
 			// end of phase 2: poly contains a clipped N-gon
 
 			// check direction, maybe cull, maybe reorder
-			const bool backfacing = rmlg::triangle2Area(clipA_[0].coord, clipA_[1].coord, clipA_[2].coord) < 0;
+			const bool backfacing = rmlg::Area(clipA_[0].coord.xy(), clipA_[1].coord.xy(), clipA_[2].coord.xy()) < 0;
 			bool willCull = true;
 			if (backfacing) {
 				if (state.cullingEnabled == false || ((state.cullFace & GL_BACK) == 0)) {
