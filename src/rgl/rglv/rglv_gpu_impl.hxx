@@ -555,10 +555,17 @@ class GPUBinImpl : GPU {
 						clipB_.push_back(here); }
 
 					if (hereIsInside != nextIsInside) {
-						hereIsInside = !hereIsInside;
-						const float d = frustum.Distance(plane, here.coord, next.coord);
-						auto newVertex = CVMix(here, next, d);
-						clipB_.emplace_back(newVertex); }}
+                        // making transition across plane
+                        // to avoid cracks between adjacent faces, the new
+                        // vertex must be computed using the same direction
+                        // across the plane
+                        auto& fromVertex = hereIsInside ? here : next;
+                        auto& toVertex = hereIsInside ? next : here;
+                        float d = frustum.Distance(plane, fromVertex.coord, toVertex.coord);
+                        auto newVertex = CVMix(fromVertex, toVertex, d);
+                        clipB_.emplace_back(newVertex);
+
+						hereIsInside = !hereIsInside; }}
 
 				swap(clipA_, clipB_);
 				if (clipA_.size() == 0) {
