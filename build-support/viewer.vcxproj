@@ -180,9 +180,11 @@
     <ClCompile Include="$(SolutionDir)\src\rcl\rclx\rclx_gason_util.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rcl\rclx\rclx_jsonfile.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_algorithm.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_blend.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_canvas.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_canvas_util.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_display_mode.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_fragmentcursor.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_kawase.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_pixeltoaster_util.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglr\rglr_profont.cxx" />
@@ -195,6 +197,7 @@
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_fragment.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gl.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gpu.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gpu_impl.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gpu_protocol.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_gpu_shaders.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_icosphere.cxx" />
@@ -205,6 +208,7 @@
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_math.t.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_mesh.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_mesh_store.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_mesh_util.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_obj.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_packed_stream.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rgl\rglv\rglv_packed_stream.t.cxx" />
@@ -219,10 +223,13 @@
     <ClCompile Include="$(SolutionDir)\src\rml\rmlm\rmlm_matrixstack.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlm\rmlm_soa.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmls\rmls_bench.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_math.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_mmutil.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_mvec4.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_soa.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_soa.t.cxx" />
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_vec.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_vec.t.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\app.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\compile.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\cpu_colors.cxx" />
