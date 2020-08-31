@@ -8,6 +8,7 @@
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
 #include "src/rgl/rglv/rglv_mesh.hxx"
+#include "src/rgl/rglv/rglv_mesh_util.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/viewer/compile.hxx"
 #include "src/viewer/shaders.hxx"

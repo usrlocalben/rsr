@@ -151,7 +151,6 @@ cc_library(
         "//src/rcl/rcls:aligned_containers",
         "//src/rcl/rcls:file",
         "//src/rml/rmlg:pow2",
-        "//src/rml/rmlv:mvec4",
         "//src/rml/rmlv:vec",
         ":texture",
         ],

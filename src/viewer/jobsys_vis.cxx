@@ -1,5 +1,7 @@
 #include "jobsys_vis.hxx"
 
+#include <array>
+
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
 

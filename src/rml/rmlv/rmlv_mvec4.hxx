@@ -1,4 +1,5 @@
 #pragma once
+#include "src/rml/rmlv/rmlv_math.hxx"
 #include "src/rml/rmlv/rmlv_mmutil.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 

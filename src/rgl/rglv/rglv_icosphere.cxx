@@ -8,6 +8,7 @@
 
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
+#include "src/rml/rmlv/rmlv_math.hxx"
 
 namespace rqdq {
 namespace rglv {

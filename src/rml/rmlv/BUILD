@@ -13,6 +13,16 @@ cc_library(
     )
 
 cc_library(
+    name = "math",
+    srcs = ["rmlv_math.cxx"],
+    hdrs = ["rmlv_math.hxx"],
+    deps = [
+        ":vec",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
     name = "mvec4",
     srcs = ["rmlv_mvec4.cxx"],
     hdrs = ["rmlv_mvec4.hxx"],
@@ -20,6 +30,7 @@ cc_library(
         "//3rdparty/sse-pow",
         "//src/rml/rmlv:mmutil",
         "//src/rml/rmlv:vec",
+        ":math",
         ],
     copts = RSR_DEFAULT_COPTS,
     )

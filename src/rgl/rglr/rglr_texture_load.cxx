@@ -8,7 +8,6 @@
 #include "src/rcl/rcls/rcls_file.hxx"
 #include "src/rgl/rglr/rglr_texture.hxx"
 #include "src/rml/rmlg/rmlg_pow2.hxx"
-#include "src/rml/rmlv/rmlv_mvec4.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
 #include "3rdparty/fmt/include/fmt/format.h"

@@ -129,11 +129,24 @@ cc_library(
     srcs = ["rglv_mesh.cxx"],
     hdrs = ["rglv_mesh.hxx"],
     deps = [
+        "//src/rcl/rclr:algorithm",
+        "//src/rml/rmlv:math",
+        "//src/rml/rmlv:vec",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )
+
+cc_library(
+    name = "mesh_util",
+    srcs = ["rglv_mesh_util.cxx"],
+    hdrs = ["rglv_mesh_util.hxx"],
+    deps = [
         "//3rdparty/tuple_hash",
         "//src/rcl/rclr:algorithm",
         "//src/rcl/rcls:aligned_containers",
+        "//src/rgl/rglv:vao",
         "//src/rml/rmlv:vec",
-        ":vao",
+        ":mesh",
         ],
     copts = RSR_DEFAULT_COPTS,
     )
@@ -304,6 +317,7 @@ cc_library(
     srcs = ["rglv_icosphere.cxx"],
     hdrs = ["rglv_icosphere.hxx"],
     deps = [
+        "//src/rml/rmlv:math",
         "//src/rml/rmlv:vec",
         "//src/rcl/rcls:aligned_containers",
         ],
