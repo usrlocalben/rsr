@@ -139,6 +139,7 @@ cc_library(
         "//src/rgl/rglr:fragmentcursor",
         "//src/rgl/rglv:gl",
         "//src/rgl/rglv:gpu",
+        "//src/rgl/rglv:gpu_impl",
         "//src/rml/rmlm:mat4",
         "//src/viewer:compile",
         ":base",

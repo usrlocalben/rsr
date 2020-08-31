@@ -3,6 +3,7 @@
 
 #include "src/rgl/rglr/rglr_fragmentcursor.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_gpu_impl.hxx"
 
 
 namespace rqdq {

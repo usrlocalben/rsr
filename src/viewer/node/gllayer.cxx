@@ -11,6 +11,7 @@
 #include "src/rgl/rglr/rglr_fragmentcursor.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
+#include "src/rgl/rglv/rglv_gpu_impl.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/viewer/compile.hxx"
 #include "src/viewer/node/base.hxx"
