@@ -157,3 +157,15 @@ cc_library(
         ],
     copts = RSR_DEFAULT_COPTS,
     )
+
+cc_library(
+    name = "fragmentcursor",
+    srcs = ["rglr_fragmentcursor.cxx"],
+    hdrs = ["rglr_fragmentcursor.hxx"],
+    deps = [
+        "//src/rgl/rglr:canvas",
+        "//src/rml/rmlv:soa",
+        "//src/rml/rmlv:vec",
+        ],
+    copts = RSR_DEFAULT_COPTS,
+    )

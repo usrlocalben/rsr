@@ -172,10 +172,11 @@ cc_library(
     srcs = ["shaders.cxx"],
     hdrs = ["shaders.hxx"],
     deps = [
+        "//src/rgl/rglr:fragmentcursor",
         "//src/rgl/rglv:fragment",
         "//src/rgl/rglv:gpu",
-        "//src/rgl/rglv:gpu_shaders",
         "//src/rgl/rglv:gpu_protocol",
+        "//src/rgl/rglv:gpu_shaders",
         "//src/rgl/rglv:interpolate",
         "//src/rgl/rglv:math",
         "//src/rgl/rglv:triangle",
