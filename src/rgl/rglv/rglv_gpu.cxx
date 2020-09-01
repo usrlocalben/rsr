@@ -271,8 +271,8 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 	FastPackedReader cs{ ReadRange(tileIdx).first };
 	int cmdCnt = 0;
 
-	const GLState* stateptr = nullptr;
-	const void* uniformptr = nullptr;
+	const GLState* stateptr{nullptr};
+	const void* uniformptr{nullptr};
 	void* eColor0{nullptr};
 	void* eDepth{nullptr};
 

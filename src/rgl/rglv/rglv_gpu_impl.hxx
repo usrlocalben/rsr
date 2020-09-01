@@ -302,7 +302,7 @@ class GPUBinImpl : GPU {
 				                               devCoordYBuffer_.data() + vi); }
 
 			for (int ti=0; ti<count; ti+=3) {
-				stats0_.totalTrianglesSubmitted++;
+				stats0_.totalPrimitivesSubmitted++;
 
 				auto i0 = static_cast<uint16_t>(indexSource(ti));
 				auto i1 = static_cast<uint16_t>(indexSource(ti+1));
@@ -315,7 +315,7 @@ class GPUBinImpl : GPU {
 				if (cf0 | cf1 | cf2) {
 					if (cf0 & cf1 & cf2) {
 						// all points outside of at least one plane
-						stats0_.totalTrianglesCulled++;
+						stats0_.totalPrimitivesCulled++;
 						continue; }
 					// queue for clipping
 					clipQueue_.push_back({ iid, i0, i1, i2 });
@@ -329,14 +329,14 @@ class GPUBinImpl : GPU {
 				const bool backfacing = rmlg::Area(dc0, dc1, dc2) < 0;
 				if (backfacing) {
 					if (cullingEnabled && cullFace == GL_BACK) {
-						stats0_.totalTrianglesCulled++;
+						stats0_.totalPrimitivesCulled++;
 						continue; }
 					// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
 					swap(i0, i2);
 					i0 |= 0x8000; }  // add backfacing flag
 				else {
 					if (cullingEnabled && cullFace == GL_FRONT) {
-						stats0_.totalTrianglesCulled++;
+						stats0_.totalPrimitivesCulled++;
 						continue; }}
 
 				ForEachCoveredTile(scissorRect, dc0, dc1, dc2, [&](uint8_t** th) {
@@ -357,7 +357,7 @@ class GPUBinImpl : GPU {
 				// that weren't covered by this draw
 				Unappend(&h, 1); }}
 
-		stats0_.totalTrianglesClipped = static_cast<int>(clipQueue_.size());
+		stats0_.totalPrimitivesClipped = static_cast<int>(clipQueue_.size());
 		if (!clipQueue_.empty()) {
 			bin_DrawElementsClipped<INSTANCED>(state); }}
 
@@ -416,7 +416,7 @@ class GPUBinImpl : GPU {
 				auto backfacing = float2bits(cmplt(area2, rmlv::mvec4f::zero()));
 
 				for (int ti{0}; ti<li; ++ti) {
-					stats0_.totalTrianglesSubmitted++;
+					stats0_.totalPrimitivesSubmitted++;
 
 					auto cf0 = clipFlags[0].si[ti];
 					auto cf1 = clipFlags[1].si[ti];
@@ -433,7 +433,7 @@ class GPUBinImpl : GPU {
 					if (cf0 | cf1 | cf2) {
 						if (cf0 & cf1 & cf2) {
 							// all points outside of at least one plane
-							stats0_.totalTrianglesCulled++;
+							stats0_.totalPrimitivesCulled++;
 							continue; }
 						// queue for clipping
 						clipQueue_.push_back({ iid, i0, i1, i2 });
@@ -441,13 +441,13 @@ class GPUBinImpl : GPU {
 
 					if (backfacing.ui[ti]) {
 						if (cullingEnabled && cullFace == GL_BACK) {
-							stats0_.totalTrianglesCulled++;
+							stats0_.totalPrimitivesCulled++;
 							continue; }
 						swap(i0, i2);
 						i0 |= 0x8000; }  // add backfacing flag
 					else {
 						if (cullingEnabled && cullFace == GL_FRONT) {
-							stats0_.totalTrianglesCulled++;
+							stats0_.totalPrimitivesCulled++;
 							continue; }}
 
 					ForEachCoveredTile(scissorRect, dc0, dc1, dc2, [&](uint8_t** th) {
@@ -462,7 +462,7 @@ class GPUBinImpl : GPU {
 				li = 0; };
 
 			for (int ti=0; ti<count; ti+=3) {
-				stats0_.totalTrianglesSubmitted++;
+				stats0_.totalPrimitivesSubmitted++;
 
 				auto i0 = static_cast<uint16_t>(indexSource(ti));
 				auto i1 = static_cast<uint16_t>(indexSource(ti+1));
@@ -485,7 +485,7 @@ class GPUBinImpl : GPU {
 				// that weren't covered by this draw
 				Unappend(&h, 1); }}
 
-		stats0_.totalTrianglesClipped = static_cast<int>(clipQueue_.size());
+		stats0_.totalPrimitivesClipped = static_cast<int>(clipQueue_.size());
 		if (!clipQueue_.empty()) {
 			bin_DrawElementsClipped<INSTANCED>(state); }}
 

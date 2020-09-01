@@ -56,10 +56,10 @@ struct GPUStats {
 	int totalTileCommandBytes;
 	int minTileCommandBytes;
 	int maxTileCommandBytes;
-	int totalTrianglesSubmitted;
-	int totalTrianglesCulled;
-	int totalTrianglesClipped;
-	int totalTrianglesDrawn; };
+	int totalPrimitivesSubmitted;
+	int totalPrimitivesCulled;
+	int totalPrimitivesClipped;
+	int totalPrimitivesDrawn; };
 
 
 struct TileStat {
@@ -71,7 +71,7 @@ inline void PrintStatistics(const GPUStats& stats) {
 	fmt::printf("tiles: % 4d   commands: % 4d   states: % 4d\n", stats.totalTiles, stats.totalCommands, stats.totalStates);
 	fmt::printf("command bytes: %d\n", stats.totalCommandBytes);
 	fmt::printf("tile bytes total: %d, min: %d, max: %d\n", stats.totalTileCommandBytes, stats.minTileCommandBytes, stats.maxTileCommandBytes);
-	fmt::printf("triangles submitted: %d, culled: %d, clipped: %d, drawn: %d\n", stats.totalTrianglesSubmitted, stats.totalTrianglesCulled, stats.totalTrianglesClipped, stats.totalTrianglesDrawn); }
+	fmt::printf("primitives submitted: %d, culled: %d, clipped: %d, drawn: %d\n", stats.totalPrimitivesSubmitted, stats.totalPrimitivesCulled, stats.totalPrimitivesClipped, stats.totalPrimitivesDrawn); }
 
 
 class GPU;
