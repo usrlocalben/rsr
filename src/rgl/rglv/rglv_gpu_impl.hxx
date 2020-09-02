@@ -45,6 +45,13 @@ auto MakeMatrices(const rglv::GLState& s) -> rglv::Matrices {
 	m.vpm = rmlm::qmat4{ s.projectionMatrix * s.viewMatrix };
 	return m; }
 
+inline
+int FindAndClearLSB(uint32_t& x) {
+	unsigned long idx;
+	_BitScanForward(&idx, x);
+	x &= x - 1;
+	return idx; }
+
 }  // close unnamed namespace
 
 namespace rglv {
@@ -275,6 +282,10 @@ class GPUBinImpl : GPU {
 			// XXX could use constexpr instead of template param?
 			assert(instanceCnt == 1); }
 
+		inMem0_.reserve(count/3+4);
+		inMem1_.reserve(count/3+4);
+		inMem2_.reserve(count/3+4);
+
 		const auto cmd = INSTANCED ? CMD_DRAW_INLINE_INSTANCED : CMD_DRAW_INLINE;
 		for (auto& h : tilesHead_) {
 			AppendByte(&h, cmd);
@@ -301,6 +312,7 @@ class GPUBinImpl : GPU {
 				devCoord.template store<false>(devCoordXBuffer_.data() + vi,
 				                               devCoordYBuffer_.data() + vi); }
 
+			int numPrims{0};
 			for (int ti=0; ti<count; ti+=3) {
 				stats0_.totalPrimitivesSubmitted++;
 
@@ -321,31 +333,85 @@ class GPUBinImpl : GPU {
 					clipQueue_.push_back({ iid, i0, i1, i2 });
 					continue; }
 
-				auto dc0 = rmlv::vec2{ devCoordXBuffer_.data()[i0], devCoordYBuffer_.data()[i0] };
-				auto dc1 = rmlv::vec2{ devCoordXBuffer_.data()[i1], devCoordYBuffer_.data()[i1] };
-				auto dc2 = rmlv::vec2{ devCoordXBuffer_.data()[i2], devCoordYBuffer_.data()[i2] };
+				inMem0_[numPrims] = i0;
+				inMem1_[numPrims] = i1;
+				inMem2_[numPrims] = i2;
+				++numPrims; }
+
+			for (int i=0; i<4; ++i) {
+				inMem0_[numPrims+i] = 0;
+				inMem1_[numPrims+i] = 0;
+				inMem2_[numPrims+i] = 0; }
+
+			const auto keepBacks = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_BACK) ? 0 : -1 });
+			const auto keepFronts = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_FRONT) ? 0 : -1 });
+
+			int numLanes{4};
+			int laneMask{ (1<<4)-1 };
+			for (int pi=0; pi<numPrims; pi+=4) {
+				if (pi + 4 > numPrims) {
+					numLanes = numPrims - pi;
+					laneMask = (1<<numLanes)-1; }
+
+				rmlv::qfloat2 dc0, dc1, dc2;
+				int ii0[4], ii1[4], ii2[4];
+
+				// gather
+				for (int li=0; li<4; ++li) {
+					ii0[li] = inMem0_[pi+li];
+					ii1[li] = inMem1_[pi+li];
+					ii2[li] = inMem2_[pi+li];
+
+					dc0.setLane(li, { devCoordXBuffer_.data()[ii0[li]], devCoordYBuffer_.data()[ii0[li]] });
+					dc1.setLane(li, { devCoordXBuffer_.data()[ii1[li]], devCoordYBuffer_.data()[ii1[li]] });
+					dc2.setLane(li, { devCoordXBuffer_.data()[ii2[li]], devCoordYBuffer_.data()[ii2[li]] }); }
 
 				// handle backfacing tris and culling
-				const bool backfacing = rmlg::Area(dc0, dc1, dc2) < 0;
-				if (backfacing) {
-					if (cullingEnabled && cullFace == GL_BACK) {
-						stats0_.totalPrimitivesCulled++;
-						continue; }
-					// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
-					swap(i0, i2);
-					i0 |= 0x8000; }  // add backfacing flag
-				else {
-					if (cullingEnabled && cullFace == GL_FRONT) {
-						stats0_.totalPrimitivesCulled++;
-						continue; }}
+				auto area = rmlg::Area(dc0, dc1, dc2);
+				auto front = cmpgt(area, rmlv::mvec4f::zero());
 
-				ForEachCoveredTile(scissorRect, dc0, dc1, dc2, [&](uint8_t** th) {
-					if (INSTANCED) {
-						assert(0 <= iid && iid < 65536);
-						AppendUShort(th, static_cast<uint16_t>(iid));}
-					AppendUShort(th, static_cast<uint16_t>(i0));  // also includes backfacing flag
-					AppendUShort(th, static_cast<uint16_t>(i1));
-					AppendUShort(th, static_cast<uint16_t>(i2)); }); }
+				auto ix0 = ftoi(dc0.x), iy0 = ftoi(dc0.y);
+				auto ix1 = ftoi(dc1.x), iy1 = ftoi(dc1.y);
+				auto ix2 = ftoi(dc2.x), iy2 = ftoi(dc2.y);
+
+				//XXX auto& rect = scissorRect;
+				rmlv::mvec4i tlx{ scissorRect.top_left.x };
+				rmlv::mvec4i tly{ scissorRect.top_left.y };
+				rmlv::mvec4i brx{ scissorRect.bottom_right.x-1 };
+				rmlv::mvec4i bry{ scissorRect.bottom_right.y-1 };
+
+				auto vminx = vmax(vmin(ix0, vmin(ix1, ix2)), tlx);
+				auto vminy = vmax(vmin(iy0, vmin(iy1, iy2)), tly);
+				auto vmaxx = vmin(vmax(ix0, vmax(ix1, ix2)), brx);
+				auto vmaxy = vmin(vmax(iy0, vmax(iy1, iy2)), bry);
+
+				auto notCulled = andnot(front, keepBacks) | (front&keepFronts);
+				auto nonemptyX = bits2float(cmpgt(vmaxx, vminx));
+				auto nonemptyY = bits2float(cmpgt(vmaxy, vminy));
+				auto accept = notCulled & (nonemptyX & nonemptyY);
+
+				uint32_t good = _mm_movemask_ps(accept.v) & laneMask;
+
+				while (good) {
+					int li = FindAndClearLSB(good);
+
+					auto topLeft = ivec2{ vminx.si[li], vminy.si[li] } / tileDimensionsInPixels_;
+					auto bottomRight = ivec2{ vmaxx.si[li], vmaxy.si[li] } / tileDimensionsInPixels_;
+					int i0 = ii0[li];
+					int i1 = ii1[li];
+					int i2 = ii2[li];
+
+					int stride = bufferDimensionsInTiles_.x;
+					int tidRow = topLeft.y * stride;
+					for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
+						for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
+							auto th = &tilesHead_[tidRow + tx];
+							if (INSTANCED) {
+								assert(0 <= iid && iid < 65536);
+								AppendUShort(th, static_cast<uint16_t>(iid));}
+							AppendUShort(th, static_cast<uint16_t>(i0));
+							AppendUShort(th, static_cast<uint16_t>(i1));
+							AppendUShort(th, static_cast<uint16_t>(i2)); }}}}
 
 			}  // instance loop
 

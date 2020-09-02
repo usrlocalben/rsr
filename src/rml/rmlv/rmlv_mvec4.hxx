@@ -530,8 +530,11 @@ auto mix(const mvec4f &a, const mvec4f &b, const mvec4f& t) -> mvec4f {
 
 inline auto vmin(const mvec4f& a, const mvec4f& b) -> mvec4f { return _mm_min_ps(a.v, b.v); }
 inline auto vmax(const mvec4f& a, const mvec4f& b) -> mvec4f { return _mm_max_ps(a.v, b.v); }
+inline auto vmin(const mvec4i& a, const mvec4i& b) -> mvec4i { return _mm_min_epi32(a.v, b.v); }
+inline auto vmax(const mvec4i& a, const mvec4i& b) -> mvec4i { return _mm_max_epi32(a.v, b.v); }
 
 inline auto andnot(const mvec4i& a, const mvec4i& b) -> mvec4i { return mvec4i(_mm_andnot_si128(a.v, b.v)); }
+inline auto andnot(const mvec4f& a, const mvec4f& b) -> mvec4f { return mvec4f(_mm_andnot_ps(a.v, b.v)); }
 
 inline auto itof      (const mvec4i& a) -> mvec4f { return _mm_cvtepi32_ps(a.v); }
 inline auto ftoi_round(const mvec4f& a) -> mvec4i { return _mm_cvtps_epi32(a.v); }
