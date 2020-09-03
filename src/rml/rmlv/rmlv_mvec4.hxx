@@ -572,6 +572,18 @@ auto fract(mvec4f a) -> mvec4f {
 	}
 
 inline
+auto selectbits(mvec4i a, mvec4i b, mvec4i mask) -> mvec4f {
+	const mvec4i a2 = andnot(mask, a);  // keep bits in a where mask is 0000's
+	const mvec4i b2 = b & mask;         // keep bits in b where mask is 1111's
+	return bits2float(a2 | b2); }
+
+inline
+auto selectbitsi(mvec4i a, mvec4i b, mvec4i mask) -> mvec4i {
+	const mvec4i a2 = andnot(mask, a);  // keep bits in a where mask is 0000's
+	const mvec4i b2 = b & mask;         // keep bits in b where mask is 1111's
+	return a2|b2; }
+
+inline
 auto selectbits(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f {
 	const mvec4i a2 = andnot(mask, float2bits(a));  // keep bits in a where mask is 0000's
 	const mvec4i b2 = float2bits(b) & mask;         // keep bits in b where mask is 1111's
