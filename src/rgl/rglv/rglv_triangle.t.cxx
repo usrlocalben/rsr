@@ -82,7 +82,7 @@ struct TestTargetProgram {
 	                       rmlv::mvec4i fragMask) {
 		// auto addr = &db_[offs_];   // depthbuffer
 		auto addr = &(cb_[offs_].a);  // alpha-channel
-		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
+		auto result = SelectFloat(destDepth, sourceDepth, fragMask).v;
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
 
 	inline void LoadColor(rmlv::qfloat4& destColor) {
@@ -92,9 +92,9 @@ struct TestTargetProgram {
 	inline void StoreColor(rmlv::qfloat4 destColor,
 	                       rmlv::qfloat4 sourceColor,
 	                       rmlv::mvec4i fragMask) {
-		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
-		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
-		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
+		auto sr = SelectFloat(destColor.r, sourceColor.r, fragMask).v;
+		auto sg = SelectFloat(destColor.g, sourceColor.g, fragMask).v;
+		auto sb = SelectFloat(destColor.b, sourceColor.b, fragMask).v;
 		rglr::QFloat4Canvas::Store(sr, sg, sb, cb_+offs_); }
 
 	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord BS, const bool frontfacing) {

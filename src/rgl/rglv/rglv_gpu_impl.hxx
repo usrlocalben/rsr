@@ -33,6 +33,11 @@
 
 #include "3rdparty/fmt/include/fmt/printf.h"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4701) // used potentially uninitialized var
+#endif
+
 namespace rqdq {
 namespace {
 
@@ -44,6 +49,13 @@ auto MakeMatrices(const rglv::GLState& s) -> rglv::Matrices {
 	m.nm = rmlm::qmat4{ transpose(inverse(s.viewMatrix)) };
 	m.vpm = rmlm::qmat4{ s.projectionMatrix * s.viewMatrix };
 	return m; }
+
+inline
+int FindAndClearLSB(uint32_t& x) {
+	unsigned long idx;
+	_BitScanForward(&idx, x);
+	x &= x - 1;
+	return idx; }
 
 }  // close unnamed namespace
 
@@ -270,6 +282,14 @@ class GPUBinImpl : GPU {
 
 		const auto [DS, DO] = DSDO(state);
 
+		const rmlv::mvec4i tlx{ scissorRect.top_left.x };
+		const rmlv::mvec4i tly{ scissorRect.top_left.y };
+		const rmlv::mvec4i brx{ scissorRect.bottom_right.x-1 };
+		const rmlv::mvec4i bry{ scissorRect.bottom_right.y-1 };
+
+		const auto keepBacks = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_BACK) ? 0 : -1 });
+		const auto keepFronts = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_FRONT) ? 0 : -1 });
+
 		if (!INSTANCED) {
 			// coding error if this is not true
 			// XXX could use constexpr instead of template param?
@@ -287,6 +307,7 @@ class GPUBinImpl : GPU {
 			const auto siz = loader.Size();
 			// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
 
+			// rmlv::mvec4i axFlags{ -1 };
 			for (int vi=0; vi<siz; vi+=4) {
 				loader.LoadMD(vi, vertex);
 
@@ -295,57 +316,111 @@ class GPUBinImpl : GPU {
 				SHADER::ShadeVertex(matrices, uniforms, vertex, coord, unused);
 
 				auto flags = frustum.Test(coord);
+				// axFlags = axFlags & flags;
 				store_bytes(clipFlagBuffer_.data() + vi, flags);
 
 				auto devCoord = pdiv(coord).xy() * DS + DO;
 				devCoord.template store<false>(devCoordXBuffer_.data() + vi,
 				                               devCoordYBuffer_.data() + vi); }
 
-			for (int ti=0; ti<count; ti+=3) {
-				stats0_.totalPrimitivesSubmitted++;
 
-				auto i0 = static_cast<uint16_t>(indexSource(ti));
-				auto i1 = static_cast<uint16_t>(indexSource(ti+1));
-				auto i2 = static_cast<uint16_t>(indexSource(ti+2));
+			int numPrims{count / 3};
+			int numLanes{4};
+			int laneMask{ (1<<4)-1 };
+			for (int pi=0; pi<numPrims; pi+=4) {
+				if (pi + 4 > numPrims) {
+					numLanes = numPrims - pi;
+					laneMask = (1<<numLanes)-1; }
 
-				// check for triangles that need clipping
-				const auto cf0 = clipFlagBuffer_.data()[i0];
-				const auto cf1 = clipFlagBuffer_.data()[i1];
-				const auto cf2 = clipFlagBuffer_.data()[i2];
-				if (cf0 | cf1 | cf2) {
-					if (cf0 & cf1 & cf2) {
-						// all points outside of at least one plane
-						stats0_.totalPrimitivesCulled++;
-						continue; }
-					// queue for clipping
-					clipQueue_.push_back({ iid, i0, i1, i2 });
+				rmlv::qfloat2 dc0, dc1, dc2;
+				rmlv::mvec4i ii0, ii1, ii2;
+				rmlv::mvec4i cf0, cf1, cf2;
+
+				// gather
+				for (int li=0; li<numLanes; ++li) {
+
+					int ti = (pi+li)*3;
+					auto i0 = static_cast<uint16_t>(indexSource(ti));
+					auto i1 = static_cast<uint16_t>(indexSource(ti+1));
+					auto i2 = static_cast<uint16_t>(indexSource(ti+2));
+
+					ii0.si[li] = i0;
+					ii1.si[li] = i1;
+					ii2.si[li] = i2;
+
+					cf0.si[li] = clipFlagBuffer_[i0];
+					cf1.si[li] = clipFlagBuffer_[i1];
+					cf2.si[li] = clipFlagBuffer_[i2];
+
+					dc0.setLane(li, { devCoordXBuffer_.data()[i0], devCoordYBuffer_.data()[i0] });
+					dc1.setLane(li, { devCoordXBuffer_.data()[i1], devCoordYBuffer_.data()[i1] });
+					dc2.setLane(li, { devCoordXBuffer_.data()[i2], devCoordYBuffer_.data()[i2] }); }
+
+				/*
+				 some-out  all-out
+				     0        0  = normal tri
+				     1        0  = needs clipping
+				     0        1  = impossible
+				     1        1  = cull
+				*/
+				auto pointsOutside = cmpgt(cf0|cf1|cf2, rmlv::mvec4i::zero());
+				auto primsOutside  = cmpgt(cf0&cf1&cf2, rmlv::mvec4i::zero());
+				auto intersectsPlanes = andnot(primsOutside, pointsOutside);
+
+				if ((_mm_movemask_ps(bits2float(primsOutside).v) & laneMask) == laneMask) {
 					continue; }
-
-				auto dc0 = rmlv::vec2{ devCoordXBuffer_.data()[i0], devCoordYBuffer_.data()[i0] };
-				auto dc1 = rmlv::vec2{ devCoordXBuffer_.data()[i1], devCoordYBuffer_.data()[i1] };
-				auto dc2 = rmlv::vec2{ devCoordXBuffer_.data()[i2], devCoordYBuffer_.data()[i2] };
+				uint32_t needClip = _mm_movemask_ps(bits2float(intersectsPlanes).v) & laneMask;
+				while (needClip) {
+					int li = FindAndClearLSB(needClip);
+					clipQueue_.push_back({ iid, ii0.si[li], ii1.si[li], ii2.si[li] }); }
 
 				// handle backfacing tris and culling
-				const bool backfacing = rmlg::Area(dc0, dc1, dc2) < 0;
-				if (backfacing) {
-					if (cullingEnabled && cullFace == GL_BACK) {
-						stats0_.totalPrimitivesCulled++;
-						continue; }
-					// devCoord is _not_ swapped, but relies on the aabb method that ForEachCoveredBin uses!
-					swap(i0, i2);
-					i0 |= 0x8000; }  // add backfacing flag
-				else {
-					if (cullingEnabled && cullFace == GL_FRONT) {
-						stats0_.totalPrimitivesCulled++;
-						continue; }}
+				auto area = rmlg::Area(dc0, dc1, dc2);
+				auto front = cmpgt(area, rmlv::mvec4f::zero());
 
-				ForEachCoveredTile(scissorRect, dc0, dc1, dc2, [&](uint8_t** th) {
-					if (INSTANCED) {
-						assert(0 <= iid && iid < 65536);
-						AppendUShort(th, static_cast<uint16_t>(iid));}
-					AppendUShort(th, static_cast<uint16_t>(i0));  // also includes backfacing flag
-					AppendUShort(th, static_cast<uint16_t>(i1));
-					AppendUShort(th, static_cast<uint16_t>(i2)); }); }
+				auto ix0 = ftoi(dc0.x), iy0 = ftoi(dc0.y);
+				auto ix1 = ftoi(dc1.x), iy1 = ftoi(dc1.y);
+				auto ix2 = ftoi(dc2.x), iy2 = ftoi(dc2.y);
+
+				auto vminx = vmax(vmin(ix0, vmin(ix1, ix2)), tlx);
+				auto vminy = vmax(vmin(iy0, vmin(iy1, iy2)), tly);
+				auto vmaxx = vmin(vmax(ix0, vmax(ix1, ix2))+1, brx);
+				auto vmaxy = vmin(vmax(iy0, vmax(iy1, iy2))+1, bry);
+
+				auto notCulled = andnot(front, keepBacks) | (front&keepFronts);
+				notCulled = andnot(bits2float(pointsOutside), notCulled);
+				auto nonemptyX = bits2float(cmpgt(vmaxx, vminx));
+				auto nonemptyY = bits2float(cmpgt(vmaxy, vminy));
+				auto accept = notCulled & (nonemptyX & nonemptyY);
+
+				// correct order of back-facing tris
+				auto ni0 = SelectBits(ii2, ii0, front);
+				auto ni1 = ii1;
+				auto ni2 = SelectBits(ii0, ii2, front);
+
+				uint32_t good = _mm_movemask_ps(accept.v) & laneMask;
+				while (good) {
+					int li = FindAndClearLSB(good);
+
+					auto topLeft = ivec2{ vminx.si[li], vminy.si[li] } / tileDimensionsInPixels_;
+					auto bottomRight = ivec2{ vmaxx.si[li], vmaxy.si[li] } / tileDimensionsInPixels_;
+					int i0 = ni0.si[li];
+					int i1 = ni1.si[li];
+					int i2 = ni2.si[li];
+					if (!front.lane[li]) {
+						i0 |= 0x8000; }
+
+					int stride = bufferDimensionsInTiles_.x;
+					int tidRow = topLeft.y * stride;
+					for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
+						for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
+							auto th = &tilesHead_[tidRow + tx];
+							if (INSTANCED) {
+								assert(0 <= iid && iid < 65536);
+								AppendUShort(th, static_cast<uint16_t>(iid));}
+							AppendUShort(th, static_cast<uint16_t>(i0));
+							AppendUShort(th, static_cast<uint16_t>(i1));
+							AppendUShort(th, static_cast<uint16_t>(i2)); }}}}
 
 			}  // instance loop
 
@@ -376,11 +451,17 @@ class GPUBinImpl : GPU {
 		typename SHADER::Loader loader( state.buffers, state.bufferFormat );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
-		// XXX workaround for lambda-capture of vars from structured binding
-		rmlv::qfloat2 DS, DO; std::tie(DS, DO) = DSDO(state);
-		// const auto [DS, DO] = DSDO(state);
-
 		const auto scissorRect = ScissorRect(state);
+
+		const auto [DS, DO] = DSDO(state);
+
+		const rmlv::mvec4i tlx{ scissorRect.top_left.x };
+		const rmlv::mvec4i tly{ scissorRect.top_left.y };
+		const rmlv::mvec4i brx{ scissorRect.bottom_right.x-1 };
+		const rmlv::mvec4i bry{ scissorRect.bottom_right.y-1 };
+
+		const auto keepBacks = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_BACK) ? 0 : -1 });
+		const auto keepFronts = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_FRONT) ? 0 : -1 });
 
 		if (!INSTANCED) {
 			// coding error if this is not true
@@ -393,89 +474,115 @@ class GPUBinImpl : GPU {
 			Mark(&h); }
 
 		for (int iid=0; iid<instanceCnt; ++iid) {
-			std::array<typename SHADER::VertexInput, 3> vertex;
-			std::array<typename SHADER::VertexOutputMD, 3> computed;
-			std::array<rmlv::qfloat2, 3> devCoord;
-			std::array<rmlv::mvec4i, 3> clipFlags;
-			std::array<std::array<int, 4>, 3> srcIdx;
-			int li{0};
+			typename SHADER::VertexInput vi0, vi1, vi2;
+			typename SHADER::VertexOutputMD vo0, vo1, vo2;
+			rmlv::qfloat2 dc0, dc1, dc2;
+			rmlv::mvec4i cf0, cf1, cf2;
+			rmlv::mvec4i ii0, ii1, ii2;
 
 			if (INSTANCED) {
-				loader.LoadInstance(iid, vertex[0]);
-				loader.LoadInstance(iid, vertex[1]);
-				loader.LoadInstance(iid, vertex[2]); } 
+				loader.LoadInstance(iid, vi0);
+				loader.LoadInstance(iid, vi1);
+				loader.LoadInstance(iid, vi2); }
 
-			auto flush = [&]() {
-				for (int i{0}; i<3; ++i) {
-					qfloat4 gl_Position;
-					SHADER::ShadeVertex(matrices, uniforms, vertex[i], gl_Position, computed[i]);
-					clipFlags[i] = frustum.Test(gl_Position);
-					devCoord[i] = pdiv(gl_Position).xy() * DS + DO; }
+			int numPrims{count / 3};
+			int numLanes{4};
+			int laneMask{(1<<4)-1};
+			for (int pi=0; pi<numPrims; pi+=4) {
+				if (pi + 4 > numPrims) {
+					numLanes = numPrims - pi;
+					laneMask = (1<<numLanes)-1; }
 
-				auto area2 = rmlg::Area(devCoord[0], devCoord[1], devCoord[2]);
-				auto backfacing = float2bits(cmplt(area2, rmlv::mvec4f::zero()));
-
-				for (int ti{0}; ti<li; ++ti) {
-					stats0_.totalPrimitivesSubmitted++;
-
-					auto cf0 = clipFlags[0].si[ti];
-					auto cf1 = clipFlags[1].si[ti];
-					auto cf2 = clipFlags[2].si[ti];
-
-					auto i0 = srcIdx[0][ti];
-					auto i1 = srcIdx[1][ti];
-					auto i2 = srcIdx[2][ti];
-
-					auto dc0 = devCoord[0].lane(ti);
-					auto dc1 = devCoord[1].lane(ti);
-					auto dc2 = devCoord[2].lane(ti);
-
-					if (cf0 | cf1 | cf2) {
-						if (cf0 & cf1 & cf2) {
-							// all points outside of at least one plane
-							stats0_.totalPrimitivesCulled++;
-							continue; }
-						// queue for clipping
-						clipQueue_.push_back({ iid, i0, i1, i2 });
-						continue; }
-
-					if (backfacing.ui[ti]) {
-						if (cullingEnabled && cullFace == GL_BACK) {
-							stats0_.totalPrimitivesCulled++;
-							continue; }
-						swap(i0, i2);
-						i0 |= 0x8000; }  // add backfacing flag
-					else {
-						if (cullingEnabled && cullFace == GL_FRONT) {
-							stats0_.totalPrimitivesCulled++;
-							continue; }}
-
-					ForEachCoveredTile(scissorRect, dc0, dc1, dc2, [&](uint8_t** th) {
-						if (INSTANCED) {
-							assert(0 <= iid && iid < 65536);
-							AppendUShort(th, static_cast<uint16_t>(iid)); }
-						AppendUShort(th, static_cast<uint16_t>(i0));  // also includes backfacing flag
-						AppendUShort(th, static_cast<uint16_t>(i1));
-						AppendUShort(th, static_cast<uint16_t>(i2)); }); }
-
-				// reset the SIMD lane counter
-				li = 0; };
-
-			for (int ti=0; ti<count; ti+=3) {
 				stats0_.totalPrimitivesSubmitted++;
 
-				auto i0 = static_cast<uint16_t>(indexSource(ti));
-				auto i1 = static_cast<uint16_t>(indexSource(ti+1));
-				auto i2 = static_cast<uint16_t>(indexSource(ti+2));
-				srcIdx[0][li] = i0;
-				srcIdx[1][li] = i1;
-				srcIdx[2][li] = i2;
-				loader.LoadLane(i0, li, vertex[0]);
-				loader.LoadLane(i1, li, vertex[1]);
-				loader.LoadLane(i2, li, vertex[2]);
-				if (++li == 4) {
-					flush(); }}
-			flush(); }  // end instance loop
+				// gather
+				for (int li=0; li<numLanes; ++li) {
+					int ti = (pi+li)*3;
+					auto i0 = static_cast<uint16_t>(indexSource(ti));
+					auto i1 = static_cast<uint16_t>(indexSource(ti+1));
+					auto i2 = static_cast<uint16_t>(indexSource(ti+2));
+					ii0.si[li] = i0;
+					ii1.si[li] = i1;
+					ii2.si[li] = i2;
+					loader.LoadLane(i0, li, vi0);
+					loader.LoadLane(i1, li, vi1);
+					loader.LoadLane(i2, li, vi2); }
+
+				{
+					qfloat4 gl_Position;
+					SHADER::ShadeVertex(matrices, uniforms, vi0, gl_Position, vo0);
+					cf0 = frustum.Test(gl_Position);
+					dc0 = pdiv(gl_Position).xy() * DS + DO; }
+				{
+					qfloat4 gl_Position;
+					SHADER::ShadeVertex(matrices, uniforms, vi1, gl_Position, vo1);
+					cf1 = frustum.Test(gl_Position);
+					dc1 = pdiv(gl_Position).xy() * DS + DO; }
+				{
+					qfloat4 gl_Position;
+					SHADER::ShadeVertex(matrices, uniforms, vi2, gl_Position, vo2);
+					cf2 = frustum.Test(gl_Position);
+					dc2 = pdiv(gl_Position).xy() * DS + DO; }
+
+				auto pointsOutside = cmpgt(cf0|cf1|cf2, rmlv::mvec4i::zero());
+				auto primsOutside  = cmpgt(cf0&cf1&cf2, rmlv::mvec4i::zero());
+				auto intersectsPlanes = andnot(primsOutside, pointsOutside);
+
+				if ((_mm_movemask_ps(bits2float(primsOutside).v) & laneMask) == laneMask) {
+					continue; }
+				uint32_t needClip = _mm_movemask_ps(bits2float(intersectsPlanes).v) & laneMask;
+				while (needClip) {
+					int li = FindAndClearLSB(needClip);
+					clipQueue_.push_back({ iid, ii0.si[li], ii1.si[li], ii2.si[li] }); }
+
+				auto area = rmlg::Area(dc0, dc1, dc2);
+				auto front = cmpgt(area, rmlv::mvec4f::zero());
+
+				auto ix0 = ftoi(dc0.x), iy0 = ftoi(dc0.y);
+				auto ix1 = ftoi(dc1.x), iy1 = ftoi(dc1.y);
+				auto ix2 = ftoi(dc2.x), iy2 = ftoi(dc2.y);
+
+				auto vminx = vmax(vmin(ix0, vmin(ix1, ix2)), tlx);
+				auto vminy = vmax(vmin(iy0, vmin(iy1, iy2)), tly);
+				auto vmaxx = vmin(vmax(ix0, vmax(ix1, ix2))+1, brx);
+				auto vmaxy = vmin(vmax(iy0, vmax(iy1, iy2))+1, bry);
+
+				auto notCulled = andnot(front, keepBacks) | (front&keepFronts);
+				notCulled = andnot(bits2float(pointsOutside), notCulled);
+				auto nonemptyX = bits2float(cmpgt(vmaxx, vminx));
+				auto nonemptyY = bits2float(cmpgt(vmaxy, vminy));
+				auto accept = notCulled & (nonemptyX & nonemptyY);
+
+				// correct order of back-facing tris
+				auto ni0 = SelectBits(ii2, ii0, front);
+				auto ni1 = ii1;
+				auto ni2 = SelectBits(ii0, ii2, front);
+
+				uint32_t good = _mm_movemask_ps(accept.v) & laneMask;
+				while (good) {
+					int li = FindAndClearLSB(good);
+
+					auto topLeft = ivec2{ vminx.si[li], vminy.si[li] } / tileDimensionsInPixels_;
+					auto bottomRight = ivec2{ vmaxx.si[li], vmaxy.si[li] } / tileDimensionsInPixels_;
+					int i0 = ni0.si[li];
+					int i1 = ni1.si[li];
+					int i2 = ni2.si[li];
+					if (!front.lane[li]) {
+						i0 |= 0x8000; }
+
+					int stride = bufferDimensionsInTiles_.x;
+					int tidRow = topLeft.y * stride;
+					for (int ty = topLeft.y; ty <= bottomRight.y; ++ty, tidRow+=stride) {
+						for (int tx = topLeft.x; tx <= bottomRight.x; ++tx) {
+							auto th = &tilesHead_[tidRow + tx];
+							if (INSTANCED) {
+								assert(0 <= iid && iid < 65536);
+								AppendUShort(th, static_cast<uint16_t>(iid));}
+							AppendUShort(th, static_cast<uint16_t>(i0));
+							AppendUShort(th, static_cast<uint16_t>(i1));
+							AppendUShort(th, static_cast<uint16_t>(i2)); }}}}
+
+			}  // instance loop
 
 		for (auto& h : tilesHead_) {
 			if (Touched(&h)) {
@@ -820,3 +927,7 @@ public:
 
 }  // close package namespace
 }  // close enterprise namespace
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif

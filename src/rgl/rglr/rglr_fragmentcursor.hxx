@@ -40,7 +40,7 @@ struct QFloatFragmentCursor {
 
 	void Store(dataType destDepth, dataType sourceDepth, rmlv::mvec4i fragMask) {
 		auto addr = &(buf_[offs_]);  // alpha-channel
-		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
+		auto result = SelectFloat(destDepth, sourceDepth, fragMask).v;
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }};
 
 
@@ -79,9 +79,9 @@ struct QFloat3FragmentCursor {
 		rglr::QFloat3Canvas::Load(buf_+offs_, data.x.v, data.y.v, data.z.v); }
 
 	void Store(dataType destColor, dataType sourceColor, rmlv::mvec4i fragMask) {
-		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
-		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
-		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
+		auto sr = SelectFloat(destColor.r, sourceColor.r, fragMask).v;
+		auto sg = SelectFloat(destColor.g, sourceColor.g, fragMask).v;
+		auto sb = SelectFloat(destColor.b, sourceColor.b, fragMask).v;
 		rglr::QFloat3Canvas::Store(sr, sg, sb, buf_+offs_); } };
 
 /**
@@ -119,9 +119,9 @@ struct QFloat4RGBFragmentCursor {
 		rglr::QFloat4Canvas::Load(buf_+offs_, data.x.v, data.y.v, data.z.v); }
 
 	void Store(dataType destColor, dataType sourceColor, rmlv::mvec4i fragMask) {
-		auto sr = selectbits(destColor.r, sourceColor.r, fragMask).v;
-		auto sg = selectbits(destColor.g, sourceColor.g, fragMask).v;
-		auto sb = selectbits(destColor.b, sourceColor.b, fragMask).v;
+		auto sr = SelectFloat(destColor.r, sourceColor.r, fragMask).v;
+		auto sg = SelectFloat(destColor.g, sourceColor.g, fragMask).v;
+		auto sb = SelectFloat(destColor.b, sourceColor.b, fragMask).v;
 		rglr::QFloat4Canvas::Store(sr, sg, sb, buf_+offs_); } };
 
 
@@ -161,7 +161,7 @@ struct QFloat4AFragmentCursor {
 
 	void Store(dataType destDepth, dataType sourceDepth, rmlv::mvec4i fragMask) {
 		auto addr = &(buf_[offs_].a);  // alpha-channel
-		auto result = selectbits(destDepth, sourceDepth, fragMask).v;
+		auto result = SelectFloat(destDepth, sourceDepth, fragMask).v;
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }};
 
 

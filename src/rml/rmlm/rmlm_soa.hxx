@@ -63,6 +63,14 @@ auto operator*(const qmat4& a, const rmlv::qfloat4& b) -> rmlv::qfloat4 {
 		a.f[2]*b.x + a.f[6]*b.y + a.f[10]*b.z + a.f[14]*b.w,
 		a.f[3]*b.x + a.f[7]*b.y + a.f[11]*b.z + a.f[15]*b.w }; }
 
+/*inline
+auto mulpos(const qmat4& a, const rmlv::qfloat3& b) -> rmlv::qfloat3 {
+	return {
+		a.f[0]*b.x + a.f[4]*b.y + a.f[ 8]*b.z + a.f[12],
+		a.f[1]*b.x + a.f[5]*b.y + a.f[ 9]*b.z + a.f[13],
+		a.f[2]*b.x + a.f[6]*b.y + a.f[10]*b.z + a.f[14],
+		1.0F }; }*/
+
 
 }  // namespace rmlm
 }  // namespace rqdq

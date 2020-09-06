@@ -14,9 +14,9 @@ namespace BlendProgram {
 
 struct Set {
 	static void blendFragment(BLEND_ARGS) {
-		target->r = selectbits(target->r, frag_color.r, mask);
-		target->g = selectbits(target->g, frag_color.g, mask);
-		target->b = selectbits(target->b, frag_color.b, mask); } };
+		target->r = SelectFloat(target->r, frag_color.r, mask);
+		target->g = SelectFloat(target->g, frag_color.g, mask);
+		target->b = SelectFloat(target->b, frag_color.b, mask); } };
 
 
 /*
@@ -25,9 +25,9 @@ struct UniformAlpha {
 		:alpha(alpha) {}
 
 	void operator()(BLEND_ARGS) const {
-		target->r = lerp_premul(target->r, frag_color.r, selectbits(rmlv::mvec4f{ 0 }, alpha, mask));
-		target->g = lerp_premul(target->g, frag_color.g, selectbits(rmlv::mvec4f{ 0 }, alpha, mask));
-		target->b = lerp_premul(target->b, frag_color.b, selectbits(rmlv::mvec4f{ 0 }, alpha, mask)); }
+		target->r = lerp_premul(target->r, frag_color.r, SelectFloat(rmlv::mvec4f{ 0 }, alpha, mask));
+		target->g = lerp_premul(target->g, frag_color.g, SelectFloat(rmlv::mvec4f{ 0 }, alpha, mask));
+		target->b = lerp_premul(target->b, frag_color.b, SelectFloat(rmlv::mvec4f{ 0 }, alpha, mask)); }
 
 	rmlv::mvec4f alpha;
 	};

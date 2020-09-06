@@ -114,6 +114,10 @@ protected:
 	std::vector<ThreadStat> threadStats_;
 
 	// tile/bin collection
+	std::vector<uint16_t> inMem0_;
+	std::vector<uint16_t> inMem1_;
+	std::vector<uint16_t> inMem2_;
+
 	std::vector<uint8_t*> tilesHead_;
 	std::vector<uint8_t*> tilesMark_;
 	std::vector<uint8_t> tilesMem0_;

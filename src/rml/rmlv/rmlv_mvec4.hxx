@@ -185,11 +185,11 @@ auto vmax(const mvec4f&, const mvec4f&) -> mvec4f;
  * i split them into bits and sign so i can save a step
  * when I know that I have a complete bitmask or not
  */
-auto selectbits(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f;
-auto selectbits(mvec4f a, mvec4f b, mvec4f mask) -> mvec4f;
+auto SelectFloat(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f;
+auto SelectFloat(mvec4f a, mvec4f b, mvec4f mask) -> mvec4f;
 
-auto select_by_sign(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f;
-auto select_by_sign(mvec4f a, mvec4f b, mvec4f mask) -> mvec4f;
+auto BlendFloat(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f;
+auto BlendFloat(mvec4f a, mvec4f b, mvec4f mask) -> mvec4f;
 
 auto andnot(const mvec4i&, const mvec4i&) -> mvec4i;
 
@@ -530,8 +530,11 @@ auto mix(const mvec4f &a, const mvec4f &b, const mvec4f& t) -> mvec4f {
 
 inline auto vmin(const mvec4f& a, const mvec4f& b) -> mvec4f { return _mm_min_ps(a.v, b.v); }
 inline auto vmax(const mvec4f& a, const mvec4f& b) -> mvec4f { return _mm_max_ps(a.v, b.v); }
+inline auto vmin(const mvec4i& a, const mvec4i& b) -> mvec4i { return _mm_min_epi32(a.v, b.v); }
+inline auto vmax(const mvec4i& a, const mvec4i& b) -> mvec4i { return _mm_max_epi32(a.v, b.v); }
 
 inline auto andnot(const mvec4i& a, const mvec4i& b) -> mvec4i { return mvec4i(_mm_andnot_si128(a.v, b.v)); }
+inline auto andnot(const mvec4f& a, const mvec4f& b) -> mvec4f { return mvec4f(_mm_andnot_ps(a.v, b.v)); }
 
 inline auto itof      (const mvec4i& a) -> mvec4f { return _mm_cvtepi32_ps(a.v); }
 inline auto ftoi_round(const mvec4f& a) -> mvec4i { return _mm_cvtps_epi32(a.v); }
@@ -569,27 +572,49 @@ auto fract(mvec4f a) -> mvec4f {
 	}
 
 inline
-auto selectbits(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f {
-	const mvec4i a2 = andnot(mask, float2bits(a));  // keep bits in a where mask is 0000's
-	const mvec4i b2 = float2bits(b) & mask;         // keep bits in b where mask is 1111's
+auto SelectFloat(mvec4i a, mvec4i b, mvec4i mask) -> mvec4f {
+	const mvec4i a2 = andnot(mask, a);  // keep bits in a where mask is 0000's
+	const mvec4i b2 = b & mask;         // keep bits in b where mask is 1111's
 	return bits2float(a2 | b2); }
 
 inline
-auto selectbits(mvec4f a, mvec4f b, mvec4f mask) -> mvec4f {
-	return selectbits(a, b, float2bits(mask)); }
+auto SelectBits(mvec4i a, mvec4i b, mvec4f mask) -> mvec4i {
+	auto m = float2bits(mask);
+	const mvec4i a2 = andnot(m, a);  // keep bits in a where mask is 0000's
+	const mvec4i b2 = b & m;         // keep bits in b where mask is 1111's
+	return a2|b2; }
+
+inline
+auto SelectBits(mvec4i a, mvec4i b, mvec4i mask) -> mvec4i {
+	const mvec4i a2 = andnot(mask, a);  // keep bits in a where mask is 0000's
+	const mvec4i b2 = b & mask;         // keep bits in b where mask is 1111's
+	return a2|b2; }
+
+inline
+auto SelectFloat(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f {
+	auto m = bits2float(mask);
+	const mvec4f a2 = andnot(m, a);  // keep bits in a where mask is 0000's
+	const mvec4f b2 = b & m;         // keep bits in b where mask is 1111's
+	return a2|b2; }
+
+inline
+auto SelectFloat(mvec4f a, mvec4f b, mvec4f mask) -> mvec4f {
+	auto a2 = andnot(mask, a);
+	auto b2 = b & mask;
+	return a2|b2; }
 
 /**
  * this is _mm_blendv_ps() for SSE2
  */
 inline
-auto select_by_sign(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f {
+auto BlendFloat(mvec4f a, mvec4f b, mvec4i mask) -> mvec4f {
 	const mvec4i newmask(_mm_srai_epi32(mask.v, 31));
-	return selectbits(a, b, newmask); }
+	return SelectFloat(a, b, newmask); }
 
 inline
-auto select_by_sign(mvec4f a, mvec4f b, mvec4f mask) -> mvec4f {
+auto BlendFloat(mvec4f a, mvec4f b, mvec4f mask) -> mvec4f {
 	const mvec4i newmask(_mm_srai_epi32(float2bits(mask).v, 31));
-	return selectbits(a, b, newmask); }
+	return SelectFloat(a, b, newmask); }
 
 inline
 auto oneover(mvec4f a) -> mvec4f {

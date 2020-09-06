@@ -721,7 +721,7 @@ struct OBJ2SProgram final : public rglv::BaseProgram {
 
 		auto lightToSurfaceAngle = dot(-surfaceToLight, normalize(u.ldir));
 		// std::cout << "ltsa: " << lightToSurfaceAngle.get_x() << "\n";
-		attenuation = selectbits(attenuation, 0.111F, cmplt(lightToSurfaceAngle, u.lcos));
+		attenuation = SelectFloat(attenuation, 0.111F, cmplt(lightToSurfaceAngle, u.lcos));
 
 		auto diffuseFactor = vmax(0.0F, dot(normalize(outs.sn.xyz()), surfaceToLight));
 
@@ -732,7 +732,7 @@ struct OBJ2SProgram final : public rglv::BaseProgram {
 		tu3.sample(rmlv::qfloat2{ lpx, lpy }*0.5F+0.5F, tmp);
 		// tu3.sample(rmlv::qfloat2{ lpx, lpy }, tmp);
 
-		attenuation = selectbits(attenuation, 0.111F, cmpgt(lpz-0.0005F, tmp));
+		attenuation = SelectFloat(attenuation, 0.111F, cmpgt(lpz-0.0005F, tmp));
 
 		gl_FragColor = { attenuation * outs.kd * diffuseFactor, 1.0F }; } };
 

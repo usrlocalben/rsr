@@ -76,7 +76,7 @@ void DepthTextureUnit::sample(rmlv::qfloat2 coord, rmlv::qfloat& out) const {
 	ofs = ofs & mask_;
 
 	auto color = load_lut(buf_, ofs);
-	out = rmlv::selectbits(borderColor, color, hit); }
+	out = rmlv::SelectFloat(borderColor, color, hit); }
 
 
 }  // namespace rglr
