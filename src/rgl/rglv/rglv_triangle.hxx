@@ -35,7 +35,7 @@ struct BlahFp {
 	auto Render(rmlv::qfloat2 frag_coord, rmlv::mvec4i trimask, rglv::BaryCoord BS, bool frontfacing) -> void {}; };
 */
 
-#if 1
+#if 0
 constexpr int FP_BITS = 8;
 constexpr int FP_MASK = 0xff;
 constexpr float FP_MUL = 256.0F;
