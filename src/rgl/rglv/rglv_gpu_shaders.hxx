@@ -49,10 +49,11 @@ struct BaseProgram {
 			return {}; }};
 
 	struct VertexOutputMD {
-		VertexOutputSD Lane(int) {
+		VertexOutputSD Lane(int) const {
 			return {}; } };
 
 	struct Interpolants {
+		Interpolants() = default;
 		Interpolants(VertexOutputSD, VertexOutputSD, VertexOutputSD) {}
 		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP [[maybe_unused]]) const {
 			return {}; } };

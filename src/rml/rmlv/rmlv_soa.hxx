@@ -124,7 +124,7 @@ struct qfloat3 {
 
 	inline qfloat3 operator-() const { return { -v[0], -v[1], -v[2] }; }
 
-	inline vec3 lane(const int li) {
+	inline vec3 lane(const int li) const {
 		return vec3{ x.lane[li], y.lane[li], z.lane[li] }; }
 
 	inline void setLane(const int li, const vec3 a) {
@@ -165,7 +165,7 @@ struct qfloat4 {
 	inline qfloat2 xy() const { return{ x, y }; }
 	inline qfloat3 xyz() const { return{ x, y, z }; }
 
-	inline vec4 lane(const int li) {
+	inline vec4 lane(const int li) const {
 		return vec4{ x.lane[li], y.lane[li], z.lane[li], w.lane[li] }; }
 
 	inline void setLane(const int li, const vec4 value) {

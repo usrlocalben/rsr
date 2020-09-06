@@ -136,11 +136,12 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 	struct VertexOutputMD {
 		rmlv::qfloat2 envmapUV;
 
-		VertexOutputSD Lane(const int li) {
+		VertexOutputSD Lane(const int li) const {
 			return VertexOutputSD{
 				envmapUV.lane(li) }; }};
 
 	struct Interpolants {
+		Interpolants() = default;
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			envmapUV({ d0.envmapUV, d1.envmapUV, d2.envmapUV }) {}
 		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
@@ -219,11 +220,12 @@ struct AmyProgram final : public rglv::BaseProgram {
 	struct VertexOutputMD {
 		rmlv::qfloat3 uv;
 
-		VertexOutputSD Lane(const int li) {
+		VertexOutputSD Lane(const int li) const {
 			return VertexOutputSD{
 				uv.lane(li) }; }};
 
 	struct Interpolants {
+		Interpolants() = default;
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			uv({ d0.uv, d1.uv, d2.uv }) {}
 		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP [[maybe_unused]]) const {
@@ -294,12 +296,13 @@ struct DepthProgram final : public rglv::BaseProgram {
 	struct VertexOutputMD {
 		rmlv::qfloat2 uv;
 
-		VertexOutputSD Lane(const int li) {
+		VertexOutputSD Lane(const int li) const {
 			return VertexOutputSD{
 				uv.lane(li) }; }};
 
 	struct Interpolants {
 		rglv::VertexFloat2 uv;
+		Interpolants() = default;
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			uv({ d0.uv, d1.uv, d2.uv }) {}
 		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
@@ -389,11 +392,12 @@ struct ManyProgram final : public rglv::BaseProgram {
 	struct VertexOutputMD {
 		rmlv::qfloat2 uv;
 
-		VertexOutputSD Lane(const int li) {
+		VertexOutputSD Lane(const int li) const {
 			return VertexOutputSD{
 				uv.lane(li) }; }};
 
 	struct Interpolants {
+		Interpolants() = default;
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			uv({ d0.uv, d1.uv, d2.uv }) {}
 		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
@@ -461,11 +465,12 @@ struct OBJ1Program final : public rglv::BaseProgram {
 	struct VertexOutputMD {
 		rmlv::qfloat3 kd;
 
-		VertexOutputSD Lane(const int li) {
+		VertexOutputSD Lane(const int li) const {
 			return VertexOutputSD{
 				kd.lane(li) }; }};
 
 	struct Interpolants {
+		Interpolants() = default;
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			kd({ d0.kd, d1.kd, d2.kd }) {}
 		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
@@ -553,11 +558,12 @@ struct OBJ2Program final : public rglv::BaseProgram {
 		rmlv::qfloat4 sn;
 		rmlv::qfloat3 kd;
 
-		VertexOutputSD Lane(const int li) {
+		VertexOutputSD Lane(const int li) const {
 			return VertexOutputSD{
 				sp.lane(li), sn.lane(li), kd.lane(li) }; }};
 
 	struct Interpolants {
+		Interpolants() = default;
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			sp({ d0.sp, d1.sp, d2.sp }),
 			sn({ d0.sn, d1.sn, d2.sn }),
@@ -666,7 +672,7 @@ struct OBJ2SProgram final : public rglv::BaseProgram {
 		rmlv::qfloat3 kd;
 		rmlv::qfloat4 lp;
 
-		VertexOutputSD Lane(const int li) {
+		VertexOutputSD Lane(const int li) const {
 			return VertexOutputSD{
 				sp.lane(li), sn.lane(li), kd.lane(li), lp.lane(li) }; }};
 
@@ -675,6 +681,7 @@ struct OBJ2SProgram final : public rglv::BaseProgram {
 		rglv::VertexFloat3 kd;
 		rglv::VertexFloat4 lp;
 
+		Interpolants() = default;
 		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
 			sp({ d0.sp, d1.sp, d2.sp }),
 			sn({ d0.sn, d1.sn, d2.sn }),

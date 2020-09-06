@@ -181,6 +181,114 @@ struct TriangleProgram {
 			dc_.Store(destDepth, fragDepth, fragMask); }}};
 
 
+template <typename SHADER, typename COLOR_IO, typename DEPTH_IO, typename TU0, typename TU1, typename TU3, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
+struct TriangleProgram2 {
+	COLOR_IO cc_;
+	DEPTH_IO dc_;
+	const Matrices matrices_;
+	const rmlv::mvec4f vw0_, vw1_, vw2_;
+	const rmlv::mvec4f vz0_, vz1_, vz2_;
+	const typename SHADER::UniformsMD uniforms_;
+	const typename SHADER::VertexOutputMD vd0_, vd1_, vd2_;
+	const TU0 tu0_;
+	const TU1 tu1_;
+	const TU3& tu3_;
+
+	rglv::VertexFloat1 invW_;
+	rglv::VertexFloat1 ndcZ_;
+	typename SHADER::Interpolants vo_;
+	// const rmlv::mvec4f frontfacing
+
+	TriangleProgram2(
+		COLOR_IO cc,
+		DEPTH_IO dc,
+		Matrices matrices,
+		rmlv::mvec4f vw0, rmlv::mvec4f vw1, rmlv::mvec4f vw2,
+		rmlv::mvec4f vz0, rmlv::mvec4f vz1, rmlv::mvec4f vz2,
+		typename SHADER::UniformsMD uniforms,
+		typename SHADER::VertexOutputMD vd0, typename SHADER::VertexOutputMD vd1, typename SHADER::VertexOutputMD vd2,
+		const TU0 tu0,
+		const TU1 tu1,
+		const TU3& tu3) :
+		cc_(cc),
+		dc_(dc),
+		matrices_(matrices),
+		vw0_(vw0), vw1_(vw1), vw2_(vw2),
+		vz0_(vz0), vz1_(vz1), vz2_(vz2),
+		uniforms_(uniforms),
+		vd0_(vd0), vd1_(vd1), vd2_(vd2),
+		tu0_(tu0),
+		tu1_(tu1),
+		tu3_(tu3)
+		{}
+
+	void Lane(int i) {
+		invW_ = VertexFloat1{ vw0_.lane[i], vw1_.lane[i], vw2_.lane[i] };
+		ndcZ_ = VertexFloat1{ vz0_.lane[i], vz1_.lane[i], vz2_.lane[i] };
+		vo_ = typename SHADER::Interpolants{ vd0_.Lane(i), vd1_.Lane(i), vd2_.Lane(i) };
+		// frontfacing XXX
+		}
+		
+	void Begin(int x, int y) {
+		cc_.Begin(x, y);
+		dc_.Begin(x, y); }
+
+	void CR() {
+		cc_.CR();
+		dc_.CR(); }
+
+	void Right2() {
+		cc_.Right2();
+		dc_.Right2(); }
+
+	void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord BS) {
+		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
+
+		const auto fragDepth = rglv::Interpolate(BS, ndcZ_);
+		qfloat destDepth;
+		rmlv::mvec4i fragMask;
+		if (DEPTH_TEST) {
+			dc_.Load(destDepth);
+			const auto depthMask = float2bits(DEPTH_FUNC{}(fragDepth, destDepth));
+			fragMask = andnot(triMask, depthMask);
+			if (movemask(bits2float(fragMask)) == 0) {
+				// early out if whole quad fails depth test
+				return; }}
+		else {
+			fragMask = andnot(triMask, float2bits(rmlv::mvec4f::all_ones())); }
+
+		// restore perspective
+		if (COLOR_WRITEMASK) {
+			const auto fragW = rmlv::oneover(Interpolate(BS, invW_));
+			rglv::BaryCoord BP;
+			BP.x = invW_.v0 * BS.x * fragW;
+			BP.z = invW_.v2 * BS.z * fragW;
+			BP.y = 1.0f - BP.x - BP.z;
+
+			auto attrs = vo_.Interpolate(BS, BP);
+
+			qfloat4 fragColor;
+			SHADER::ShadeFragment(
+				matrices_,
+				uniforms_,
+				tu0_, tu1_, tu3_,
+				BS, BP, attrs,
+				fragCoord,
+				/*frontFacing,*/
+				fragDepth,
+				fragColor);
+
+		// XXX late-Z should happen here <----
+
+			qfloat3 destColor;
+			cc_.Load(destColor);
+			qfloat3 blendedColor = BLEND_FUNC()(fragColor, destColor);
+			cc_.Store(destColor, blendedColor, fragMask); }
+
+		if (DEPTH_WRITEMASK) {
+			dc_.Store(destDepth, fragDepth, fragMask); }}};
+
+
 template <typename SHADER>
 class GPUBltImpl : GPU {
 
@@ -807,21 +915,20 @@ class GPUTileImpl : GPU {
 				fy[i] = ftoi(rglv::FP_MUL * (devCoord[i].y * DS.y + DO.y)); }
 
 			// draw up to 4 triangles
-			for (int ti=0; ti<li; ti++) {
-				auto triPgm = TriangleProgram<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, rglr::DepthTextureUnit, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
-					colorCursor,
-					depthCursor,
-					matrices,
-					VertexFloat1{ devCoord[0].w.lane[ti], devCoord[1].w.lane[ti], devCoord[2].w.lane[ti] },
-					VertexFloat1{ devCoord[0].z.lane[ti], devCoord[1].z.lane[ti], devCoord[2].z.lane[ti] },
-					uniforms,
-					computed[0].Lane(ti), computed[1].Lane(ti), computed[2].Lane(ti),
-					tu0, tu1, tu3
-					};
-				auto rasterizer = TriangleRasterizer<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
-				rasterizer.Draw(fx[0].si[ti], fx[1].si[ti], fx[2].si[ti],
-				                fy[0].si[ti], fy[1].si[ti], fy[2].si[ti],
-				                !backfacing[ti]); }
+			auto triPgm = TriangleProgram2<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, rglr::DepthTextureUnit, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
+				colorCursor,
+				depthCursor,
+				matrices,
+				// XXX backfacing,
+				devCoord[0].w, devCoord[1].w, devCoord[2].w,
+				devCoord[0].z, devCoord[1].z, devCoord[2].z,
+				uniforms,
+				computed[0], computed[1], computed[2],
+				tu0, tu1, tu3
+				};
+			auto rasterizer = TriangleRasterizer2<SCISSOR_ENABLED, decltype(triPgm)>{triPgm, rect, targetHeightInPixels_};
+			rasterizer.Draw(fx[0], fx[1], fx[2],
+							fy[0], fy[1], fy[2], li);
 
 			// reset the SIMD lane counter
 			li = 0; };
