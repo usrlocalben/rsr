@@ -77,31 +77,27 @@ inline void PrintStatistics(const GPUStats& stats) {
 class GPU;
 
 
-struct VertexProgramPtrs {
-	void (GPU::*bin_DrawArraysSingle)(int /*count*/);
-	void (GPU::*bin_DrawArraysInstanced)(int /*count*/, int /*instanceCnt*/);
-	void (GPU::*bin_DrawElementsSingle)(int count, uint16_t* indices, uint8_t /*hint*/);
-	void (GPU::*bin_DrawElementsInstanced)(int count, uint16_t* indices, int /*instanceCnt*/);
-	// void (GPU::*tile_DrawClipped)(const GLState& state, const void* uniformsPtr, const rmlg::irect& rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
-};
+struct BinProgramPtrs {
+	void (GPU::*DrawArrays1)(int /*count*/);
+	void (GPU::*DrawArraysN)(int /*count*/, int /*instanceCnt*/);
+	void (GPU::*DrawElements1)(int count, uint16_t* indices, uint8_t /*hint*/);
+	void (GPU::*DrawElementsN)(int count, uint16_t* indices, int /*instanceCnt*/); };
 
 
-struct FragmentProgramPtrs {
-	void (GPU::*tile_DrawClipped)(void*, void*, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
-	void (GPU::*tile_DrawElementsSingle)(void*, void*, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
-	void (GPU::*tile_DrawElementsInstanced)(void*, void*, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
-	};
+struct DrawProgramPtrs {
+	void (GPU::*DrawClipped  )(void*, void*, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
+	void (GPU::*DrawElements1)(void*, void*, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs);
+	void (GPU::*DrawElementsN)(void*, void*, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs); };
 
 
 struct BltProgramPtrs {
-	void (GPU::*tile_StoreTrueColor)(const GLState& state, const void* uniformsPtr, rmlg::irect rect, bool enableGamma, rglr::TrueColorCanvas& outcanvas);
-	};
+	void (GPU::*StoreTrueColor)(const GLState& state, const void* uniformsPtr, rmlg::irect rect, bool enableGamma, rglr::TrueColorCanvas& outcanvas); };
 
 
 class GPU {
 private:
-	std::unordered_map<uint32_t, VertexProgramPtrs> vertexDispatch_{};
-	std::unordered_map<uint32_t, FragmentProgramPtrs> fragmentDispatch_{};
+	std::unordered_map<uint32_t, BinProgramPtrs> binDispatch_{};
+	std::unordered_map<uint32_t, DrawProgramPtrs> drawDispatch_{};
 	std::unordered_map<uint32_t, BltProgramPtrs> bltDispatch_{};
 
 	const int concurrency_;
@@ -155,8 +151,8 @@ protected:
 
 public:
 	GPU(int concurrency, std::string guid="unnamed");
-	void Install(int programId, uint32_t stateKey, VertexProgramPtrs ptrs);
-	void Install(int programId, uint32_t stateKey, FragmentProgramPtrs ptrs);
+	void Install(int programId, uint32_t stateKey, BinProgramPtrs ptrs);
+	void Install(int programId, uint32_t stateKey, DrawProgramPtrs ptrs);
 	void Install(int programId, uint32_t stateKey, BltProgramPtrs ptrs);
 
 	auto IC() -> GL&;

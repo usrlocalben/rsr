@@ -9,7 +9,7 @@
 #include "src/rgl/rglv/rglv_marching_cubes.hxx"
 #include "src/rgl/rglv/rglv_vao.hxx"
 #include "src/viewer/compile.hxx"
-#include "src/viewer/shaders.hxx"
+#include "src/viewer/shaders_envmap.hxx"
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/i_gl.hxx"
 #include "src/viewer/node/i_material.hxx"

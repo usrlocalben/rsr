@@ -24,7 +24,7 @@ namespace jobsys = rclmt::jobsys;
 
 class Impl : public IMaterial {
 public:
-	Impl(std::string_view id, InputList inputs, ShaderProgramId programId, bool filter)
+	Impl(std::string_view id, InputList inputs, int programId, bool filter)
 		:IMaterial(id, std::move(inputs)), programId_(programId), filter_(filter) {}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
@@ -97,7 +97,7 @@ public:
 
 private:
 	// config
-	ShaderProgramId programId_;
+	int programId_;
 	bool filter_;
 
 	// inputs
@@ -117,7 +117,7 @@ class Compiler final : public NodeCompiler {
 		if (!Input("u0", /*required=*/false)) { return; }
 		if (!Input("u1", /*required=*/false)) { return; }
 
-		ShaderProgramId programId = ShaderProgramId::Default;
+		int programId = static_cast<int>(ShaderProgramId::Default);
 		if (auto jv = jv_find(data_, "program", JSON_STRING)) {
 			programId = ShaderProgramNameSerializer::Deserialize(jv->toString()); }
 

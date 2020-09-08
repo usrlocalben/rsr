@@ -38,8 +38,8 @@ class Impl : public ILayer {
 public:
 	Impl(std::string_view id, InputList inputs) :
 		ILayer(id, std::move(inputs)) {
-		gpu_.Install(0, 0, rglv::GPUBinImpl<rglv::BaseProgram>::MakeVertexProgramPtrs());
-		gpu_.Install(0, 0x6a2, rglv::GPUTileImpl<rglr::QFloat3FragmentCursor, rglr::QFloatFragmentCursor, rglv::BaseProgram, false, true, rglv::DepthLT, true, false, rglv::BlendOff>::MakeFragmentProgramPtrs()); }
+		gpu_.Install(0, 0, rglv::GPUBinImpl<rglv::BaseProgram>::MakeBinProgramPtrs());
+		gpu_.Install(0, 0x6a2, rglv::GPUTileImpl<rglr::QFloat3FragmentCursor, rglr::QFloatFragmentCursor, rglv::BaseProgram, false, true, rglv::DepthLT, true, false, rglv::BlendOff>::MakeDrawProgramPtrs()); }
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "camera") {

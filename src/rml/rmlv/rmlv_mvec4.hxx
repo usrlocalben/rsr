@@ -8,7 +8,18 @@
 #include <intrin.h>
 #include "3rdparty/sse-pow/sse_pow.h"
 
-//#define USE_SSE3
+/**
+ * SSE  = 1
+ * SSE2 = 2
+ * SSE3 = 3
+ * SSSE3 = 4
+ * SSE4.1 = 5
+ * SSE4.2 = 6
+ * AVX
+ * AVX2
+ * AVX512
+ */
+#define SSE_LEVEL 4
 
 namespace rqdq {
 namespace rmlv {

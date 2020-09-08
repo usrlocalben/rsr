@@ -38,48 +38,7 @@ enum class ShaderProgramId {
 
 
 struct ShaderProgramNameSerializer {
-	static ShaderProgramId Deserialize(std::string_view text); };
-
-
-/*
- * wireframe shader, adapted from
- * http://codeflow.org/entries/2012/aug/02/easy-wireframe-display-with-barycentric-coordinates/
- */
-struct WireframeProgram final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::Wireframe);
-
-	template <typename TU0, typename TU1, typename TU3>
-	inline static void ShadeFragment(
-		const rglv::Matrices& mats,
-		const rglv::BaseProgram::UniformsMD& u,
-		const TU0 tu0,
-		const TU1 tu1,
-		const TU3& tu3,
-		const rglv::BaryCoord& BS,
-		const rglv::BaryCoord& BP,
-		const WireframeProgram::VertexOutputMD& v,
-		const rmlv::qfloat2& gl_FragCoord,
-		/* gl_FrontFacing, */
-		const rmlv::qfloat& gl_FragDepth,
-		rmlv::qfloat4& gl_FragColor
-		) {
-		using namespace rmlv;
-		static const qfloat grey(0.1f);
-		static const qfloat3 face_color{ 0.5f, 0.6f, 0.7f };
-		const qfloat e = edgefactor(BP);
-
-		//auto fd = (-gl_FragDepth + qfloat(1));
-		gl_FragColor = qfloat4{
-			mix(grey, face_color.v[0], e) *  qfloat{4.0f},
-			mix(grey, face_color.v[1], e) *  qfloat(4.0f),
-			mix(grey, face_color.v[2], e) *  qfloat(4.0f),
-			0.0f }; }
-
-	inline static rmlv::qfloat edgefactor(const rmlv::qfloat3& BP) {
-		static const rmlv::qfloat thickfactor(1.5F);
-		rmlv::qfloat3 d = rglv::fwidth(BP);
-		rmlv::qfloat3 a3 = rglv::smoothstep(0, d*thickfactor, BP);
-		return vmin(a3.v[0], vmin(a3.v[1], a3.v[2])); } };
+	static int Deserialize(std::string_view text); };
 
 
 struct DefaultPostProgram final : public rglv::BaseProgram {
@@ -102,88 +61,6 @@ struct IQPostProgram final : public rglv::BaseProgram {
 		return col; }};
 
 
-struct EnvmapProgram final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::Envmap);
-
-	struct VertexInput {
-		rmlv::qfloat4 position;
-		rmlv::qfloat4 smoothNormal;
-		rmlv::qfloat4 faceNormal; };
-
-	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr); }
-		int Size() const { return data_.size(); }
-		void LoadInstance(int, VertexInput&) {}
-		void LoadMD(int idx, VertexInput& vi) {
-			vi.position     = data_.a0.loadxyz1(idx);
-			vi.smoothNormal = data_.a1.loadxyz0(idx);
-			vi.faceNormal   = data_.a2.loadxyz0(idx); }
-		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position    .setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
-			vi.smoothNormal.setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
-			vi.faceNormal  .setLane(li, rmlv::vec4{ data_.a2.at(idx), 0 }); }
-		const rglv::VertexArray_F3F3F3& data_; };
-
-	struct VertexOutputSD {
-		rmlv::vec2 envmapUV;
-		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
-			return { mix(a.envmapUV, b.envmapUV, t) }; }};
-
-	struct VertexOutputMD {
-		rmlv::qfloat2 envmapUV;
-
-		VertexOutputSD Lane(const int li) const {
-			return VertexOutputSD{
-				envmapUV.lane(li) }; }};
-
-	struct Interpolants {
-		Interpolants() = default;
-		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
-			envmapUV({ d0.envmapUV, d1.envmapUV, d2.envmapUV }) {}
-		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP) const {
-			return { rglv::Interpolate(BP, envmapUV) }; }
-		rglv::VertexFloat2 envmapUV; };
-
-	inline static void ShadeVertex(
-		const rglv::Matrices& mats [[maybe_unused]],
-		const UniformsMD& u [[maybe_unused]],
-		const VertexInput& v [[maybe_unused]],
-		rmlv::qfloat4& gl_Position,
-		VertexOutputMD& out [[maybe_unused]]) {
-
-		rmlv::qfloat4 position = gl_ModelViewMatrix * v.position;
-		rmlv::qfloat3 e = normalize(position.xyz());
-		rmlv::qfloat4 vn = mix(v.smoothNormal, v.faceNormal, 0.0F); // in_uniform.roughness);
-		rmlv::qfloat3 n = normalize(mul_w0(gl_NormalMatrix, vn));
-		rmlv::qfloat3 r = rglv::reflect(e, n);
-
-		rmlv::qfloat m = rmlv::qfloat{2.0F} * sqrt((r.x*r.x) + (r.y*r.y) + ((r.z + 1.0F)*(r.z + 1.0F)));
-		rmlv::qfloat uu = r.x / m + 0.5F;
-		rmlv::qfloat vv = r.y / m + 0.5F;
-		out.envmapUV = { uu, vv };
-		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
-
-	template <typename TU0, typename TU1, typename TU3>
-	inline static void ShadeFragment(
-		const rglv::Matrices& mats [[maybe_unused]],
-		const UniformsMD& u [[maybe_unused]],
-		const TU0 tu0 [[maybe_unused]],
-		const TU1 tu1 [[maybe_unused]],
-		const TU3& tu3 [[maybe_unused]],
-		const rglv::BaryCoord& BS [[maybe_unused]],
-		const rglv::BaryCoord& BP [[maybe_unused]],
-		const VertexOutputMD& outs [[maybe_unused]],
-		const rmlv::qfloat2& gl_FragCoord [[maybe_unused]],
-		/* gl_FrontFacing, */
-		const rmlv::qfloat& gl_FragDepth [[maybe_unused]],
-		rmlv::qfloat4& gl_FragColor) {
-		tu0->sample({ outs.envmapUV.x, outs.envmapUV.y }, gl_FragColor);
-		gl_FragColor.w = 0.5F;
-	} };
 
 
 struct AmyProgram final : public rglv::BaseProgram {

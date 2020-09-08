@@ -23,20 +23,20 @@ GPU::GPU(int concurrency, std::string guid) :
 	threadStats_(concurrency)
 	{}
 
-void GPU::Install(int programId, uint32_t stateKey, VertexProgramPtrs ptrs) {
+void GPU::Install(int programId, uint32_t stateKey, BinProgramPtrs ptrs) {
 	uint32_t x = (programId << 24) | stateKey;
-	if (auto item = vertexDispatch_.find(x); item != vertexDispatch_.end()) {
+	if (auto item = binDispatch_.find(x); item != binDispatch_.end()) {
 		std::cerr << "warning: duplicate GPU vertex program pid(" << programId << ") state(" << stateKey << ")\n"; }
-	// std::cerr << "installed VertexProgram " << x << "\n";
-	vertexDispatch_[x] = ptrs; }
+	// std::cerr << "installed BinProgram " << x << "\n";
+	binDispatch_[x] = ptrs; }
 
 
-void GPU::Install(int programId, uint32_t stateKey, FragmentProgramPtrs ptrs) {
+void GPU::Install(int programId, uint32_t stateKey, DrawProgramPtrs ptrs) {
 	uint32_t x = (programId << 24) | stateKey;
-	if (auto item = fragmentDispatch_.find(x); item != fragmentDispatch_.end()) {
+	if (auto item = drawDispatch_.find(x); item != drawDispatch_.end()) {
 		std::cerr << "warning: duplicate GPU fragment program pid(" << programId << ") state(" << stateKey << ")\n"; }
-	// std::cerr << "installed FragmentProgram " << x << "\n";
-	fragmentDispatch_[x] = ptrs; }
+	// std::cerr << "installed DrawProgram " << x << "\n";
+	drawDispatch_[x] = ptrs; }
 
 
 void GPU::Install(int programId, uint32_t stateKey, BltProgramPtrs ptrs) {
@@ -193,9 +193,9 @@ void GPU::BinImpl() {
 			//auto flags = cs.consumeByte();
 			//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
 			auto count = cs.consumeInt();
-			if (auto found = vertexDispatch_.find(binState->VertexStateKey());  found != vertexDispatch_.end()) {
+			if (auto found = binDispatch_.find(binState->VertexStateKey());  found != binDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.bin_DrawArraysSingle))(count); }
+				((*this).*(ptrs.DrawArrays1))(count); }
 			else {
 				binState->Dump();
 				fmt::print(stderr, "BIN:DRAW_ARRAYS no dispatch entry for 0x{:x}\n", binState->VertexStateKey());
@@ -206,9 +206,9 @@ void GPU::BinImpl() {
 			//assert(flags == 0x14);  // videocore: 16-bit indices, triangles
 			auto count = cs.consumeInt();
 			auto instanceCnt = cs.consumeInt();
-			if (auto found = vertexDispatch_.find(binState->VertexStateKey());  found != vertexDispatch_.end()) {
+			if (auto found = binDispatch_.find(binState->VertexStateKey());  found != binDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.bin_DrawArraysInstanced))(count, instanceCnt); }
+				((*this).*(ptrs.DrawArraysN))(count, instanceCnt); }
 			else {
 				fmt::print(stderr, "BIN:DRAW_ARRAYS_INSTANCED no dispatch entry for 0x{:x}\n", binState->VertexStateKey());
 				std::exit(1); }}
@@ -220,9 +220,9 @@ void GPU::BinImpl() {
 			auto hint = cs.consumeByte();
 			auto count = cs.consumeInt();
 			auto indices = static_cast<uint16_t*>(cs.consumePtr());
-			if (auto found = vertexDispatch_.find(binState->VertexStateKey());  found != vertexDispatch_.end()) {
+			if (auto found = binDispatch_.find(binState->VertexStateKey());  found != binDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.bin_DrawElementsSingle))(count, indices, hint); }
+				((*this).*(ptrs.DrawElements1))(count, indices, hint); }
 			else {
 				fmt::print(stderr, "BIN:DRAW_ELEMENTS no dispatch entry for 0x{:x}\n", binState->VertexStateKey());
 				std::exit(1); }}
@@ -234,9 +234,9 @@ void GPU::BinImpl() {
 			auto count = cs.consumeInt();
 			auto indices = static_cast<uint16_t*>(cs.consumePtr());
 			auto instanceCnt = cs.consumeInt();
-			if (auto found = vertexDispatch_.find(binState->VertexStateKey());  found != vertexDispatch_.end()) {
+			if (auto found = binDispatch_.find(binState->VertexStateKey());  found != binDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.bin_DrawElementsInstanced))(count, indices, instanceCnt); }
+				((*this).*(ptrs.DrawElementsN))(count, indices, instanceCnt); }
 			else {
 				fmt::print(stderr, "BIN:DRAW_ELEMENTS_INSTANCED no dispatch entry for 0x{:x}\n", binState->VertexStateKey());
 				std::exit(1); }}
@@ -386,7 +386,7 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 			auto& outcanvas = *static_cast<rglr::TrueColorCanvas*>(cs.ConsumePtr());
 			if (auto found = bltDispatch_.find(stateptr->BltStateKey());  found != bltDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.tile_StoreTrueColor))(*stateptr, uniformptr, rect, enableGamma, outcanvas); }
+				((*this).*(ptrs.StoreTrueColor))(*stateptr, uniformptr, rect, enableGamma, outcanvas); }
 			else {
 				stateptr->Dump();
 				std::cerr << "no dispatch entry for " << std::hex << stateptr->BltStateKey() << std::dec << " found for CMD_STORE_COLOR_FULL_LINEAR_TC\n";
@@ -404,27 +404,27 @@ void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 				std::exit(1); }}
 			break;
 		case CMD_CLIPPED_TRI: {
-			if (auto found = fragmentDispatch_.find(stateptr->FragmentStateKey());  found != fragmentDispatch_.end()) {
+			if (auto found = drawDispatch_.find(stateptr->FragmentStateKey());  found != drawDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.tile_DrawClipped))(eColor0, eDepth, *stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
+				((*this).*(ptrs.DrawClipped))(eColor0, eDepth, *stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
 			else {
 				stateptr->Dump();
 				std::cerr << "no dispatch entry for " << std::hex << stateptr->FragmentStateKey() << std::dec << " found for CMD_CLIPPED_TRI\n";
 				std::exit(1); }}
 			break;
 		case CMD_DRAW_INLINE: {
-			if (auto found = fragmentDispatch_.find(stateptr->FragmentStateKey());  found != fragmentDispatch_.end()) {
+			if (auto found = drawDispatch_.find(stateptr->FragmentStateKey());  found != drawDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.tile_DrawElementsSingle))(eColor0, eDepth, *stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
+				((*this).*(ptrs.DrawElements1))(eColor0, eDepth, *stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
 			else {
 				stateptr->Dump();
 				std::cerr << "no dispatch entry for " << std::hex << stateptr->FragmentStateKey() << std::dec << " found for CMD_DRAW_INLINE\n";
 				std::exit(1); }}
 			break;
 		case CMD_DRAW_INLINE_INSTANCED: {
-			if (auto found = fragmentDispatch_.find(stateptr->FragmentStateKey());  found != fragmentDispatch_.end()) {
+			if (auto found = drawDispatch_.find(stateptr->FragmentStateKey());  found != drawDispatch_.end()) {
 				auto ptrs = found->second;
-				((*this).*(ptrs.tile_DrawElementsInstanced))(eColor0, eDepth, *stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
+				((*this).*(ptrs.DrawElementsN))(eColor0, eDepth, *stateptr, uniformptr, rect, tileOrigin, tileIdx, cs); }
 			else {
 				stateptr->Dump();
 				std::cerr << "no dispatch entry for " << std::hex << stateptr->FragmentStateKey() << std::dec << " found for CMD_DRAW_INLINE_INSTANCED\n";

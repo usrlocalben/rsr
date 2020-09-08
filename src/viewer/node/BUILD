@@ -84,7 +84,7 @@ cc_library(
         "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec",
         "//src/viewer:compile",
-        "//src/viewer:shaders",
+        "//src/viewer:shaders_envmap",
         ":base",
         ":i_gl",
         ":i_material",

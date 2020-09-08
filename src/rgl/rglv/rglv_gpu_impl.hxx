@@ -186,14 +186,16 @@ struct TriangleProgram2 {
 	COLOR_IO cc_;
 	DEPTH_IO dc_;
 	const Matrices matrices_;
+	const typename SHADER::UniformsMD uniforms_;
+	const rmlv::mvec4i vbf_;
 	const rmlv::mvec4f vw0_, vw1_, vw2_;
 	const rmlv::mvec4f vz0_, vz1_, vz2_;
-	const typename SHADER::UniformsMD uniforms_;
 	const typename SHADER::VertexOutputMD vd0_, vd1_, vd2_;
 	const TU0 tu0_;
 	const TU1 tu1_;
 	const TU3& tu3_;
 
+	rmlv::mvec4i backfacing_;
 	rglv::VertexFloat1 invW_;
 	rglv::VertexFloat1 ndcZ_;
 	typename SHADER::Interpolants vo_;
@@ -203,9 +205,10 @@ struct TriangleProgram2 {
 		COLOR_IO cc,
 		DEPTH_IO dc,
 		Matrices matrices,
+		typename SHADER::UniformsMD uniforms,
+		rmlv::mvec4i vbf,
 		rmlv::mvec4f vw0, rmlv::mvec4f vw1, rmlv::mvec4f vw2,
 		rmlv::mvec4f vz0, rmlv::mvec4f vz1, rmlv::mvec4f vz2,
-		typename SHADER::UniformsMD uniforms,
 		typename SHADER::VertexOutputMD vd0, typename SHADER::VertexOutputMD vd1, typename SHADER::VertexOutputMD vd2,
 		const TU0 tu0,
 		const TU1 tu1,
@@ -213,9 +216,10 @@ struct TriangleProgram2 {
 		cc_(cc),
 		dc_(dc),
 		matrices_(matrices),
+		uniforms_(uniforms),
+		vbf_(vbf),
 		vw0_(vw0), vw1_(vw1), vw2_(vw2),
 		vz0_(vz0), vz1_(vz1), vz2_(vz2),
-		uniforms_(uniforms),
 		vd0_(vd0), vd1_(vd1), vd2_(vd2),
 		tu0_(tu0),
 		tu1_(tu1),
@@ -223,6 +227,7 @@ struct TriangleProgram2 {
 		{}
 
 	void Lane(int i) {
+		backfacing_ = vbf_.si[i];
 		invW_ = VertexFloat1{ vw0_.lane[i], vw1_.lane[i], vw2_.lane[i] };
 		ndcZ_ = VertexFloat1{ vz0_.lane[i], vz1_.lane[i], vz2_.lane[i] };
 		vo_ = typename SHADER::Interpolants{ vd0_.Lane(i), vd1_.Lane(i), vd2_.Lane(i) };
@@ -274,7 +279,7 @@ struct TriangleProgram2 {
 				tu0_, tu1_, tu3_,
 				BS, BP, attrs,
 				fragCoord,
-				/*frontFacing,*/
+				/*backfacing,*/
 				fragDepth,
 				fragColor);
 
@@ -292,7 +297,7 @@ struct TriangleProgram2 {
 template <typename SHADER>
 class GPUBltImpl : GPU {
 
-	void tile_StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
+	void StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
 		// XXX add support for uniforms in stream-out shader
 		if (state.color0AttachmentType == RB_COLOR_DEPTH || state.color0AttachmentType == RB_RGBAF32) {
 			auto ptr = reinterpret_cast<rmlv::qfloat4*>(color0Buf_.data() + kTileColorSizeInBytes*rclmt::jobsys::threadId);
@@ -316,26 +321,26 @@ public:
 	static
 	auto MakeBltProgramPtrs() -> rglv::BltProgramPtrs {
 		rglv::BltProgramPtrs out;
-		out.tile_StoreTrueColor = static_cast<decltype(out.tile_StoreTrueColor)>(&GPUBltImpl::tile_StoreTrueColor);
+		out.StoreTrueColor = static_cast<decltype(out.StoreTrueColor)>(&GPUBltImpl::StoreTrueColor);
 		return out; } };
 
 
 template <typename SHADER>
 class GPUBinImpl : GPU {
 
-	void bin_DrawArraysInstanced(int count, int instanceCnt) {
+	void DrawArraysN(int count, int instanceCnt) {
 		struct SequenceSource {
 			int operator()(int ti) { return ti; }};
 		SequenceSource indexSource{};
-		bin_DrawArrays<true>(count, indexSource, instanceCnt); }
+		BinTriangles2P<true>(count, indexSource, instanceCnt); }
 
-	void bin_DrawArraysSingle(int count) {
+	void DrawArrays1(int count) {
 		struct SequenceSource {
 			int operator()(int ti) { return ti; }};
 		SequenceSource indexSource{};
-		bin_DrawArrays<false>(count, indexSource, 1); }
+		BinTriangles2P<false>(count, indexSource, 1); }
 
-	void bin_DrawElementsSingle(int count, uint16_t* indices, uint8_t hint) {
+	void DrawElements1(int count, uint16_t* indices, uint8_t hint) {
 		if ((hint & RGL_HINT_DENSE) && (hint & RGL_HINT_READ4)) {
 			// special case:
 			// vertex data length is a multiple of 4 (SSE ready), and
@@ -348,25 +353,35 @@ class GPUBinImpl : GPU {
 				int operator()(int ti) { return data_[ti]; }
 				const uint16_t* const data_; };
 			ArraySource indexSource{indices};
-			bin_DrawArrays<false>(count, indexSource, 1); }
+			BinTriangles2P<false>(count, indexSource, 1); }
 		else {
 			struct ArraySource {
 				ArraySource(const uint16_t* data) : data_(data) {}
 				int operator()(int ti) { return data_[ti]; }
 				const uint16_t* const data_; };
 			ArraySource indexSource{indices};
-			bin_DrawElements<false>(count, indexSource, 1); }}
+			BinTriangles1P<false>(count, indexSource, 1); }}
 
-	void bin_DrawElementsInstanced(int count, uint16_t* indices, int instanceCnt) {
+	void DrawElementsN(int count, uint16_t* indices, int instanceCnt) {
 			struct ArraySource {
 				ArraySource(const uint16_t* data) : data_(data) {}
 				int operator()(int ti) { return data_[ti]; }
 				const uint16_t* const data_; };
 			ArraySource indexSource{indices};
-			bin_DrawElements<true>(count, indexSource, instanceCnt); }
+			BinTriangles1P<true>(count, indexSource, instanceCnt); }
 
+	/**
+	 * transform and bin triangles, 2-phase impl
+	 * p1: transform, clip-test whole v.buffer to temp storage
+	 * p2: gather from temp store and process primitives 
+	 *
+	 * preferred when
+	 *  - most or all of the vertex-buffer is used, and
+	 *  - most vertices are shared by multiple primitives
+	 *    (e.g. solid geometry)
+	 */
 	template <bool INSTANCED, typename INDEX_SOURCE>
-	void bin_DrawArrays(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
+	void BinTriangles2P(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
@@ -486,6 +501,16 @@ class GPUBinImpl : GPU {
 				auto area = rmlg::Area(dc0, dc1, dc2);
 				auto front = cmpgt(area, rmlv::mvec4f::zero());
 
+				/*
+				 * alternative:
+				 * reverse the vertex order and use sign-bit
+				 * to create the mask with _mm_srai_epi32.
+				 * but it's slower! (at least on Broadwell)
+				 *
+				 * auto area = rmlg::Area(dc2, dc1, dc0);
+				 * auto front = rmlv::sar<31>(float2bits(area));
+				 */
+
 				auto ix0 = ftoi(dc0.x), iy0 = ftoi(dc0.y);
 				auto ix1 = ftoi(dc1.x), iy1 = ftoi(dc1.y);
 				auto ix2 = ftoi(dc2.x), iy2 = ftoi(dc2.y);
@@ -542,10 +567,17 @@ class GPUBinImpl : GPU {
 
 		stats0_.totalPrimitivesClipped = static_cast<int>(clipQueue_.size());
 		if (!clipQueue_.empty()) {
-			bin_DrawElementsClipped<INSTANCED>(state); }}
+			ClipTriangles<INSTANCED>(state); }}
 
+	/**
+	 * transform and bin triangles, 1-phase impl
+	 *
+	 * preferred when
+	 *  - a subset of a vertex-buffer is used, or
+	 *  - vertices are not shared by multiple primitives
+	 */
 	template <bool INSTANCED, typename INDEX_SOURCE>
-	void bin_DrawElements(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
+	void BinTriangles1P(const int count, INDEX_SOURCE& indexSource, const int instanceCnt) {
 		using std::min, std::max, std::swap;
 		using rmlv::ivec2, rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4, rmlm::qmat4;
 		const auto& state = *binState;
@@ -702,10 +734,10 @@ class GPUBinImpl : GPU {
 
 		stats0_.totalPrimitivesClipped = static_cast<int>(clipQueue_.size());
 		if (!clipQueue_.empty()) {
-			bin_DrawElementsClipped<INSTANCED>(state); }}
+			ClipTriangles<INSTANCED>(state); }}
 
 	template <bool INSTANCED>
-	void bin_DrawElementsClipped(const GLState& state) {
+	void ClipTriangles(const GLState& state) {
 		using rmlm::mat4;
 		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
 		using std::array, std::swap, std::min, std::max;
@@ -848,26 +880,26 @@ class GPUBinImpl : GPU {
 
 public:
 	static
-	auto MakeVertexProgramPtrs() -> rglv::VertexProgramPtrs {
-		rglv::VertexProgramPtrs out;
-		out.bin_DrawArraysSingle = static_cast<decltype(out.bin_DrawArraysSingle)>(&GPUBinImpl::bin_DrawArraysSingle);
-		out.bin_DrawArraysInstanced = static_cast<decltype(out.bin_DrawArraysInstanced)>(&GPUBinImpl::bin_DrawArraysInstanced);
-		out.bin_DrawElementsSingle = static_cast<decltype(out.bin_DrawElementsSingle)>(&GPUBinImpl::bin_DrawElementsSingle);
-		out.bin_DrawElementsInstanced = static_cast<decltype(out.bin_DrawElementsInstanced)>(&GPUBinImpl::bin_DrawElementsInstanced);
+	auto MakeBinProgramPtrs() -> rglv::BinProgramPtrs {
+		rglv::BinProgramPtrs out;
+		out.DrawArrays1   = static_cast<decltype(out.DrawArrays1)  >(&GPUBinImpl::DrawArrays1);
+		out.DrawArraysN   = static_cast<decltype(out.DrawArraysN)  >(&GPUBinImpl::DrawArraysN);
+		out.DrawElements1 = static_cast<decltype(out.DrawElements1)>(&GPUBinImpl::DrawElements1);
+		out.DrawElementsN = static_cast<decltype(out.DrawElementsN)>(&GPUBinImpl::DrawElementsN);
 		return out; }};
 
 			
 template <typename COLOR_IO, typename DEPTH_IO, typename SHADER, bool SCISSOR_ENABLED, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
 class GPUTileImpl : GPU {
 
-	void tile_DrawElementsSingle(void* c0, void* d, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
-		tile_DrawElements<false>(c0, d, state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
+	void DrawElements1(void* c0, void* d, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+		DrawTriangles<false>(c0, d, state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
 
-	void tile_DrawElementsInstanced(void* c0, void* d, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
-		tile_DrawElements<true>(c0, d, state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
+	void DrawElementsN(void* c0, void* d, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+		DrawTriangles<true>(c0, d, state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }
 
 	template<bool INSTANCED>
-	void tile_DrawElements(void* color0Buf, void* depthBuf, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+	void DrawTriangles(void* color0Buf, void* depthBuf, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 		using rmlv::mvec4i;
@@ -914,15 +946,18 @@ class GPUTileImpl : GPU {
 				fx[i] = ftoi(rglv::FP_MUL * (devCoord[i].x * DS.x + DO.x));
 				fy[i] = ftoi(rglv::FP_MUL * (devCoord[i].y * DS.y + DO.y)); }
 
+			auto area = rmlg::Area(devCoord[0].xy(), devCoord[1].xy(), devCoord[2].xy());
+			auto backfacing = rmlv::sar<31>(float2bits(area));
+
 			// draw up to 4 triangles
 			auto triPgm = TriangleProgram2<SHADER, COLOR_IO, DEPTH_IO, sampler, sampler, rglr::DepthTextureUnit, DEPTH_TEST, DEPTH_FUNC, DEPTH_WRITEMASK, COLOR_WRITEMASK, BLEND_FUNC>{
 				colorCursor,
 				depthCursor,
 				matrices,
-				// XXX backfacing,
+				uniforms,
+				backfacing,
 				devCoord[0].w, devCoord[1].w, devCoord[2].w,
 				devCoord[0].z, devCoord[1].z, devCoord[2].z,
-				uniforms,
 				computed[0], computed[1], computed[2],
 				tu0, tu1, tu3
 				};
@@ -972,7 +1007,7 @@ class GPUTileImpl : GPU {
 				flush(); }}
 		flush(); }
 
-	void tile_DrawClipped(void* color0Buf, void* depthBuf, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
+	void DrawClipped(void* color0Buf, void* depthBuf, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
 		using rmlm::mat4;
 		using rmlv::vec2, rmlv::vec3, rmlv::vec4;
 
@@ -1024,11 +1059,11 @@ class GPUTileImpl : GPU {
 
 public:
 	static
-	auto MakeFragmentProgramPtrs() -> rglv::FragmentProgramPtrs {
-		rglv::FragmentProgramPtrs out;
-		out.tile_DrawClipped = static_cast<decltype(out.tile_DrawClipped)>(&GPUTileImpl::tile_DrawClipped);
-		out.tile_DrawElementsSingle = static_cast<decltype(out.tile_DrawElementsSingle)>(&GPUTileImpl::tile_DrawElementsSingle);
-		out.tile_DrawElementsInstanced = static_cast<decltype(out.tile_DrawElementsInstanced)>(&GPUTileImpl::tile_DrawElementsInstanced);
+	auto MakeDrawProgramPtrs() -> rglv::DrawProgramPtrs {
+		rglv::DrawProgramPtrs out;
+		out.DrawElements1 = static_cast<decltype(out.DrawElements1)>(&GPUTileImpl::DrawElements1);
+		out.DrawElementsN = static_cast<decltype(out.DrawElementsN)>(&GPUTileImpl::DrawElementsN);
+		out.DrawClipped   = static_cast<decltype(out.DrawClipped)  >(&GPUTileImpl::DrawClipped);
 		return out; }};
 
 

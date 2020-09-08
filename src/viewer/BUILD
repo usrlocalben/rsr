@@ -185,6 +185,53 @@ cc_library(
         "//src/rml/rmlm:mat4",
         "//src/rml/rmlm:soa",
         "//src/rml/rmlv:soa",
+        "//src/rml/rmlv:vec",
+        ":shaders_envmap",
+        ":shaders_wireframe",
+        ],
+    copts = RSR_DEFAULT_COPTS,)
+
+
+cc_library(
+    name = "shaders_wireframe",
+    srcs = ["shaders_wireframe.cxx"],
+    hdrs = ["shaders_wireframe.hxx"],
+    deps = [
+        "//src/rgl/rglr:fragmentcursor",
+        "//src/rgl/rglv:fragment",
+        "//src/rgl/rglv:gpu",
+        "//src/rgl/rglv:gpu_impl",
+        "//src/rgl/rglv:gpu_protocol",
+        "//src/rgl/rglv:gpu_shaders",
+        "//src/rgl/rglv:interpolate",
+        "//src/rgl/rglv:math",
+        # "//src/rgl/rglv:triangle",
+        "//src/rgl/rglv:vao",
+        "//src/rml/rmlm:mat4",
+        "//src/rml/rmlm:soa",
+        "//src/rml/rmlv:soa",
+        "//src/rml/rmlv:vec", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+
+cc_library(
+    name = "shaders_envmap",
+    srcs = ["shaders_envmap.cxx"],
+    hdrs = ["shaders_envmap.hxx"],
+    deps = [
+        "//src/rgl/rglr:fragmentcursor",
+        "//src/rgl/rglv:fragment",
+        "//src/rgl/rglv:gpu",
+        "//src/rgl/rglv:gpu_impl",
+        "//src/rgl/rglv:gpu_protocol",
+        "//src/rgl/rglv:gpu_shaders",
+        "//src/rgl/rglv:interpolate",
+        "//src/rgl/rglv:math",
+        # "//src/rgl/rglv:triangle",
+        "//src/rgl/rglv:vao",
+        "//src/rml/rmlm:mat4",
+        "//src/rml/rmlm:soa",
+        "//src/rml/rmlv:soa",
         "//src/rml/rmlv:vec", ],
     copts = RSR_DEFAULT_COPTS,)
 

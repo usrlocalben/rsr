@@ -20,7 +20,7 @@ using namespace rqv;
 
 class Impl : public IOutput {
 public:
-	Impl(std::string_view id, InputList inputs, ShaderProgramId programId, bool sRGB)
+	Impl(std::string_view id, InputList inputs, int programId, bool sRGB)
 		:IOutput(id, std::move(inputs)), programId_(programId), sRGB_(sRGB) {}
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
@@ -76,7 +76,7 @@ public:
 
 private:
 	// static config
-	ShaderProgramId programId_;
+	int programId_;
 	bool sRGB_;
 
 	// runtime config
@@ -91,7 +91,7 @@ class Compiler final : public NodeCompiler {
 		using rclx::jv_find;
 		if (!Input("gpu", /*required=*/true)) { return; }
 
-		ShaderProgramId programId = ShaderProgramId::Default;
+		int programId = static_cast<int>(ShaderProgramId::Default);
 		if (auto jv = jv_find(data_, "program", JSON_STRING)) {
 			programId = ShaderProgramNameSerializer::Deserialize(jv->toString()); }
 
