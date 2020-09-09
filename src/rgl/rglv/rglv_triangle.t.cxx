@@ -86,7 +86,6 @@ struct TestTargetProgram {
 		_mm_store_ps(reinterpret_cast<float*>(addr), result); }
 
 	inline void LoadColor(rmlv::qfloat4& destColor) {
-		auto& cell = cb_[offs_];
 		rglr::QFloat4Canvas::Load(cb_+offs_, destColor.x.v, destColor.y.v, destColor.z.v); }
 
 	inline void StoreColor(rmlv::qfloat4 destColor,
@@ -97,7 +96,7 @@ struct TestTargetProgram {
 		auto sb = SelectFloat(destColor.b, sourceColor.b, fragMask).v;
 		rglr::QFloat4Canvas::Store(sr, sg, sb, cb_+offs_); }
 
-	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord BS, const bool frontfacing) {
+	inline void Render(const rmlv::qfloat2 fragCoord, const rmlv::mvec4i triMask, rglv::BaryCoord BS) {
 		using rmlv::qfloat, rmlv::qfloat3, rmlv::qfloat4;
 
 		const auto fragDepth = rglv::Interpolate(BS, zOverW_);
@@ -266,8 +265,6 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 
 	rglr::Fill(cbc, vec4{ 0, 0, 0, 1.0F });
 
-	bool frontfacing = true;
-
 	TestTargetProgram<DebugWithBary, rglr::BlendProgram::Set> target_program(
 		cbc, dbc,
 		VertexFloat1{ points[0].w, points[1].w, points[2].w },
@@ -276,7 +273,7 @@ bool check_triangle(array<vec4, 3> points, array<string, 8> expected) {
 		DebugWithBary::VertexOutputSD{},
 		DebugWithBary::VertexOutputSD{});
 	rglv::TriangleRasterizer<false, decltype(target_program)> tr(target_program, cbc.rect(), cbc.height());
-	tr.Draw(points[0], points[1], points[2], frontfacing);
+	tr.Draw(points[0], points[1], points[2]);
 
 	// compare
 	for (int yy = 0; yy < 8; yy++) {
@@ -314,8 +311,6 @@ bool check_triangle_uv() {
 
 	rglr::Fill(cbc, vec4{ 0, 0, 0, 1.0F });
 
-	bool frontfacing = true;
-
 	vec4 ulp( 0, 0, 0, 1 ); vec4 urp( w, 0, 0, 1 );
 	vec4 llp( 0, h, 0, 1 ); vec4 lrp( w, h, 0, 1 );
 
@@ -339,7 +334,7 @@ bool check_triangle_uv() {
 			VertexFloat1{ points[0].z, points[1].z, points[2].z },
 			computed1, computed2, computed3);
 		rglv::TriangleRasterizer<false, decltype(target_program)> tr(target_program, cbc.rect(), cbc.height());
-		tr.Draw(points[0], points[1], points[2], frontfacing); }
+		tr.Draw(points[0], points[1], points[2]); }
 	{
 		auto& points = points_lower_right;
 		auto& uvs = uv_lower_right;
@@ -352,7 +347,7 @@ bool check_triangle_uv() {
 			VertexFloat1{ points[0].z, points[1].z, points[2].z },
 			computed1, computed2, computed3);
 		rglv::TriangleRasterizer<false, decltype(target_program)> tr(target_program, cbc.rect(), cbc.height());
-		tr.Draw(points[0], points[1], points[2], frontfacing); }
+		tr.Draw(points[0], points[1], points[2]); }
 
 	auto almostEqual = [](float a, float b) {
 		constexpr float ep = 0.01F;

@@ -66,7 +66,7 @@ public:
 		scissorFlags_(ScissorFlags(rect_)) {}
 
 	// MANIPULATORS
-	void Draw(rmlv::vec4 s1, rmlv::vec4 s2, rmlv::vec4 s3, const bool frontfacing) {
+	void Draw(rmlv::vec4 s1, rmlv::vec4 s2, rmlv::vec4 s3) {
 		constexpr float co = 0.0F;  // pixel-center correction offset
 		int x1 = int(FP_MUL * (s1.x - co));
 		int x2 = int(FP_MUL * (s2.x - co));
@@ -74,9 +74,9 @@ public:
 		int y1 = int(FP_MUL * (s1.y - co));
 		int y2 = int(FP_MUL * (s2.y - co));
 		int y3 = int(FP_MUL * (s3.y - co));
-		Draw(x1, x2, x3, y1, y2, y3, frontfacing); }
+		Draw(x1, x2, x3, y1, y2, y3); }
 
-	void Draw(int x1, int x2, int x3, int y1, int y2, int y3, const bool frontfacing) {
+	void Draw(int x1, int x2, int x3, int y1, int y2, int y3) {
 		using std::max, std::min;
 		using rmlv::qfloat, rmlv::qfloat2, rmlv::qfloat3;
 		using rmlv::mvec4f, rmlv::mvec4i;
@@ -129,7 +129,6 @@ public:
 		auto cb3dydx = mvec4i((int)dy31*2); auto cb3dxdy = mvec4i((int)dx31*2);
 
 		mvec4f scale{1.0f / (c1 + c2 + c3)};
-		// std::cerr << "scale(" << scale.get_x() << ")\n";
 
 		program_.Begin(minx, miny);
 		for (int y=miny; y<endy; y+=2, cb1+=cb1dxdy, cb2+=cb2dxdy, cb3+=cb3dxdy, program_.CR()) {
@@ -165,11 +164,11 @@ public:
 				bary.z = itof(cx1) * scale;
 				bary.y = 1.0F - bary.x - bary.z;
 
-				program_.Render(frag_coord, trimask, bary, frontfacing); }} } };
+				program_.Render(frag_coord, trimask, bary); }} } };
 
 
 template <bool SCISSOR_TEST, typename FRAGMENT_PROCESSOR>
-class TriangleRasterizer2 {
+class VTriangleRasterizer {
 
 	// DATA
 	FRAGMENT_PROCESSOR& program_;
@@ -182,7 +181,7 @@ class TriangleRasterizer2 {
 
 public:
 	// CREATORS
-	TriangleRasterizer2(FRAGMENT_PROCESSOR& fp, rmlg::irect rect, int targetHeightInPx) :
+	VTriangleRasterizer(FRAGMENT_PROCESSOR& fp, rmlg::irect rect, int targetHeightInPx) :
 		program_(fp),
 		rectTopLeftX_(rect.top_left.x),
 		rectTopLeftY_(rect.top_left.y),
@@ -213,8 +212,6 @@ public:
 		auto vmaxy = vmin( Ceil(vmax(vmax(y1, y2), y3)), rectBottomRightY_);
 		vminx = vminx & blockMask;
 		vminy = vminy & blockMask;
-		//vminx &= ~(q - 1); // align to 2x2 block
-		//vminy &= ~(q - 1);
 
 		auto vdx12 = x1-x2, vdy12 = y2-y1;
 		auto vdx23 = x2-x3, vdy23 = y3-y2;
@@ -229,14 +226,13 @@ public:
 		auto vc3 = vdy31*(vsx-x3) + vdx31*(vsy-y3);
 
 		// correct for top-left fill
-#if 1
 		auto tl12 = cmpgt(vdy12, zero) | (cmpeq(vdy12,zero) & cmpgt(vdx12,zero));
 		auto tl23 = cmpgt(vdy23, zero) | (cmpeq(vdy23,zero) & cmpgt(vdx23,zero));
 		auto tl31 = cmpgt(vdy31, zero) | (cmpeq(vdy31,zero) & cmpgt(vdx31,zero));
 		vc1 = vc1 + shr<31>(tl12) - one;
 		vc2 = vc2 + shr<31>(tl23) - one;
 		vc3 = vc3 + shr<31>(tl31) - one;
-#endif
+
 		vc1 = sar<FP_BITS>(vc1);
 		vc2 = sar<FP_BITS>(vc2);
 		vc3 = sar<FP_BITS>(vc3);
