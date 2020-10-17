@@ -33,6 +33,11 @@ cc_binary(
     copts = RSR_DEFAULT_COPTS,
     linkopts = ["-SUBSYSTEM:WINDOWS",],)
 
+cc_binary(
+    name = "blah",
+    srcs = ["blah.cxx"],
+    deps = ["//3rdparty/lua"],
+    copts = RSR_DEFAULT_COPTS)
 
 app_srcs = ["app.cxx"]
 app_hdrs = ["app.hxx"]
