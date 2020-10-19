@@ -386,9 +386,9 @@ class GPUBinImpl : GPU {
 					ii1.si[li] = i1;
 					ii2.si[li] = i2;
 
-					cf0.si[li] = clipFlagBuffer_[i0];
-					cf1.si[li] = clipFlagBuffer_[i1];
-					cf2.si[li] = clipFlagBuffer_[i2];
+					cf0.si[li] = clipFlagBuffer_.data()[i0];
+					cf1.si[li] = clipFlagBuffer_.data()[i1];
+					cf2.si[li] = clipFlagBuffer_.data()[i2];
 
 					dc0.setLane(li, { devCoordXBuffer_.data()[i0], devCoordYBuffer_.data()[i0] });
 					dc1.setLane(li, { devCoordXBuffer_.data()[i1], devCoordYBuffer_.data()[i1] });
