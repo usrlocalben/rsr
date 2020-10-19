@@ -33,6 +33,7 @@
 #include "src/viewer/jobsys_vis.hxx"
 #include "src/viewer/node/multivalue.hxx"
 #include "src/viewer/node/i_output.hxx"
+#include "src/viewer/node/i_controller.hxx"
 #include "src/viewer/node/uicamera.hxx"
 
 #include "3rdparty/fmt/include/fmt/format.h"
@@ -153,7 +154,7 @@ class Application::impl : public PixelToaster::Listener {
 	ivec2 tile_dim{ 12, 4 };
 
 	int vis_scale = 30;
-	bool debug_mode = true;
+	bool debug_mode = false;
 	bool show_shader_threads = false;
 	bool isPaused_ = false;
 	bool runFullScreen_ = false;
@@ -303,10 +304,23 @@ public:
 #endif // ENABLE_MUSIC
 
 				// update globals
-				globalsNode_->Upsert("wallclock", isPaused_ ? float(0) : float(wallClock_.time()));
+				const auto tNow = static_cast<float>(wallClock_.time());
+				globalsNode_->Upsert("wallclock", isPaused_ ? float(0) : tNow);
 				globalsNode_->Upsert("windowSize", rmlv::vec2(float(cur_mode.width_in_pixels), float(cur_mode.height_in_pixels)));
 				globalsNode_->Upsert("tileSize", rmlv::vec2(float(tile_dim.x), float(tile_dim.y)));
 				globalsNode_->Upsert("windowAspect", float(cur_mode.width_in_pixels) / float(cur_mode.height_in_pixels));
+
+				{
+					const std::string_view selector{"game"};
+					const auto match = rclr::find_if(nodes_, [=](const auto& node) { return node->get_id() == selector; });
+					if (match == end(nodes_)) {
+						std::cerr << "BF controller node \"" << selector << "\" not found\n"; }
+					else {
+						auto* node = dynamic_cast<IController*>(match->get());
+						if (node == nullptr) {
+							std::cerr << "BF node with id\"" << selector << "\" is not an IController\n"; }
+						else {
+							node->BeforeFrame(isPaused_ ? float(0) : tNow); }}}
 
 				ComputeAndRenderFrame(canvas);
 				if (nice_) { jobsys::work_end();}
@@ -346,6 +360,24 @@ private:
 		return false; }
 
 	void onKeyPressed(PixelToaster::DisplayInterface& display, PixelToaster::Key key) override {
+		if (!debug_mode) {
+			if (key == Key::F1) {
+				debug_mode = !debug_mode;
+				return; }
+
+			const std::string_view selector{"game"};
+			const auto match = rclr::find_if(nodes_, [=](const auto& node) { return node->get_id() == selector; });
+			if (match == end(nodes_)) {
+				std::cerr << "controller node \"" << selector << "\" not found\n";
+				return; }
+			auto* node = dynamic_cast<IController*>(match->get());
+			if (node == nullptr) {
+				std::cerr << "node with id\"" << selector << "\" is not an IController\n";
+				return; }
+
+			node->KeyPress(key);
+			return; }
+
 		switch (key) {
 		case Key::OpenBracket:
 			taskSize_ = max(4, taskSize_ - 1);

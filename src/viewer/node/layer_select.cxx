@@ -73,7 +73,7 @@ private:
 	ILayer* GetSelectedLayer() const {
 		if (layers_.empty()) {
 			return nullptr; }
-		auto idx = selectorNode_->Eval(selectorSlot_).as_int();
+		auto idx = static_cast<int>(selectorNode_->Eval(selectorSlot_).as_float());
 		const int lastLayer = int(layers_.size() - 1);
 		if (idx < 0 || lastLayer < idx) {
 			return nullptr; }

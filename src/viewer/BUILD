@@ -62,6 +62,7 @@ app_deps = [
     "//src/rgl/rglv:mesh_store",
     "//src/rml/rmls:bench",
     "//src/rml/rmlv:vec",
+    "//src/viewer/node:i_controller",
     "//src/viewer/node:i_output",
     "//src/viewer/node:uicamera",
     "//src/viewer/node:multivalue",
@@ -104,6 +105,7 @@ cc_library(
     deps = [
         "//src/viewer/node:buffers",
         "//src/viewer/node:computed",
+        "//src/viewer/node:controller",
         "//src/viewer/node:fx_auraforlaura",
         # "//src/viewer/node:fx_carpet",
         "//src/viewer/node:fx_foo",
@@ -128,6 +130,7 @@ cc_library(
     linkopts = [
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:buffers)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:computed)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:controller)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_auraforlaura)",
         # "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_carpet)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:fx_foo)",

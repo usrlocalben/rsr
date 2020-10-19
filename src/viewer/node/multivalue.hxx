@@ -30,7 +30,7 @@ public:
 private:
 	std::unordered_map<std::string, NamedValue> db_{};
 	//NamedValue notFoundValue_{ "__notfound__", int{0}}; };
-	NamedValue notFoundValue_{ int{0}}; };
+	NamedValue notFoundValue_{ float{0}}; };
 
 
 }  // namespace rqv

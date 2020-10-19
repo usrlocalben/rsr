@@ -23,6 +23,19 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
+    name = "controller",
+    srcs = ["controller.cxx"],
+    deps = [
+        "//3rdparty/lua",
+        "//src/rcl/rclt:util",
+        "//src/rcl/rclx:gason_util",
+        "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
+        ":i_controller",
+        ":i_value", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
     name = "fx_auraforlaura",
     srcs = ["fx_auraforlaura.cxx"],
     deps = [
@@ -268,6 +281,14 @@ cc_library(
     deps = [
         "//src/rml/rmlv:vec",
         ":base",],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
+    name = "i_controller",
+    srcs = ["i_controller.cxx"],
+    hdrs = ["i_controller.hxx"],
+    deps = [
+        "//src/rml/rmlv:vec",],
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(

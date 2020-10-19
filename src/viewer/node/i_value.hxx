@@ -52,53 +52,52 @@ auto make_visitor(Fs... fs) {
 
 struct NamedValue {
 	// std::string name;
-	std::variant<int, float, rmlv::vec2, rmlv::vec3, rmlv::vec4> data;
+	std::variant<float, rmlv::vec2, rmlv::vec3, rmlv::vec4, std::string> data;
 
-	int as_int() {
+	auto as_string() -> std::string {
 		return std::visit(make_visitor(
-			[](const int x) { return x; },
-			[](const float x) { return int(x); },
-			[](const rmlv::vec2 x) { return int(x.x); },
-			[](const rmlv::vec3 x) { return int(x.x); },
-			[](const rmlv::vec4 x) { return int(x.x); }
+			[](const float x) { return std::to_string(x); },
+			[](const rmlv::vec2 x) { return std::to_string(x.x); },
+			[](const rmlv::vec3 x) { return std::to_string(x.x); },
+			[](const rmlv::vec4 x) { return std::to_string(x.x); },
+			[](const std::string x) { return x; }
 			), data); }
 
-	float as_float() {
+	auto as_float() -> float {
 		return std::visit(make_visitor(
-			[](const int x) { return float(x); },
 			[](const float x) { return x; },
 			[](const rmlv::vec2 x) { return x.x; },
 			[](const rmlv::vec3 x) { return x.x; },
-			[](const rmlv::vec4 x) { return x.x; }
+			[](const rmlv::vec4 x) { return x.x; },
+			[](const std::string x) { return stof(x); }
 			), data); }
 
-	rmlv::vec2 as_vec2() {
+	auto as_vec2() -> rmlv::vec2 {
 		return std::visit(make_visitor(
-			[](const int x) { return rmlv::vec2{ float(x) }; },
 			[](const float x) { return rmlv::vec2{ x }; },
 			[](const rmlv::vec2 x) { return x; },
 			[](const rmlv::vec3 x) { return rmlv::vec2{ x.x, x.y }; },
-			[](const rmlv::vec4 x) { return rmlv::vec2{ x.x, x.y }; }
+			[](const rmlv::vec4 x) { return rmlv::vec2{ x.x, x.y }; },
+			[](const std::string x) { return rmlv::vec2{ stof(x) }; }
 			), data); }
 
-	rmlv::vec3 as_vec3() {
+	auto as_vec3() -> rmlv::vec3 {
 		return std::visit(make_visitor(
-			[](const int x) { return rmlv::vec3{ float(x) }; },
 			[](const float x) { return rmlv::vec3{ x }; },
 			[](const rmlv::vec2 x) { return rmlv::vec3{ x.x, x.y, 0 }; },
 			[](const rmlv::vec3 x) { return x; },
-			[](const rmlv::vec4 x) { return rmlv::vec3{ x.x, x.y, x.z }; }
+			[](const rmlv::vec4 x) { return rmlv::vec3{ x.x, x.y, x.z }; },
+			[](const std::string x) { return rmlv::vec3{ stof(x) }; }
 			), data); }
 
-	rmlv::vec4 as_vec4() {
+	auto as_vec4() -> rmlv::vec4 {
 		return std::visit(make_visitor(
-			[](const int x) { return rmlv::vec4{ float(x) }; },
 			[](const float x) { return rmlv::vec4{ x }; },
 			[](const rmlv::vec2 x) { return rmlv::vec4{ x.x, x.y, 0, 0 }; },
 			[](const rmlv::vec3 x) { return rmlv::vec4{ x.x, x.y, x.z, 0 }; },
-			[](const rmlv::vec4 x) { return x; }
-			), data); }
-	};
+			[](const rmlv::vec4 x) { return x; },
+			[](const std::string x) { return rmlv::vec4{ stof(x) }; }
+			), data); } };
 
 
 /**

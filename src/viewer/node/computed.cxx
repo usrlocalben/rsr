@@ -136,7 +136,7 @@ public:
 			if (ci.sourceNode != nullptr) {
 				switch (ci.type) {
 				case ValueType::Integer:
-					{int value = ci.sourceNode->Eval(ci.sourceSlot).as_int();
+					{auto value = static_cast<int>(ci.sourceNode->Eval(ci.sourceSlot).as_float());
 					ci.data[0] = double(value); }
 					break;
 				case ValueType::Real:
