@@ -87,8 +87,6 @@ public:
 
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
-		auto [id, ptr] = dc.AllocUniformBuffer<AmyProgram::UniformsSD>();
-		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
 		dc.DrawArrays(GL_TRIANGLES, 0, 6); }

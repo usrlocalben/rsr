@@ -166,8 +166,6 @@ public:
 
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
-		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapProgram::UniformsSD>();
-		dc.UseUniforms(id);
 
 		auto& buffer = buffers_[activeBuffer_];
 		for (int ai=0; ai<bufferEnd_[activeBuffer_]; ai++) {
@@ -190,8 +188,6 @@ public:
 
 		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
-		auto [id, ptr] = dc.AllocUniformBuffer<EnvmapProgram::UniformsSD>();
-		dc.UseUniforms(id);
 
 		auto& buffer = buffers_[activeBuffer_];
 		for (int ai=0; ai<bufferEnd_[activeBuffer_]; ai++) {

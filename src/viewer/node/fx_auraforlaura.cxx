@@ -108,8 +108,6 @@ public:
 
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
-		auto [id, ptr] = dc.AllocUniformBuffer<AmyProgram::UniformsSD>();
-		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, *vbo_);
 		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data(), RGL_HINT_DENSE|RGL_HINT_READ4);
@@ -133,8 +131,6 @@ public:
 
 		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
-		auto [id, ptr] = dc.AllocUniformBuffer<AmyProgram::UniformsSD>();
-		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, *vbo_);
 		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data(), RGL_HINT_DENSE|RGL_HINT_READ4);
