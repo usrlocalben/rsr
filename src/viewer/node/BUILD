@@ -389,7 +389,8 @@ cc_library(
         "//src/viewer:shaders",
         ":base",
         ":i_gpu",
-        ":i_output", ],
+        ":i_output",
+        ":i_value", ],
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(

@@ -11,6 +11,7 @@
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/i_gpu.hxx"
 #include "src/viewer/node/i_output.hxx"
+#include "src/viewer/node/i_value.hxx"
 #include "src/viewer/shaders.hxx"
 
 namespace rqdq {
@@ -28,6 +29,13 @@ public:
 			gpuNode_ = dynamic_cast<IGPU*>(other);
 			if (gpuNode_ == nullptr) {
 				TYPE_ERROR(IGPU);
+				return false; }
+			return true; }
+		if (attr == "uf0") {
+			uf0Node_ = dynamic_cast<IValue*>(other);
+			uf0Slot_ = slot;
+			if (uf0Node_ == nullptr) {
+				TYPE_ERROR(IValue);
 				return false; }
 			return true; }
 		return IOutput::Connect(attr, other, slot); }
@@ -62,6 +70,13 @@ public:
 		auto& ic = gpuNode_->IC();
 		if (outCanvas_ != nullptr) {
 			ic.UseProgram(int(programId_));
+
+			if (uf0Node_ != nullptr) {
+				auto [id, ptr] = ic.AllocUniformBuffer();
+				float* buf = static_cast<float*>(ptr);
+				buf[0] = uf0Node_->Eval(uf0Slot_).as_float();
+				ic.UseUniforms(id); }
+
 			if (gpuNode_->GetAA()) {
 				throw std::runtime_error("truecolor aa not implemented"); }
 			else {
@@ -83,13 +98,16 @@ private:
 	rglr::TrueColorCanvas* outCanvas_{nullptr};
 
 	// inputs
-	IGPU* gpuNode_{nullptr}; };
+	IGPU* gpuNode_{nullptr};
+	IValue* uf0Node_{nullptr};
+	std::string uf0Slot_{"default"}; };
 
 
 class Compiler final : public NodeCompiler {
 	void Build() override {
 		using rclx::jv_find;
 		if (!Input("gpu", /*required=*/true)) { return; }
+		Input("uf0", /*required=*/false);
 
 		int programId = 1;
 		if (auto jv = jv_find(data_, "program", JSON_STRING)) {
