@@ -59,6 +59,8 @@ constexpr int RB_RGBF32 = 1;
 constexpr int RB_RGBAF32 = 2;
 constexpr int RB_F32 = 3;
 
+constexpr int UNIFORM_BUFFER_SIZE = 8*4;  // 32 floats, or 8 vec4s
+
 struct TextureState {
 	const PixelToaster::FloatingPointPixel *ptr;
 	int width;
@@ -251,12 +253,11 @@ public:
 		else if (attachment == GL_COLOR_ATTACHMENT0) {
 			cs_.color0AttachmentType = type; }}
 
-	template <typename T>
-	std::pair<int, T*> AllocUniformBuffer() {
-		const int amt = (sizeof(T) + 0xf) & 0xfffffff0;
+	auto AllocUniformBuffer() -> std::pair<int, void*> {
+		constexpr int amt = UNIFORM_BUFFER_SIZE;
 		int idx = static_cast<int>(ubuf_.size());
 		for (int i=0; i<amt; i++) { ubuf_.emplace_back(); }
-		auto* ptr = reinterpret_cast<T*>(ubuf_.data() + idx);
+		auto* ptr = reinterpret_cast<void*>(ubuf_.data() + idx);
 		return { idx, ptr }; }
 
 	void* GetUniformBufferAddr(int ofs) {
@@ -342,7 +343,7 @@ public:
 private:
 	GLState cs_;
 	bool dirty_{false};
-	std::vector<uint8_t> ubuf_;
+	std::vector<float> ubuf_;
 	std::deque<GLState> states_; };
 
 

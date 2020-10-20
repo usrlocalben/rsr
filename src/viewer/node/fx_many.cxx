@@ -140,24 +140,24 @@ public:
 
 		dc.ProjectionMatrix(*pmat);
 		dc.ViewMatrix(*mvmat);
-		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->magic = 0.222F;
+		{auto [id, ptr] = dc.AllocUniformBuffer();
+		static_cast<ManyProgram::UniformsSD*>(ptr)->magic = 0.222F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+0));
 		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
-		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->magic = 0.555F;
+		{auto [id, ptr] = dc.AllocUniformBuffer();
+		static_cast<ManyProgram::UniformsSD*>(ptr)->magic = 0.555F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+batch));
 		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
-		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->magic = 0.888F;
+		{auto [id, ptr] = dc.AllocUniformBuffer();
+		static_cast<ManyProgram::UniformsSD*>(ptr)->magic = 0.888F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
@@ -174,24 +174,24 @@ public:
 
 		dc.ProjectionMatrix(*pmat);
 		dc.ViewMatrix(*vmat * *mmat);
-		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->magic = 0.222F;
+		{auto [id, ptr] = dc.AllocUniformBuffer();
+		static_cast<ManyProgram::UniformsSD*>(ptr)->magic = 0.222F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+0));
 		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
-		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->magic = 0.555F;
+		{auto [id, ptr] = dc.AllocUniformBuffer();
+		static_cast<ManyProgram::UniformsSD*>(ptr)->magic = 0.555F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);
 		dc.UseBuffer(1, (float*)(mats_.data()+batch));
 		dc.DrawElementsInstanced(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data(), batch);}
 
-		{auto [id, ptr] = dc.AllocUniformBuffer<ManyProgram::UniformsSD>();
-		ptr->magic = 0.888F;
+		{auto [id, ptr] = dc.AllocUniformBuffer();
+		static_cast<ManyProgram::UniformsSD*>(ptr)->magic = 0.888F;
 		dc.UseUniforms(id);
 
 		dc.UseBuffer(0, vbo_);

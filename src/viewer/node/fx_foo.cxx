@@ -61,7 +61,8 @@ public:
 
 		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
-		auto [id, ptr] = dc.AllocUniformBuffer<OBJ2SProgram::UniformsSD>();
+		auto [id, vptr] = dc.AllocUniformBuffer();
+		auto* ptr = static_cast<OBJ2SProgram::UniformsSD*>(vptr);
 		dc.UseUniforms(id);
 
 		/*const rmlm::mat4 ndcToUV{
