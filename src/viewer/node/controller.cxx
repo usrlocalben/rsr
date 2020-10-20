@@ -47,6 +47,7 @@ public:
 
 	// Base...
 	void Reset() override {
+		IValue::Reset();
 		lua_getglobal(L, varName_.c_str());
 		lua_getfield(L, -1, "Reset");
 		if (!lua_isfunction(L, -1)) {
@@ -85,7 +86,12 @@ public:
 		lua_swap(L);
 		std::string tmp{name};
 		lua_pushstring(L, tmp.c_str());
-		lua_pcall(L, 2, 1, 0);
+		if (lua_pcall(L, 2, 1, 0)) {
+			std::string tmp2(lua_tostring(L, -1));
+			std::cerr << "calling Eval(" << tmp << "):\n";
+			std::cerr << tmp2 <<"\n";
+			std::exit(1);
+		}
 		if (lua_isstring(L, -1)) {
 			size_t len;
 			auto dataBegin = lua_tolstring(L, -1, &len);
@@ -130,6 +136,8 @@ class Compiler final : public NodeCompiler {
 
 		auto L = luaL_newstate();
 		luaL_openlibs(L);
+		luaL_dostring(L, "package.path = 'data/?.lua;' .. package.path");
+		// luaL_dostring(L, "print(package.path)");
 		if (luaL_dofile(L, fileName.c_str())) {
 			throw std::runtime_error(lua_tostring(L, -1)); }
 
