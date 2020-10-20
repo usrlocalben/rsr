@@ -91,7 +91,7 @@ class Compiler final : public NodeCompiler {
 		using rclx::jv_find;
 		if (!Input("gpu", /*required=*/true)) { return; }
 
-		int programId = static_cast<int>(ShaderProgramId::Default);
+		int programId = 1;
 		if (auto jv = jv_find(data_, "program", JSON_STRING)) {
 			programId = ShaderProgramNameSerializer::Deserialize(jv->toString()); }
 

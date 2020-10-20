@@ -24,25 +24,13 @@
 namespace rqdq {
 namespace rqv {
 
-enum class ShaderProgramId {
-	Default,
-	Wireframe,
-	IQ,
-	Envmap,
-	Amy,
-	Depth,
-	Many,
-	OBJ1,
-	OBJ2,
-	OBJ2S };
-
 
 struct ShaderProgramNameSerializer {
 	static int Deserialize(std::string_view text); };
 
 
 struct DefaultPostProgram final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::IQ);
+	static constexpr int id = 1;
 
 	static inline
 	auto ShadeCanvas(const rmlv::qfloat2 q [[maybe_unused]], const rmlv::qfloat3 source) -> rmlv::qfloat3 {
@@ -50,7 +38,7 @@ struct DefaultPostProgram final : public rglv::BaseProgram {
 
 
 struct IQPostProgram final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::IQ);
+	static constexpr int id = 3;
 
 	inline static rmlv::qfloat3 ShadeCanvas(const rmlv::qfloat2 q, const rmlv::qfloat3 source) {
 		//const auto q = gl_FragCoord / targetSize;
@@ -64,7 +52,7 @@ struct IQPostProgram final : public rglv::BaseProgram {
 
 
 struct AmyProgram final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::Amy);
+	static constexpr int id = 4;
 
 	struct VertexInput {
 		rmlv::qfloat4 position;
@@ -140,7 +128,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 
 
 struct DepthProgram final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::Depth);
+	static constexpr int id = 5;
 
 	struct VertexInput {
 		rmlv::qfloat3 position;
@@ -221,7 +209,7 @@ struct DepthProgram final : public rglv::BaseProgram {
 
 
 struct ManyProgram final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::Many);
+	static constexpr int id = 6;
 
 	struct UniformsSD {
 		float magic; };
@@ -309,7 +297,7 @@ struct ManyProgram final : public rglv::BaseProgram {
 
 
 struct OBJ1Program final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::OBJ1);
+	static constexpr int id = 7;
 
 	struct VertexInput {
 		rmlv::qfloat4 position;
@@ -396,7 +384,7 @@ struct OBJ1Program final : public rglv::BaseProgram {
 
 
 struct OBJ2Program final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::OBJ2);
+	static constexpr int id = 8;
 
 	struct VertexInput {
 		rmlv::qfloat4 position;
@@ -489,7 +477,7 @@ struct OBJ2Program final : public rglv::BaseProgram {
 
 
 struct OBJ2SProgram final : public rglv::BaseProgram {
-	static constexpr int id = int(ShaderProgramId::OBJ2S);
+	static constexpr int id = 9;
 
 	struct UniformsSD {
 		rmlm::mat4 modelToShadow;

@@ -22,7 +22,7 @@ namespace rqdq {
 namespace rqv {
 
 struct EnvmapProgram final : public rglv::BaseProgram {
-	static constexpr int id = 620953;
+	static constexpr int id = 10;
 
 	struct VertexInput {
 		rmlv::qfloat4 position;

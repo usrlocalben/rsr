@@ -117,7 +117,7 @@ class Compiler final : public NodeCompiler {
 		if (!Input("u0", /*required=*/false)) { return; }
 		if (!Input("u1", /*required=*/false)) { return; }
 
-		int programId = static_cast<int>(ShaderProgramId::Default);
+		int programId = 1;
 		if (auto jv = jv_find(data_, "program", JSON_STRING)) {
 			programId = ShaderProgramNameSerializer::Deserialize(jv->toString()); }
 

@@ -27,7 +27,7 @@ namespace rqv {
  * http://codeflow.org/entries/2012/aug/02/easy-wireframe-display-with-barycentric-coordinates/
  */
 struct WireframeProgram final : public rglv::BaseProgram {
-	static constexpr int id = 876324;
+	static constexpr int id = 11;
 
 	template <typename TU0, typename TU1, typename TU3>
 	inline static void ShadeFragment(
