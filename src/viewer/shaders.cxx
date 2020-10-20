@@ -21,6 +21,8 @@ int ShaderProgramNameSerializer::Deserialize(std::string_view text) {
 		return WireframeProgram::id; }
 	if (text == "IQ") {
 		return IQPostProgram::id; }
+	if (text == "Exposure") {
+		return ExposurePostProgram::id; }
 	if (text == "Envmap") {
 		return EnvmapProgram::id; }
 	if (text == "Amy") {
@@ -49,6 +51,9 @@ void Install(rglv::GPU& gpu) {
 
 	id = DefaultPostProgram::id;
 	gpu.Install(id, 0, rglv::GPUBltImpl<DefaultPostProgram>::MakeBltProgramPtrs());
+
+	id = ExposurePostProgram::id;
+	gpu.Install(id, 0, rglv::GPUBltImpl<ExposurePostProgram>::MakeBltProgramPtrs());
 
 	InstallWireframe(gpu);
 	InstallEnvmap(gpu);

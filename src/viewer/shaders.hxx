@@ -37,6 +37,22 @@ struct DefaultPostProgram final : public rglv::BaseProgram {
 		return source; }};
 
 
+struct ExposurePostProgram final : public rglv::BaseProgram {
+	static constexpr int id = 2;
+
+	struct UniformsSD {
+		float exposure; };
+
+	struct UniformsMD {
+		rmlv::qfloat exposure;
+		UniformsMD(const UniformsSD& data) :
+			exposure(data.exposure) {} };
+
+	static inline
+	auto ShadeCanvas(const UniformsMD& u [[maybe_unused]], const rmlv::qfloat2 q [[maybe_unused]], const rmlv::qfloat3 source) -> rmlv::qfloat3 {
+		return source * u.exposure; }};
+
+
 struct IQPostProgram final : public rglv::BaseProgram {
 	static constexpr int id = 3;
 
