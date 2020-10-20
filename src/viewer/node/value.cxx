@@ -37,8 +37,7 @@ public:
 
 protected:
 	void AddDeps() override {
-		IValue::AddDeps();
-		AddDep(xNode_); }
+		IValue::AddDeps(); }
 
 private:
 	float value_{};
@@ -78,9 +77,7 @@ public:
 
 protected:
 	void AddDeps() override {
-		IValue::AddDeps();
-		AddDep(xNode_);
-		AddDep(yNode_); }
+		IValue::AddDeps(); }
 
 private:
 	rmlv::vec2 value_{};
@@ -132,10 +129,7 @@ public:
 
 protected:
 	void AddDeps() override {
-		IValue::AddDeps();
-		AddDep(xNode_);
-		AddDep(yNode_);
-		AddDep(zNode_); }
+		IValue::AddDeps(); }
 
 private:
 	rmlv::vec3 value_;

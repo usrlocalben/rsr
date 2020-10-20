@@ -33,8 +33,7 @@ public:
 		cache_ = {}; }
 
 	void AddDeps() override {
-		IValue::AddDeps();
-		AddDep(coordNode_);}
+		IValue::AddDeps(); }
 
 	// IValue
 	NamedValue Eval(std::string_view name [[maybe_unused]]) override {

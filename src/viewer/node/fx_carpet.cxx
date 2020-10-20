@@ -48,9 +48,7 @@ public:
 		return IGl::Connect(attr, other, slot);}
 
 	void AddDeps() override {
-		AddDep(materialNode_);
-		AddDep(freqNode_);
-		AddDep(phaseNode_); }
+		AddDep(materialNode_); }
 
 	void Main() override {
 		jobsys::run(Compute());}

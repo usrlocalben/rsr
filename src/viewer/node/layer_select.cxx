@@ -66,7 +66,6 @@ public:
 protected:
 	void AddDeps() override {
 		ILayer::AddDeps();
-		AddDep(selectorNode_);
 		AddDep(GetSelectedLayer()); }
 
 private:	

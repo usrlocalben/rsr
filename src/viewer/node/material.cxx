@@ -59,9 +59,7 @@ public:
 	void AddDeps() override {
 		IMaterial::AddDeps();
 		AddDep(textureNode0_);
-		AddDep(textureNode1_);
-		AddDep(uNode0_);
-		AddDep(uNode1_); }
+		AddDep(textureNode1_); }
 
 	void Main() override {
 		jobsys::Job *postSetup = jobsys::make_job(jobsys::noop);

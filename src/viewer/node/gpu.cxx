@@ -94,10 +94,7 @@ public:
 	void AddDeps() override {
 		IGPU::AddDeps();
 		for (auto node : layers_) {
-			AddDep(node); }
-		AddDep(targetSizeNode_);
-		AddDep(tileSizeNode_);
-		AddDep(aspectNode_); }
+			AddDep(node); }}
 
 	void Reset() override {
 		NodeBase::Reset(); }

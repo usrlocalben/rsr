@@ -170,7 +170,6 @@ protected:
 	void AddDeps() override {
 		ILayer::AddDeps();
 		AddDep(cameraNode_);
-		AddDep(colorNode_);
 		for (auto gl : gls_) {
 			AddDep(gl); } }
 
