@@ -33,22 +33,21 @@ struct DefaultPostProgram final : public rglv::BaseProgram {
 	static constexpr int id = 1;
 
 	static inline
-	auto ShadeCanvas(const rmlv::qfloat2 q [[maybe_unused]], const rmlv::qfloat3 source) -> rmlv::qfloat3 {
+	auto ShadeCanvas(const UniformsMD& u [[maybe_unused]], const rmlv::qfloat2 q [[maybe_unused]], const rmlv::qfloat3 source) -> rmlv::qfloat3 {
 		return source; }};
 
 
 struct IQPostProgram final : public rglv::BaseProgram {
 	static constexpr int id = 3;
 
-	inline static rmlv::qfloat3 ShadeCanvas(const rmlv::qfloat2 q, const rmlv::qfloat3 source) {
+	static inline
+	auto ShadeCanvas(const UniformsMD& u [[maybe_unused]], const rmlv::qfloat2 q, const rmlv::qfloat3 source) -> rmlv::qfloat3 {
 		//const auto q = gl_FragCoord / targetSize;
 		auto col = source;
 		col = pow(col, rmlv::qfloat3(0.45F, 0.5F, 0.55F));
 		col *= 0.2F + 0.8F * pow(16.0F * q.x * q.y * (1.0F - q.x) * (1.0F - q.y), 0.2F);
 		col += (1.0 / 255.0) * rglv::hash3(q.x + 13.0*q.y);
 		return col; }};
-
-
 
 
 struct AmyProgram final : public rglv::BaseProgram {
