@@ -29,7 +29,7 @@ void Copy(const QFloat4Canvas& src, QFloat4Canvas& dst, rmlg::irect rect);
 
 
 template <class SHADER, class CONVERTER>
-void FilterTile(const QFloat3Canvas& src1, TrueColorCanvas& dst, const rmlg::irect rect) {
+void FilterTile(const typename SHADER::UniformsMD& u, const QFloat3Canvas& src1, TrueColorCanvas& dst, const rmlg::irect rect) {
 	using rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4;
 	using rmlv::mvec4f, rmlv::mvec4i;
 
@@ -59,7 +59,7 @@ void FilterTile(const QFloat3Canvas& src1, TrueColorCanvas& dst, const rmlg::ire
 				QFloat3Canvas::Load(src1Addr, sc.x.v, sc.y.v, sc.z.v);
 
 				// shade & convert
-				qfloat3 fragColor = SHADER::ShadeCanvas({ fcx, fcy }, sc);
+				qfloat3 fragColor = SHADER::ShadeCanvas(u, { fcx, fcy }, sc);
 				packed[sub] = CONVERTER::to_tc(fragColor); }
 
 			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow1Addr), _mm_unpacklo_epi64(packed[0].v, packed[1].v));
@@ -67,7 +67,7 @@ void FilterTile(const QFloat3Canvas& src1, TrueColorCanvas& dst, const rmlg::ire
 
 
 template <class SHADER, class CONVERTER>
-void FilterTile(const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::irect rect) {
+void FilterTile(const typename SHADER::UniformsMD& u, const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::irect rect) {
 	using rmlv::qfloat2, rmlv::qfloat3, rmlv::qfloat4;
 	using rmlv::mvec4f, rmlv::mvec4i;
 
@@ -97,7 +97,7 @@ void FilterTile(const QFloat4Canvas& src1, TrueColorCanvas& dst, const rmlg::ire
 				QFloat4Canvas::Load(src1Addr, sc.x.v, sc.y.v, sc.z.v);
 
 				// shade & convert
-				qfloat3 fragColor = SHADER::ShadeCanvas({ fcx, fcy }, sc);
+				qfloat3 fragColor = SHADER::ShadeCanvas(u, { fcx, fcy }, sc);
 				packed[sub] = CONVERTER::to_tc(fragColor); }
 
 			_mm_stream_si128(reinterpret_cast<__m128i*>(destRow1Addr), _mm_unpacklo_epi64(packed[0].v, packed[1].v));

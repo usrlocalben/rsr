@@ -213,21 +213,22 @@ template <typename SHADER>
 class GPUBltImpl : GPU {
 
 	void StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
+		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(uniformsPtr));
 		// XXX add support for uniforms in stream-out shader
 		if (state.color0AttachmentType == RB_COLOR_DEPTH || state.color0AttachmentType == RB_RGBAF32) {
 			auto ptr = reinterpret_cast<rmlv::qfloat4*>(color0Buf_.data() + kTileColorSizeInBytes*rclmt::jobsys::threadId);
 			rglr::QFloat4Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, ptr, 64 };
 			if (enableGamma) {
-				rglr::FilterTile<SHADER, rglr::sRGB>(cc, outcanvas, rect); }
+				rglr::FilterTile<SHADER, rglr::sRGB>(uniforms, cc, outcanvas, rect); }
 			else {
-				rglr::FilterTile<SHADER, rglr::LinearColor>(cc, outcanvas, rect); }}
+				rglr::FilterTile<SHADER, rglr::LinearColor>(uniforms, cc, outcanvas, rect); }}
 		else if (state.color0AttachmentType == RB_RGBF32) {
 			auto ptr = reinterpret_cast<rmlv::qfloat3*>(color0Buf_.data() + kTileColorSizeInBytes*rclmt::jobsys::threadId);
 			rglr::QFloat3Canvas cc{ tileDimensionsInPixels_.x, tileDimensionsInPixels_.y, ptr, 64 };
 			if (enableGamma) {
-				rglr::FilterTile<SHADER, rglr::sRGB>(cc, outcanvas, rect); }
+				rglr::FilterTile<SHADER, rglr::sRGB>(uniforms, cc, outcanvas, rect); }
 			else {
-				rglr::FilterTile<SHADER, rglr::LinearColor>(cc, outcanvas, rect); }}
+				rglr::FilterTile<SHADER, rglr::LinearColor>(uniforms, cc, outcanvas, rect); }}
 		else {
 			std::cerr << "not implemented: tile_StoreTrueColor for color attachment type " << state.color0AttachmentType << "\n";
 			std::exit(1); }}
