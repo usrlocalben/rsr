@@ -9,6 +9,7 @@
 #include "src/rcl/rclt/rclt_util.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
+#include "src/rml/rmlv/rmlv_vec.hxx"
 #include "src/rgl/rglv/rglv_mesh.hxx"
 #include "src/rgl/rglv/rglv_mesh_util.hxx"
 #include "src/viewer/compile.hxx"
@@ -41,6 +42,8 @@ class Impl final : public IGl {
 	IMaterial* materialNode_{nullptr};
 	IValue* textNode_{nullptr};
 	std::string textSlot_{"default"};
+	IValue* colorNode_{nullptr};
+	std::string colorSlot_{"default"};
 
 	// runtime
 	int mod2_{0};
@@ -63,7 +66,15 @@ public:
 			return true; }
 		if (attr == "text") {
 			textNode_ = dynamic_cast<IValue*>(other);
+			textSlot_ = slot;
 			if (textNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
+		if (attr == "color") {
+			colorNode_ = dynamic_cast<IValue*>(other);
+			colorSlot_ = slot;
+			if (colorNode_ == nullptr) {
 				TYPE_ERROR(IValue);
 				return false; }
 			return true; }
@@ -87,6 +98,10 @@ private:
 		mod2_ = (mod2_+1)%2;
 		auto& vbo = vbos_[mod2_];
 		vbo.clear();
+
+		rmlv::vec3 color{1.0F};
+		if (colorNode_ != nullptr) {
+			color = colorNode_->Eval(colorSlot_).as_vec3(); }
 
 		auto text = textNode_->Eval(textSlot_).as_string();
 		auto words = rclt::Split(text, ' ');
@@ -128,14 +143,14 @@ private:
 
 				cx += (width - ox) / float(font_.height) * tracking_;
 
-				auto n = rmlv::vec3{ 0, 0, 1.0F };
-				vbo.append({ x0, y0, 0 }, n, { u0, v0, 0 });
-				vbo.append({ x0, y1, 0 }, n, { u0, v1, 0 });
-				vbo.append({ x1, y0, 0 }, n, { u1, v0, 0 });
+				// auto n = rmlv::vec3{ 0, 0, 1.0F };
+				vbo.append({ x0, y0, 0 }, color, { u0, v0, 0 });
+				vbo.append({ x0, y1, 0 }, color, { u0, v1, 0 });
+				vbo.append({ x1, y0, 0 }, color, { u1, v0, 0 });
 
-				vbo.append({ x1, y0, 0 }, n, { u1, v0, 0 });
-				vbo.append({ x0, y1, 0 }, n, { u0, v1, 0 });
-				vbo.append({ x1, y1, 0 }, n, { u1, v1, 0 }); }
+				vbo.append({ x1, y0, 0 }, color, { u1, v0, 0 });
+				vbo.append({ x0, y1, 0 }, color, { u0, v1, 0 });
+				vbo.append({ x1, y1, 0 }, color, { u1, v1, 0 }); }
 			cy -= 1.0F * leading_; }
 
 		vbo.pad(); }
@@ -188,6 +203,7 @@ class Compiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("material", /*required=*/true)) { return; }
 		if (!Input("text", /*required=*/true)) { return; }
+		if (!Input("color", /*required=*/false)) { return; }
 
 		std::string_view font{"notfound.lua"};
 		if (auto jv = rclx::jv_find(data_, "font", JSON_STRING)) {

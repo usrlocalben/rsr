@@ -142,6 +142,72 @@ struct AmyProgram final : public rglv::BaseProgram {
 		} };
 
 
+struct TextProgram final : public rglv::BaseProgram {
+	static constexpr int id = 26;
+
+	struct VertexInput {
+		rmlv::qfloat3 position;
+		rmlv::qfloat3 color;
+		rmlv::qfloat2 uv; };
+
+	struct Loader {
+		Loader(const std::array<const void*, 4>& buffers,
+		       const std::array<int, 4>& formats [[maybe_unused]]) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == rglv::AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
+		int Size() const { return data_.size(); }
+		void LoadInstance(int, VertexInput&) {}
+		void LoadMD(int idx, VertexInput& vi) {
+			vi.position = data_.a0.load(idx);
+			vi.color    = data_.a1.load(idx);
+			vi.uv       = data_.a2.loadxy(idx); }
+		void LoadLane(int idx, int li, VertexInput& vi) {
+			vi.position.setLane(li, data_.a0.at(idx));
+			vi.color   .setLane(li, data_.a1.at(idx));
+			vi.uv      .setLane(li, data_.a2.at(idx).xy()); }
+		const rglv::VertexArray_F3F3F3& data_; };
+
+	struct VertexOutputSD {
+		rmlv::vec3 color;
+		rmlv::vec2 uv;
+		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+			return {
+				mix(a.color, b.color, t),
+				mix(a.uv, b.uv, t) }; }};
+	struct VertexOutputMD {
+		rmlv::qfloat3 color;
+		rmlv::qfloat2 uv;
+		VertexOutputSD Lane(int li) const {
+			return VertexOutputSD{
+				color.lane(li),
+				uv.lane(li) }; }};
+
+	struct Interpolants {
+		Interpolants() = default;
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
+			color({ d0.color, d1.color, d2.color }),
+			uv({ d0.uv, d1.uv, d2.uv }) {}
+		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP [[maybe_unused]]) const {
+			return {
+				rglv::Interpolate(BP, color),
+				rglv::Interpolate(BP, uv) }; }
+		rglv::VertexFloat3 color;
+		rglv::VertexFloat2 uv; };
+
+	static void ShadeVertex(const rglv::Matrices& mats, const rglv::BaseProgram::UniformsMD& u [[maybe_unused]], const VertexInput& v, rmlv::qfloat4& gl_Position, VertexOutputMD& outs) {
+		outs.color = v.color;
+		outs.uv = v.uv;
+		gl_Position = gl_ModelViewProjectionMatrix * rmlv::qfloat4{ v.position, 1.0F  }; }
+
+	template <typename TU0, typename TU1, typename TU3>
+	static inline void ShadeFragment(const rglv::Matrices& mats, const rglv::BaseProgram::UniformsMD& u, const TU0 tu0, const TU1 tu1, const TU3& tu3 [[maybe_unused]], const rglv::BaryCoord& BS, const rglv::BaryCoord& BP, const VertexOutputMD& outs, const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth, rmlv::qfloat4& gl_FragColor) {
+		tu0->sample(outs.uv, gl_FragColor);
+		gl_FragColor.x *= outs.color.x;
+		gl_FragColor.y *= outs.color.y;
+		gl_FragColor.z *= outs.color.z; } };
+
+
 struct DepthProgram final : public rglv::BaseProgram {
 	static constexpr int id = 5;
 
