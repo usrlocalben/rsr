@@ -289,6 +289,59 @@ struct DepthProgram final : public rglv::BaseProgram {
 		} };
 
 
+struct PatternProgram final : public rglv::BaseProgram {
+	static constexpr int id = 41;
+
+	struct UniformsSD {
+		rmlv::vec4 offset;
+		rmlv::vec4 dim; };
+	struct UniformsMD {
+		rmlv::qfloat4 offset;
+		rmlv::qfloat4 dim;
+		UniformsMD(const UniformsSD& data) :
+			offset(data.offset),
+			dim(data.dim) {} };
+
+	struct VertexInput {
+		rmlv::qfloat3 position; };
+
+	struct Loader {
+		Loader(const std::array<const void*, 4>& buffers,
+		       const std::array<int, 4>& formats [[maybe_unused]]) :
+			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
+			assert(formats[0] == rglv::AF_VAO_F3F3F3);
+			assert(buffers[0] != nullptr); }
+		int Size() const { return data_.size(); }
+		void LoadInstance(int, VertexInput&) {}
+		void LoadMD(int idx, VertexInput& vi) {
+			vi.position = data_.a0.load(idx); }
+		void LoadLane(int idx, int li, VertexInput& vi) {
+			vi.position.setLane(li, data_.a0.at(idx)); }
+		const rglv::VertexArray_F3F3F3& data_; };
+
+	struct VertexOutputSD {
+		static auto Mix(VertexOutputSD a, VertexOutputSD b, float t) -> VertexOutputSD {
+			return {}; }};
+	struct VertexOutputMD {
+		auto Lane(int li) const -> VertexOutputSD {
+			return {};}};
+
+	struct Interpolants {
+		Interpolants() = default;
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) {}
+		auto Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP [[maybe_unused]]) const -> VertexOutputMD {
+			return {}; }};
+
+	static void ShadeVertex(const rglv::Matrices& mats, const UniformsMD& u [[maybe_unused]], const VertexInput& v, rmlv::qfloat4& gl_Position, VertexOutputMD& outs) {
+		gl_Position = gl_ModelViewProjectionMatrix * rmlv::qfloat4{ v.position, 1.0F  }; }
+
+	template <typename TU0, typename TU1, typename TU3>
+	static inline void ShadeFragment(const rglv::Matrices& mats, const UniformsMD& u, const TU0 tu0, const TU1 tu1, const TU3& tu3 [[maybe_unused]], const rglv::BaryCoord& BS, const rglv::BaryCoord& BP, const VertexOutputMD& outs, const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth, rmlv::qfloat4& gl_FragColor) {
+		auto uv = gl_FragCoord / u.dim.y;
+		uv += u.offset.xy();
+		tu0->sample(uv, gl_FragColor); }};
+
+
 struct ManyProgram final : public rglv::BaseProgram {
 	static constexpr int id = 6;
 

@@ -29,6 +29,8 @@ int ShaderProgramNameSerializer::Deserialize(std::string_view text) {
 		return AmyProgram::id; }
 	if (text == "Text") {
 		return TextProgram::id; }
+	if (text == "Pattern") {
+		return PatternProgram::id; }
 	if (text == "Depth") {
 		return DepthProgram::id; }
 	if (text == "Many") {
@@ -76,6 +78,15 @@ void Install(rglv::GPU& gpu) {
 	gpu.Install(id, 0, rglv::GPUBinImpl<TextProgram>::MakeBinProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_ALPHA,
 				rglv::GPUTileImpl<rglr::QFloat4RGBFragmentCursor, rglr::QFloat4AFragmentCursor, TextProgram, false, true, rglv::DepthLT, true, true, rglv::BlendAlpha>::MakeDrawProgramPtrs());
+
+	id = PatternProgram::id;
+	gpu.Install(id, 0, rglv::GPUBinImpl<PatternProgram>::MakeBinProgramPtrs());
+	gpu.Install(id, 0x6e2,
+				rglv::GPUTileImpl<rglr::QFloat3FragmentCursor, rglr::QFloatFragmentCursor, PatternProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeDrawProgramPtrs());
+	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
+				rglv::GPUTileImpl<rglr::QFloat4RGBFragmentCursor, rglr::QFloat4AFragmentCursor, PatternProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeDrawProgramPtrs());
+	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_ALPHA,
+				rglv::GPUTileImpl<rglr::QFloat4RGBFragmentCursor, rglr::QFloat4AFragmentCursor, PatternProgram, false, true, rglv::DepthLT, true, true, rglv::BlendAlpha>::MakeDrawProgramPtrs());
 
 	id = DepthProgram::id;
 	gpu.Install(id, 0, rglv::GPUBinImpl<DepthProgram>::MakeBinProgramPtrs());
