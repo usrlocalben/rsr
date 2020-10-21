@@ -39,6 +39,13 @@ cc_binary(
     deps = ["//3rdparty/lua"],
     copts = RSR_DEFAULT_COPTS)
 
+cc_library(
+    name = "fontloader",
+    srcs = ["fontloader.cxx"],
+    hdrs = ["fontloader.hxx"],
+    deps = ["//3rdparty/lua"],
+    copts = RSR_DEFAULT_COPTS)
+
 app_srcs = ["app.cxx"]
 app_hdrs = ["app.hxx"]
 app_deps = [
@@ -126,7 +133,8 @@ cc_library(
         "//src/viewer/node:rendertotexture",
         "//src/viewer/node:translate",
         "//src/viewer/node:truecolor",
-        "//src/viewer/node:value", ],
+        "//src/viewer/node:value",
+        "//src/viewer/node:writer", ],
     linkopts = [
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:buffers)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:computed)",
@@ -151,7 +159,8 @@ cc_library(
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:rendertotexture)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:translate)",
         "-WHOLEARCHIVE:$(execpath //src/viewer/node:truecolor)",
-        "-WHOLEARCHIVE:$(execpath //src/viewer/node:value)",],
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:value)",
+        "-WHOLEARCHIVE:$(execpath //src/viewer/node:writer)",],
     copts = RSR_DEFAULT_COPTS,)
 
 

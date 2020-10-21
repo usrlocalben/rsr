@@ -314,7 +314,7 @@ public:
 					const std::string_view selector{"game"};
 					const auto match = rclr::find_if(nodes_, [=](const auto& node) { return node->get_id() == selector; });
 					if (match == end(nodes_)) {
-						std::cerr << "BF controller node \"" << selector << "\" not found\n"; }
+						/*std::cerr << "BF controller node \"" << selector << "\" not found\n";*/ }
 					else {
 						auto* node = dynamic_cast<IController*>(match->get());
 						if (node == nullptr) {

@@ -67,6 +67,8 @@ void Install(rglv::GPU& gpu) {
 				rglv::GPUTileImpl<rglr::QFloat3FragmentCursor, rglr::QFloatFragmentCursor, AmyProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeDrawProgramPtrs());
 	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_NOBLEND,
 				rglv::GPUTileImpl<rglr::QFloat4RGBFragmentCursor, rglr::QFloat4AFragmentCursor, AmyProgram, false, true, rglv::DepthLT, true, true, rglv::BlendOff>::MakeDrawProgramPtrs());
+	gpu.Install(id, NOSCISSOR_DEPTH_LESS_DEPTHWRITE_COLORWRITE_ALPHA,
+				rglv::GPUTileImpl<rglr::QFloat4RGBFragmentCursor, rglr::QFloat4AFragmentCursor, AmyProgram, false, true, rglv::DepthLT, true, true, rglv::BlendAlpha>::MakeDrawProgramPtrs());
 
 	id = DepthProgram::id;
 	gpu.Install(id, 0, rglv::GPUBinImpl<DepthProgram>::MakeBinProgramPtrs());

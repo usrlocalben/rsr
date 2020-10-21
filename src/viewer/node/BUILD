@@ -84,6 +84,24 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
+    name = "writer",
+    srcs = ["writer.cxx"],
+    deps = [
+        "//3rdparty/pixeltoaster",
+        "//src/rcl/rcls:aligned_containers",
+        "//src/rcl/rclx:gason_util",
+        "//src/rgl/rglv:mesh",
+        "//src/rgl/rglv:mesh_util",
+        "//src/rml/rmlm:mat4",
+        "//src/viewer:compile",
+        "//src/viewer:fontloader",
+        ":base",
+        ":i_gl",
+        ":i_material",
+        ":i_value", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
     name = "fx_mc",
     srcs = ["fx_mc.cxx"],
     deps = [

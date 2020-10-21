@@ -13,6 +13,17 @@ namespace {
 
 using namespace rqv;
 
+class StringNode : public IValue {
+	std::string value_{};
+public:
+	StringNode(std::string_view id, InputList inputs, std::string value) :
+		IValue(id, std::move(inputs)),
+		value_(std::move(value)) {}
+
+	auto Eval(std::string_view name) -> NamedValue override {
+		return NamedValue{ value_ }; }};
+
+
 class FloatNode : public IValue {
 public:
 	FloatNode(std::string_view id, InputList inputs, float value)
@@ -141,6 +152,15 @@ private:
 	std::string zSlot_{}; };
 
 
+class StringCompiler final : public NodeCompiler {
+	void Build() override {
+		using rclx::jv_find;
+		std::string data{"emptystring"};
+		if (auto jv = jv_find(data_, "data", JSON_STRING)) {
+			data = jv->toString(); }
+		out_ = std::make_shared<StringNode>(id_, std::move(inputs_), std::move(data)); }};
+
+
 class FloatCompiler final : public NodeCompiler {
 	void Build() override {
 		using rclx::jv_find;
@@ -197,6 +217,7 @@ class Vec3Compiler final : public NodeCompiler {
 
 
 struct init { init() {
+	NodeRegistry::GetInstance().Register("$string", []() { return std::make_unique<StringCompiler>(); });
 	NodeRegistry::GetInstance().Register("$float", []() { return std::make_unique<FloatCompiler>(); });
 	NodeRegistry::GetInstance().Register("$vec2", []() { return std::make_unique<Vec2Compiler>(); });
 	NodeRegistry::GetInstance().Register("$vec3", []() { return std::make_unique<Vec3Compiler>(); });
