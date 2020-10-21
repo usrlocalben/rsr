@@ -32,10 +32,10 @@ class Impl : public IMaterial {
 	// inputs
 	ITexture* textureNode0_{nullptr};
 	ITexture* textureNode1_{nullptr};
-	IValue* uNode0_{nullptr};
-	std::string uSlot0_{};
-	IValue* uNode1_{nullptr};
-	std::string uSlot1_{};
+	IValue* uv0Node_{nullptr};
+	std::string uv0Slot_{};
+	IValue* uv1Node_{nullptr};
+	std::string uv1Slot_{};
 
 public:
 	Impl(std::string_view id, InputList inputs, int programId, bool filter, bool alpha) :
@@ -57,17 +57,17 @@ public:
 				TYPE_ERROR(ITexture);
 				return false; }
 			return true; }
-		if (attr == "u0") {
-			uNode0_ = dynamic_cast<IValue*>(other);
-			uSlot0_ = slot;
-			if (uNode0_ == nullptr) {
+		if (attr == "uv0") {
+			uv0Node_ = dynamic_cast<IValue*>(other);
+			uv0Slot_ = slot;
+			if (uv0Node_ == nullptr) {
 				TYPE_ERROR(IValue);
 				return false; }
 			return true; }
-		if (attr == "u1") {
-			uNode1_ = dynamic_cast<IValue*>(other);
-			uSlot1_ = slot;
-			if (uNode1_ == nullptr) {
+		if (attr == "uv1") {
+			uv1Node_ = dynamic_cast<IValue*>(other);
+			uv1Slot_ = slot;
+			if (uv1Node_ == nullptr) {
 				TYPE_ERROR(IValue);
 				return false; }
 			return true; }
@@ -107,12 +107,16 @@ public:
 			dc.Enable(rglv::GL_BLEND); }
 		else {
 			dc.Disable(rglv::GL_BLEND); }
-		/*if (uNode0_ != nullptr) {
-			dc.glColor(uNode0_->Eval(uSlot0_).as_vec3()); }
-		if (uNode1_ != nullptr) {
-			dc.glNormal(uNode1_->Eval(uSlot1_).as_vec3()); }*/
-		// dc.vertex_input_uniform(VertexInputUniform{ sin(float(gt.elapsed()*3.0f)) * 0.5f + 0.5f });
-		}};
+
+		if (uv0Node_ || uv1Node_) {
+			auto [id, ptr] = dc.AllocUniformBuffer();
+			dc.UseUniforms(id);
+			if (uv0Node_) {
+				auto dst = static_cast<rmlv::vec4*>(ptr);
+				dst[0] = uv0Node_->Eval(uv0Slot_).as_vec4(); }
+			if (uv1Node_) {
+				auto dst = static_cast<rmlv::vec4*>(ptr);
+				dst[1] = uv1Node_->Eval(uv1Slot_).as_vec4(); }} }};
 
 
 class Compiler final : public NodeCompiler {
@@ -120,8 +124,8 @@ class Compiler final : public NodeCompiler {
 		using rclx::jv_find;
 		if (!Input("texture0", /*required=*/false)) { return; }
 		if (!Input("texture1", /*required=*/false)) { return; }
-		if (!Input("u0", /*required=*/false)) { return; }
-		if (!Input("u1", /*required=*/false)) { return; }
+		if (!Input("uv0", /*required=*/false)) { return; }
+		if (!Input("uv1", /*required=*/false)) { return; }
 
 		int programId = 1;
 		if (auto jv = jv_find(data_, "program", JSON_STRING)) {
