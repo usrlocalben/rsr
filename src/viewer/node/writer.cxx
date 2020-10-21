@@ -164,7 +164,6 @@ private:
 
 		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
-		dc.Enable(rglv::GL_BLEND);
 
 		dc.UseBuffer(0, vbos_[mod2_]);
 		dc.DrawArrays(GL_TRIANGLES, 0, vbos_[mod2_].size()); }

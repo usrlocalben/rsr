@@ -23,11 +23,28 @@ using namespace rqv;
 namespace jobsys = rclmt::jobsys;
 
 class Impl : public IMaterial {
-public:
-	Impl(std::string_view id, InputList inputs, int programId, bool filter)
-		:IMaterial(id, std::move(inputs)), programId_(programId), filter_(filter) {}
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	// config
+	const int programId_;
+	const bool filter_;
+	const bool alpha_;
+
+	// inputs
+	ITexture* textureNode0_{nullptr};
+	ITexture* textureNode1_{nullptr};
+	IValue* uNode0_{nullptr};
+	std::string uSlot0_{};
+	IValue* uNode1_{nullptr};
+	std::string uSlot1_{};
+
+public:
+	Impl(std::string_view id, InputList inputs, int programId, bool filter, bool alpha) :
+		IMaterial(id, std::move(inputs)),
+		programId_(programId),
+		filter_(filter),
+		alpha_(alpha) {}
+
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "texture0") {
 			textureNode0_ = dynamic_cast<ITexture*>(other);
 			if (textureNode0_ == nullptr) {
@@ -86,25 +103,16 @@ public:
 			auto& texture = textureNode1_->GetTexture();
 			dc.BindTexture(1, texture.buf.data(), texture.width, texture.height, texture.stride, filter_ ? 1 : 0); }
 		dc.Enable(rglv::GL_CULL_FACE);
+		if (alpha_) {
+			dc.Enable(rglv::GL_BLEND); }
+		else {
+			dc.Disable(rglv::GL_BLEND); }
 		/*if (uNode0_ != nullptr) {
 			dc.glColor(uNode0_->Eval(uSlot0_).as_vec3()); }
 		if (uNode1_ != nullptr) {
 			dc.glNormal(uNode1_->Eval(uSlot1_).as_vec3()); }*/
 		// dc.vertex_input_uniform(VertexInputUniform{ sin(float(gt.elapsed()*3.0f)) * 0.5f + 0.5f });
-		}
-
-private:
-	// config
-	int programId_;
-	bool filter_;
-
-	// inputs
-	ITexture* textureNode0_{nullptr};
-	ITexture* textureNode1_{nullptr};
-	IValue* uNode0_{nullptr};
-	std::string uSlot0_{};
-	IValue* uNode1_{nullptr};
-	std::string uSlot1_{}; };
+		}};
 
 
 class Compiler final : public NodeCompiler {
@@ -123,7 +131,11 @@ class Compiler final : public NodeCompiler {
 		if (auto jv = jv_find(data_, "filter", JSON_TRUE)) {
 			filter = true; }
 
-		out_ = std::make_shared<Impl>(id_, std::move(inputs_), programId, filter); }};
+		bool alpha{false};
+		if (auto jv = jv_find(data_, "alpha", JSON_TRUE)) {
+			alpha = true; }
+
+		out_ = std::make_shared<Impl>(id_, std::move(inputs_), programId, filter, alpha); }};
 
 
 struct init { init() {
