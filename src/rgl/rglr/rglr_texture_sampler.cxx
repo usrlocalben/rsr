@@ -8,6 +8,14 @@ namespace rqdq {
 namespace {
 
 /**
+ * constant from ryg's srgb tools
+ */
+#define SSE_CONST4(name, val) static const __declspec(align(16)) unsigned int name[4] = { (val), (val), (val), (val) }
+#define _CONST(name) *(const __m128i *)&name
+#define _CONSTF(name) *(const __m128 *)&name
+
+
+/**
  * based on OpenGL lod formula and ideas/source from
  * http://hugi.scene.org/online/coding/hugi%2014%20-%20comipmap.htm
  *
@@ -65,6 +73,7 @@ public:
 
 	void sample(const rmlv::qfloat2& uv, rmlv::qfloat4& out) const override {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::sar, rmlv::qfloat4, rmlv::qfloat;
+		SSE_CONST4(c_almostone, 0x3f7fffff);
 
 		// const auto baseDim = qfloat{ float(1<<POWER) };
 		const auto baseTexCoord = rmlv::qfloat2{ uv.s * baseDim_, uv.t * baseDim_ };
@@ -76,8 +85,8 @@ public:
 		const auto levelBeginRow = (0xfffffffe << (POWER-lod)) & ((1<<(POWER+1))-1);
 
 		// flip Y and convert to mipmap coords
-		auto levelX = ftoi(        fract(uv.x+10.0F)  * levelDim);
-		auto levelY = ftoi((1.0F - fract(uv.y+10.0F)) * levelDim);
+		auto levelX = ftoi(                        fract(uv.x+10.0F)  * levelDim);
+		auto levelY = ftoi((_CONSTF(c_almostone) - fract(uv.y+10.0F)) * levelDim);
 
 		auto bufferX = levelX;
 		auto bufferY = levelBeginRow + levelY;
@@ -113,6 +122,7 @@ public:
 
 	void sample(const rmlv::qfloat2& uv, rmlv::qfloat4& out) const override {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::sar, rmlv::qfloat4, rmlv::qfloat;
+		SSE_CONST4(c_almostone, 0x3f7fffff);
 
 		// const auto baseDim = qfloat{ float(1<<POWER) };
 		const auto baseTexCoord = rmlv::qfloat2{ uv.s * baseDim_, uv.t * baseDim_ };
@@ -124,8 +134,8 @@ public:
 		const auto levelBeginRow = (0xfffffffe << (POWER-lod)) & ((1<<(POWER+1))-1);
 
 		// flip Y and convert to mipmap coords
-		auto levelX = ftoi(        fract(uv.x+10.0F)  * levelDim);
-		auto levelY = ftoi((1.0F - fract(uv.y+10.0F)) * levelDim);
+		auto levelX = ftoi(                        fract(uv.x+10.0F)  * levelDim);
+		auto levelY = ftoi((_CONSTF(c_almostone) - fract(uv.y+10.0F)) * levelDim);
 
 		auto bufferX = levelX;
 		auto bufferY = levelBeginRow + levelY;
@@ -292,8 +302,9 @@ public:
 
 	void sample(const rmlv::qfloat2& uv, rmlv::qfloat4& out) const override {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::sar, rmlv::qfloat4, rmlv::qfloat;
-		auto pxU = ftoi(        fract(uv.s)  * width_);
-		auto pxV = ftoi((1.0F - fract(uv.t)) * height_);
+		SSE_CONST4(c_almostone, 0x3f7fffff);
+		auto pxU = ftoi(                        fract(uv.s)  * width_);
+		auto pxV = ftoi((_CONSTF(c_almostone) - fract(uv.t)) * height_);
 		auto ofs = pxV*stride_ + pxU;
 		ofs = shl<2>(ofs);  // 4 channels
 
