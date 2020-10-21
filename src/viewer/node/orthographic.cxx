@@ -16,15 +16,15 @@ class Impl final : public ICamera {
 	const rmlm::mat4 m_;
 
 public:
-	Impl(std::string_view id, InputList inputs, float l, float r, float b, float t) :
+	Impl(std::string_view id, InputList inputs, float l, float r, float b, float t, float n, float f) :
 		ICamera(id, std::move(inputs)),
-		m_(rglv::Orthographic(l, r, b, t, 1.0F, -1.0F)) {}
+		m_(rglv::Orthographic(l, r, b, t, n, f)) {}
 
-	using ICamera::ICamera;
-	rmlm::mat4 ProjectionMatrix(float aspect [[maybe_unused]]) const override {
+	// using ICamera::ICamera;
+	auto ProjectionMatrix(float aspect [[maybe_unused]]) const -> rmlm::mat4 override {
 		return m_; }
 
-	rmlm::mat4 ViewMatrix() const override {
+	auto ViewMatrix() const -> rmlm::mat4 override {
 		return rmlm::mat4{1}; }};
 
 
@@ -48,7 +48,15 @@ class Compiler final : public NodeCompiler {
 		if (auto jv = jv_find(data_, "r", JSON_NUMBER)) {
 			r = static_cast<float>(jv->toNumber()); }
 
-		out_ = std::make_shared<Impl>(id_, std::move(inputs_), l, r, b, t); }};
+		float n{1.0F};
+		if (auto jv = jv_find(data_, "n", JSON_NUMBER)) {
+			n = static_cast<float>(jv->toNumber()); }
+
+		float f{-1.0F};
+		if (auto jv = jv_find(data_, "f", JSON_NUMBER)) {
+			f = static_cast<float>(jv->toNumber()); }
+
+		out_ = std::make_shared<Impl>(id_, std::move(inputs_), l, r, b, t, n, f); }};
 
 
 struct init { init() {
