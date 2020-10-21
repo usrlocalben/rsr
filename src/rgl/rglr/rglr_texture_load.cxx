@@ -58,7 +58,7 @@ Texture load_any(const std::string& prefix, const std::string& fn, const std::st
 	//	transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
 	// std::cout << "texturestore: loading " << prefix << fn << std::endl;
 	std::string ext = fn.substr(fn.length() - 4, 4);
-	if (ext == ".png") {
+	if (ext == ".png" || ext == ".PNG") {
 		return load_png(prefix + fn, name, premultiply); }
 //	else if (ext == ".jpg") {
 //		return loadJpg(prefix + fn, name);
