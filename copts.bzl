@@ -13,6 +13,7 @@ MSVC_FLAGS = [
     #"/wd4267",  # conversion from 'size_t' to 'type', possible loss of data
 
     # for clang-cl
+    #"-msse4.1",
     #"-Wno-unused-parameter",
     #"-Wno-unused-variable",
     #"-Wno-builtin-macro-redefined",

@@ -233,11 +233,13 @@
     <ClCompile Include="$(SolutionDir)\src\viewer\app.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\compile.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\cpu_colors.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\fontloader.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\jobsys_vis.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\main.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\base.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\buffers.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\computed.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\controller.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_auraforlaura.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_foo.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_many.cxx" />
@@ -248,6 +250,7 @@
     <ClCompile Include="$(SolutionDir)\src\viewer\node\group.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\i_camera.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\i_canvas.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_controller.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\i_gl.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\i_gpu.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\i_layer.cxx" />
@@ -269,8 +272,11 @@
     <ClCompile Include="$(SolutionDir)\src\viewer\node\truecolor.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\uicamera.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\value.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\writer.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\resource.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\shaders.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\shaders_envmap.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\shaders_wireframe.cxx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -13,3 +13,5 @@ bazel-*
 #python
 *.pyc
 
+#in-tree local state
+data/viewer_config.json

@@ -304,6 +304,24 @@
     <ClCompile Include="$(SolutionDir)\src\rml\rmlv\rmlv_vec.t.cxx">
       <Filter>rml</Filter>
     </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\shaders_envmap.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\shaders_wireframe.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\controller.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_controller.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\fontloader.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\writer.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ral">
