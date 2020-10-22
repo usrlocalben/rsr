@@ -303,8 +303,8 @@ public:
 	void sample(const rmlv::qfloat2& uv, rmlv::qfloat4& out) const override {
 		using rmlv::mvec4f, rmlv::mvec4i, rmlv::ftoi, rmlv::shl, rmlv::sar, rmlv::qfloat4, rmlv::qfloat;
 		SSE_CONST4(c_almostone, 0x3f7fffff);
-		auto pxU = ftoi(                        fract(uv.s)  * width_);
-		auto pxV = ftoi((_CONSTF(c_almostone) - fract(uv.t)) * height_);
+		auto pxU = ftoi(                        fract(uv.s+100.0F)  * width_);
+		auto pxV = ftoi((_CONSTF(c_almostone) - fract(uv.t+100.0F)) * height_);
 		auto ofs = pxV*stride_ + pxU;
 		ofs = shl<2>(ofs);  // 4 channels
 
