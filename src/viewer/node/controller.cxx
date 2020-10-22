@@ -92,10 +92,14 @@ public:
 			std::cerr << tmp2 <<"\n";
 			std::exit(1);
 		}
-		if (lua_isstring(L, -1)) {
+		if (lua_type(L, -1) == LUA_TSTRING) {
 			size_t len;
 			auto dataBegin = lua_tolstring(L, -1, &len);
 			std::string v(dataBegin, len);
+			lua_pop(L, 1);
+			return NamedValue{ v }; }
+		else if (lua_isnumber(L, -1)) {
+			auto v = static_cast<float>(lua_tonumber(L, -1));
 			lua_pop(L, 1);
 			return NamedValue{ v }; }
 		else if (lua_istable(L, -1)) {
