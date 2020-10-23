@@ -9,31 +9,30 @@
 
 #include "3rdparty/gason/gason.h"
 
-
 namespace rqdq {
 namespace rclx {
 
 class JSONFile {
+	const std::string path_{};
+	int generation_{0};
+	long long lastMTime_{0};
+	std::vector<char> bytes_{};
+	JsonValue jsonRoot_;
+	std::optional<JsonAllocator> allocator_;
+	bool valid_{false};
+
 public:
 	explicit JSONFile(std::string path);
-	bool IsOutOfDate() const;
-	bool Refresh();
-	bool IsValid() const;
-	JsonValue GetRoot() const;
+
+	auto IsOutOfDate() const -> bool;
+	auto Refresh() -> bool;
+	auto IsValid() const -> bool;
+	auto GetRoot() const -> JsonValue;
 
 private:
 	void Reload();
-	int64_t GetMTime() const;
+	auto GetMTime() const -> int64_t; };
 
-private:
-	int d_generation{0};
-	long long d_lastMTime{0};
-	std::string d_path{};
-	std::vector<char> d_bytes{};
-	JsonValue d_jsonRoot;
-	std::optional<JsonAllocator> d_allocator;
-	bool d_valid{false};
-	};
 
-}  // namespace rclx
-}  // namespace rqdq
+}  // close package namespace
+}  // close enterprise namespace

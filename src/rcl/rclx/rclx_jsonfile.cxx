@@ -9,53 +9,54 @@
 namespace rqdq {
 namespace rclx {
 
-JSONFile::JSONFile(std::string path) :d_path(std::move(path)) {
-	d_lastMTime = GetMTime();
+JSONFile::JSONFile(std::string path) :
+	path_(std::move(path)) {
+	lastMTime_ = GetMTime();
 	Reload(); }
 
 
-bool JSONFile::IsOutOfDate() const {
-	return GetMTime() != d_lastMTime; }
+auto JSONFile::IsOutOfDate() const -> bool {
+	return GetMTime() != lastMTime_; }
 
 
-bool JSONFile::Refresh() {
+auto JSONFile::Refresh() -> bool {
 	if (IsOutOfDate()) {
-		d_lastMTime = GetMTime();
+		lastMTime_ = GetMTime();
 		Reload();
 		return true; }
 	return false;}
 
 
-bool JSONFile::IsValid() const {
-	return d_valid; }
+auto JSONFile::IsValid() const -> bool {
+	return valid_; }
 
 
-JsonValue JSONFile::GetRoot() const {
-	if (!d_valid) {
+auto JSONFile::GetRoot() const -> JsonValue {
+	if (!valid_) {
 		throw std::runtime_error("document is not valid"); }
-	return d_jsonRoot; }
+	return jsonRoot_; }
 
 
-int64_t JSONFile::GetMTime() const {
-	return rcls::GetMTime(d_path); }
+auto JSONFile::GetMTime() const -> int64_t {
+	return rcls::GetMTime(path_); }
 
 
 void JSONFile::Reload() {
-	d_allocator = JsonAllocator{};
-	d_bytes.clear();
+	allocator_ = JsonAllocator{};
+	bytes_.clear();
 
-	rcls::LoadBytes(d_path, d_bytes);
-	d_bytes.emplace_back(static_cast<char>(0));
-	char* dataBegin = d_bytes.data();
+	rcls::LoadBytes(path_, bytes_);
+	bytes_.emplace_back(static_cast<char>(0));
+	char* dataBegin = bytes_.data();
 	char* dataEnd;
 
-	int status = jsonParse(dataBegin, &dataEnd, &d_jsonRoot, *d_allocator);
+	int status = jsonParse(dataBegin, &dataEnd, &jsonRoot_, *allocator_);
 	if (status != JSON_OK) {
 		std::cerr << jsonStrError(status) << " @" << (dataEnd - dataBegin) << std::endl;
-		d_valid = false; }
+		valid_ = false; }
 	else {
-		d_valid = true;
-		d_generation++; }}
+		valid_ = true;
+		generation_++; }}
 
 
 }  // namespace rclx

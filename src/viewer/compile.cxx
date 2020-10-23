@@ -36,7 +36,7 @@ using rclt::Split;
 NodeRegistry::NodeRegistry() = default;
 
 
-NodeRegistry& NodeRegistry::GetInstance() {
+auto NodeRegistry::GetInstance() -> NodeRegistry& {
 	static NodeRegistry reg{};
 	return reg; }
 
@@ -63,7 +63,7 @@ auto NodeRegistry::Get(const std::string& jsonName) -> FactoryFunc {
 	return {}; }
 
 
-CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore);
+auto CompileNode(JsonValue data, const rglv::MeshStore& meshStore) -> CompileResult;
 
 
 NodeCompiler::NodeCompiler() = default;
@@ -72,7 +72,7 @@ NodeCompiler::NodeCompiler() = default;
 NodeCompiler::~NodeCompiler() = default;
 
 
-CompileResult NodeCompiler::Compile(std::string_view id, JsonValue data, const rglv::MeshStore& meshStore) {
+auto NodeCompiler::Compile(std::string_view id, JsonValue data, const rglv::MeshStore& meshStore) -> CompileResult {
 	id_ = id;
 	data_ = data;
 	meshStore_ = &meshStore;
@@ -86,7 +86,7 @@ CompileResult NodeCompiler::Compile(std::string_view id, JsonValue data, const r
 	return std::tuple{out_, deps_}; }
 
 
-bool NodeCompiler::Input(std::string_view attrName, bool required) {
+auto NodeCompiler::Input(std::string_view attrName, bool required) -> bool {
 	if (auto jv = jv_find(data_, attrName)) {
 		if (jv->getTag() == JSON_STRING) {
 			// reference string
@@ -114,7 +114,7 @@ bool NodeCompiler::Input(std::string_view attrName, bool required) {
 			return true; }}}
 
 
-optional<tuple<NodeRegistry::FactoryFunc, JsonValue, std::string>> IdentifyNode(JsonValue data) {
+auto IdentifyNode(JsonValue data) -> optional<tuple<NodeRegistry::FactoryFunc, JsonValue, std::string>> {
 	auto& registry = NodeRegistry::GetInstance();
 	if (data.getTag() == JSON_OBJECT) {
 		// it's an object
@@ -137,7 +137,7 @@ optional<tuple<NodeRegistry::FactoryFunc, JsonValue, std::string>> IdentifyNode(
 	return {};}
 
 
-CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore) {
+auto CompileNode(JsonValue data, const rglv::MeshStore& meshStore) -> CompileResult {
 	if (auto info = IdentifyNode(data)) {
 		const auto[compilerFactory, innerData, guid] = *info;
 		auto nodeCompiler = compilerFactory();
@@ -145,7 +145,7 @@ CompileResult CompileNode(JsonValue data, const rglv::MeshStore& meshStore) {
 	return {}; }
 
 
-tuple<bool, NodeList> CompileDocument(const JsonValue root, const rglv::MeshStore& meshStore) {
+auto CompileDocument(const JsonValue root, const rglv::MeshStore& meshStore) -> tuple<bool, NodeList> {
 	NodeList nodes;
 
 	// add the json nodes
@@ -164,7 +164,7 @@ tuple<bool, NodeList> CompileDocument(const JsonValue root, const rglv::MeshStor
 	return tuple{success, nodes}; }
 
 
-bool Link(NodeList& nodes) {
+auto Link(NodeList& nodes) -> bool {
 	unordered_map<string, int> byId;
 
 	// index by id, check for duplicates

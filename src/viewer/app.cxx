@@ -82,7 +82,8 @@ struct Soundtrack {
 
 
 struct SoundtrackSerializer {
-	static std::optional<Soundtrack> Deserialize(const JsonValue data) {
+	static
+	auto Deserialize(const JsonValue data) -> std::optional<Soundtrack> {
 		double tempo;
 		double duration = 0;
 		string path;
@@ -120,7 +121,8 @@ struct SyncConfig {
 
 
 struct SyncConfigSerializer {
-	static std::optional<SyncConfig> Deserialize(const JsonValue data) {
+	static
+	auto Deserialize(const JsonValue data) -> std::optional<SyncConfig> {
 		SyncConfig sc;
 
 		if (auto search = jv_find(data, "precision", JSON_NUMBER)) {
@@ -356,7 +358,7 @@ public:
 		nice_ = value; }
 
 private:
-	bool defaultKeyHandlers() const override {
+	auto defaultKeyHandlers() const -> bool override {
 		return false; }
 
 	void onKeyPressed(PixelToaster::DisplayInterface& display, PixelToaster::Key key) override {
@@ -649,7 +651,7 @@ private:
 		node->Run();
 		jobsys::wait(rootJob); }
 
-	bool Recompile(JsonValue docroot) {
+	auto Recompile(JsonValue docroot) -> bool {
 		PixelToaster::Timer compileTime;
 		NodeList newNodes;
 		bool success;
