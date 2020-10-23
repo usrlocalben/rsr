@@ -65,7 +65,7 @@ std::vector<char> LoadBytes(const std::string& path) {
 
 
 void LoadBytes(const std::string& path, std::vector<char>& buf) {
-	std::ifstream fd(path);
+	std::ifstream fd(path, std::ios::binary);
 	fd.exceptions(std::ifstream::badbit | std::ifstream::failbit | std::ifstream::eofbit);
 	fd.seekg(0, std::ios::end);
 	std::streampos length(fd.tellg());
