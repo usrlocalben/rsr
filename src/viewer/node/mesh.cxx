@@ -104,7 +104,7 @@ public:
 
 class Compiler final : public NodeCompiler {
 	void Build() override {
-		if (!Input("material", /*required=*/true)) { return; }
+		if (!Input("material", /*required=*/false)) { return; }
 
 		std::string_view name{"notfound.obj"};
 		if (auto jv = rclx::jv_find(data_, "name", JSON_STRING)) {
