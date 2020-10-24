@@ -106,6 +106,9 @@ public:
 		using namespace rmlm;
 		using namespace rglv;
 
+		if (!Enabled()) {
+			return; }
+
 		auto& pmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
 		auto& vmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
 		auto& mmat = *static_cast<mat4*>(rclma::framepool::Allocate(64));
@@ -205,7 +208,7 @@ class Compiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("camera", /*required=*/true)) { return; }
 		if (!Input("color", /*required=*/false)) { return; }
-		if (!Input("enabled", /*required=*/false)) { return; }
+		if (!Input("enable", /*required=*/false)) { return; }
 
 		if (auto jv = rclx::jv_find(data_, "gl", JSON_ARRAY)) {
 			for (const auto& item : *jv) {
