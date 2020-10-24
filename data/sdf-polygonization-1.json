@@ -27,7 +27,7 @@
 	{"$material": { "id": "mBlack",
 		"program": "Envmap",
 		"filter": false,
-		"texture0": {"$image": {"file": "data/textures/env-black.png"}}}},
+		"texture0": {"$image": {"file": "data/texture/env-black.png"}}}},
 
 	{"$vec3": {"id": "norotator", "x": 0, "y": 0, "z": 0}},
 

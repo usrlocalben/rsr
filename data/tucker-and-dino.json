@@ -63,9 +63,9 @@
 {"$material": { "id": "dinoTexture",
 	"program": "Amy",
 	"filter": true,
-	"texture0": {"$image": {"file": "data/textures/dino512.png"}}}},
+	"texture0": {"$image": {"file": "data/texture/dino512.png"}}}},
 
 {"$material": { "id": "tinyTexture",
 	"program": "Amy",
 	"filter": true,
-	"texture0": {"$image": {"file": "data/textures/tiny512.png"}}}} ]
+	"texture0": {"$image": {"file": "data/texture/tiny512.png"}}}} ]

@@ -4,7 +4,7 @@
 "soundtrack": {
 	"tempo": 132,
 	"duration": {"minutes": 2, "seconds": 51},
-	"path": "data/untitled2.mp3"},
+	"path": "data/audio/untitled2.mp3"},
 "sync": {
 	"precision": 4,
 	"tracks": ["foo", "bar"]}}

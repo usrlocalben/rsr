@@ -201,8 +201,8 @@ class Application::impl : public PixelToaster::Listener {
 
 public:
 	void Run() {
-		textureStore_.load_dir("data\\textures\\");
-		meshStore_.LoadDir("data\\meshes\\");
+		textureStore_.load_dir("data\\texture\\");
+		meshStore_.LoadDir("data\\mesh\\");
 
 		PrepareBuiltInNodes();
 

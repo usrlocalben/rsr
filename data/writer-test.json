@@ -24,12 +24,12 @@
 		"width": 8.3,
 		"color": {"$vec3": {"x": 0.80, "y": 1.0, "z": 0.5}},
 		"text": {"$string": {"data": "There is a box over there! Do you see that box over there?"}},
-		"font": "data\\cmu_serif_roman_48.lua"}}}},
+		"font": "data/font/cmu_serif_roman_48.lua"}}}},
 
 {"$material": { "id": "mfont",
 	"program": "Text",
 	"filter": true,
 	"alpha": true,
-	"texture0": {"$image": {"file": "data/textures/cmu_serif_roman_48.png"}}}}
+	"texture0": {"$image": {"file": "data/font/cmu_serif_roman_48.png"}}}}
 
 ]

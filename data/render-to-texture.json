@@ -113,14 +113,14 @@
 	{"$material": { "id": "mBlack",
 		"program": "Envmap",
 		"filter": false,
-		"texture0": {"$image": {"file": "data/textures/env-black.png"}}}},
+		"texture0": {"$image": {"file": "data/texture/env-black.png"}}}},
 
 	{"$material": { "id": "mPurpleFade",
 		"program": "EnvmapX",
 		"filter": false,
 		"u0": "amyBackgroundColor",
 		"u1": "sync:foo",
-		"texture0": {"$image": {"id": "texpurple1", "file": "data/textures/env-purple.png"}}}},
+		"texture0": {"$image": {"id": "texpurple1", "file": "data/texture/env-purple.png"}}}},
 
 	{"$computedVec3": {
 		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
@@ -129,7 +129,7 @@
 	{"$material": { "id": "mAmy",
 		"program": "Amy",
 		"filter": true,
-		"texture0": {"$image": {"file": "data/textures/amy1024.png"}}}},
+		"texture0": {"$image": {"file": "data/texture/amy1024.png"}}}},
 
 	{"$computedVec3": {"id": "auraFreq",
 		"inputs": [{"name": "t", "type": "real", "source": "globals:wallclock"}],
