@@ -12,7 +12,7 @@ Layer{ id="lEffects",
   --camera="uiCamera",
   camera=Perspective{ position=Vec3(0, 0, 130),
                       h=3.14159, v=0, fov=45.0 },
-  background=BACKGROUND_COLOR,
+  color=BACKGROUND_COLOR,
   gl={"sceneGeo",}}
 
 --[[debugGl = Modify{

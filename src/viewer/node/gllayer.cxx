@@ -32,6 +32,9 @@ class Impl : public ILayer {
 	ICamera* cameraNode_{nullptr};
 	IValue* colorNode_{nullptr};
 	std::string colorSlot_{};
+	IValue* enableNode_{nullptr};
+	std::string enableSlot_{};
+
 	std::vector<rcls::vector<float>> lightmaps_{};
 	rglv::GPU gpu_{ jobsys::numThreads, std::string{"gllayer"} };
 
@@ -41,7 +44,7 @@ public:
 		gpu_.Install(0, 0, rglv::GPUBinImpl<rglv::BaseProgram>::MakeBinProgramPtrs());
 		gpu_.Install(0, 0x6a2, rglv::GPUTileImpl<rglr::QFloat3FragmentCursor, rglr::QFloatFragmentCursor, rglv::BaseProgram, false, true, rglv::DepthLT, true, false, rglv::BlendOff>::MakeDrawProgramPtrs()); }
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "camera") {
 			cameraNode_ = dynamic_cast<ICamera*>(other);
 			if (cameraNode_ == nullptr) {
@@ -62,6 +65,13 @@ public:
 				return false; }
 			gls_.push_back(tmp);
 			return true; }
+		if (attr == "enable") {
+			enableNode_ = dynamic_cast<IValue*>(other);
+			enableSlot_ = slot;
+			if (enableNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
 		return ILayer::Connect(attr, other, slot); }
 
 	void Main() override {
@@ -70,22 +80,23 @@ public:
 		jobsys::Job *doneJob = jobsys::make_job(jobsys::noop);
 		AddLinksTo(doneJob);
 
-		if (gls_.empty()) {
-			jobsys::run(doneJob); }
-		else {
+		if (Enabled() && gls_.size()>0) {
 			for (auto glnode : gls_) {
 				glnode->AddLink(AfterAll(doneJob)); }
 			for (auto glnode : gls_) {
-				glnode->Run(); } }}
+				glnode->Run(); } }
+		else {
+			jobsys::run(doneJob); }}
 
-	static void AllThen(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+	static
+	void AllThen(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
 		if (--counter != 0) {
 			return; }
 		jobsys::run(link); }
 
-	rmlv::vec3 GetBackgroundColor() override {
+	auto Color() -> rmlv::vec3 override {
 		auto color = rmlv::vec3{0.0F};
 		if (colorNode_ != nullptr) {
 			color = colorNode_->Eval(colorSlot_).as_vec3(); }
@@ -169,9 +180,9 @@ public:
 protected:
 	void AddDeps() override {
 		ILayer::AddDeps();
-		AddDep(cameraNode_);
-		for (auto gl : gls_) {
-			AddDep(gl); } }
+		if (Enabled()) {
+			for (auto gl : gls_) {
+				AddDep(gl); } }}
 
 private:
 	rclmt::jobsys::Job* Post() {
@@ -179,7 +190,14 @@ private:
 	static void PostJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto& [self] = *data;
 		self->Post(); }
-	void PostImpl() {}};
+	void PostImpl() {}
+
+	auto Enabled() -> bool {
+		bool enabled = true;
+		if (enableNode_ != nullptr) {
+			if (enableNode_->Eval(enableSlot_).as_float() < 1.0F) {
+				enabled = false; }}
+		return enabled; } };
 
 
 
@@ -187,6 +205,7 @@ class Compiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("camera", /*required=*/true)) { return; }
 		if (!Input("color", /*required=*/false)) { return; }
+		if (!Input("enabled", /*required=*/false)) { return; }
 
 		if (auto jv = rclx::jv_find(data_, "gl", JSON_ARRAY)) {
 			for (const auto& item : *jv) {

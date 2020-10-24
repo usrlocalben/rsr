@@ -36,8 +36,8 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
-    name = "fx_auraforlaura",
-    srcs = ["fx_auraforlaura.cxx"],
+    name = "auraforlaura",
+    srcs = ["auraforlaura.cxx"],
     deps = [
         "//3rdparty/pixeltoaster",
         "//src/rcl/rclx:gason_util",
@@ -53,22 +53,8 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
-    name = "fx_carpet",
-    srcs = ["fx_carpet.cxx"],
-    deps = [
-        "//src/rgl/rglv:gl",
-        "//src/rgl/rglv:mesh",
-        "//src/viewer:compile",
-        "//src/viewer:shaders",
-        ":base",
-        ":i_gl",
-        ":i_value",
-        ":i_material", ],
-    copts = RSR_DEFAULT_COPTS,)
-
-cc_library(
-    name = "fx_foo",
-    srcs = ["fx_foo.cxx"],
+    name = "mesh",
+    srcs = ["mesh.cxx"],
     deps = [
         "//3rdparty/pixeltoaster",
         "//src/rcl/rcls:aligned_containers",
@@ -102,8 +88,8 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
-    name = "fx_mc",
-    srcs = ["fx_mc.cxx"],
+    name = "mc",
+    srcs = ["mc.cxx"],
     deps = [
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rclx:gason_util",
@@ -123,8 +109,8 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
-    name = "fx_many",
-    srcs = ["fx_many.cxx"],
+    name = "many",
+    srcs = ["many.cxx"],
     deps = [
         "//src/rcl/rclmt:jobsys",
         "//src/rcl/rclx:gason_util",
@@ -441,8 +427,8 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
-    name = "translate",
-    srcs = ["translate.cxx"],
+    name = "modify",
+    srcs = ["modify.cxx"],
     deps = [
         "//src/rcl/rclma:framepool",
         "//src/rcl/rclmt:jobsys",

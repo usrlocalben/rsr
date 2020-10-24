@@ -132,7 +132,7 @@ end
 
 function Modify(d)
     data = fold_id(d)
-    HOST:compile('translate', data)
+    HOST:compile('modify', data)
     return data.id
 end
 
@@ -188,7 +188,7 @@ end
 
 function AuraForLaura(d)
     local data = fold_id(d)
-    HOST:compile('fxAuraForLaura', data)
+    HOST:compile('auraForLaura', data)
     return data.id
 end
 
@@ -212,13 +212,13 @@ end
 
 function Many(d)
     local data = fold_id(d)
-    HOST:compile('fxMany', data)
+    HOST:compile('many', data)
     return data.id
 end
 
 function Mesh(d)
     local data = fold_id(d)
-    HOST:compile('fxFoo', data)
+    HOST:compile('mesh', data)
     return data.id
 end
 

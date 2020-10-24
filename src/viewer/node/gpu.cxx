@@ -124,7 +124,7 @@ public:
 		auto backgroundColor = vec3{ 0, 0, 0 };
 		if (!layers_.empty()) {
 			auto& firstLayer = layers_[0];
-			backgroundColor = firstLayer->GetBackgroundColor(); }
+			backgroundColor = firstLayer->Color(); }
 		ic.RenderbufferType(rglv::GL_COLOR_ATTACHMENT0, rglv::RB_COLOR_DEPTH);
 		ic.RenderbufferType(rglv::GL_DEPTH_ATTACHMENT, rglv::RB_COLOR_DEPTH);
 		ic.ClearColor(backgroundColor);

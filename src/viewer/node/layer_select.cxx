@@ -52,11 +52,11 @@ public:
 			layerNode->AddLink(AfterAll(doneJob));
 			layerNode->Run(); }}
 
-	rmlv::vec3 GetBackgroundColor() override {
+	auto Color() -> rmlv::vec3 override {
 		auto layerNode = GetSelectedLayer();
 		if (layerNode == nullptr) {
 			return rmlv::vec3{ 0.0F }; }
-		return layerNode->GetBackgroundColor(); }
+		return layerNode->Color(); }
 
 	void Render(int pass, rglv::GL* dc, rmlv::ivec2 targetSizeInPx, float aspect) override {
 		auto layerNode = GetSelectedLayer();

@@ -225,7 +225,7 @@ class Compiler final : public NodeCompiler {
 
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$fxAuraForLaura", [](){ return std::make_unique<Compiler>(); });
+	NodeRegistry::GetInstance().Register("$auraForLaura", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 

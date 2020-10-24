@@ -179,7 +179,7 @@ public:
 		self->lowerNode_->Draw(pass, lights, dc, pmat, vmat, mmat); }};
 
 
-class TranslateOp final : public IGl {
+class ModifyOp final : public IGl {
 	IGl *lowerNode_{nullptr};
 	std::string scaleSlot_{"default"};
 	IValue* scaleNode_{nullptr};
@@ -266,7 +266,7 @@ public:
 		return a; } };
 
 
-class TranslateCompiler final : public NodeCompiler {
+class ModifyCompiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("gl", /*required=*/true)) { return; }
 		if (!Input("rotate", /*required=*/false)) { return; }
@@ -291,7 +291,7 @@ class TranslateCompiler final : public NodeCompiler {
 		if (auto jv = jv_find(data_, "gl", JSON_STRING)) {
 			inputs.emplace_back("gl", jv->toString()); }
 */
-		out_ = std::make_shared<TranslateOp>(id_, std::move(inputs_)); }};
+		out_ = std::make_shared<ModifyOp>(id_, std::move(inputs_)); }};
 
 
 class RepeatCompiler final : public NodeCompiler {
@@ -312,7 +312,7 @@ class RepeatCompiler final : public NodeCompiler {
 
 struct init { init() {
 	NodeRegistry::GetInstance().Register("$repeat", [](){ return std::make_unique<RepeatCompiler>(); });
-	NodeRegistry::GetInstance().Register("$translate", [](){ return std::make_unique<TranslateCompiler>(); });
+	NodeRegistry::GetInstance().Register("$modify", [](){ return std::make_unique<ModifyCompiler>(); });
 }} init{};
 
 

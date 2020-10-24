@@ -10,7 +10,7 @@ namespace rqv {
 class ILayer : public NodeBase {
 public:
 	using NodeBase::NodeBase;
-	virtual auto GetBackgroundColor() -> rmlv::vec3 = 0;
+	virtual auto Color() -> rmlv::vec3 = 0;
 	virtual auto Render(int pass, rglv::GL* dc, rmlv::ivec2 targetSizeInPx, float aspect) -> void = 0; };
 
 

@@ -26,6 +26,21 @@ constexpr int batch = 3000;
 
 
 class Impl final : public IGl {
+
+	// state
+	int activeBuffer_{0};
+	rglv::VertexArray_F3F3F3 vbo_;
+	rcls::vector<uint16_t> meshIndices_;
+	rcls::vector<rmlm::mat4> mats_;
+	// std::array<rglv::VertexArray_F3F3F3, 3> buffers_{};
+
+	// inputs
+	IMaterial* materialNode_{nullptr};
+	/*IValue* freqNode_{nullptr};
+	std::string freqSlot_{};
+	IValue* phaseNode_{nullptr};
+	std::string phaseSlot_{};*/
+
 public:
 	Impl(std::string_view id, InputList inputs, const rglv::Mesh& mesh) :
 		IGl(id, std::move(inputs)) {
@@ -117,18 +132,10 @@ public:
 				TYPE_ERROR(IMaterial);
 				return false; }
 			return true; }
-		/* if (attr == "num") {
-			numNode_ = dynamic_cast<IValue*>(other);
-			numSlot_ = slot;
-			if (numNode_ == nullptr) {
-				TYPE_ERROR(IValue);
-				return false; }
-			return true; } */
 		return IGl::Connect(attr, other, slot); }
 
 	void AddDeps() override {
 		AddDep(materialNode_); }
-		// AddDep(numNode_); }
 
 	void Main() override {
 		rclmt::jobsys::run(Compute());}
@@ -213,42 +220,15 @@ private:
 		using rmlv::ivec2;
 		activeBuffer_ = (activeBuffer_+1)%3;
 
-		/*rmlv::vec3 freq{ 0.0F };
-		if (freqNode_ != nullptr) {
-			freq = freqNode_->Eval(freqSlot_).as_vec3();
-
-		rmlv::vec3 phase{ 0.0F };
-		if (phaseNode_ != nullptr) {
-			phase = phaseNode_->Eval(phaseSlot_).as_vec3(); }*/
-
-
 		auto postSetup = rclmt::jobsys::make_job(rclmt::jobsys::noop);
 		AddLinksTo(postSetup);
 		materialNode_->AddLink(postSetup);
-		materialNode_->Run();}
-
-private:
-	// state
-	int activeBuffer_{0};
-	rglv::VertexArray_F3F3F3 vbo_;
-	rcls::vector<uint16_t> meshIndices_;
-	rcls::vector<rmlm::mat4> mats_;
-	// std::array<rglv::VertexArray_F3F3F3, 3> buffers_{};
-
-	// inputs
-	IMaterial* materialNode_{nullptr};
-	/*IValue* freqNode_{nullptr};
-	std::string freqSlot_{};
-	IValue* phaseNode_{nullptr};
-	std::string phaseSlot_{};*/
-	};
+		materialNode_->Run();} };
 
 
 class Compiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("material", /*required=*/true)) { return; }
-		// if (!Input("freq", /*required=*/true)) { return; }
-		// if (!Input("phase", /*required=*/true)) { return; }
 
 		std::string_view meshPath{"notfound.obj"};
 		if (auto jv = rclx::jv_find(data_, "mesh", JSON_STRING)) {
@@ -259,7 +239,7 @@ class Compiler final : public NodeCompiler {
 
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$fxMany", [](){ return std::make_unique<Compiler>(); });
+	NodeRegistry::GetInstance().Register("$many", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 
