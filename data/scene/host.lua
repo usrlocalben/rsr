@@ -234,6 +234,12 @@ function Spot(d)
     return data.id
 end
 
+function Controller(d)
+    local data = fold_id(d)
+    HOST:compile('controller', data)
+    return data.id
+end
+
 function Group(...)
     local data
     if type(...) == 'table' then
