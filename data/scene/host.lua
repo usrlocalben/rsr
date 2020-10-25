@@ -210,6 +210,12 @@ function Buffers(d)
     return data.id
 end
 
+function RenderToTexture(d)
+    local data = fold_id(d)
+    HOST:compile('renderToTexture', data)
+    return data.id
+end
+
 function Many(d)
     local data = fold_id(d)
     HOST:compile('many', data)
