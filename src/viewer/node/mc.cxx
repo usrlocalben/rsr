@@ -358,7 +358,7 @@ class Compiler final : public NodeCompiler {
 
 
 struct init { init() {
-	NodeRegistry::GetInstance().Register("$fxMC", [](){ return std::make_unique<Compiler>(); });
+	NodeRegistry::GetInstance().Register("$mc", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 }  // namespace

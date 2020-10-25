@@ -216,6 +216,12 @@ function Many(d)
     return data.id
 end
 
+function MC(d)
+    local data = fold_id(d)
+    HOST:compile('mc', data)
+    return data.id
+end
+
 function Mesh(d)
     local data = fold_id(d)
     HOST:compile('mesh', data)

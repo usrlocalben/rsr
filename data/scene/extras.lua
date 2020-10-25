@@ -32,6 +32,39 @@ function T3(id, expr)
     end
 end
 
+function Mul_Float_Float(a, b)
+    return ComputedVec3{
+        inputs={
+            { name="a", type="real", source=a },
+            { name="b", type="real", source=b } },
+        code="{ a*b, a*b, a*b }"}
+end
+
+function Mul_Vec3_Float(a, b)
+    return ComputedVec3{
+        inputs={
+            { name="a", type="vec3", source=a },
+            { name="b", type="real", source=b } },
+        code="{ a[0]*b, a[1]*b, a[2]*b }"}
+end
+
+function Mul_Vec3_Vec3(a, b)
+    return ComputedVec3{
+        inputs={
+            { name="a", type="vec3", source=a },
+            { name="b", type="vec3", source=b } },
+        code="{ a[0]*b[0], a[1]*b[1], a[2]*b[2] }"}
+end
+
+function Merge3(a, b, c)
+    return ComputedVec3{
+        inputs={
+            { name="a", type="real", source=a },
+            { name="b", type="real", source=b },
+            { name="c", type="real", source=c },},
+        code="{ a, b, c }"}
+end
+
 function Linear(s)
   return math.pow(s/255.0, 2.2333)
 end

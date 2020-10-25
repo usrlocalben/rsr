@@ -1,7 +1,9 @@
 require "extras"
 
-NOISE_AMP = Float(0)
+SHAKE_AMP = Float(0)
+SHAKE_SPEED = Float(1)
 SCALE = Float(9.0)
+SPIKINESS = Float(0.05)
 T = "globals:wallclock"
 
 local function Linear(s)
@@ -31,6 +33,13 @@ Layer{ id="lAmy",
         filter=true,
         texture0=Image("data/texture/amy1024.png") }}}}}
 
+ft = Mul_Float_Float(T, SHAKE_SPEED)
+shake = Mul_Vec3_Float(
+  Vec3{ x=Noise(Vec2(0, ft)),
+        y=Noise(Vec2(0.2348792, ft)),
+	z=Noise(Vec2(0.4718937, ft)) },
+  SHAKE_AMP)
+
 Layer{ id="lAuraForLaura",
   camera=Perspective{position=Vec3(0,0,24),
                      h=3.14, v=0, fov=55.0,
@@ -38,21 +47,13 @@ Layer{ id="lAuraForLaura",
   gl=Modify{
     gl=AuraForLauraMT{
       material=Material{
-        program="Envmap",
-        filter=false,
+        program="Envmap", filter=false,
         texture0=Image("data/texture/env-purple.png") },
       freq=T3("{(pow(sin(t*0.5),7))*10+15.0, sin(t*0.25)*15+10, 0}"),
       phase=T3("{t*1, t*5.0, 0}"),
-      amp=Float(0.05)},
-    translate=ComputedVec3{
-      inputs={{ name="amp", type="real", source=NOISE_AMP },
-              { name="nx", type="real", source="auraPositionNoiseX" },
-              { name="ny", type="real", source="auraPositionNoiseY" },
-              { name="nz", type="real", source="auraPositionNoiseZ" },},
-      code="{nx*amp, ny*amp, nz*amp}"},
+      amp=SPIKINESS},
+    translate=shake,
     scale=SCALE,
-    rotate=T3('auraRotation', "{0, sin(t*0.5)*0.2+0.2, sin(t*0.222)*0.1}")}}
+    rotate=T3("{0, sin(t*0.5)*0.2+0.2, sin(t*0.222)*0.1}")}}
 
-Noise{ id="auraPositionNoiseX", coord=Vec3(0, T, 0) }
-Noise{ id="auraPositionNoiseY", coord=Vec3(0.2348792, T, 0) }
-Noise{ id="auraPositionNoiseZ", coord=Vec3(0.4718937, T, 0) }
+
