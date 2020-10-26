@@ -70,35 +70,54 @@ struct AmyProgram final : public rglv::BaseProgram {
 	static constexpr int id = 4;
 
 	struct VertexInput {
-		rmlv::qfloat4 position;
-		rmlv::qfloat4 normal;
-		rmlv::qfloat4 uv; };
+		rmlv::qfloat3 position;
+		rmlv::qfloat3 normal;
+		rmlv::qfloat2 uv; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr); }
-		int Size() const { return data_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
 		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.position = data_.a0.loadxyz1(idx);
-			vi.normal   = data_.a1.loadxyz0(idx);
-			vi.uv       = data_.a2.loadxyz0(idx); }
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }
+
+			if (ptrs_[3]) {
+				vi.normal.x = _mm_load_ps(&ptrs_[3][idx]);
+				vi.normal.y = _mm_load_ps(&ptrs_[4][idx]);
+				vi.normal.z = _mm_load_ps(&ptrs_[5][idx]); }
+			else {
+				vi.normal.x = vi.normal.y = _mm_setzero_ps(); vi.normal.z = _mm_set1_ps(1.0F); }
+
+			vi.uv.x = ptrs_[ 9] ? _mm_load_ps(&ptrs_[ 9][idx]) : _mm_setzero_ps();
+			vi.uv.y = ptrs_[10] ? _mm_load_ps(&ptrs_[10][idx]) : _mm_setzero_ps(); }
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position.setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
-			vi.normal  .setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
-			vi.uv      .setLane(li, rmlv::vec4{ data_.a2.at(idx), 0 }); }
-		const rglv::VertexArray_F3F3F3& data_; };
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }
+
+			if (ptrs_[3]) {
+				vi.normal.setLane(li, rmlv::vec3{ ptrs_[3][idx], ptrs_[4][idx], ptrs_[5][idx] }); }
+			else {
+				vi.normal.setLane(li, rmlv::vec3{ 0, 0, 1 }); }
+
+			vi.uv.setLane(li, rmlv::vec2{ ptrs_[ 9]?ptrs_[ 9][idx]:0, ptrs_[10]?ptrs_[10][idx]:0 }); }};
 
 	struct VertexOutputSD {
-		rmlv::vec3 uv;
+		rmlv::vec2 uv;
 		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
 			return { mix(a.uv, b.uv, t) }; }};
 
 	struct VertexOutputMD {
-		rmlv::qfloat3 uv;
+		rmlv::qfloat2 uv;
 
 		VertexOutputSD Lane(const int li) const {
 			return VertexOutputSD{
@@ -110,7 +129,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 			uv({ d0.uv, d1.uv, d2.uv }) {}
 		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP [[maybe_unused]]) const {
 			return { rglv::Interpolate(BP, uv) }; }
-		rglv::VertexFloat3 uv; };
+		rglv::VertexFloat2 uv; };
 
 	static void ShadeVertex(
 		const rglv::Matrices& mats,
@@ -118,8 +137,8 @@ struct AmyProgram final : public rglv::BaseProgram {
 		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs) {
-		outs.uv = v.uv.xyz();
-		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
+		outs.uv = v.uv;
+		gl_Position = gl_ModelViewProjectionMatrix * rmlv::qfloat4{ v.position, 1.0F }; }
 
 	template <typename TU0, typename TU1, typename TU3>
 	inline static void ShadeFragment(
@@ -130,15 +149,14 @@ struct AmyProgram final : public rglv::BaseProgram {
 		const TU3& tu3 [[maybe_unused]],
 		const rglv::BaryCoord& BS,
 		const rglv::BaryCoord& BP,
-		const VertexOutputMD& outs,
+		const VertexOutputMD& data,
 		const rmlv::qfloat2& gl_FragCoord,
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth,
 		rmlv::qfloat4& gl_FragColor) {
 		// gl_FragColor = { 0.5F, 0.5F, 0.5F, 1.0F };
 		// fmt::print(std::cerr, "tu0 is {}\n", reinterpret_cast<const void*>(tu0));
-		rmlv::qfloat2 tmp{ outs.uv.x, outs.uv.y };
-		tu0->sample(tmp, gl_FragColor);
+		tu0->sample(data.uv, gl_FragColor);
 		} };
 
 
@@ -151,22 +169,41 @@ struct TextProgram final : public rglv::BaseProgram {
 		rmlv::qfloat2 uv; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr); }
-		int Size() const { return data_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
 		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.position = data_.a0.load(idx);
-			vi.color    = data_.a1.load(idx);
-			vi.uv       = data_.a2.loadxy(idx); }
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }
+
+			if (ptrs_[6]) {
+				vi.color.x = _mm_load_ps(&ptrs_[6][idx]);
+				vi.color.y = _mm_load_ps(&ptrs_[7][idx]);
+				vi.color.z = _mm_load_ps(&ptrs_[8][idx]); }
+			else {
+				vi.color.x = vi.color.y = vi.color.z = _mm_set1_ps(1.0F); }
+
+			vi.uv.x = ptrs_[ 9] ? _mm_load_ps(&ptrs_[ 9][idx]) : _mm_setzero_ps();
+			vi.uv.y = ptrs_[10] ? _mm_load_ps(&ptrs_[10][idx]) : _mm_setzero_ps(); }
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position.setLane(li, data_.a0.at(idx));
-			vi.color   .setLane(li, data_.a1.at(idx));
-			vi.uv      .setLane(li, data_.a2.at(idx).xy()); }
-		const rglv::VertexArray_F3F3F3& data_; };
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }
+
+			if (ptrs_[6]) {
+				vi.color.setLane(li, rmlv::vec3{ ptrs_[6][idx], ptrs_[7][idx], ptrs_[8][idx] }); }
+			else {
+				vi.color.setLane(li, rmlv::vec3{ 1, 1, 1 }); }
+
+			vi.uv.setLane(li, rmlv::vec2{ ptrs_[ 9]?ptrs_[ 9][idx]:0, ptrs_[10]?ptrs_[10][idx]:0 }); }};
 
 	struct VertexOutputSD {
 		rmlv::vec3 color;
@@ -217,22 +254,41 @@ struct DepthProgram final : public rglv::BaseProgram {
 		rmlv::qfloat2 uv; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr); }
-		int Size() const { return data_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
 		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.position = data_.a0.load(idx);
-			vi.normal   = data_.a1.load(idx);
-			vi.uv       = data_.a2.loadxy(idx); }
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }
+
+			if (ptrs_[3]) {
+				vi.normal.x = _mm_load_ps(&ptrs_[3][idx]);
+				vi.normal.y = _mm_load_ps(&ptrs_[4][idx]);
+				vi.normal.z = _mm_load_ps(&ptrs_[5][idx]); }
+			else {
+				vi.normal.x = vi.normal.y = _mm_setzero_ps(); vi.normal.z = _mm_set1_ps(1.0F); }
+
+			vi.uv.x = ptrs_[ 9] ? _mm_load_ps(&ptrs_[ 9][idx]) : _mm_setzero_ps();
+			vi.uv.y = ptrs_[10] ? _mm_load_ps(&ptrs_[10][idx]) : _mm_setzero_ps(); }
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position.setLane(li, data_.a0.at(idx));
-			vi.normal  .setLane(li, data_.a1.at(idx));
-			vi.uv      .setLane(li, data_.a2.at(idx).xy()); }
-		const rglv::VertexArray_F3F3F3& data_; };
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }
+
+			if (ptrs_[3]) {
+				vi.normal.setLane(li, rmlv::vec3{ ptrs_[3][idx], ptrs_[4][idx], ptrs_[5][idx] }); }
+			else {
+				vi.normal.setLane(li, rmlv::vec3{ 0, 0, 1 }); }
+
+			vi.uv.setLane(li, rmlv::vec2{ ptrs_[ 9]?ptrs_[ 9][idx]:0, ptrs_[10]?ptrs_[10][idx]:0 }); }};
 
 	struct VertexOutputSD {
 		rmlv::vec2 uv;
@@ -306,18 +362,25 @@ struct PatternProgram final : public rglv::BaseProgram {
 		rmlv::qfloat3 position; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr); }
-		int Size() const { return data_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
 		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.position = data_.a0.load(idx); }
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }}
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position.setLane(li, data_.a0.at(idx)); }
-		const rglv::VertexArray_F3F3F3& data_; };
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }}};
+
 
 	struct VertexOutputSD {
 		static auto Mix(VertexOutputSD a, VertexOutputSD b, float t) -> VertexOutputSD {
@@ -355,33 +418,48 @@ struct ManyProgram final : public rglv::BaseProgram {
 			magic(data.magic) {} };
 
 	struct VertexInput {
-		rmlv::qfloat4 position;
-		rmlv::qfloat4 normal;
+		rmlv::qfloat3 position;
+		rmlv::qfloat3 normal;
 		rmlv::qfloat2 uv;
 		rmlm::qmat4 imat; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			vbo_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])),
-			mats_(static_cast<const rmlm::mat4*>(buffers[1])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr);
-			assert(formats[1] == rglv::AF_FLOAT);
-			assert(buffers[1] != nullptr); }
-		int Size() const { return vbo_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
 		void LoadInstance(int idx, VertexInput& vi) {
-			vi.imat = rmlm::qmat4{ mats_[idx] }; }
+			vi.imat = rmlm::qmat4{ reinterpret_cast<const rmlm::mat4*>(ptrs_[15])[idx] }; }
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.position = vbo_.a0.loadxyz1(idx);
-			vi.normal   = vbo_.a1.loadxyz0(idx);
-			vi.uv       = vbo_.a2.loadxy(idx); }
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }
+
+			if (ptrs_[3]) {
+				vi.normal.x = _mm_load_ps(&ptrs_[3][idx]);
+				vi.normal.y = _mm_load_ps(&ptrs_[4][idx]);
+				vi.normal.z = _mm_load_ps(&ptrs_[5][idx]); }
+			else {
+				vi.normal.x = vi.normal.y = _mm_setzero_ps(); vi.normal.z = _mm_set1_ps(1.0F); }
+
+			vi.uv.x = ptrs_[ 9] ? _mm_load_ps(&ptrs_[ 9][idx]) : _mm_setzero_ps();
+			vi.uv.y = ptrs_[10] ? _mm_load_ps(&ptrs_[10][idx]) : _mm_setzero_ps(); }
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position.setLane(li, rmlv::vec4{ vbo_.a0.at(idx), 1 });
-			vi.normal  .setLane(li, rmlv::vec4{ vbo_.a1.at(idx), 0 });
-			vi.uv      .setLane(li, vbo_.a2.at(idx).xy()); }
-		const rglv::VertexArray_F3F3F3& vbo_;
-		const rmlm::mat4* const mats_; };
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }
+
+			if (ptrs_[3]) {
+				vi.normal.setLane(li, rmlv::vec3{ ptrs_[3][idx], ptrs_[4][idx], ptrs_[5][idx] }); }
+			else {
+				vi.normal.setLane(li, rmlv::vec3{ 0, 0, 1 }); }
+
+			vi.uv.setLane(li, rmlv::vec2{ ptrs_[ 9]?ptrs_[ 9][idx]:0, ptrs_[10]?ptrs_[10][idx]:0 }); }};
 
 	struct VertexOutputSD {
 		rmlv::vec2 uv;
@@ -409,7 +487,7 @@ struct ManyProgram final : public rglv::BaseProgram {
 		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs) {
-		rmlv::qfloat4 p1 = v.imat * v.position;
+		rmlv::qfloat4 p1 = v.imat * rmlv::qfloat4{ v.position, 1.0F };
 		outs.uv = v.uv;
 		gl_Position = gl_ModelViewProjectionMatrix * p1; }
 
@@ -434,27 +512,54 @@ struct OBJ1Program final : public rglv::BaseProgram {
 	static constexpr int id = 7;
 
 	struct VertexInput {
-		rmlv::qfloat4 position;
-		rmlv::qfloat4 normal;
+		rmlv::qfloat3 position;
+		rmlv::qfloat3 normal;
 		rmlv::qfloat3 kd; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			vbo_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr); }
-		int Size() const { return vbo_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
 		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.position = vbo_.a0.loadxyz1(idx);
-			vi.normal   = vbo_.a1.loadxyz0(idx);
-			vi.kd       = vbo_.a2.load(idx); }
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }
+
+			if (ptrs_[3]) {
+				vi.normal.x = _mm_load_ps(&ptrs_[3][idx]);
+				vi.normal.y = _mm_load_ps(&ptrs_[4][idx]);
+				vi.normal.z = _mm_load_ps(&ptrs_[5][idx]); }
+			else {
+				vi.normal.x = vi.normal.y = _mm_setzero_ps(); vi.normal.z = _mm_set1_ps(1.0F); }
+
+			if (ptrs_[6]) {
+				vi.kd.x = _mm_load_ps(&ptrs_[6][idx]);
+				vi.kd.y = _mm_load_ps(&ptrs_[7][idx]);
+				vi.kd.z = _mm_load_ps(&ptrs_[8][idx]); }
+			else {
+				vi.normal.x = vi.normal.y = _mm_setzero_ps(); vi.normal.z = _mm_set1_ps(1.0F); }}
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position.setLane(li, rmlv::vec4{ vbo_.a0.at(idx), 1 });
-			vi.normal  .setLane(li, rmlv::vec4{ vbo_.a1.at(idx), 0 });
-			vi.kd      .setLane(li, vbo_.a2.at(idx)); }
-		const rglv::VertexArray_F3F3F3& vbo_; };
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }
+
+			if (ptrs_[3]) {
+				vi.normal.setLane(li, rmlv::vec3{ ptrs_[3][idx], ptrs_[4][idx], ptrs_[5][idx] }); }
+			else {
+				vi.normal.setLane(li, rmlv::vec3{ 0, 0, 1 }); }
+
+			if (ptrs_[6]) {
+				vi.kd.setLane(li, rmlv::vec3{ ptrs_[6][idx], ptrs_[7][idx], ptrs_[8][idx] }); }
+			else {
+				vi.kd.setLane(li, rmlv::vec3{ 1, 1, 1 }); }}};
+
 
 	struct VertexOutputSD {
 		rmlv::vec3 kd;
@@ -488,8 +593,8 @@ struct OBJ1Program final : public rglv::BaseProgram {
 
 		rmlv::qfloat4 lightPos{ 0.0F, 0.0F, 0.0F, 1.0F };
 
-		auto mvv = mats.vm * v.position;
-		auto mvn = mats.vm * v.normal;
+		auto mvv = mats.vm * rmlv::qfloat4{ v.position, 1.0F };
+		auto mvn = mats.vm * rmlv::qfloat4{ v.normal, 0 };
 		auto distance = rmlv::length(lightPos - mvv);
 		auto lightVector = rmlv::normalize(lightPos - mvv);
 		auto diffuse = vmax(dot(mvn, lightVector), 0.1F);
@@ -498,7 +603,7 @@ struct OBJ1Program final : public rglv::BaseProgram {
 		outs.kd = v.kd * diffuse;
 
 		// outs.kd = v.kd;
-		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
+		gl_Position = gl_ModelViewProjectionMatrix * rmlv::qfloat4{ v.position, 1.0F }; }
 
 	template <typename TU0, typename TU1, typename TU3>
 	inline static void ShadeFragment(
@@ -521,27 +626,53 @@ struct OBJ2Program final : public rglv::BaseProgram {
 	static constexpr int id = 8;
 
 	struct VertexInput {
-		rmlv::qfloat4 position;
-		rmlv::qfloat4 normal;
+		rmlv::qfloat3 position;
+		rmlv::qfloat3 normal;
 		rmlv::qfloat3 kd; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			vbo_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr); }
-		int Size() const { return vbo_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
 		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.position = vbo_.a0.loadxyz1(idx);
-			vi.normal   = vbo_.a1.loadxyz0(idx);
-			vi.kd       = vbo_.a2.load(idx); }
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }
+
+			if (ptrs_[3]) {
+				vi.normal.x = _mm_load_ps(&ptrs_[3][idx]);
+				vi.normal.y = _mm_load_ps(&ptrs_[4][idx]);
+				vi.normal.z = _mm_load_ps(&ptrs_[5][idx]); }
+			else {
+				vi.normal.x = vi.normal.y = _mm_setzero_ps(); vi.normal.z = _mm_set1_ps(1.0F); }
+
+			if (ptrs_[6]) {
+				vi.kd.x = _mm_load_ps(&ptrs_[6][idx]);
+				vi.kd.y = _mm_load_ps(&ptrs_[7][idx]);
+				vi.kd.z = _mm_load_ps(&ptrs_[8][idx]); }
+			else {
+				vi.normal.x = vi.normal.y = _mm_setzero_ps(); vi.normal.z = _mm_set1_ps(1.0F); }}
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position.setLane(li, rmlv::vec4{ vbo_.a0.at(idx), 1 });
-			vi.normal  .setLane(li, rmlv::vec4{ vbo_.a1.at(idx), 0 });
-			vi.kd      .setLane(li, vbo_.a2.at(idx)); }
-		const rglv::VertexArray_F3F3F3& vbo_; };
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }
+
+			if (ptrs_[3]) {
+				vi.normal.setLane(li, rmlv::vec3{ ptrs_[3][idx], ptrs_[4][idx], ptrs_[5][idx] }); }
+			else {
+				vi.normal.setLane(li, rmlv::vec3{ 0, 0, 1 }); }
+
+			if (ptrs_[6]) {
+				vi.kd.setLane(li, rmlv::vec3{ ptrs_[6][idx], ptrs_[7][idx], ptrs_[8][idx] }); }
+			else {
+				vi.kd.setLane(li, rmlv::vec3{ 1, 1, 1 }); }}};
 
 	struct VertexOutputSD {
 		rmlv::vec4 sp;
@@ -578,10 +709,10 @@ struct OBJ2Program final : public rglv::BaseProgram {
 		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs) {
-		outs.sp = mats.vm * v.position;
-		outs.sn = mats.vm * v.normal;
+		outs.sp = mats.vm * rmlv::qfloat4{v.position, 1};
+		outs.sn = mats.vm * rmlv::qfloat4{v.normal, 0};
 		outs.kd = v.kd;
-		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
+		gl_Position = gl_ModelViewProjectionMatrix * rmlv::qfloat4{v.position, 1}; }
 
 	template <typename TU0, typename TU1, typename TU3>
 	inline static void ShadeFragment(
@@ -637,22 +768,48 @@ struct OBJ2SProgram final : public rglv::BaseProgram {
 		rmlv::qfloat3 kd; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			vbo_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr); }
-		int Size() const { return vbo_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
 		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.position = vbo_.a0.load(idx);
-			vi.normal   = vbo_.a1.load(idx);
-			vi.kd       = vbo_.a2.load(idx); }
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }
+
+			if (ptrs_[3]) {
+				vi.normal.x = _mm_load_ps(&ptrs_[3][idx]);
+				vi.normal.y = _mm_load_ps(&ptrs_[4][idx]);
+				vi.normal.z = _mm_load_ps(&ptrs_[5][idx]); }
+			else {
+				vi.normal.x = vi.normal.y = _mm_setzero_ps(); vi.normal.z = _mm_set1_ps(1.0F); }
+
+			if (ptrs_[6]) {
+				vi.kd.x = _mm_load_ps(&ptrs_[6][idx]);
+				vi.kd.y = _mm_load_ps(&ptrs_[7][idx]);
+				vi.kd.z = _mm_load_ps(&ptrs_[8][idx]); }
+			else {
+				vi.normal.x = vi.normal.y = _mm_setzero_ps(); vi.normal.z = _mm_set1_ps(1.0F); }}
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position.setLane(li, vbo_.a0.at(idx));
-			vi.normal  .setLane(li, vbo_.a1.at(idx));
-			vi.kd      .setLane(li, vbo_.a2.at(idx)); }
-		const rglv::VertexArray_F3F3F3& vbo_; };
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }
+
+			if (ptrs_[3]) {
+				vi.normal.setLane(li, rmlv::vec3{ ptrs_[3][idx], ptrs_[4][idx], ptrs_[5][idx] }); }
+			else {
+				vi.normal.setLane(li, rmlv::vec3{ 0, 0, 1 }); }
+
+			if (ptrs_[6]) {
+				vi.kd.setLane(li, rmlv::vec3{ ptrs_[6][idx], ptrs_[7][idx], ptrs_[8][idx] }); }
+			else {
+				vi.kd.setLane(li, rmlv::vec3{ 1, 1, 1 }); }}};
 
 	struct VertexOutputSD {
 		rmlv::vec4 sp;

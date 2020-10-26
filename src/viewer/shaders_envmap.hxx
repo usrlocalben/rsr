@@ -13,6 +13,8 @@
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
+#include <array>
+
 #define gl_ModelViewMatrix mats.vm
 #define gl_ModelViewProjectionMatrix mats.vpm
 #define gl_NormalMatrix mats.nm
@@ -25,27 +27,53 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 	static constexpr int id = 10;
 
 	struct VertexInput {
-		rmlv::qfloat4 position;
-		rmlv::qfloat4 smoothNormal;
-		rmlv::qfloat4 faceNormal; };
+		rmlv::qfloat3 position;
+		rmlv::qfloat3 smoothNormal;
+		rmlv::qfloat3 faceNormal; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-			assert(formats[0] == rglv::AF_VAO_F3F3F3);
-			assert(buffers[0] != nullptr); }
-		int Size() const { return data_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
 		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.position     = data_.a0.loadxyz1(idx);
-			vi.smoothNormal = data_.a1.loadxyz0(idx);
-			vi.faceNormal   = data_.a2.loadxyz0(idx); }
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }
+
+			if (ptrs_[3]) {
+				vi.smoothNormal.x = _mm_load_ps(&ptrs_[3][idx]);
+				vi.smoothNormal.y = _mm_load_ps(&ptrs_[4][idx]);
+				vi.smoothNormal.z = _mm_load_ps(&ptrs_[5][idx]); }
+			else {
+				vi.smoothNormal.x = vi.smoothNormal.y = _mm_setzero_ps(); vi.smoothNormal.z = _mm_set1_ps(1.0F); }
+
+			if (ptrs_[6]) {
+				vi.faceNormal.x = _mm_load_ps(&ptrs_[6][idx]);
+				vi.faceNormal.y = _mm_load_ps(&ptrs_[7][idx]);
+				vi.faceNormal.z = _mm_load_ps(&ptrs_[8][idx]); }
+			else {
+				vi.faceNormal.x = vi.faceNormal.y = vi.faceNormal.z = _mm_set1_ps(1.0F); }}
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.position    .setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 });
-			vi.smoothNormal.setLane(li, rmlv::vec4{ data_.a1.at(idx), 0 });
-			vi.faceNormal  .setLane(li, rmlv::vec4{ data_.a2.at(idx), 0 }); }
-		const rglv::VertexArray_F3F3F3& data_; };
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }
+
+			if (ptrs_[3]) {
+				vi.smoothNormal.setLane(li, rmlv::vec3{ ptrs_[3][idx], ptrs_[4][idx], ptrs_[5][idx] }); }
+			else {
+				vi.smoothNormal.setLane(li, rmlv::vec3{ 0, 0, 1 }); }
+
+			if (ptrs_[6]) {
+				vi.faceNormal.setLane(li, rmlv::vec3{ ptrs_[6][idx], ptrs_[7][idx], ptrs_[8][idx] }); }
+			else {
+				vi.faceNormal.setLane(li, rmlv::vec3{ 1, 1, 1 }); }}};
 
 	struct VertexOutputSD {
 		rmlv::vec2 envmapUV;
@@ -74,9 +102,9 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& out [[maybe_unused]]) {
 
-		rmlv::qfloat4 position = gl_ModelViewMatrix * v.position;
+		rmlv::qfloat4 position = gl_ModelViewMatrix * rmlv::qfloat4{ v.position, 1 };
 		rmlv::qfloat3 e = normalize(position.xyz());
-		rmlv::qfloat4 vn = mix(v.smoothNormal, v.faceNormal, 0.0F); // in_uniform.roughness);
+		rmlv::qfloat3 vn = mix(v.smoothNormal, v.faceNormal, 0.0F); // in_uniform.roughness);
 		rmlv::qfloat3 n = normalize(mul_w0(gl_NormalMatrix, vn));
 		rmlv::qfloat3 r = rglv::reflect(e, n);
 
@@ -84,7 +112,7 @@ struct EnvmapProgram final : public rglv::BaseProgram {
 		rmlv::qfloat uu = r.x / m + 0.5F;
 		rmlv::qfloat vv = r.y / m + 0.5F;
 		out.envmapUV = { uu, vv };
-		gl_Position = gl_ModelViewProjectionMatrix * v.position; }
+		gl_Position = gl_ModelViewProjectionMatrix * rmlv::qfloat4{ v.position, 1 }; }
 
 	template <typename TU0, typename TU1, typename TU3>
 	inline static void ShadeFragment(

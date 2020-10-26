@@ -31,8 +31,8 @@ class Impl final : public IGl {
 	// state
 	int mod2_{0};
 	std::vector<uint16_t> indices_;
-	std::array<rglv::VertexArray_F3F3F3, 2> vbos_{};
-	rglv::VertexArray_F3F3F3* vbo_{nullptr};
+	std::array<rglv::VertexArray_F3F3, 2> vbos_{};
+	rglv::VertexArray_F3F3* vbo_{nullptr};
 
 	// inputs
 	IMaterial* materialNode_{nullptr};
@@ -116,7 +116,8 @@ public:
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
 
-		dc.UseBuffer(0, *vbo_);
+		dc.UseBuffer(0, vbo_->a0);
+		dc.UseBuffer(3, vbo_->a1);
 		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data(), RGL_HINT_DENSE|RGL_HINT_READ4);
 		dc.ResetX(); }
 
@@ -139,7 +140,8 @@ public:
 		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
 
-		dc.UseBuffer(0, *vbo_);
+		dc.UseBuffer(0, vbo_->a0);
+		dc.UseBuffer(3, vbo_->a1);
 		dc.DrawElements(GL_TRIANGLES, numRenderIndices_, GL_UNSIGNED_SHORT, indices_.data(), RGL_HINT_DENSE|RGL_HINT_READ4);
 		dc.ResetX();
 	}

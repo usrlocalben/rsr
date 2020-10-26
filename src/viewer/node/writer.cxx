@@ -172,7 +172,9 @@ private:
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
 
-		dc.UseBuffer(0, vbos_[mod2_]);
+		dc.UseBuffer(0, vbos_[mod2_].a0);
+		dc.UseBuffer(6, vbos_[mod2_].a1);
+		dc.UseBuffer(9, vbos_[mod2_].a2);
 		dc.DrawArrays(GL_TRIANGLES, 0, vbos_[mod2_].size()); }
 
 	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
@@ -186,7 +188,9 @@ private:
 		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
 
-		dc.UseBuffer(0, vbos_[mod2_]);
+		dc.UseBuffer(0, vbos_[mod2_].a0);
+		dc.UseBuffer(6, vbos_[mod2_].a1);
+		dc.UseBuffer(9, vbos_[mod2_].a2);
 		dc.DrawArrays(GL_TRIANGLES, 0, vbos_[mod2_].size()); }
 
 private:

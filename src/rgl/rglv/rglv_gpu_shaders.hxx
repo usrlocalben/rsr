@@ -26,23 +26,26 @@ struct BaseProgram {
 		UniformsMD(const UniformsSD&) {} };
 
 	struct VertexInput {
-		rmlv::qfloat4 a0; };
+		rmlv::qfloat3 a0; };
 
 	struct Loader {
-		Loader(const std::array<const void*, 4>& buffers,
-		       const std::array<int, 4>& formats [[maybe_unused]]) :
-			data_(*static_cast<const rglv::VertexArray_F3F3F3*>(buffers[0])) {
-				assert(formats[0] == AF_VAO_F3F3F3);
-				assert(buffers[0] != nullptr); }
-		int Size() const { return data_.size(); }
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
 		void LoadInstance(int, VertexInput&) {}
 		void LoadMD(int idx, VertexInput& vi) {
-			vi.a0 = data_.a0.loadxyz1(idx); }
-		/*void LoadOne(int idx, VertexInput& vi) {
-			vi.a0 = rmlv::vec4{ data_.a0.at(idx), 1 }; }*/
+			if (ptrs_[0]) {
+				vi.a0.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.a0.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.a0.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.a0.x = vi.a0.y = vi.a0.z = _mm_setzero_ps(); }}
+
 		void LoadLane(int idx, int li, VertexInput& vi) {
-			vi.a0.setLane(li, rmlv::vec4{ data_.a0.at(idx), 1 }); }
-		const rglv::VertexArray_F3F3F3& data_; };
+			if (ptrs_[0]) {
+				vi.a0.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.a0.setLane(li, rmlv::vec3{ 0, 0, 0 }); }}};
 
 	struct VertexOutputSD {
 		static VertexOutputSD Mix(VertexOutputSD, VertexOutputSD, float) {
@@ -64,7 +67,7 @@ struct BaseProgram {
 		const VertexInput& v,
 		rmlv::qfloat4& gl_Position,
 		VertexOutputMD& outs [[maybe_unused]]) {
-		gl_Position = m.vpm * v.a0; }
+		gl_Position = m.vpm * rmlv::qfloat4{ v.a0, 1.0F }; }
 
 	template <typename TU0, typename TU1, typename TU3>
 	inline static void ShadeFragment(

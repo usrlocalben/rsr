@@ -25,7 +25,7 @@ class Impl final : public IGl {
 	// config
 	const bool takeShadows_;
 	const bool makeShadows_;
-	rglv::VertexArray_F3F3F3 meshVAO_;
+	rglv::VertexArray_F3F3F3 meshBuffer_;
 	rcls::vector<uint16_t> meshIndices_;
 
 	// inputs
@@ -36,7 +36,7 @@ public:
 		IGl(id, std::move(inputs)),
 		takeShadows_(ts),
 		makeShadows_(ms) {
-		rglv::MakeArray(mesh, "PND", meshVAO_, meshIndices_); }
+		rglv::MakeArray(mesh, "PND", meshBuffer_, meshIndices_); }
 
 	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
 		if (attr == "material") {
@@ -64,7 +64,9 @@ public:
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
 
-		dc.UseBuffer(0, meshVAO_);
+		dc.UseBuffer(0, meshBuffer_.a0);
+		dc.UseBuffer(3, meshBuffer_.a1);
+		dc.UseBuffer(6, meshBuffer_.a2);
 		dc.DrawElements(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data()); }
 
 	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
@@ -102,7 +104,9 @@ public:
 		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
 
-		dc.UseBuffer(0, meshVAO_);
+		dc.UseBuffer(0, meshBuffer_.a0);
+		dc.UseBuffer(3, meshBuffer_.a1);
+		dc.UseBuffer(6, meshBuffer_.a2);
 		dc.DrawElements(GL_TRIANGLES, static_cast<int>(meshIndices_.size()), GL_UNSIGNED_SHORT, meshIndices_.data()); }};
 
 

@@ -101,8 +101,7 @@ struct GLState {
 	int color0AttachmentType;  // default is RB_COLOR_DEPTH
 	int depthAttachmentType;   // default is RB_COLOR_DEPTH
 
-	std::array<const void*, 4> buffers;
-	std::array<int, 4> bufferFormat;
+	std::array<const float*, 16> buffers;
 
 	std::array<TextureState, 2> tus;
 
@@ -177,9 +176,7 @@ struct GLState {
 		for (auto& tu : tus) {
 			tu.reset(); }
 		for (auto& item : buffers) {
-			item = nullptr; }
-		for (auto& item : bufferFormat) {
-			item = 0; }}};
+			item = nullptr; }}};
 
 
 class GL {
@@ -280,15 +277,15 @@ public:
 		cs_.tu3ptr = ptr;
 		cs_.tu3dim = dim; }
 
-	void UseBuffer(int idx, const VertexArray_F3F3F3& vao) {
+	void UseBuffer(int idx, const Float3Array& ptr) {
 		dirty_ = true;
-		cs_.buffers[idx] = &vao;
-		cs_.bufferFormat[idx] = AF_VAO_F3F3F3; }
+		cs_.buffers[idx]   = ptr.x.data();
+		cs_.buffers[idx+1] = ptr.y.data();
+		cs_.buffers[idx+2] = ptr.z.data(); }
 
-	void UseBuffer(int idx, float* ptr) {
+	void UseBuffer(int idx, const float* ptr) {
 		dirty_ = true;
-		cs_.buffers[idx] = ptr;
-		cs_.bufferFormat[idx] = AF_FLOAT; }
+		cs_.buffers[idx] = ptr; }
 
 	void ClearColor(rmlv::vec3 value) {
 		dirty_ = true;

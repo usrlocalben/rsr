@@ -178,7 +178,8 @@ public:
 			if (vao.size() != 0) {
 				const int elements = vao.size();
 				vao.pad();
-				dc.UseBuffer(0, vao);
+				dc.UseBuffer(0, vao.a0);
+				dc.UseBuffer(3, vao.a1);
 				dc.DrawArrays(GL_TRIANGLES, 0, elements); }}}
 
 	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
@@ -200,7 +201,8 @@ public:
 			if (vao.size() != 0) {
 				const int elements = vao.size();
 				vao.pad();
-				dc.UseBuffer(0, vao);
+				dc.UseBuffer(0, vao.a0);
+				dc.UseBuffer(3, vao.a1);
 				dc.DrawArrays(GL_TRIANGLES, 0, elements); }}}
 
 private:

@@ -92,7 +92,9 @@ public:
 		dc.ViewMatrix(*mvmat);
 		dc.ProjectionMatrix(*pmat);
 
-		dc.UseBuffer(0, vbo_);
+		dc.UseBuffer(0, vbo_.a0);
+		dc.UseBuffer(3, vbo_.a1);
+		dc.UseBuffer(9, vbo_.a2);
 		dc.DrawArrays(GL_TRIANGLES, 0, 6); }
 
 	void Draw(int pass, const LightPack& lights [[maybe_unused]], rglv::GL* _dc, const rmlm::mat4* const pmat, const rmlm::mat4* const vmat, const rmlm::mat4* mmat) override {
@@ -106,7 +108,9 @@ public:
 
 		dc.ViewMatrix(*vmat * *mmat);
 		dc.ProjectionMatrix(*pmat);
-		dc.UseBuffer(0, vbo_);
+		dc.UseBuffer(0, vbo_.a0);
+		dc.UseBuffer(3, vbo_.a1);
+		dc.UseBuffer(9, vbo_.a2);
 		dc.DrawArrays(GL_TRIANGLES, 0, 6); }};
 
 
@@ -153,7 +157,9 @@ public:
 		dc.ViewMatrix(vm);
 		dc.UseProgram(5);  // DepthProgram
 		dc.BindTexture3(lights.map[0], lights.size[0]);
-		dc.UseBuffer(0, vbo_);
+		dc.UseBuffer(0, vbo_.a0);
+		dc.UseBuffer(3, vbo_.a1);
+		dc.UseBuffer(9, vbo_.a2);
 		dc.DrawArrays(GL_TRIANGLES, 0, 6); }};
 
 

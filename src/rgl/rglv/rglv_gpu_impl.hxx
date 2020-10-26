@@ -308,13 +308,20 @@ class GPUBinImpl : GPU {
 		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(binUniforms));
 		const auto cullingEnabled = state.cullingEnabled;
 		const auto cullFace = state.cullFace;
-		typename SHADER::Loader loader( state.buffers, state.bufferFormat );
+		typename SHADER::Loader loader( state.buffers );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
 		typename SHADER::VertexInput vertex;
 
+		// XXX could be slooow.  maybe the client
+		// should have a way to indicate the size
+		// of the buffers
+		int maxidx = 0;
+		for (int i = 0; i < count; ++i) {
+			maxidx = std::max(maxidx, indexSource(i)); }
+
 		clipQueue_.clear();
-		int paddedSize = (loader.Size() + 3) & (~0x3);
+		int paddedSize = (maxidx+1 + 3) & (~0x3);
 		clipFlagBuffer_.reserve(paddedSize);
 		devCoordXBuffer_.reserve(paddedSize);
 		devCoordYBuffer_.reserve(paddedSize);
@@ -345,7 +352,7 @@ class GPUBinImpl : GPU {
 			if (INSTANCED) {
 				loader.LoadInstance(iid, vertex); }
 
-			const auto siz = loader.Size();
+			const auto siz = maxidx+1;
 			// xxx const int rag = siz % 4;  assume vaos are always padded to size()%4=0
 
 			// rmlv::mvec4i axFlags{ -1 };
@@ -506,7 +513,7 @@ class GPUBinImpl : GPU {
 		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(binUniforms));
 		const auto cullingEnabled = state.cullingEnabled;
 		const auto cullFace = state.cullFace;
-		typename SHADER::Loader loader( state.buffers, state.bufferFormat );
+		typename SHADER::Loader loader( state.buffers );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_ };
 
 		const auto scissorRect = ScissorRect(state);
@@ -660,7 +667,7 @@ class GPUBinImpl : GPU {
 		using rmlv::ivec2, rmlv::vec2, rmlv::vec3, rmlv::vec4, rmlv::qfloat4;
 		using std::array, std::swap, std::min, std::max;
 
-		typename SHADER::Loader loader( state.buffers, state.bufferFormat );
+		typename SHADER::Loader loader( state.buffers );
 		const auto frustum = ViewFrustum{ bufferDimensionsInPixels_.x };
 
 		const auto [DS, DO] = DSDO(state);
@@ -831,7 +838,7 @@ class GPUTileImpl : GPU {
 		COLOR_IO colorCursor( color0Buf, tileOrigin );
 		DEPTH_IO depthCursor( depthBuf, tileOrigin );
 
-		auto loader = typename SHADER::Loader{ state.buffers, state.bufferFormat };
+		auto loader = typename SHADER::Loader{ state.buffers };
 
 		const int targetHeightInPixels_ = bufferDimensionsInPixels_.y;
 
