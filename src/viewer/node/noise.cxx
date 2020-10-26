@@ -29,6 +29,10 @@ public:
 			return true; }
 		return IValue::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IValue::DisconnectAll();
+		coordNode_ = nullptr; }
+
 	void Reset() override {
 		cache_ = {}; }
 

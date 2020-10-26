@@ -31,6 +31,10 @@ public:
 			return true; }
 		return ITexture::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		ITexture::DisconnectAll();
+		gpuNode_ = nullptr; }
+
 	void AddDeps() override {
 		ITexture::AddDeps();
 		AddDep(gpuNode_); }

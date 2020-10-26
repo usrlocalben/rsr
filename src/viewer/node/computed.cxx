@@ -113,6 +113,12 @@ public:
 			return true; }
 		return IValue::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IValue::DisconnectAll();
+		for (auto& td : state_pt_) {
+			for (auto& computed_input : td->computedInputs) {
+				computed_input.sourceNode = nullptr; }}}
+
 	void Reset() override {
 		for (auto& cache : cache_pt_) {
 			cache.clear(); }}

@@ -80,6 +80,12 @@ public:
 			return true; }
 		return IGl::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IGl::DisconnectAll();
+		materialNode_ = nullptr;
+		textNode_ = nullptr;
+		colorNode_ = nullptr; }
+
 	void Main() override {
 		auto postSetup = Compute();
 		AddLinksTo(postSetup);

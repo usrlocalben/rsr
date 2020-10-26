@@ -91,6 +91,13 @@ public:
 			return true; }
 		return IGPU::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IGPU::DisconnectAll();
+		layers_.clear();
+		targetSizeNode_ = nullptr;
+		tileSizeNode_ = nullptr;
+		aspectNode_ = nullptr; }
+
 	void AddDeps() override {
 		IGPU::AddDeps();
 		for (auto node : layers_) {

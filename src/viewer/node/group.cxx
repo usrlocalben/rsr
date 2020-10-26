@@ -34,6 +34,10 @@ public:
 			return true; }
 		return IGl::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IGl::DisconnectAll();
+		gls_.clear(); }
+
 	void Main() override {
 		jobsys::Job *doneJob = jobsys::make_job(jobsys::noop);
 		AddLinksTo(doneJob);

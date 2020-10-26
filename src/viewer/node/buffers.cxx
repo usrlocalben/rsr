@@ -34,6 +34,10 @@ public:
 			return true; }
 		return ICanvas::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		ICanvas::DisconnectAll();
+		gpuNode_ = nullptr; }
+
 	void AddDeps() override {
 		AddDep(gpuNode_); }
 

@@ -46,6 +46,10 @@ public:
 			return true; }
 		return IValue::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IValue::DisconnectAll();
+		xNode_ = nullptr; }
+
 protected:
 	void AddDeps() override {
 		IValue::AddDeps(); }
@@ -85,6 +89,12 @@ public:
 				return false; }
 			return true; }
 		return IValue::Connect(attr, other, slot); }
+
+	void DisconnectAll() override {
+		IValue::DisconnectAll();
+		xNode_ = nullptr;
+		yNode_ = nullptr; }
+
 
 protected:
 	void AddDeps() override {
@@ -137,6 +147,12 @@ public:
 				return false; }
 			return true; }
 		return IValue::Connect(attr, other, slot); }
+
+	void DisconnectAll() override {
+		IValue::DisconnectAll();
+		xNode_ = nullptr;
+		yNode_ = nullptr;
+		zNode_ = nullptr; }
 
 protected:
 	void AddDeps() override {

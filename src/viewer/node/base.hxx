@@ -43,6 +43,7 @@ public:
 
 	virtual void Reset();
 	virtual auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool;
+	virtual void DisconnectAll();
 	virtual auto IsValid() -> bool;
 	virtual void Main();
 	virtual auto Deps() -> const std::vector<NodeBase*>&;

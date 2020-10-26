@@ -90,6 +90,13 @@ public:
 			return true; }
 		return IGl::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IGl::DisconnectAll();
+		materialNode_ = nullptr;
+		freqNode_ = nullptr;
+		phaseNode_ = nullptr;
+		ampNode_ = nullptr; }
+
 	void AddDeps() override {
 		IGl::AddDeps();
 		AddDep(materialNode_); }

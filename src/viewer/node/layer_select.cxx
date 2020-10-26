@@ -40,6 +40,11 @@ public:
 			return true; }
 		return ILayer::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		ILayer::DisconnectAll();
+		layers_.clear();
+		selectorNode_ = nullptr; }
+
 	void Main() override {
 		using rmlv::ivec2;
 		jobsys::Job *doneJob = jobsys::make_job(jobsys::noop);

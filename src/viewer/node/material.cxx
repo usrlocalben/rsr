@@ -73,6 +73,13 @@ public:
 			return true; }
 		return IMaterial::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IMaterial::DisconnectAll();
+		textureNode0_ = nullptr;
+		textureNode1_ = nullptr;
+		uv0Node_ = nullptr;
+		uv1Node_ = nullptr; }
+
 	void AddDeps() override {
 		IMaterial::AddDeps();
 		AddDep(textureNode0_);

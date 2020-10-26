@@ -35,6 +35,10 @@ public:
 			return true; }
 		return ICanvas::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		inputSlot_ = nullptr;
+		ICanvas::DisconnectAll(); }
+
 	void AddDeps() override {
 		ICanvas::AddDeps();
 		AddDep(inputNode_); }

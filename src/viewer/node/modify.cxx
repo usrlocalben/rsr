@@ -76,6 +76,13 @@ public:
 			return true; }
 		return IGl::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IGl::DisconnectAll();
+		lowerNode_ = nullptr;
+		scaleNode_ = nullptr;
+		rotateNode_ = nullptr;
+		translateNode_ = nullptr; }
+
 	void AddDeps() override {
 		IGl::AddDeps();
 		AddDep(lowerNode_); }
@@ -220,6 +227,13 @@ public:
 				return false; }
 			return true; }
 		return IGl::Connect(attr, other, slot); }
+
+	void DisconnectAll() override {
+		IGl::DisconnectAll();
+		lowerNode_ = nullptr;
+		scaleNode_ = nullptr;
+		rotateNode_ = nullptr;
+		translateNode_ = nullptr; }
 
 	void AddDeps() override {
 		IGl::AddDeps();

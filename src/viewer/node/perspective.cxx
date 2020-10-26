@@ -31,6 +31,10 @@ public:
 			return true; }
 		return ICamera::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		ICamera::DisconnectAll();
+		positionNode_ = nullptr; }
+
 	rmlm::mat4 ProjectionMatrix(float aspect) const override {
 		rmlm::mat4 m = rglv::Perspective2(fov, aspect, 10, 1000);
 		m = rmlm::mat4::translate(origin.x, origin.y, 0) * m;

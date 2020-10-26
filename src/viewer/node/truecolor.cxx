@@ -40,6 +40,11 @@ public:
 			return true; }
 		return IOutput::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IOutput::DisconnectAll();
+		gpuNode_ = nullptr;
+		uf0Node_ = nullptr; }
+
 	void AddDeps() override {
 		IOutput::AddDeps();
 		AddDep(gpuNode_); }

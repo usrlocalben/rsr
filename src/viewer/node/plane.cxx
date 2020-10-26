@@ -68,6 +68,10 @@ public:
 			return true; }
 		return IGl::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IGl::DisconnectAll();
+		materialNode_ = nullptr; }
+
 	void AddDeps() override {
 		AddDep(materialNode_); }
 

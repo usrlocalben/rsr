@@ -127,6 +127,11 @@ public:
 			return true; }
 		return IGl::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IGl::DisconnectAll();
+		materialNode_ = nullptr;
+		frobNode_ = nullptr; }
+
 	void Main() override {
 		using rmlv::vec3;
 		namespace jobsys = rclmt::jobsys;

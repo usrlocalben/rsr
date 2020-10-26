@@ -186,8 +186,14 @@ class Application::impl : public PixelToaster::Listener {
 	HandyCam camera_;
 	// END debugger state
 
-	// current scene and built-in nodes
+	// current scene, must always be valid & linked
 	NodeList nodes_;
+
+	// user node files
+	// nodes match last-known-good compile for its corresponding file
+	std::vector<std::pair<JSONFile, NodeList>> userNodes_;
+
+	// built-in nodes
 	NodeList appNodes_;
 	std::shared_ptr<MultiValueNode> globalsNode_;
 	std::shared_ptr<MultiValueNode> syncNode_;
@@ -201,21 +207,40 @@ class Application::impl : public PixelToaster::Listener {
 
 public:
 	void Run() {
-		textureStore_.load_dir("data\\texture\\");
-		meshStore_.LoadDir("data\\mesh\\");
+		JSONFile config_json("data/viewer_config.json");
+
+		std::vector<std::string> scenePath = { { "data/scene.json" } };
+		if (auto jv = jv_find(config_json.GetRoot(), "scene", JSON_STRING)) {
+			scenePath[0] = jv->toString(); }
+		else if (auto ja = jv_find(config_json.GetRoot(), "scene", JSON_ARRAY)) {
+			scenePath.clear();
+			for (const auto item : *ja) {
+				scenePath.emplace_back(item->value.toString()); } }
+
+		std::string textureDir{"data/texture"};
+		if (auto jv = jv_find(config_json.GetRoot(), "textureDir")) {
+			textureDir = jv->toString(); }
+
+		std::string meshDir{"data/mesh"};
+		if (auto jv = jv_find(config_json.GetRoot(), "meshDir")) {
+			meshDir = jv->toString(); }
+
+		textureStore_.load_dir(textureDir);
+		meshStore_.LoadDir(meshDir);
 
 		PrepareBuiltInNodes();
 
-		// initial read from scene.json
-		JSONFile sceneJson("data/scene.json");
-		if (!sceneJson.IsValid()) {
-			std::cerr << "error while reading data/scene.json, can't continue.\n";
-			return; }
-		if (auto success = Recompile(sceneJson.GetRoot()); !success) {
+		// initial read of scene data
+		for (const auto& sp : scenePath) {
+			auto item = std::pair<JSONFile, NodeList>( JSONFile(sp), NodeList{} );
+			userNodes_.emplace_back(item);
+			auto& sj = userNodes_.back().first;
+			if (!sj.IsValid()) {
+				std::cerr << "error while reading \"" << sp << "\", can't continue.\n"; }}
+		if (auto success = MaybeRecompile(/*force=*/true); !success) {
 			std::cerr << "compile failed, can't continue.\n";
 			return; }
 
-		JSONFile config_json("data/viewer_config.json");
 
 #ifdef ENABLE_MUSIC
 		if (auto jv = jv_find(config_json.GetRoot(), "soundtrack", JSON_OBJECT)) {
@@ -265,11 +290,7 @@ public:
 			while (!shouldQuit_) {
 				MaybeUpdateDisplay();
 
-				if (sceneJson.IsOutOfDate()) {
-					jobsys::_sleep(100);
-					sceneJson.Refresh();
-					if (sceneJson.IsValid()) {
-						Recompile(sceneJson.GetRoot()); }}
+				MaybeRecompile();
 
 				if (mouseCaptured_ && reset_mouse_next_frame) {
 					reset_mouse_next_frame = false;
@@ -651,23 +672,52 @@ private:
 		node->Run();
 		jobsys::wait(rootJob); }
 
-	auto Recompile(JsonValue docroot) -> bool {
+	auto MaybeRecompile(bool force=false) -> bool {
+		bool allUpToDate{true};
+		for (auto& un : userNodes_) {
+			auto& sceneJson = un.first;
+			if (sceneJson.IsOutOfDate()) {
+				allUpToDate = false; }}
+
+		if (allUpToDate and !force) {
+			return false; }
+
+		// debounce/settle time
+		jobsys::_sleep(200);
+
 		PixelToaster::Timer compileTime;
+		for (auto& un : userNodes_) {
+			auto& sceneJson = un.first;
+			auto& nodeList = un.second;
+			if (force || sceneJson.IsOutOfDate()) {
+				sceneJson.Refresh();
+				if (sceneJson.IsValid()) {
+					NodeList newNodes;
+					bool success;
+					std::tie(success, newNodes) = CompileDocument(sceneJson.GetRoot(), meshStore_);
+					if (!success) {
+						std::cerr << "compile failed \"" << sceneJson.Path() << "\" nodes not updated\n";
+						return false; }
+					nodeList = std::move(newNodes); }}}
+
 		NodeList newNodes;
-		bool success;
-		std::tie(success, newNodes) = CompileDocument(docroot, meshStore_);
-		if (success) {
-			newNodes.insert(end(newNodes), begin(appNodes_), end(appNodes_));
-			success = Link(newNodes);
-			if (success) {
-				auto elapsed = compileTime.delta() * 1000.0;
-				nodes_ = newNodes;
-				std::cout << fmt::sprintf("scene compiled in %.2fms\n", elapsed);
-				return true; }
-			std::cerr << "link failed, scene not updated!\n"; }
-		else {
-			std::cerr << "compile failed, scene not updated!\n"; }
-		return false; } };
+		rclr::for_each(nodes_, [](auto& n){ n->DisconnectAll(); });
+		newNodes.insert(end(newNodes), begin(appNodes_), end(appNodes_));
+		for (auto& un : userNodes_) {
+			auto& nodeList = un.second;
+			newNodes.insert(end(newNodes), begin(nodeList), end(nodeList)); }
+		if (Link(newNodes)) {
+			// new node collection is good!
+			auto elapsed = compileTime.delta() * 1000.0;
+			nodes_ = std::move(newNodes);
+			std::cerr << fmt::sprintf("scene compiled in %.2fms\n", elapsed);
+			return true; }
+
+		// new node-set failed, re-link the previous set
+		if (!Link(nodes_)) {
+			std::cerr << "re-link old nodes failed!\n";
+			std::exit(1); }
+		return false; }};
 
 
 Application::Application() :impl_(std::make_unique<impl>()) {}

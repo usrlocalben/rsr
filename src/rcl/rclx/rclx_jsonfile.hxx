@@ -24,10 +24,18 @@ class JSONFile {
 public:
 	explicit JSONFile(std::string path);
 
+	// XXX copyable, but new instance could be refreshed
+	//     when the original is a generation behind
+	JSONFile(const JSONFile& other) :
+		path_(other.path_) {
+		Reload(); }
+
 	auto IsOutOfDate() const -> bool;
 	auto Refresh() -> bool;
 	auto IsValid() const -> bool;
 	auto GetRoot() const -> JsonValue;
+	auto Path() const -> const std::string& {
+		return path_; }
 
 private:
 	void Reload();

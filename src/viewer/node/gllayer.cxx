@@ -74,6 +74,13 @@ public:
 			return true; }
 		return ILayer::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		ILayer::DisconnectAll();
+		cameraNode_ = nullptr;
+		colorNode_ = nullptr;
+		gls_.clear();
+		enableNode_ = nullptr; }
+
 	void Main() override {
 		using rmlv::ivec2;
 

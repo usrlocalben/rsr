@@ -67,6 +67,9 @@ auto NodeBase::Connect(std::string_view attr, NodeBase* other, std::string_view 
 	return false; }
 
 
+void NodeBase::DisconnectAll() {}
+
+
 auto NodeBase::IsValid() -> bool {
 	return true; }
 

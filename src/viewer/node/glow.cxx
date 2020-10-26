@@ -59,6 +59,11 @@ public:
 			return true; }
 		return IOutput::Connect(attr, other, slot); }
 
+	void DisconnectAll() override {
+		IOutput::DisconnectAll();
+		imageNode_ = nullptr;
+		blurNode_ = nullptr; }
+
 	void AddDeps() override {
 		IOutput::AddDeps();
 		AddDep(imageNode_);
