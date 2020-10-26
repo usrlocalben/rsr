@@ -153,7 +153,8 @@ struct AmyProgram final : public rglv::BaseProgram {
 		const rmlv::qfloat2& gl_FragCoord,
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth,
-		rmlv::qfloat4& gl_FragColor) {
+		rmlv::qfloat4& gl_FragColor,
+		rmlv::mvec4i& gl_triMask [[maybe_unused]]) {
 		// gl_FragColor = { 0.5F, 0.5F, 0.5F, 1.0F };
 		// fmt::print(std::cerr, "tu0 is {}\n", reinterpret_cast<const void*>(tu0));
 		tu0->sample(data.uv, gl_FragColor);
@@ -162,6 +163,7 @@ struct AmyProgram final : public rglv::BaseProgram {
 
 struct TextProgram final : public rglv::BaseProgram {
 	static constexpr int id = 26;
+	static constexpr bool earlyZ = false;
 
 	struct VertexInput {
 		rmlv::qfloat3 position;
@@ -238,11 +240,14 @@ struct TextProgram final : public rglv::BaseProgram {
 		gl_Position = gl_ModelViewProjectionMatrix * rmlv::qfloat4{ v.position, 1.0F  }; }
 
 	template <typename TU0, typename TU1, typename TU3>
-	static inline void ShadeFragment(const rglv::Matrices& mats, const rglv::BaseProgram::UniformsMD& u, const TU0 tu0, const TU1 tu1, const TU3& tu3 [[maybe_unused]], const rglv::BaryCoord& BS, const rglv::BaryCoord& BP, const VertexOutputMD& outs, const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth, rmlv::qfloat4& gl_FragColor) {
+	static inline void ShadeFragment(const rglv::Matrices& mats, const rglv::BaseProgram::UniformsMD& u, const TU0 tu0, const TU1 tu1, const TU3& tu3 [[maybe_unused]], const rglv::BaryCoord& BS, const rglv::BaryCoord& BP, const VertexOutputMD& outs, const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth, rmlv::qfloat4& gl_FragColor, rmlv::mvec4i& gl_triMask [[maybe_unused]]) {
 		tu0->sample(outs.uv, gl_FragColor);
 		gl_FragColor.x *= outs.color.x;
 		gl_FragColor.y *= outs.color.y;
-		gl_FragColor.z *= outs.color.z; } };
+		gl_FragColor.z *= outs.color.z;
+
+		// discard
+		gl_triMask &= float2bits(cmpgt(gl_FragColor.w, rmlv::mvec4f{0.0F})); } };
 
 
 struct DepthProgram final : public rglv::BaseProgram {
@@ -332,7 +337,8 @@ struct DepthProgram final : public rglv::BaseProgram {
 		const rmlv::qfloat2& gl_FragCoord,
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth,
-		rmlv::qfloat4& gl_FragColor) {
+		rmlv::qfloat4& gl_FragColor,
+		rmlv::mvec4i& gl_triMask [[maybe_unused]]) {
 
 		rmlv::qfloat zNear{ 10.0F };
 		rmlv::qfloat zFar{ 1000.0F };
@@ -399,7 +405,7 @@ struct PatternProgram final : public rglv::BaseProgram {
 		gl_Position = gl_ModelViewProjectionMatrix * rmlv::qfloat4{ v.position, 1.0F  }; }
 
 	template <typename TU0, typename TU1, typename TU3>
-	static inline void ShadeFragment(const rglv::Matrices& mats, const UniformsMD& u, const TU0 tu0, const TU1 tu1, const TU3& tu3 [[maybe_unused]], const rglv::BaryCoord& BS, const rglv::BaryCoord& BP, const VertexOutputMD& outs, const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth, rmlv::qfloat4& gl_FragColor) {
+	static inline void ShadeFragment(const rglv::Matrices& mats, const UniformsMD& u, const TU0 tu0, const TU1 tu1, const TU3& tu3 [[maybe_unused]], const rglv::BaryCoord& BS, const rglv::BaryCoord& BP, const VertexOutputMD& outs, const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth, rmlv::qfloat4& gl_FragColor, rmlv::mvec4i& gl_triMask [[maybe_unused]]) {
 		auto uv = gl_FragCoord / u.dim.y;
 		uv += u.offset.xy();
 		tu0->sample(uv, gl_FragColor); }};
@@ -504,7 +510,8 @@ struct ManyProgram final : public rglv::BaseProgram {
 		const rmlv::qfloat2& gl_FragCoord,
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth,
-		rmlv::qfloat4& gl_FragColor) {
+		rmlv::qfloat4& gl_FragColor,
+		rmlv::mvec4i& gl_triMask [[maybe_unused]]) {
 		gl_FragColor = { outs.uv.x, outs.uv.y, u.magic, 1.0F }; } };
 
 
@@ -618,7 +625,8 @@ struct OBJ1Program final : public rglv::BaseProgram {
 		const rmlv::qfloat2& gl_FragCoord,
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth,
-		rmlv::qfloat4& gl_FragColor) {
+		rmlv::qfloat4& gl_FragColor,
+		rmlv::mvec4i& gl_triMask [[maybe_unused]]) {
 		gl_FragColor = { outs.kd, 1.0F }; } };
 
 
@@ -727,7 +735,8 @@ struct OBJ2Program final : public rglv::BaseProgram {
 		const rmlv::qfloat2& gl_FragCoord,
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth,
-		rmlv::qfloat4& gl_FragColor) {
+		rmlv::qfloat4& gl_FragColor,
+		rmlv::mvec4i& gl_triMask [[maybe_unused]]) {
 
 		// rmlv::qfloat4 lightPos{ 0.0F, 100.0F, 100.0F, 1.0F };
 		// lightPos = mats.vm * lightPos;
@@ -875,7 +884,8 @@ struct OBJ2SProgram final : public rglv::BaseProgram {
 		const rmlv::qfloat2& gl_FragCoord,
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth,
-		rmlv::qfloat4& gl_FragColor) {
+		rmlv::qfloat4& gl_FragColor,
+		rmlv::mvec4i& gl_triMask [[maybe_unused]]) {
 
 		auto surfaceToLight = normalize(u.lpos - outs.sp.xyz());
 		auto distanceToLight = length(u.lpos - outs.sp.xyz());

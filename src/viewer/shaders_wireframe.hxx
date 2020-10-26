@@ -42,7 +42,8 @@ struct WireframeProgram final : public rglv::BaseProgram {
 		const rmlv::qfloat2& gl_FragCoord,
 		/* gl_FrontFacing, */
 		const rmlv::qfloat& gl_FragDepth,
-		rmlv::qfloat4& gl_FragColor
+		rmlv::qfloat4& gl_FragColor,
+		rmlv::mvec4i& gl_triMask [[maybe_unused]]
 		) {
 		using namespace rmlv;
 		static const qfloat grey(0.1f);

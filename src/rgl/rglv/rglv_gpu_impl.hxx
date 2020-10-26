@@ -167,7 +167,9 @@ struct TriangleProgram {
 		const auto fragDepth = rglv::Interpolate(BS, ndcZ_);
 		qfloat destDepth;
 		rmlv::mvec4i fragMask;
-		if (DEPTH_TEST) {
+
+		// --- early-Z ---
+		if constexpr (DEPTH_TEST && SHADER::earlyZ) {
 			dc_.Load(destDepth);
 			const auto depthMask = float2bits(DEPTH_FUNC{}(fragDepth, destDepth));
 			fragMask = andnot(triMask, depthMask);
@@ -176,37 +178,46 @@ struct TriangleProgram {
 				return; }}
 		else {
 			fragMask = andnot(triMask, float2bits(rmlv::mvec4f::all_ones())); }
+		if constexpr (DEPTH_WRITEMASK && SHADER::earlyZ) {
+			dc_.Store(destDepth, fragDepth, fragMask); }
 
-		// restore perspective
-		if (COLOR_WRITEMASK) {
-			const auto fragW = rmlv::oneover(Interpolate(BS, invW_));
-			rglv::BaryCoord BP;
-			BP.x = invW_.v0 * BS.x * fragW;
-			BP.z = invW_.v2 * BS.z * fragW;
-			BP.y = 1.0f - BP.x - BP.z;
+		// --- fragment shader ---
+		const auto fragW = rmlv::oneover(Interpolate(BS, invW_));
+		rglv::BaryCoord BP;
+		BP.x = invW_.v0 * BS.x * fragW;
+		BP.z = invW_.v2 * BS.z * fragW;
+		BP.y = 1.0f - BP.x - BP.z;
 
-			auto attrs = vo_.Interpolate(BS, BP);
+		auto attrs = vo_.Interpolate(BS, BP);
 
-			qfloat4 fragColor;
-			SHADER::ShadeFragment(
-				matrices_,
-				uniforms_,
-				tu0_, tu1_, tu3_,
-				BS, BP, attrs,
-				fragCoord,
-				/*frontFacing,*/
-				fragDepth,
-				fragColor);
+		qfloat4 fragColor;
+		SHADER::ShadeFragment(
+			matrices_,
+			uniforms_,
+			tu0_, tu1_, tu3_,
+			BS, BP, attrs,
+			fragCoord,
+			/*frontFacing,*/
+			fragDepth,
+			fragColor,
+			fragMask);
 
-		// XXX late-Z should happen here <----
+		// --- late-Z ---
+		if constexpr (DEPTH_TEST && !SHADER::earlyZ) {
+			dc_.Load(destDepth);
+			auto depthMask = float2bits(DEPTH_FUNC{}(fragDepth, destDepth));
+			fragMask &= depthMask;
+			if (movemask(bits2float(fragMask)) == 0) {
+				// early out if whole quad fails depth test
+				return; }}
+		if constexpr (DEPTH_WRITEMASK && !SHADER::earlyZ) {
+			dc_.Store(destDepth, fragDepth, fragMask); }
 
+		if constexpr (COLOR_WRITEMASK) {
 			qfloat3 destColor;
 			cc_.Load(destColor);
 			qfloat3 blendedColor = BLEND_FUNC()(fragColor, destColor);
-			cc_.Store(destColor, blendedColor, fragMask); }
-
-		if (DEPTH_WRITEMASK) {
-			dc_.Store(destDepth, fragDepth, fragMask); }}};
+			cc_.Store(destColor, blendedColor, fragMask); }}};
 
 
 template <typename SHADER>
