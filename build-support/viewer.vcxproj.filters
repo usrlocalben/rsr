@@ -166,18 +166,6 @@
     <ClCompile Include="$(SolutionDir)\src\viewer\node\computed.cxx">
       <Filter>viewer\node</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_auraforlaura.cxx">
-      <Filter>viewer\node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_foo.cxx">
-      <Filter>viewer\node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_many.cxx">
-      <Filter>viewer\node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\fx_mc.cxx">
-      <Filter>viewer\node</Filter>
-    </ClCompile>
     <ClCompile Include="$(SolutionDir)\src\viewer\node\gllayer.cxx">
       <Filter>viewer\node</Filter>
     </ClCompile>
@@ -245,9 +233,6 @@
       <Filter>viewer\node</Filter>
     </ClCompile>
     <ClCompile Include="$(SolutionDir)\src\viewer\node\rendertotexture.cxx">
-      <Filter>viewer\node</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)\src\viewer\node\translate.cxx">
       <Filter>viewer\node</Filter>
     </ClCompile>
     <ClCompile Include="$(SolutionDir)\src\viewer\node\value.cxx">
@@ -320,6 +305,21 @@
       <Filter>viewer</Filter>
     </ClCompile>
     <ClCompile Include="$(SolutionDir)\src\viewer\node\writer.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\auraforlaura.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\many.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\mc.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\mesh.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\modify.cxx">
       <Filter>viewer\node</Filter>
     </ClCompile>
   </ItemGroup>
