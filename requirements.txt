@@ -1,4 +1,4 @@
 docopt==0.6.2
 pathlib2==2.3.2
-Twisted==18.7.0
+Twisted==20.3.0
 pywin32==224       # twisted optional dep for spawnProcess
