@@ -101,10 +101,12 @@ struct TriangleProgram {
 	typename SHADER::Interpolants vo_;
 	// XXX rmlv::mvec4i backfacing_;
 
-	const rmlv::mvec4f vw0_, vw1_, vw2_;
-	const rmlv::mvec4f vz0_, vz1_, vz2_;
-	const typename SHADER::VertexOutputMD vd0_, vd1_, vd2_;
-	// XXX const rmlv::mvec4i vbf_;
+	// XXX these should be const, but would need
+	//     two different classes
+	rmlv::mvec4f vw0_, vw1_, vw2_;
+	rmlv::mvec4f vz0_, vz1_, vz2_;
+	typename SHADER::VertexOutputMD vd0_, vd1_, vd2_;
+	// XXX rmlv::mvec4i vbf_;
 
 	TriangleProgram(
 		COLOR_IO cc, DEPTH_IO dc,
@@ -222,7 +224,7 @@ struct TriangleProgram {
 
 template <typename SHADER>
 class GPUBltImpl : GPU {
-	static_assert(sizeof(SHADER::UniformsSD) <= 128);
+	static_assert(sizeof(typename SHADER::UniformsSD) <= 128);
 
 	void StoreTrueColor(const GLState& state, const void* uniformsPtr, const rmlg::irect rect, const bool enableGamma, rglr::TrueColorCanvas& outcanvas) {
 		const typename SHADER::UniformsMD uniforms(*static_cast<const typename SHADER::UniformsSD*>(uniformsPtr));
@@ -255,7 +257,7 @@ public:
 
 template <typename SHADER>
 class GPUBinImpl : GPU {
-	static_assert(sizeof(SHADER::UniformsSD) <= 128);
+	static_assert(sizeof(typename SHADER::UniformsSD) <= 128);
 
 	void DrawArraysN(int count, int instanceCnt) {
 		struct SequenceSource {
@@ -827,7 +829,7 @@ public:
 			
 template <typename COLOR_IO, typename DEPTH_IO, typename SHADER, bool SCISSOR_ENABLED, bool DEPTH_TEST, typename DEPTH_FUNC, bool DEPTH_WRITEMASK, bool COLOR_WRITEMASK, typename BLEND_FUNC>
 class GPUTileImpl : GPU {
-	static_assert(sizeof(SHADER::UniformsSD) <= 128);
+	static_assert(sizeof(typename SHADER::UniformsSD) <= 128);
 
 	void DrawElements1(void* c0, void* d, const GLState& state, const void* uniformsPtr, rmlg::irect rect, rmlv::ivec2 tileOrigin, int tileIdx, FastPackedReader& cs) {
 		DrawTriangles<false>(c0, d, state, uniformsPtr, rect, tileOrigin, tileIdx, cs); }

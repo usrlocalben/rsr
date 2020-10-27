@@ -12,9 +12,11 @@ void bail(lua_State* L, const char* msg) {
 	std::cerr << "\nFATAL ERROR:\n  " << msg << ": " << lua_tostring(L, -1) << "\n\n";
 	std::exit(1); }
 
+/*
 inline
 void lua_swap(lua_State *L) {
     lua_insert(L, -2); }
+*/
 
 }  // close unnamed namespace
 
