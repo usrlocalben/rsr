@@ -10,5 +10,5 @@ Layer{ id="lEffects",
                       h=3.72, v=-0.35,
                       fov=45.0 },
   color=sRGB(128,128,128),
-  gl=Mesh{ material=Material{ program="Wireframe" },
+  gl=Mesh{ --material=Material{ program="Wireframe" },
            name="colortest.obj" }}

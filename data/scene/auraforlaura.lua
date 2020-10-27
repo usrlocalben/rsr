@@ -24,14 +24,13 @@ Truecolor{ id='root',
 Layer{ id="lAmy",
   camera=Orthographic(0, 16, 0, 9),
   color=sRGB(238, 248, 255),
-  gl=Modify{ id="nAmy",
+  gl=Group{ id="nAmy",
     translate=Vec3(12.5, 4.5, 0.999),
-    gl=Modify{
-      scale=Vec3(9.0, 9.0, 1.0),
-      gl=Plane{ material=Material{
-        program="Amy",
-        filter=true,
-        texture0=Image("data/texture/amy1024.png") }}}}}
+    scale=Vec3(9.0, 9.0, 1.0),
+    gl=Plane{ material=Material{
+      program="Amy",
+      filter=true,
+      texture0=Image("data/texture/amy1024.png") }}}}
 
 ft = Mul_Float_Float(T, SHAKE_SPEED)
 shake = Mul_Vec3_Float(
@@ -44,7 +43,7 @@ Layer{ id="lAuraForLaura",
   camera=Perspective{position=Vec3(0,0,24),
                      h=3.14, v=0, fov=55.0,
                      originX=-0.425},
-  gl=Modify{
+  gl=Group{
     gl=AuraForLauraMT{
       material=Material{
         program="Envmap", filter=false,
@@ -55,5 +54,3 @@ Layer{ id="lAuraForLaura",
     translate=shake,
     scale=SCALE,
     rotate=T3("{0, sin(t*0.5)*0.2+0.2, sin(t*0.222)*0.1}")}}
-
-

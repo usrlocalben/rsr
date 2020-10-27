@@ -14,13 +14,12 @@ Layer{ id="pipLayer",
   color=sRGB(50, 100, 100),
   gl={ "pipBorder", "pipImage" }}
 
-
-Modify{ id="pipBorder",
+Group{ id="pipBorder",
   scale=Vec3(7+(BW*2), 7+(BW*2), 1),
   translate=Vec3(7+1, 3.5+1, 0.2),
   gl=Plane{ material="blackEnvmap" }}
 
-Modify{ id="pipImage",
+Group{ id="pipImage",
   scale=Vec3(7, 7, 1),
   translate=Vec3(7+1, 3.5+1, 0.1),
   gl=Plane{ material=Material{
@@ -33,7 +32,7 @@ Modify{ id="pipImage",
         layers={ Layer{
           color=Float(0.333),
           camera="uiCamera",
-          gl=Modify{
+          gl=Group{
             scale=Float(1.0),
             rotate=T3("{ t*0.1, sin(t*0.41)*0.333, sin(t*0.222)*0.3}"),
             gl=MC{

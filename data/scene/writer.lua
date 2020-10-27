@@ -8,7 +8,7 @@ Layer{ id="writerTest",
   camera=Orthographic{l=0, r=16.0, b=-9, t=0},
   --camera="uiCamera",
   color=Vec3(0.2,0.3,0.3),
-  gl=Modify{
+  gl=Group{
     translate=Vec3(4, -1, 0),
     gl=Writer{
       material=Material{

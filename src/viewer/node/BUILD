@@ -190,13 +190,15 @@ cc_library(
     name = "group",
     srcs = ["group.cxx"],
     deps = [
-        "//src/rcl/rclx:gason_util",
+        "//src/rcl/rclma:framepool",
         "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
         "//src/rgl/rglv:gl",
         "//src/rml/rmlm:mat4",
         "//src/viewer:compile",
         ":base",
-        ":i_gl"],
+        ":i_gl",
+        ":i_value"],
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
@@ -427,8 +429,8 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
-    name = "modify",
-    srcs = ["modify.cxx"],
+    name = "repeat",
+    srcs = ["repeat.cxx"],
     deps = [
         "//src/rcl/rclma:framepool",
         "//src/rcl/rclmt:jobsys",

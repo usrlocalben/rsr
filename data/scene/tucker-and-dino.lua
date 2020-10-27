@@ -17,11 +17,10 @@ NO_ROTATION = Vec3(0, 0, 0.1)
 -- move field around
 ORIGIN_OFFSET = T3("{ 4+sin(t), 2.25+cos(t), 0 }")
 
-Modify{ id="cuddleFieldMoving",
+Group{ id="cuddleFieldMoving",
   translate=ORIGIN_OFFSET,
-  gl=Modify{
-    rotate=NO_ROTATION,  -- DINO_ROTATION to feel sick
-    gl="cuddleField" }}
+  rotate=NO_ROTATION,  -- DINO_ROTATION to feel sick
+  gl="cuddleField" }
 
 -- tuckerPair is 1x2
 tinyOffset = T3("{ frac(t/2), 0, 0 }")
@@ -30,12 +29,12 @@ cuddlePair = Group{
     -- dino at y=0
     Plane{ material="dinoPicture" },
     -- and tucker at y=1, with x animated by tinyOffset
-    Modify{ translate=Vec3{ x=tinyOffset..":x", y=1.0 },
-            gl=Plane{ material="tuckerPicture" }}}}
+    Group{ translate=Vec3{ x=tinyOffset..":x", y=1.0 },
+           gl=Plane{ material="tuckerPicture" }}}}
 
 -- create a dim-by-dim field of cuddlePairs
 local dim = 24
-Modify{ id="cuddleField",
+Group{ id="cuddleField",
   translate=Vec2(-dim/2, -dim/2),
   gl=Repeat{
     many=dim,
@@ -43,7 +42,7 @@ Modify{ id="cuddleField",
     gl=Repeat{
       many=dim/2, -- cuddlePair is 1x2, so half as many in y
       translate=Vec2(0, 2.0),
-      gl=Modify{
+      gl=Group{
         scale=Vec2(1, 1),
         translate=Vec2(0.5, 0.5),
         gl=cuddlePair}}}}
