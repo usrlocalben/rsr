@@ -194,6 +194,8 @@ class ModifyOp final : public IGl {
 	IValue* rotateNode_{nullptr};
 	std::string translateSlot_{"default"};
 	IValue* translateNode_{nullptr};
+	std::string enableSlot_{"default"};
+	IValue* enableNode_{nullptr};
 
 public:
 	using IGl::IGl;
@@ -226,6 +228,13 @@ public:
 				TYPE_ERROR(IValue);
 				return false; }
 			return true; }
+		if (attr == "enable") {
+			enableNode_ = dynamic_cast<IValue*>(other);
+			enableSlot_ = slot;
+			if (enableNode_ == nullptr) {
+				TYPE_ERROR(IValue);
+				return false; }
+			return true; }
 		return IGl::Connect(attr, other, slot); }
 
 	void DisconnectAll() override {
@@ -233,27 +242,39 @@ public:
 		lowerNode_ = nullptr;
 		scaleNode_ = nullptr;
 		rotateNode_ = nullptr;
-		translateNode_ = nullptr; }
+		translateNode_ = nullptr;
+		enableNode_ = nullptr; }
 
 	void AddDeps() override {
 		IGl::AddDeps();
-		AddDep(lowerNode_); }
+		if (Enabled()) {
+			AddDep(lowerNode_); }}
+
+	bool Enabled() {
+		if (enableNode_ && enableNode_->Eval(enableSlot_).as_float() <= 0) {
+			return false; }
+		return true; }
 
 	void Main() override {
 		auto* my_noop = rclmt::jobsys::make_job(rclmt::jobsys::noop);
 		AddLinksTo(my_noop);
-		lowerNode_->AddLink(my_noop);
-		lowerNode_->Run(); }
+		if (!Enabled()) {
+			rclmt::jobsys::run(my_noop); }
+		else {
+			lowerNode_->AddLink(my_noop);
+			lowerNode_->Run(); }}
 
 	auto Lights(rmlm::mat4 mvmat) -> LightPack override {
 		return lowerNode_->Lights(Apply(mvmat)); }
 
 	void DrawDepth(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
+		if (!Enabled()) return;
 		auto M = static_cast<rmlm::mat4*>(rclma::framepool::Allocate(64));
 		*M = Apply(*mvmat);
 		lowerNode_->DrawDepth(dc, pmat, M); }
 
 	void Draw(int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
+		if (!Enabled()) return;
 		auto M = static_cast<rmlm::mat4*>(rclma::framepool::Allocate(64));
 		*M = Apply(*mmat);
 		lowerNode_->Draw(pass, lights, dc, pmat, vmat, M); }
@@ -286,6 +307,7 @@ class ModifyCompiler final : public NodeCompiler {
 		if (!Input("rotate", /*required=*/false)) { return; }
 		if (!Input("scale", /*required=*/false)) { return; }
 		if (!Input("translate", /*required=*/false)) { return; }
+		if (!Input("enable", /*required=*/false)) { return; }
 
 /*
 		map<string, vec3> slot_values = {
