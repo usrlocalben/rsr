@@ -161,6 +161,74 @@ struct AmyProgram final : public rglv::BaseProgram {
 		} };
 
 
+struct AlphaTextureProgram final : public rglv::BaseProgram {
+	static constexpr int id = 65;
+	static constexpr bool earlyZ = false;
+
+	struct VertexInput {
+		rmlv::qfloat3 position;
+		rmlv::qfloat2 uv; };
+
+	struct Loader {
+		const std::array<const float*, 16> ptrs_;
+		Loader(const std::array<const float*, 16>& buffers) :
+			ptrs_(buffers) {}
+		// int Size() const { return data_.size(); }
+		void LoadInstance(int, VertexInput&) {}
+		void LoadMD(int idx, VertexInput& vi) {
+			if (ptrs_[0]) {
+				vi.position.x = _mm_load_ps(&ptrs_[0][idx]);
+				vi.position.y = _mm_load_ps(&ptrs_[1][idx]);
+				vi.position.z = _mm_load_ps(&ptrs_[2][idx]); }
+			else {
+				vi.position.x = vi.position.y = vi.position.z = _mm_setzero_ps(); }
+
+			vi.uv.x = ptrs_[ 9] ? _mm_load_ps(&ptrs_[ 9][idx]) : _mm_setzero_ps();
+			vi.uv.y = ptrs_[10] ? _mm_load_ps(&ptrs_[10][idx]) : _mm_setzero_ps(); }
+
+		void LoadLane(int idx, int li, VertexInput& vi) {
+			if (ptrs_[0]) {
+				vi.position.setLane(li, rmlv::vec3{ ptrs_[0][idx], ptrs_[1][idx], ptrs_[2][idx] }); }
+			else {
+				vi.position.setLane(li, rmlv::vec3{ 0, 0, 0 }); }
+
+			vi.uv.setLane(li, rmlv::vec2{ ptrs_[ 9]?ptrs_[ 9][idx]:0, ptrs_[10]?ptrs_[10][idx]:0 }); }};
+
+	struct VertexOutputSD {
+		rmlv::vec2 uv;
+		static VertexOutputSD Mix(VertexOutputSD a, VertexOutputSD b, float t) {
+			return { mix(a.uv, b.uv, t) }; }};
+
+	struct VertexOutputMD {
+		rmlv::qfloat2 uv;
+
+		VertexOutputSD Lane(const int li) const {
+			return VertexOutputSD{
+				uv.lane(li) }; }};
+
+	struct Interpolants {
+		Interpolants() = default;
+		Interpolants(VertexOutputSD d0, VertexOutputSD d1, VertexOutputSD d2) :
+			uv({ d0.uv, d1.uv, d2.uv }) {}
+		VertexOutputMD Interpolate(rglv::BaryCoord BS [[maybe_unused]], rglv::BaryCoord BP [[maybe_unused]]) const {
+			return { rglv::Interpolate(BP, uv) }; }
+		rglv::VertexFloat2 uv; };
+
+	static void ShadeVertex(
+		const rglv::Matrices& mats,
+		const rglv::BaseProgram::UniformsMD& u [[maybe_unused]],
+		const VertexInput& v,
+		rmlv::qfloat4& gl_Position,
+		VertexOutputMD& outs) {
+		outs.uv = v.uv;
+		gl_Position = gl_ModelViewProjectionMatrix * rmlv::qfloat4{ v.position, 1.0F }; }
+
+	template <typename TU0, typename TU1, typename TU3>
+	inline static void ShadeFragment( const rglv::Matrices& mats, const rglv::BaseProgram::UniformsMD& u, const TU0 tu0, const TU1 tu1, const TU3& tu3 [[maybe_unused]], const rglv::BaryCoord& BS, const rglv::BaryCoord& BP, const VertexOutputMD& data, const rmlv::qfloat2& gl_FragCoord, /* gl_FrontFacing, */ const rmlv::qfloat& gl_FragDepth, rmlv::qfloat4& gl_FragColor, rmlv::mvec4i& gl_triMask [[maybe_unused]]) {
+		tu0->sample(data.uv, gl_FragColor);
+		gl_triMask &= float2bits(cmpgt(gl_FragColor.w, rmlv::mvec4f{0.0F})); } };
+
+
 struct TextProgram final : public rglv::BaseProgram {
 	static constexpr int id = 26;
 	static constexpr bool earlyZ = false;
