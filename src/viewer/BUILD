@@ -272,3 +272,29 @@ genrule(
     tools = [
         "compile-resources.sh",
         "gen_vsenv_stub.sh", ],)
+
+cc_binary(
+    name = "perf",
+    srcs = ["perf.cxx"],
+    deps = [
+        "//3rdparty/fmt",
+        "//3rdparty/gason",
+        "//3rdparty/pixeltoaster",
+        "//src/rcl/rclma:framepool",
+        "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclr:algorithm",
+        "//src/rcl/rclx:gason_util",
+        "//src/rcl/rclx:jsonfile",
+        # "//src/rgl/rglr:pixeltoaster_util",
+        "//src/rgl/rglr:texture_store",
+        "//src/rgl/rglv:camera",
+        "//src/rgl/rglv:mesh_store",
+        "//src/rml/rmls:bench",
+        "//src/rml/rmlv:vec",
+        "//src/viewer/node:i_controller",
+        "//src/viewer/node:i_output",
+        "//src/viewer/node:uicamera",
+        "//src/viewer/node:multivalue",
+        ":compile",
+        ":node_library", ],
+    copts = RSR_DEFAULT_COPTS)
