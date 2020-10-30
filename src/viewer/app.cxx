@@ -146,7 +146,8 @@ class Application::impl : public PixelToaster::Listener {
 	TextureStore textureStore_;
 	ProPrinter pp_;
 	rcls::SmoothedIntervalTimer refreshTime_;
-	rcls::SmoothedIntervalTimer renderTime_;
+	PixelToaster::Timer renderTime_;
+	double lastRenderTime_;
 	PixelToaster::Timer wallClock_;
 
 	// BEGIN debugger state
@@ -296,7 +297,7 @@ public:
 					reset_mouse_next_frame = false;
 					display_.center_mouse(); }
 
-				renderTime_.Start();
+				renderTime_.reset();
 				auto frame = Frame(display_);
 				auto canvas = frame.canvas();
 
@@ -352,7 +353,7 @@ public:
 				audioController.FillBuffers();  // decrease chance of missing vsync
 #endif
 
-				renderTime_.Stop();
+				lastRenderTime_ = renderTime_.time();
 				refreshTime_.Sample();
 				DrawUI(canvas);
 				runtimeInFrames_++; }}
@@ -502,8 +503,8 @@ private:
 		int ticks = wheel_amount / 120;
 		camera_.Zoom(ticks); }
 
-	void DrawUI(struct TrueColorCanvas& canvas) {
-		auto renderTimeInMillis = renderTime_.Get();
+	void DrawUI(TrueColorCanvas& canvas) {
+		auto renderTimeInMillis = lastRenderTime_ * 1000.0; // renderTime_.Get();
 		auto refreshTimeInMillis = refreshTime_.Get();
 
 		if (show_mode_list) {
@@ -679,7 +680,7 @@ private:
 			if (sceneJson.IsOutOfDate()) {
 				allUpToDate = false; }}
 
-		if (allUpToDate and !force) {
+		if (allUpToDate && !force) {
 			return false; }
 
 		// debounce/settle time

@@ -27,8 +27,8 @@ public:
 	ProPrinter();
 	int charmap_to_offset(const rmlv::ivec2& cxy) const;
 	int char_to_offset(char ch) const;
-	void draw_glyph(char ch, int left, int top, struct TrueColorCanvas& canvas) const;
-	void write(std::string str, int left, int top, struct TrueColorCanvas& canvas) const;
+	void draw_glyph(char ch, int left, int top, class TrueColorCanvas& canvas) const;
+	void write(std::string str, int left, int top, class TrueColorCanvas& canvas) const;
 
 private:
 	// const ivec2 glyph_dimensions;

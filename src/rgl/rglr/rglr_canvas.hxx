@@ -460,34 +460,29 @@ private:
 	int stride2_{0}; };
 
 
-struct TrueColorCanvas {
-	TrueColorCanvas(
-		PixelToaster::TrueColorPixel * ptr,
-	    const int width,
-	    const int height,
-	    const int stride = 0
-	) :
-		_ptr(ptr),
-		_width(width),
-		_height(height),
-		_stride(stride == 0 ? width : stride),
-		_aspect(float(width) / float(height)) {}
+class TrueColorCanvas {
+	PixelToaster::TrueColorPixel* ptr_;
+	const int width_;
+	const int height_;
+	const int stride_;
+	const float aspect_;
 
-	auto data() { return _ptr; }
-	auto cdata() const { return _ptr; }
-	auto width() const { return _width; }
-	auto height() const { return _height; }
-	auto stride() const { return _stride; }
-	auto aspect() const { return _aspect; }
-	rmlg::irect rect() const {
-		return rmlg::irect{ rmlv::ivec2{0,0}, rmlv::ivec2{_width, _height} }; }
-private:
-	PixelToaster::TrueColorPixel * _ptr;
-	const int _width;
-	const int _height;
-	const int _stride;
-	const float _aspect;
-	};
+public:
+	TrueColorCanvas(PixelToaster::TrueColorPixel* ptr, int w, int h, int stride = 0) :
+		ptr_(ptr),
+		width_(w),
+		height_(h),
+		stride_(stride == 0 ? width_ : stride),
+		aspect_(float(width_) / float(height_)) {}
+
+	auto data() { return ptr_; }
+	auto cdata() const { return ptr_; }
+	auto width() const { return width_; }
+	auto height() const { return height_; }
+	auto stride() const { return stride_; }
+	auto aspect() const { return aspect_; }
+	auto rect() const -> rmlg::irect {
+		return { {0,0}, {width_, height_} }; }};
 
 
 struct FloatingPointCanvas {
