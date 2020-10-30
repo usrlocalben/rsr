@@ -36,14 +36,14 @@ cc_binary(
 cc_binary(
     name = "blah",
     srcs = ["blah.cxx"],
-    deps = ["//3rdparty/lua"],
+    deps = ["//3rdparty/lua:lib"],
     copts = RSR_DEFAULT_COPTS)
 
 cc_library(
     name = "fontloader",
     srcs = ["fontloader.cxx"],
     hdrs = ["fontloader.hxx"],
-    deps = ["//3rdparty/lua"],
+    deps = ["//3rdparty/lua:lib"],
     copts = RSR_DEFAULT_COPTS)
 
 app_srcs = ["app.cxx"]

@@ -2,13 +2,18 @@ load("//:copts.bzl", "RSR_DEFAULT_COPTS")
 
 package(default_visibility = ["//visibility:public"])
 
-'''
 cc_binary(
-        "luac.c",
-'''
+    name = "lua",
+    srcs = ["lua.c"],
+    deps = [":lib"],)
+
+cc_binary(
+    name = "luac",
+    srcs = ["luac.c"],
+    deps = [":lib"],)
 
 cc_library(
-    name = "lua",
+    name = "lib",
     hdrs = [
         "lauxlib.h",
         "lua.h",

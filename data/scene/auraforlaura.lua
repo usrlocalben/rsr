@@ -6,14 +6,6 @@ SCALE = Float(9.0)
 SPIKINESS = Float(0.05)
 T = "globals:wallclock"
 
-local function Linear(s)
-  return math.pow(s/255.0, 2.2333)
-end
-
-local function sRGB(r, g, b)
-  return Vec3(Linear(r), Linear(g), Linear(b))
-end
-
 Truecolor{ id='root',
   sRGB=true,
   program="Default",

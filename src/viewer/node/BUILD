@@ -26,7 +26,7 @@ cc_library(
     name = "controller",
     srcs = ["controller.cxx"],
     deps = [
-        "//3rdparty/lua",
+        "//3rdparty/lua:lib",
         "//src/rcl/rclt:util",
         "//src/rcl/rclx:gason_util",
         "//src/rml/rmlv:vec",

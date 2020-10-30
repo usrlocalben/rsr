@@ -66,7 +66,7 @@ function Merge3(a, b, c)
 end
 
 function Linear(s)
-  return math.pow(s/255.0, 2.2333)
+  return (s/255.0)^2.2333
 end
 
 function sRGB(r, g, b)
