@@ -12,21 +12,24 @@ MSVC_FLAGS = [
     #"/wd4005",  # macro redefinition
     #"/wd4267",  # conversion from 'size_t' to 'type', possible loss of data
 
-    # for clang-cl
-    #"-msse4.1",
-    #"-Wno-unused-parameter",
-    #"-Wno-unused-variable",
-    #"-Wno-builtin-macro-redefined",
-    #"-Wno-unused-command-line-argument",  # rocket .c sources don't use /std:c++17
-
     "/DUNICODE",
     "/D_UNICODE",
     "/D_ENABLE_EXTENDED_ALIGNED_STORAGE",
     "/DNOMINMAX",  # Don't define min and max macros (windows.h)
     ]
 
+CLANG_CL_FLAGS = [
+    "-msse4.1",
+    "-Wno-unused-parameter",
+    "-Wno-unused-variable",
+    "-Wno-builtin-macro-redefined",
+    "-Wno-unused-command-line-argument",  # rocket .c sources don't use /std:c++17
+    ]
+
 MSVC_RELEASE_FLAGS = [
     "/fp:fast",  # fpu mode: less precise
     ]
 
-RSR_DEFAULT_COPTS = MSVC_FLAGS + MSVC_RELEASE_FLAGS
+# RSR_DEFAULT_COPTS = MSVC_FLAGS + MSVC_RELEASE_FLAGS
+RSR_DEFAULT_COPTS = MSVC_FLAGS + MSVC_RELEASE_FLAGS + select({"clang_cl_compiler": CLANG_CL_FLAGS,
+                                                              "//conditions:default": []})
