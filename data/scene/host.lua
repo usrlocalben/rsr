@@ -240,6 +240,13 @@ function Writer(d)
     return data.id
 end
 
+function Particles(d)
+    local data = fold_id(d)
+    HOST:compile('particles', data)
+    return data.id
+end
+
+
 function Spot(d)
     local data = fold_id(d)
     HOST:compile('spot', data)

@@ -1,0 +1,20 @@
+Truecolor{ id="root",
+  sRGB=false,
+  program="IQ",
+  gpu=GPU{ targetSize="globals:windowSize",
+           layers={"foo", "board"} }}
+
+Layer{ id="foo",
+  camera="uiCamera",
+  color=Vec3(0.2,0.3,0.3),
+  gl=Group{
+    translate=Vec3(0, 5, 0),
+    gl=Particles{
+      many=8192,
+      gravity=-0.1635/300,
+      gl=Group{ scale=Float(0.3), gl=Plane{ material=Material{ program="Wireframe" } }}}}}
+
+Layer{ id="board",
+  camera="uiCamera",
+  gl=Mesh{ name="board10m.obj" }}
+

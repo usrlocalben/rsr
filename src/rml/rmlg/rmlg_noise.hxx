@@ -1,3 +1,8 @@
+/**
+ * "Improved Noise reference implementation"
+ * Ken Perlin
+ * https://mrl.cs.nyu.edu/~perlin/noise/
+ */
 #pragma once
 
 namespace rqdq {

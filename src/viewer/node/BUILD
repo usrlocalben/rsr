@@ -370,6 +370,22 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
+    name = "particles",
+    srcs = ["particles.cxx"],
+    deps = [
+        "//src/rcl/rclma:framepool",
+        "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
+        "//src/rgl/rglv:gl",
+        "//src/rml/rmlg:noise",
+        "//src/rml/rmlm:mat4",
+        "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
+        ":base",
+        ":i_gl"],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
     name = "perspective",
     srcs = ["perspective.cxx"],
     deps = [
