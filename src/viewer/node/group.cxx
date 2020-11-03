@@ -36,7 +36,9 @@ class Impl final : public IGl {
 	IValue* enableNode_{nullptr};
 
 public:
-	using IGl::IGl;
+	Impl(std::string_view id, InputList inputs) :
+		NodeBase(id, std::move(inputs)),
+		IGl() {}
 
 	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "gl") {

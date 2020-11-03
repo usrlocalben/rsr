@@ -38,9 +38,9 @@ auto Merge(LightPack a, LightPack b) {
 	return a; }
 
 
-class IGl : public NodeBase {
+class IGl : public virtual NodeBase {
 public:
-	using NodeBase::NodeBase;
+	IGl() : NodeBase("", {}) {}
 	virtual void Draw(int /*pass*/, const LightPack& /*lights*/, rglv::GL* /*dc*/, const rmlm::mat4* /*pmat*/, const rmlm::mat4* /*vmat*/, const rmlm::mat4* /*mmat*/) {}
 	virtual void DrawDepth(rglv::GL* /*dc*/, const rmlm::mat4* /*pmat*/, const rmlm::mat4* /*mvmat*/) {}
 	virtual auto Lights(rmlm::mat4 mvmat [[maybe_unused]]) -> LightPack { return {}; } };

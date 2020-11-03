@@ -109,6 +109,27 @@ cc_library(
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
+    name = "mc2",
+    srcs = ["mc2.cxx"],
+    deps = [
+        "//src/rcl/rclmt:jobsys",
+        "//src/rcl/rclx:gason_util",
+        "//src/rgl/rglv:gl",
+        "//src/rgl/rglv:marching_cubes",
+        "//src/rgl/rglv:vao",
+        "//src/rml/rmlm:mat4",
+        "//src/rml/rmlv:mvec4",
+        "//src/rml/rmlv:soa",
+        "//src/rml/rmlv:vec",
+        "//src/viewer:compile",
+        ":base",
+        ":i_gl",
+        ":i_material",
+        ":i_particles",
+        ":i_value", ],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
     name = "many",
     srcs = ["many.cxx"],
     deps = [
@@ -218,6 +239,13 @@ cc_library(
         "//src/rgl/rglv:gl",
         "//src/rml/rmlm:mat4",
         ":base",],
+    copts = RSR_DEFAULT_COPTS,)
+
+cc_library(
+    name = "i_particles",
+    srcs = ["i_particles.cxx"],
+    hdrs = ["i_particles.hxx"],
+    deps = [":base",],
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(
@@ -382,7 +410,8 @@ cc_library(
         "//src/rml/rmlv:vec",
         "//src/viewer:compile",
         ":base",
-        ":i_gl"],
+        ":i_gl",
+        ":i_particles"],
     copts = RSR_DEFAULT_COPTS,)
 
 cc_library(

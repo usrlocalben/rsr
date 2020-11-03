@@ -22,6 +22,7 @@ CLANG_CL_FLAGS = [
     "-msse4.1",
     "-Wno-unused-parameter",
     "-Wno-unused-variable",
+    "-Wno-unused-function",
     "-Wno-builtin-macro-redefined",
     "-Wno-unused-command-line-argument",  # rocket .c sources don't use /std:c++17
     ]

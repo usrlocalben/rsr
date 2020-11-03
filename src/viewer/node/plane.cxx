@@ -33,7 +33,8 @@ class Impl : public IGl {
 
 public:
 	Impl(std::string_view id, InputList inputs) :
-		IGl(id, std::move(inputs)) {
+		NodeBase(id, std::move(inputs)),
+		IGl() {
 		using rmlv::vec3;
 
 		rmlv::vec2 leftTop{ -0.5F, 0.5F };
@@ -119,7 +120,8 @@ class DepthDebug final : public IGl {
 
 public:
 	DepthDebug(std::string_view id, InputList inputs) :
-		IGl(id, std::move(inputs)) {
+		NodeBase(id, std::move(inputs)),
+		IGl() {
 		using rmlv::vec3;
 
 		rmlv::vec2 leftTop{ -0.5F, 0.5F };
@@ -171,7 +173,8 @@ class SpotLight final : public IGl {
 
 public:
 	SpotLight(std::string_view id, InputList inputs, float angle, int size) :
-		IGl(id, std::move(inputs)),
+		NodeBase(id, std::move(inputs)),
+		IGl(),
 		angle_(angle),
 		size_(size) {}
 

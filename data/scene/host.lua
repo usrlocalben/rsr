@@ -228,6 +228,12 @@ function MC(d)
     return data.id
 end
 
+function Metaballs(d)
+    local data = fold_id(d)
+    HOST:compile('mc2', data)
+    return data.id
+end
+
 function Mesh(d)
     local data = fold_id(d)
     HOST:compile('mesh', data)

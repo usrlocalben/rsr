@@ -177,7 +177,7 @@ public:
 		//if (auto jv = jv_find(config_json.GetRoot(), "textureDir")) {
 		//	textureDir = jv->toString(); }
 
-		std::string meshDir{"data/mesh"};
+		std::string meshDir{"data/mesh/"};
 		//if (auto jv = jv_find(config_json.GetRoot(), "meshDir")) {
 		//	meshDir = jv->toString(); }
 

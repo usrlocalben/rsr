@@ -43,7 +43,8 @@ class Impl final : public IGl {
 
 public:
 	Impl(std::string_view id, InputList inputs, const rglv::Mesh& mesh) :
-		IGl(id, std::move(inputs)) {
+		NodeBase(id, std::move(inputs)),
+		IGl() {
 		using rmlm::mat4;
 		using std::cout;
 

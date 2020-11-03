@@ -51,7 +51,8 @@ class Impl final : public IGl {
 
 public:
 	Impl(std::string_view id, InputList inputs, FontInfo fi, float wrapWidth, float leading, float tracking) :
-		IGl(id, std::move(inputs)),
+		NodeBase(id, std::move(inputs)),
+		IGl(),
 		font_(std::move(fi)),
 		wrapWidth_(wrapWidth),
 		leading_(leading),

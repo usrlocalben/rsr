@@ -45,7 +45,8 @@ class Impl final : public IGl {
 
 public:
 	Impl(std::string_view id, InputList inputs, int divs, int hunk) :
-		IGl(id, std::move(inputs)),
+		NodeBase(id, std::move(inputs)),
+		IGl(),
 		mesh_(divs, hunk),
 		numVertices_(mesh_.GetNumVertices()),
 		numRenderIndices_(mesh_.GetNumRenderIndices()) {

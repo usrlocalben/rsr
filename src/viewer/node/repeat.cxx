@@ -41,7 +41,8 @@ class RepeatOp final : public IGl {
 
 public:
 	RepeatOp(std::string_view id, InputList inputs, int cnt, bool fork) :
-		IGl(id, std::move(inputs)),
+		NodeBase(id, std::move(inputs)),
+		IGl(),
 		cnt_(cnt),
 		fork_(fork)
 		{}

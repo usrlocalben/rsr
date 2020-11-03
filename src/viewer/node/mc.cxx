@@ -105,8 +105,12 @@ private:
 
 class Impl final : public IGl {
 public:
-	Impl(std::string_view id, InputList inputs, int precision, int forkDepth, float range)
-		:IGl(id, std::move(inputs)), precision_(precision), forkDepth_(forkDepth), range_(range) {
+	Impl(std::string_view id, InputList inputs, int precision, int forkDepth, float range) :
+		NodeBase(id, std::move(inputs)),
+		IGl(),
+		precision_(precision),
+		forkDepth_(forkDepth),
+		range_(range) {
 		buffers_[0].reserve(4096);
 		buffers_[1].reserve(4096);
 		buffers_[2].reserve(4096); }

@@ -152,6 +152,30 @@ struct alignas(8) ivec2 {
 	ivec2 operator-(int b) const { return ivec2(x - b, y - b); }};
 
 
+struct alignas(16) ivec3 {
+
+	int x, y, z;
+
+	ivec3() = default;
+	constexpr ivec3(vec3 a) noexcept : x(int(a.x)), y(int(a.y)), z(int(a.z)) {}
+	constexpr ivec3(int a, int b, int c) noexcept : x(a), y(b), z(c) {}
+	constexpr ivec3(int a) noexcept : x(a), y(a), z(a) {}
+
+	ivec3 operator+(const ivec3& b) const { return ivec3(x + b.x, y + b.y, z + b.z); }
+	ivec3 operator-(const ivec3& b) const { return ivec3(x - b.x, y - b.y, z - b.z); }
+	ivec3 operator*(const ivec3& b) const { return ivec3(x * b.x, y * b.y, z * b.z); }
+	ivec3 operator/(const ivec3& b) const { return ivec3(x / b.x, y / b.y, z / b.z); }
+
+	ivec3& operator+=(const ivec3& b) { x += b.x; y += b.y; z += b.z; return *this; }
+	ivec3& operator-=(const ivec3& b) { x -= b.x; y -= b.y; z -= b.z; return *this; }
+
+	ivec3 operator+(int b) const { return ivec3(x+b, y+b, z+b); }
+	ivec3 operator-(int b) const { return ivec3(x-b, y-b, z-b); }};
+
+inline
+auto itof(ivec3 a) -> vec3 { return vec3(float(a.x), float(a.y), float(a.z)); }
+
+
 struct alignas(16) ivec4 {
 
 #ifdef _MSC_VER

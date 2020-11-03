@@ -33,7 +33,8 @@ class Impl final : public IGl {
 
 public:
 	Impl(std::string_view id, InputList inputs, const rglv::Mesh& mesh, bool ts, bool ms) :
-		IGl(id, std::move(inputs)),
+		NodeBase(id, std::move(inputs)),
+		IGl(),
 		takeShadows_(ts),
 		makeShadows_(ms) {
 		rglv::MakeArray(mesh, "PND", meshBuffer_, meshIndices_); }
