@@ -1,5 +1,16 @@
 require "host"
 
+function concat(a, b)
+  out = {}
+  for i=1,#a do
+    out[#out+1] = a[i]
+  end
+  for i=1,#b do
+    out[#out+1] = b[i]
+  end
+  return out
+end
+
 function AuraForLauraMT(args)
     assert(args.material)
     assert(args.freq)
