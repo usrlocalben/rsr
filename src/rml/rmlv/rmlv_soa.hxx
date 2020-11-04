@@ -207,6 +207,15 @@ inline qfloat dot(const qfloat2& a, const qfloat2& b_) { return a.x*b_.x + a.y*b
 inline qfloat dot(const qfloat3& a, const qfloat3& b_) { return a.x*b_.x + a.y*b_.y + a.z*b_.z; }
 inline qfloat dot(const qfloat4& a, const qfloat4& b_) { return a.x*b_.x + a.y*b_.y + a.z*b_.z + a.w*b_.w; }
 
+// min/max
+inline qfloat3 vmin(const qfloat3& a, const qfloat3& b) {
+	return { vmin(a.x, b.x), vmin(a.y, b.y), vmin(a.z, b.z) }; }
+inline qfloat3 vmax(const qfloat3& a, const qfloat3& b) {
+	return { vmax(a.x, b.x), vmax(a.y, b.y), vmax(a.z, b.z) }; }
+
+// clamp
+inline qfloat3 clamp(const qfloat3& a, const qfloat3& l, const qfloat3& h) {
+	return vmin(vmax(a, l), h); }
 
 // length (_not_ using rsqrt!)
 inline qfloat length(qfloat2 a) { return sqrt(dot(a,a)); }
