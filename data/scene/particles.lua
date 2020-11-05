@@ -5,17 +5,19 @@ Truecolor{ id="root",
            layers={"foo", "board"} }}
 
 ppp = Particles{
-  many=128,
-  gravity=0, -- -00.005,
+  many=2048,
+  rate=0.01,
+  life=8.00,
+  gravity=-0.0001, -- -00.005,
   gl=Group{
     scale=Float(0.3),
-    gl=Plane{ material=Material{ program="Wireframe" } }}}
+    gl=Plane{ material=Material{ program="Amy", texture0=Image('data/texture/among240.png')  } }}}
 
 mc = Metaballs{
   particles=ppp,
   precision=64,
   scale=10.0,
-  forkDepth=2 }
+  forkDepth=3 }
 
 Layer{ id="foo",
   camera="uiCamera",

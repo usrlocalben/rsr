@@ -23,6 +23,8 @@ using namespace rqdq::rmlm;
 using namespace rqdq::rmlv;
 namespace jobsys = rclmt::jobsys;
 
+constexpr float oo = 9999999999.F;
+
 struct Particle {
 	rmlv::vec3 p;
 	rmlv::vec3 v;
@@ -34,6 +36,8 @@ class Impl final : public IGl, IParticles {
 	double ttt_{0.0};
 	const int many_;
 	const float gravity_;
+	const float life_;
+	const float rate_;
 
 	IGl* glNode_{nullptr};
 
@@ -45,19 +49,28 @@ class Impl final : public IGl, IParticles {
 	PixelToaster::Timer timer_;
 	std::random_device rd_;
 	std::minstd_rand rng_;
+	std::uniform_real_distribution<float> newDist_{0.0F, 1.0F};
 
 public:
-	Impl(std::string_view id, InputList inputs, int many, float gravity) :
+	Impl(std::string_view id, InputList inputs, int many, float gravity, float life, float rate) :
 		NodeBase(id, std::move(inputs)),
 		IGl(),
 		IParticles(),
 		many_(many),
 		gravity_(gravity),
+		life_(life),
+		rate_(rate),
 		px_(many_), py_(many_), pz_(many_),
 		vx_(many_), vy_(many_), vz_(many_),
 		lr_(many_), sz_(many_),
 		rd_(),
-		rng_(rd_()) {}
+		rng_(rd_()) {
+
+		for (int i=0; i<many_; ++i) {
+			px_[i] = oo; py_[i] = oo; pz_[i] = oo;
+			vx_[i] = 0;  vy_[i] = 0;  vz_[i] = 0;
+			lr_[i] = 0;
+			sz_[i] = 1; }}
 
 	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "gl") {
@@ -90,6 +103,7 @@ public:
 		if (!glNode_) return;
 		if (pass != 1) return;
 		for (int i=0; i<many_; ++i) {
+			if (lr_[i] <= 0) continue;
 			auto M = static_cast<rmlm::mat4*>(rclma::framepool::Allocate(64));
 			*M = *mmat;
 			*M = *M * mat4::translate(rmlv::vec3{ px_[i], py_[i], pz_[i] });
@@ -99,8 +113,7 @@ public:
 	auto GetPtrs() const -> ParticlePtrs override {
 		return { int(px_.size()), 
 			     px_.data(), py_.data(), pz_.data(),
-		         sz_.data(),
-				 lr_.data() }; }
+		         sz_.data() }; }
 
 private:
 	auto Update() -> jobsys::Job* {
@@ -116,28 +129,24 @@ private:
 			vy_[i] += gravity_;
 			vx_[i] += (float)rmlg::PINoise(float(i)/many_, 0.1874, t) / 1000.0F;
 			vz_[i] += (float)rmlg::PINoise(float(i)/many_, 0.5782, t*2) / 1000.0F;
-			px_[i] += vx_[i];
-			py_[i] += vy_[i];
-			pz_[i] += vz_[i];
+			px_[i] += vx_[i]; py_[i] += vy_[i]; pz_[i] += vz_[i];
 			lr_[i] -= dt;
 			if (lr_[i] <= 0) {
-				auto p = MakeOne();
-				px_[i] = p.p.x;
-				py_[i] = p.p.y;
-				pz_[i] = p.p.z;
-				vx_[i] = p.v.x;
-				vy_[i] = p.v.y;
-				vz_[i] = p.v.z;
-				lr_[i] = p.lr;
-				sz_[i] = p.sz; }}}
+				px_[i] = py_[i] = pz_[i] = oo;
+				// vx_[i] = 0, vy_[i] = 0, vz_[i] = 0;
+				if (newDist_(rng_) < rate_) {
+					auto p = MakeOne();
+					px_[i] = p.p.x; py_[i] = p.p.y; pz_[i] = p.p.z;
+					vx_[i] = p.v.x; vy_[i] = p.v.y; vz_[i] = p.v.z;
+					lr_[i] = p.lr;
+					sz_[i] = p.sz; }}}}
 
 	auto MakeOne() -> Particle {
 		const float bounds = 0.5F;
 		std::uniform_real_distribution<float> posDist(-bounds, bounds);
 		std::uniform_real_distribution<float> dirDist(-2, 2);
 		std::uniform_real_distribution<float> velDist(0.5, 1.0);
-		std::uniform_real_distribution<float> sizDist(0.8, 1.2);
-		std::uniform_real_distribution<float> ageDist(2.0, 3.0);
+		std::uniform_real_distribution<float> sizDist(0.29, 0.31);
 
 		// XXX this is not a uniform random vector
 		const auto dir = normalize(rmlv::vec3{ dirDist(rng_), dirDist(rng_), dirDist(rng_) });
@@ -146,7 +155,7 @@ private:
 		return {
 			/*p=*/{ posDist(rng_), posDist(rng_), posDist(rng_) },
 			/*v=*/vel,
-			/*lr=*/ageDist(rng_),
+			/*lr=*/life_,
 			/*sz=*/sizDist(rng_) }; }
 	};
 
@@ -156,15 +165,12 @@ class Compiler final : public NodeCompiler {
 		using rclx::jv_find;
 		if (!Input("gl", /*required=*/false)) { return; }
 
-		int many{16};
-		if (auto jv = jv_find(data_, "many", JSON_NUMBER)) {
-			many = static_cast<int>(jv->toNumber()); }
+		auto many = DataInt("many", 16);
+		auto gravity = DataReal("gravity", 0.0F);
+		auto life = DataReal("life", 1.0F);
+		auto rate = DataReal("rate", 0.05F);
 
-		float gravity{0};
-		if (auto jv = jv_find(data_, "gravity", JSON_NUMBER)) {
-			gravity = static_cast<float>(jv->toNumber()); }
-
-		out_ = std::make_shared<Impl>(id_, std::move(inputs_), many, gravity); }};
+		out_ = std::make_shared<Impl>(id_, std::move(inputs_), many, gravity, life, rate); }};
 
 
 struct init { init() {

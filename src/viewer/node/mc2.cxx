@@ -78,6 +78,10 @@ class Impl : public IGl {
 	std::mutex bufferMutex_{};
 	std::array<std::vector<rglv::VertexArray_F3F3F3>, 2> buffers_;
 	std::array<std::atomic<int>, 2> bufferEnd_{ 0, 0 };
+
+	std::array<rcls::vector<float>, 600> bpx_, bpy_, bpz_, bsz_;
+	std::atomic<int> packsEnd_{0};
+
 	std::atomic<int> blocksRemaining_{};
 	rcls::vector<float> cloud_;
 	ParticlePtrs pptrs_;
@@ -143,11 +147,12 @@ private:
 	void UpdateImpl() {
 		mod2_ = (mod2_+1)&1;
 		bufferEnd_[mod2_] = 0;
+		packsEnd_ = 0;
 
 		blocksRemaining_ = pow(8, levels_);
 
 		pptrs_ = particlesNode_->GetPtrs();
-		jobsys::run(Block({0, int16_t(dim_), 0, int16_t(dim_), 0, int16_t(dim_), int16_t(levels_)})); }
+		jobsys::run(Block(RootRange())); }
 
 	auto Block(BlockRange range, jobsys::Job* parent=nullptr) -> jobsys::Job* {
 		if (parent != nullptr) {
@@ -161,7 +166,7 @@ private:
 			Fill(range);
 			if (--blocksRemaining_ == 0) {
 				// std::cerr << "done resolving cloud\n";
-				RunLinks(); }}
+				jobsys::run(Resolve(RootRange())); }}
 		else {
 			int16_t lm1 = range.l - 1;
 			int16_t x1 = range.x1, x2 = range.x2;
@@ -191,21 +196,12 @@ private:
 		vec3 c1 = itof(ic1 - half_) / float(dim_);
 		vec3 c2 = itof(ic2 - half_) / float(dim_);
 
-		vec3 center = (c1+c2)/2.0F;
-		float radius = length(c1 - center);
-
-#define FAST_DIST
-
 		// oct-tree breakdown of pow-2 cube should
 		// give SSE friendly dimensions at each level
 		assert((r.x2 - r.x1) % 4 == 0);
 
-		qfloat3 cellCenter{ center };
-#ifdef FAST_DIST
-		qfloat cellRadius2{ radius*radius };
-#else
-		qfloat cellRadius{ radius };
-#endif
+		const auto boxMin = qfloat3{ c1 };
+		const auto boxMax = qfloat3{ c2 };
 
 		const int pcnt = pptrs_.many;
 		for (int bi=0; bi<pcnt; bi+=4) {
@@ -214,24 +210,16 @@ private:
 			                 _mm_load_ps(&pptrs_.py[bi]),
 			                 _mm_load_ps(&pptrs_.pz[bi]) };
 
-#ifdef FAST_DIST
-			__m128 tmp = _mm_load_ps(&pptrs_.sz[bi]);
-			qfloat ballRadius2{ _mm_mul_ps(tmp, tmp) };
-#else
 			qfloat ballRadius{ _mm_load_ps(&pptrs_.sz[bi]) };
-#endif
+			auto ballRadiusSq = ballRadius * ballRadius;
 
+			auto nearestPoint = clamp(ballPos, boxMin, boxMax);
+			auto ballToBox = ballPos - nearestPoint;
+			auto distanceSq = dot(ballToBox, ballToBox);
+			auto intersects = cmplt(distanceSq, ballRadiusSq);
 
-#ifdef FAST_DIST
-			auto cellToBall = cellCenter - ballPos;
-			auto d2 = dot(cellToBall, cellToBall);
-			auto inbounds = cmplt(d2-ballRadius2, cellRadius2);
-#else
-			auto inbounds = cmplt(sd_sphere(cellCenter - ballPos, ballRadius), cellRadius);
-#endif
-
-			auto active = rmlv::cmpgt(rmlv::qfloat{_mm_load_ps(&pptrs_.lr[bi])}, rmlv::qfloat{_mm_setzero_ps()});
-			uint32_t valid = movemask(inbounds & active);
+			// auto active = rmlv::cmpgt(rmlv::qfloat{_mm_load_ps(&pptrs_.lr[bi])}, rmlv::qfloat{_mm_setzero_ps()});
+			uint32_t valid = movemask(intersects); // & active);
 			while (valid) {
 				int li = FindAndClearLSB(valid);
 				mx.push_back(pptrs_.px[bi+li]);
@@ -239,14 +227,6 @@ private:
 				mz.push_back(pptrs_.pz[bi+li]);
 				mr.push_back(pptrs_.sz[bi+li]); }}
 
-		// pad local balls up to 4x with oob balls
-		/*
-		for (int n=mx.size()%4; n<4; ++n) {
-			mx.push_back(999999.0F);
-			my.push_back(999999.0F);
-			mz.push_back(999999.0F);
-			mr.push_back(0.0F); }
-		*/
 
 		const mvec4i xgrad{ 0, 1, 2, 3 };
 		for (int y=r.y1; y<r.y2; ++y) {
@@ -264,7 +244,36 @@ private:
 						qfloat ballRadius{ mr[bi] };
 						charge += Charge(qfloat3{ px, py, pz } - ballPos, ballRadius); }
 
-					_mm_store_ps(&out[x], charge.v); }}} }
+					_mm_stream_ps(&out[x], charge.v); }}} }
+
+	auto Resolve(BlockRange range, jobsys::Job* parent=nullptr) -> jobsys::Job* {
+		if (parent != nullptr) {
+			return jobsys::make_job_as_child(parent, Impl::ResolveJmp, std::tuple{this, range}); }
+		return jobsys::make_job(Impl::ResolveJmp, std::tuple{this, range}); }
+	static void ResolveJmp(jobsys::Job*, unsigned, std::tuple<Impl*, BlockRange>* data) {
+		auto&[self, range] = *data;
+		self->ResolveImpl(range);}
+	void ResolveImpl(BlockRange range) {
+		RunLinks(); }
+
+	auto RootRange() const -> BlockRange {
+		return {0, int16_t(dim_),
+		        0, int16_t(dim_),
+		        0, int16_t(dim_),
+		        int16_t(levels_)}; }
+
+	/*
+	auto AllocPack() -> int {
+		return packsEnd_++; }
+		std::scoped_lock lock(bufferMutex_);
+		if (packsEnd_ == int(bpx_.size())) {
+			bpx_.push_back({});
+			bpy_.push_back({});
+			bpz_.push_back({});
+			bsz_.push_back({}); }
+		++packsEnd_;
+		return out; }
+	*/
 
 	/*
 	auto AllocBuffer() -> rglv::VertexArray_F3F3F3& {
