@@ -19,7 +19,6 @@
 #include "src/rcl/rcls/rcls_smoothedintervaltimer.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rcl/rclx/rclx_jsonfile.hxx"
-#include "src/rgl/rglr/rglr_display_mode.hxx"
 #include "src/rgl/rglr/rglr_pixeltoaster_util.hxx"
 #include "src/rgl/rglr/rglr_profont.hxx"
 #include "src/rgl/rglr/rglr_texture_store.hxx"
@@ -63,7 +62,7 @@ const int SCAN_SAMPLESIZE_IN_FRAMES = 120;
 const ivec2 SCAN_SIZE_LIMIT_IN_TILES{ 16, 16 };
 const double MEASUREMENT_DISCARD = 0.05;  // discard worst 5% because of os noise
 
-std::vector<DisplayMode> modelist = {
+std::vector<ivec2> modelist = {
 	{640, 360},
 	{640, 480},
 	{800, 600},
@@ -154,34 +153,33 @@ class Application::impl : public PixelToaster::Listener {
 	bool shouldQuit_ = false;
 	int runtimeInFrames_{ 0 };
 	int taskSize_ = 6;
-	ivec2 tile_dim{ 12, 4 };
+	ivec2 tileSizeInBlocks_{ 12, 4 };
 
-	int vis_scale = 30;
-	bool debug_mode = false;
-	bool show_shader_threads = false;
+	int visualizerScale_ = 30;
+	bool debugMode_ = false;
+	bool showTileThreads_ = false;
 	bool isPaused_ = false;
-	bool runFullScreen_ = false;
+	bool wantFullScreen_ = false;
 	bool nice_ = true;
 
 	bool mouseCaptured_ = false;
-	bool reset_mouse_next_frame = false;
+	bool resetMouseNextFrame_ = false;
 	rmlv::vec2 mousePositionInPx_{};
 
-	bool measuring = false;
-	bool start_measuring = false;
-	bool scanning = false;
-	bool start_scanning = false;
-	bool stop_scanning = false;
-	double scan_min_value;
-	ivec2 scan_min_dim;
+	bool measuring_ = false;
+	bool startMeasuring_ = false;
+	bool scanning_ = false;
+	bool startScanning_ = false;
+	bool stopScanning_ = false;
+	double scanMinValue_;
+	ivec2 scanMinDim_;
 
 	std::vector<double> measurementSamples_;
-	BenchStat last_stats;
-	bool show_stats = false;
-	DisplayMode cur_mode{ 0, 0 };
-	DisplayMode change_mode = modelist[3];
+	std::optional<BenchStat> lastStats_;
+	ivec2 windowSizeInPx_{ 0, 0 };
+	ivec2 wantedSizeInPx_{modelist[3]};
 	bool runningFullScreen_ = false;
-	bool show_mode_list = false;
+	bool showModeList_ = false;
 	bool keys_shifted = false;
 
 	HandyCam camera_;
@@ -293,8 +291,8 @@ public:
 
 				MaybeRecompile();
 
-				if (mouseCaptured_ && reset_mouse_next_frame) {
-					reset_mouse_next_frame = false;
+				if (mouseCaptured_ && resetMouseNextFrame_) {
+					resetMouseNextFrame_ = false;
 					display_.center_mouse(); }
 
 				renderTime_.reset();
@@ -330,9 +328,9 @@ public:
 				// update globals
 				const auto tNow = static_cast<float>(wallClock_.time());
 				globalsNode_->Upsert("wallclock", isPaused_ ? float(0) : tNow);
-				globalsNode_->Upsert("windowSize", rmlv::vec2(float(cur_mode.width_in_pixels), float(cur_mode.height_in_pixels)));
-				globalsNode_->Upsert("tileSize", rmlv::vec2(float(tile_dim.x), float(tile_dim.y)));
-				globalsNode_->Upsert("windowAspect", float(cur_mode.width_in_pixels) / float(cur_mode.height_in_pixels));
+				globalsNode_->Upsert("windowSize", rmlv::vec2(float(windowSizeInPx_.x), float(windowSizeInPx_.y)));
+				globalsNode_->Upsert("tileSize", rmlv::vec2(float(tileSizeInBlocks_.x), float(tileSizeInBlocks_.y)));
+				globalsNode_->Upsert("windowAspect", windowSizeInPx_.x / float(windowSizeInPx_.y));
 
 				{
 					const std::string_view selector{"game"};
@@ -374,7 +372,7 @@ public:
 		}
 
 	void SetFullScreen(bool value) {
-		runFullScreen_ = value; }
+		wantFullScreen_ = value; }
 
 	void SetNice(bool value) {
 		nice_ = value; }
@@ -384,9 +382,9 @@ private:
 		return false; }
 
 	void onKeyPressed(PixelToaster::DisplayInterface& display, PixelToaster::Key key) override {
-		if (!debug_mode) {
+		if (!debugMode_) {
 			if (key == Key::F1) {
-				debug_mode = !debug_mode;
+				debugMode_ = !debugMode_;
 				return; }
 
 			const std::string_view selector{"game"};
@@ -405,17 +403,17 @@ private:
 		switch (key) {
 		case Key::OpenBracket:
 			taskSize_ = max(4, taskSize_ - 1);
-			tile_dim = ivec2{ taskSize_, taskSize_ };
+			tileSizeInBlocks_ = ivec2{ taskSize_, taskSize_ };
 			break;
 		case Key::CloseBracket:
 			taskSize_ = min(taskSize_ + 1, 128);
-			tile_dim = ivec2{ taskSize_, taskSize_ };
+			tileSizeInBlocks_ = ivec2{ taskSize_, taskSize_ };
 			break;
 		case Key::F1:
-			debug_mode = !debug_mode;
+			debugMode_ = !debugMode_;
 			break;
 		case Key::F2:
-			show_shader_threads = !show_shader_threads;
+			showTileThreads_ = !showTileThreads_;
 			break;
 		case Key::P:
 			std::cout << camera_ << "\n";
@@ -428,19 +426,19 @@ private:
 		case Key::E: camera_.MoveUp();  break;
 		case Key::Q: camera_.MoveDown();  break;
 		case Key::Period:
-			vis_scale += max(vis_scale / 10, 1);
+			visualizerScale_ += max(visualizerScale_ / 10, 1);
 			break;
 		case Key::Comma:
-			vis_scale = max(1, vis_scale - (vis_scale / 10));
+			visualizerScale_ = max(1, visualizerScale_ - (visualizerScale_ / 10));
 			break;
 		case Key::R:
-			start_measuring = true;
+			startMeasuring_ = true;
 			break;
 		case Key::C:
-			show_stats = false;
+			lastStats_.reset();
 			break;
 		case Key::F:
-			runFullScreen_ = !runFullScreen_;
+			wantFullScreen_ = !wantFullScreen_;
 			break;
 		case Key::G:
 			rglv::doubleBuffer = !rglv::doubleBuffer;
@@ -454,17 +452,17 @@ private:
 			break;
 	/*
 		case Key::S:
-			if (!measuring && !scanning) {
-				start_scanning = true; }
-			else if (scanning) {
-				stop_scanning = true; }
+			if (!measuring_ && !scanning_) {
+				startScanning_ = true; }
+			else if (scanning_) {
+				stopScanning_ = true; }
 			break;
 	*/
 		default:
 	//		cout << "key was " << key << endl;
-			if (show_mode_list && (key >= Key::One && key < (Key::One + modelist.size()))) {
+			if (showModeList_ && (key >= Key::One && key < (Key::One + modelist.size()))) {
 				int modeidx = key - Key::One;
-				change_mode = modelist[modeidx]; }}}
+				wantedSizeInPx_ = modelist[modeidx]; }}}
 
 	void onKeyDown(PixelToaster::DisplayInterface&, PixelToaster::Key key) override {
 		switch (key) {
@@ -472,7 +470,7 @@ private:
 			shouldQuit_ = true;
 			break;
 		case Key::M:
-			show_mode_list = true;
+			showModeList_ = true;
 			break;
 		case Key::Shift:
 			keys_shifted = true;
@@ -482,7 +480,7 @@ private:
 	void onKeyUp(PixelToaster::DisplayInterface&, PixelToaster::Key key) override {
 		switch (key) {
 		case Key::M:
-			show_mode_list = false;
+			showModeList_ = false;
 			break;
 		case Key::Shift:
 			keys_shifted = false;
@@ -497,7 +495,7 @@ private:
 		if (mouseCaptured_) {
 			//cout << "mm(" << dmx << ", " << dmy << ")" << endl;
 			camera_.OnMouseMove({ dmx, dmy });
-			reset_mouse_next_frame = true; }}
+			resetMouseNextFrame_ = true; }}
 
 	void onMouseWheel(PixelToaster::DisplayInterface&, PixelToaster::Mouse, short wheel_amount) override {
 		int ticks = wheel_amount / 120;
@@ -507,91 +505,90 @@ private:
 		auto renderTimeInMillis = lastRenderTime_ * 1000.0; // renderTime_.Get();
 		auto refreshTimeInMillis = refreshTime_.Get();
 
-		if (show_mode_list) {
+		if (showModeList_) {
 			int idx = 1;
 			int top = canvas.height() / 2;
 			for (const auto& mode : modelist) {
 				stringstream ss;
-				ss << idx << ": " << mode.width_in_pixels << "x" << mode.height_in_pixels;
-				if (cur_mode == mode) {
+				ss << idx << ": " << mode.x << "x" << mode.y;
+				if (windowSizeInPx_ == mode) {
 					ss << " (current)"; }
 				pp_.write(ss.str(), 16, top, canvas);
 				top += 10;
 				idx += 1; } }
 
-		if (start_measuring) {
-			measuring = true;
-			start_measuring = false;
-			show_stats = false;
+		if (startMeasuring_) {
+			measuring_ = true;
+			startMeasuring_ = false;
+			lastStats_.reset();
 			measurementSamples_.clear(); }
 
-		if (measuring) {
+		if (measuring_) {
 			if (measurementSamples_.size() == MEASUREMENT_SAMPLESIZE_IN_FRAMES) {
-				measuring = false;
-				last_stats = CalcStat(measurementSamples_, MEASUREMENT_DISCARD);
-				show_stats = true; }
+				measuring_ = false;
+				lastStats_ = CalcStat(measurementSamples_, MEASUREMENT_DISCARD); }
 			else {
 				measurementSamples_.push_back(renderTimeInMillis);
 				stringstream ss;
-				ss << "measuring, " << measurementSamples_.size() << " / " << MEASUREMENT_SAMPLESIZE_IN_FRAMES;
+				ss << "measuring_, " << measurementSamples_.size() << " / " << MEASUREMENT_SAMPLESIZE_IN_FRAMES;
 				pp_.write(ss.str(), 16, 100, canvas); } }
 
-		if (start_scanning) {
-			scanning = true;
-			start_scanning = false;
-			tile_dim = ivec2{ 2, 2 };
-			scan_min_dim = ivec2{ 2, 2 };
-			scan_min_value = 10000.0;
+		if (startScanning_) {
+			scanning_ = true;
+			startScanning_ = false;
+			tileSizeInBlocks_ = ivec2{ 2, 2 };
+			scanMinDim_ = ivec2{ 2, 2 };
+			scanMinValue_ = 10000.0;
 			measurementSamples_.clear(); }
 
-		if (stop_scanning) {
-			stop_scanning = false;
-			scanning = false;
-			tile_dim = scan_min_dim; }
+		if (stopScanning_) {
+			stopScanning_ = false;
+			scanning_ = false;
+			tileSizeInBlocks_ = scanMinDim_; }
 
-		if (scanning) {
+		if (scanning_) {
 			{
 				int top = 100;
 				stringstream ss;
-				ss << "probing for fastest tile dimensions: " << (((tile_dim.y - 1) * 16) + tile_dim.x - 1) << " / " << (16 * 16) << "   ";
+				ss << "probing for fastest tile dimensions: " << (((tileSizeInBlocks_.y - 1) * 16) + tileSizeInBlocks_.x - 1) << " / " << (16 * 16) << "   ";
 				pp_.write(ss.str(), 16, top, canvas);  top += 10;
 				ss.str("");
-				ss << "                     fastest so far: " << scan_min_dim.x << "x" << scan_min_dim.y << "   ";
+				ss << "                     fastest so far: " << scanMinDim_.x << "x" << scanMinDim_.y << "   ";
 				pp_.write(ss.str(), 16, top, canvas);  top += 10;
 				ss.str("");
 				ss << "          press s to stop            ";
 				pp_.write(ss.str(), 16, top, canvas);  top += 10; }
 			if (measurementSamples_.size() == SCAN_SAMPLESIZE_IN_FRAMES) {
-				last_stats = CalcStat(std::vector<double>(begin(measurementSamples_) + 60, end(measurementSamples_)), MEASUREMENT_DISCARD);
+				lastStats_ = CalcStat(std::vector<double>(begin(measurementSamples_) + 60, end(measurementSamples_)), MEASUREMENT_DISCARD);
 				measurementSamples_.clear();
-				if (last_stats.avg < scan_min_value) {
-					scan_min_value = last_stats.avg;
-					scan_min_dim = tile_dim; }
-				tile_dim.x += 2;
-				if (tile_dim.x > SCAN_SIZE_LIMIT_IN_TILES.x) {
-					tile_dim.x = 2;
-					tile_dim.y += 2; }
-				if (tile_dim.y > SCAN_SIZE_LIMIT_IN_TILES.y) {
-					scanning = false;
-					tile_dim = scan_min_dim; } }
+				if (lastStats_->avg < scanMinValue_) {
+					scanMinValue_ = lastStats_->avg;
+					scanMinDim_ = tileSizeInBlocks_; }
+				tileSizeInBlocks_.x += 2;
+				if (tileSizeInBlocks_.x > SCAN_SIZE_LIMIT_IN_TILES.x) {
+					tileSizeInBlocks_.x = 2;
+					tileSizeInBlocks_.y += 2; }
+				if (tileSizeInBlocks_.y > SCAN_SIZE_LIMIT_IN_TILES.y) {
+					scanning_ = false;
+					tileSizeInBlocks_ = scanMinDim_; } }
 			else {
 				measurementSamples_.push_back(renderTimeInMillis); } }
 
-		if (debug_mode) {
+		if (debugMode_) {
 			double fps = 1.0 / (refreshTimeInMillis / 1000.0);
 			auto s = fmt::sprintf("% 6.2f ms, fps: %.0f", renderTimeInMillis, fps);
 			pp_.write(s, 16, 16, canvas); }
 
-		if (debug_mode) {
+		if (debugMode_) {
 			stringstream ss;
-			ss << "tile size: " << tile_dim.x << "x" << tile_dim.y;
+			ss << "tile size: " << tileSizeInBlocks_.x << "x" << tileSizeInBlocks_.y;
 			ss << ", ";
-			ss << "visu scale: " << vis_scale;
+			ss << "visu scale: " << visualizerScale_;
 			if (isPaused_) {
 				ss << "   PAUSED"; }
 			pp_.write(ss.str(), 16, 27, canvas); }
 
-		if (debug_mode) {
+		if (debugMode_) {
 			stringstream ss;
 			ss << "F1 debug         l  toggle srgb   [&] tile size    ,&. vis scale       ";
 			pp_.write(ss.str(), 16, -32, canvas);
@@ -607,22 +604,22 @@ private:
 			ss << "F1 debug";
 			pp_.write(ss.str(), 0, top, canvas); }
 
-		if (debug_mode) {
-			render_jobsys(20, 40, float(vis_scale), canvas); }
+		if (debugMode_) {
+			render_jobsys(20, 40, float(visualizerScale_), canvas); }
 
-		if (debug_mode && show_stats) {
+		if (debugMode_ && lastStats_) {
 			using fmt::format_to, fmt::to_string;
 			int top = canvas.height() / 2;
 			pp_.write("   min    25th     med    75th     max    mean    sdev", 32, top, canvas);
 			top += 10;
 			fmt::memory_buffer out;
-			format_to(out, "{: 6.2f}  ", last_stats.min);
-			format_to(out, "{: 6.2f}  ", last_stats.p25);
-			format_to(out, "{: 6.2f}  ", last_stats.med);
-			format_to(out, "{: 6.2f}  ", last_stats.p75);
-			format_to(out, "{: 6.2f}  ", last_stats.max);
-			format_to(out, "{: 6.2f}  ", last_stats.avg);
-			format_to(out, "{: 6.2f}  ", last_stats.std);
+			format_to(out, "{: 6.2f}  ", lastStats_->min);
+			format_to(out, "{: 6.2f}  ", lastStats_->p25);
+			format_to(out, "{: 6.2f}  ", lastStats_->med);
+			format_to(out, "{: 6.2f}  ", lastStats_->p75);
+			format_to(out, "{: 6.2f}  ", lastStats_->max);
+			format_to(out, "{: 6.2f}  ", lastStats_->avg);
+			format_to(out, "{: 6.2f}  ", lastStats_->std);
 			pp_.write(to_string(out), 32, top, canvas);
 			top += 10;
 			pp_.write(string("press C to clear"), 32, top, canvas); } }
@@ -638,13 +635,12 @@ private:
 		appNodes_.emplace_back(uiCameraNode_); }
 
 	void MaybeUpdateDisplay() {
-		if (cur_mode != change_mode || runningFullScreen_ != runFullScreen_) {
-			cur_mode = change_mode;
-			runningFullScreen_ = runFullScreen_;
+		if (windowSizeInPx_ != wantedSizeInPx_ || runningFullScreen_ != wantFullScreen_) {
+			windowSizeInPx_ = wantedSizeInPx_;
+			runningFullScreen_ = wantFullScreen_;
 			display_.close();
-			display_.open("rqdq 2018",
-						  cur_mode.width_in_pixels,
-						  cur_mode.height_in_pixels,
+			display_.open("rqdq 2021",
+						  windowSizeInPx_.x, windowSizeInPx_.y,
 						  runningFullScreen_ ? Output::Fullscreen : Output::Windowed,
 						  Mode::TrueColor);
 			display_.listener(this);
