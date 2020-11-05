@@ -1,4 +1,4 @@
-# fmt-6.0.0
+# fmt-7.1.2
 
 load("//:copts.bzl", "RSR_DEFAULT_COPTS")
 
@@ -8,9 +8,5 @@ cc_library(
     name='fmt',
     hdrs=glob(["include/fmt/*.h"]),
     includes = ["include"],
-    srcs=[
-        "src/format.cc",
-        "src/posix.cc",
-        ],
-    copts = RSR_DEFAULT_COPTS,
-    )
+    srcs=["src/format.cc", "src/os.cc",],
+    copts = RSR_DEFAULT_COPTS,)
