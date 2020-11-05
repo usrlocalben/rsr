@@ -89,6 +89,7 @@ cc_library(
     srcs = ["rglr_profont.cxx"],
     hdrs = ["rglr_profont.hxx"],
     deps = [
+        "//3rdparty/fmt",
         "//3rdparty/picopng",
         "//3rdparty/pixeltoaster",
         "//src/rcl/rclr:algorithm",

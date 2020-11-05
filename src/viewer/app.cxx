@@ -1,14 +1,5 @@
 #include "app.hxx"
 
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <thread>
-#include <vector>
-
 #ifdef ENABLE_MUSIC
 #include "src/ral/ralio/ralio_audio_controller.hxx"
 #include "src/ral/rals/rals_sync_controller.hxx"
@@ -34,6 +25,14 @@
 #include "src/viewer/node/i_output.hxx"
 #include "src/viewer/node/i_controller.hxx"
 #include "src/viewer/node/uicamera.hxx"
+
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <thread>
+#include <vector>
 
 #include <fmt/format.h>
 #include <fmt/printf.h>
@@ -509,11 +508,11 @@ private:
 			int idx = 1;
 			int top = canvas.height() / 2;
 			for (const auto& mode : modelist) {
-				stringstream ss;
-				ss << idx << ": " << mode.x << "x" << mode.y;
+				fmt::memory_buffer buf;
+				format_to(buf, "{}: {}x{}", idx, mode.x, mode.y);
 				if (windowSizeInPx_ == mode) {
-					ss << " (current)"; }
-				pp_.write(ss.str(), 16, top, canvas);
+					format_to(buf, " (current)"); }
+				pp_.write(buf, 16, top, canvas);
 				top += 10;
 				idx += 1; } }
 
@@ -529,9 +528,9 @@ private:
 				lastStats_ = CalcStat(measurementSamples_, MEASUREMENT_DISCARD); }
 			else {
 				measurementSamples_.push_back(renderTimeInMillis);
-				stringstream ss;
-				ss << "measuring_, " << measurementSamples_.size() << " / " << MEASUREMENT_SAMPLESIZE_IN_FRAMES;
-				pp_.write(ss.str(), 16, 100, canvas); } }
+				fmt::memory_buffer buf;
+				format_to(buf, "measuring, {} / {}", measurementSamples_.size(), MEASUREMENT_SAMPLESIZE_IN_FRAMES);
+				pp_.write(buf, 16, 100, canvas); } }
 
 		if (startScanning_) {
 			scanning_ = true;
@@ -549,15 +548,18 @@ private:
 		if (scanning_) {
 			{
 				int top = 100;
-				stringstream ss;
-				ss << "probing for fastest tile dimensions: " << (((tileSizeInBlocks_.y - 1) * 16) + tileSizeInBlocks_.x - 1) << " / " << (16 * 16) << "   ";
-				pp_.write(ss.str(), 16, top, canvas);  top += 10;
-				ss.str("");
-				ss << "                     fastest so far: " << scanMinDim_.x << "x" << scanMinDim_.y << "   ";
-				pp_.write(ss.str(), 16, top, canvas);  top += 10;
-				ss.str("");
-				ss << "          press s to stop            ";
-				pp_.write(ss.str(), 16, top, canvas);  top += 10; }
+				fmt::memory_buffer buf;
+				format_to(buf, "probing for fastest file dimensions: {} / {}   ",
+				          ((tileSizeInBlocks_.y - 1) * 16) + tileSizeInBlocks_.x-1, 16*16);
+				pp_.write(buf, 16, top, canvas);  top += 10;  buf.clear();
+
+				format_to(buf, "                     fastest so far: {}x{}   ",
+				          scanMinDim_.x, scanMinDim_.y);
+				pp_.write(buf, 16, top, canvas);  top += 10;  buf.clear();
+
+				format_to(buf, "          press s to stop            ");
+				pp_.write(buf, 16, top, canvas);  top += 10; }
+
 			if (measurementSamples_.size() == SCAN_SAMPLESIZE_IN_FRAMES) {
 				lastStats_ = CalcStat(std::vector<double>(begin(measurementSamples_) + 60, end(measurementSamples_)), MEASUREMENT_DISCARD);
 				measurementSamples_.clear();
@@ -576,39 +578,30 @@ private:
 
 		if (debugMode_) {
 			double fps = 1.0 / (refreshTimeInMillis / 1000.0);
-			auto s = fmt::sprintf("% 6.2f ms, fps: %.0f", renderTimeInMillis, fps);
-			pp_.write(s, 16, 16, canvas); }
+			fmt::memory_buffer buf;
+			format_to(buf, "{: 6.2f} ms, fps: {:.0f}", renderTimeInMillis, fps);
+			pp_.write(buf, 16, 16, canvas); }
 
 		if (debugMode_) {
-			stringstream ss;
-			ss << "tile size: " << tileSizeInBlocks_.x << "x" << tileSizeInBlocks_.y;
-			ss << ", ";
-			ss << "visu scale: " << visualizerScale_;
+			fmt::memory_buffer buf;
+			format_to(buf, "tile size: {}x{}", tileSizeInBlocks_.x, tileSizeInBlocks_.y);
+			format_to(buf, ", visu scale: {}", visualizerScale_);
 			if (isPaused_) {
-				ss << "   PAUSED"; }
-			pp_.write(ss.str(), 16, 27, canvas); }
+				format_to(buf, "   PAUSED"); }
+			pp_.write(buf, 16, 27, canvas); }
 
 		if (debugMode_) {
-			stringstream ss;
-			ss << "F1 debug         l  toggle srgb   [&] tile size    ,&. vis scale       ";
-			pp_.write(ss.str(), 16, -32, canvas);
-			ss.str("");
-			ss << " p toggle pause  m  change mode    r  measure       n  wasd capture    ";
-			pp_.write(ss.str(), 16, -42, canvas);
-			ss.str("");
-			ss << " f fullscreen   F2  show tiles     g  dblbuf        shift -&+ grid size";
-			pp_.write(ss.str(), 16, -52, canvas); }
+			pp_.write("F1 debug         l  toggle srgb   [&] tile size    ,&. vis scale       ", 16, -32, canvas);
+			pp_.write(" p toggle pause  m  change mode    r  measure       n  wasd capture    ", 16, -42, canvas);
+			pp_.write(" f fullscreen   F2  show tiles     g  dblbuf        shift -&+ grid size", 16, -52, canvas); }
 		else if (runtimeInFrames_ < (5 * 60)) {
-			stringstream ss;
 			int top = canvas.height() - 11;
-			ss << "F1 debug";
-			pp_.write(ss.str(), 0, top, canvas); }
+			pp_.write("F1 debug", 0, top, canvas);  }
 
 		if (debugMode_) {
 			render_jobsys(20, 40, float(visualizerScale_), canvas); }
 
 		if (debugMode_ && lastStats_) {
-			using fmt::format_to, fmt::to_string;
 			int top = canvas.height() / 2;
 			pp_.write("   min    25th     med    75th     max    mean    sdev", 32, top, canvas);
 			top += 10;
@@ -620,7 +613,7 @@ private:
 			format_to(out, "{: 6.2f}  ", lastStats_->max);
 			format_to(out, "{: 6.2f}  ", lastStats_->avg);
 			format_to(out, "{: 6.2f}  ", lastStats_->std);
-			pp_.write(to_string(out), 32, top, canvas);
+			pp_.write(out, 32, top, canvas);
 			top += 10;
 			pp_.write(string("press C to clear"), 32, top, canvas); } }
 
@@ -707,12 +700,12 @@ private:
 			// new node collection is good!
 			auto elapsed = compileTime.delta() * 1000.0;
 			nodes_ = std::move(newNodes);
-			std::cerr << fmt::sprintf("scene compiled in %.2fms\n", elapsed);
+			fmt::print(stderr, "scene compiled in {:.2f}ms\n", elapsed);
 			return true; }
 
 		// new node-set failed, re-link the previous set
 		if (!Link(nodes_)) {
-			std::cerr << "re-link old nodes failed!\n";
+			fmt::print(stderr, "re-link old nodes failed!\n");
 			std::exit(1); }
 		return false; }};
 

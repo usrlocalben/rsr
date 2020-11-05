@@ -92,7 +92,7 @@ void ProPrinter::draw_glyph(const char ch, int left, int top, TrueColorCanvas& c
 
 
 
-void ProPrinter::write(const std::string str, int left, int top, TrueColorCanvas& canvas) const {
+void ProPrinter::write(std::string_view str, int left, int top, TrueColorCanvas& canvas) const {
 	for (const char& ch : str) {
 		draw_glyph(ch, left, top, canvas);
 		left += GLYPH_SIZE_IN_PX.x; }}
