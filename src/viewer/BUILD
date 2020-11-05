@@ -33,12 +33,6 @@ cc_binary(
     copts = RSR_DEFAULT_COPTS,
     linkopts = ["-SUBSYSTEM:WINDOWS",],)
 
-cc_binary(
-    name = "blah",
-    srcs = ["blah.cxx"],
-    deps = ["//3rdparty/lua:lib"],
-    copts = RSR_DEFAULT_COPTS)
-
 cc_library(
     name = "fontloader",
     srcs = ["fontloader.cxx"],
