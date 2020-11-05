@@ -25,28 +25,25 @@ plusminus, y=4, x=17
 */
 
 class ProPrinter {
-	std::unordered_map<char, rmlv::ivec2> charmap;
-	std::vector<uint8_t> bitmap;
+	class TrueColorCanvas& canvas_;
 
 public:
-	ProPrinter();
-	int charmap_to_offset(const rmlv::ivec2& cxy) const;
-	int char_to_offset(char ch) const;
-	void draw_glyph(char ch, int left, int top, class TrueColorCanvas& canvas) const;
+	ProPrinter(class TrueColorCanvas& canvas) :
+		canvas_(canvas) {}
 
-	void write(std::string_view str, int left, int top, class TrueColorCanvas& canvas) const;
-	void write(const char *str, int left, int top, class TrueColorCanvas& canvas) const;
-	void write(const fmt::memory_buffer&, int left, int top, class TrueColorCanvas& canvas) const; };
+	void Write(rmlv::ivec2, char ch);
+	void Write(rmlv::ivec2, std::string_view);
+	void Write(rmlv::ivec2, const char*);
+	void Write(rmlv::ivec2, const fmt::memory_buffer&); };
+
+inline
+void ProPrinter::Write(rmlv::ivec2 coord, const fmt::memory_buffer& buf) {
+	return Write(coord, std::string_view(buf.data(), buf.size())); }
 
 
 inline
-void ProPrinter::write(const fmt::memory_buffer& buf, int left, int top, class TrueColorCanvas& canvas) const {
-	return write(std::string_view(buf.data(), buf.size()), left, top, canvas); }
-
-
-inline
-void ProPrinter::write(const char* str, int left, int top, class TrueColorCanvas& canvas) const {
-	return write(std::string_view(str), left, top, canvas); }
+void ProPrinter::Write(rmlv::ivec2 coord, const char* str) {
+	return Write(coord, std::string_view(str)); }
 
 
 }  // namespace rglr

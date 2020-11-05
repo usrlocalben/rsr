@@ -142,7 +142,6 @@ class Application::impl : public PixelToaster::Listener {
 	PixelToaster::Display display_;
 	rglv::MeshStore meshStore_;
 	TextureStore textureStore_;
-	ProPrinter pp_;
 	rcls::SmoothedIntervalTimer refreshTime_;
 	PixelToaster::Timer renderTime_;
 	double lastRenderTime_;
@@ -504,6 +503,8 @@ private:
 		auto renderTimeInMillis = lastRenderTime_ * 1000.0; // renderTime_.Get();
 		auto refreshTimeInMillis = refreshTime_.Get();
 
+		auto tty = ProPrinter(canvas);
+
 		if (showModeList_) {
 			int idx = 1;
 			int top = canvas.height() / 2;
@@ -512,7 +513,7 @@ private:
 				format_to(buf, "{}: {}x{}", idx, mode.x, mode.y);
 				if (windowSizeInPx_ == mode) {
 					format_to(buf, " (current)"); }
-				pp_.write(buf, 16, top, canvas);
+				tty.Write({ 16, top }, buf);
 				top += 10;
 				idx += 1; } }
 
@@ -530,7 +531,7 @@ private:
 				measurementSamples_.push_back(renderTimeInMillis);
 				fmt::memory_buffer buf;
 				format_to(buf, "measuring, {} / {}", measurementSamples_.size(), MEASUREMENT_SAMPLESIZE_IN_FRAMES);
-				pp_.write(buf, 16, 100, canvas); } }
+				tty.Write({ 16, 100 }, buf); } }
 
 		if (startScanning_) {
 			scanning_ = true;
@@ -551,14 +552,14 @@ private:
 				fmt::memory_buffer buf;
 				format_to(buf, "probing for fastest file dimensions: {} / {}   ",
 				          ((tileSizeInBlocks_.y - 1) * 16) + tileSizeInBlocks_.x-1, 16*16);
-				pp_.write(buf, 16, top, canvas);  top += 10;  buf.clear();
+				tty.Write({ 16, top }, buf);  top += 10;  buf.clear();
 
 				format_to(buf, "                     fastest so far: {}x{}   ",
 				          scanMinDim_.x, scanMinDim_.y);
-				pp_.write(buf, 16, top, canvas);  top += 10;  buf.clear();
+				tty.Write({ 16, top }, buf);  top += 10;  buf.clear();
 
 				format_to(buf, "          press s to stop            ");
-				pp_.write(buf, 16, top, canvas);  top += 10; }
+				tty.Write({ 16, top }, buf);  top += 10; }
 
 			if (measurementSamples_.size() == SCAN_SAMPLESIZE_IN_FRAMES) {
 				lastStats_ = CalcStat(std::vector<double>(begin(measurementSamples_) + 60, end(measurementSamples_)), MEASUREMENT_DISCARD);
@@ -580,7 +581,7 @@ private:
 			double fps = 1.0 / (refreshTimeInMillis / 1000.0);
 			fmt::memory_buffer buf;
 			format_to(buf, "{: 6.2f} ms, fps: {:.0f}", renderTimeInMillis, fps);
-			pp_.write(buf, 16, 16, canvas); }
+			tty.Write({ 16, 16 }, buf); }
 
 		if (debugMode_) {
 			fmt::memory_buffer buf;
@@ -588,22 +589,22 @@ private:
 			format_to(buf, ", visu scale: {}", visualizerScale_);
 			if (isPaused_) {
 				format_to(buf, "   PAUSED"); }
-			pp_.write(buf, 16, 27, canvas); }
+			tty.Write({ 16, 27 }, buf); }
 
 		if (debugMode_) {
-			pp_.write("F1 debug         l  toggle srgb   [&] tile size    ,&. vis scale       ", 16, -32, canvas);
-			pp_.write(" p toggle pause  m  change mode    r  measure       n  wasd capture    ", 16, -42, canvas);
-			pp_.write(" f fullscreen   F2  show tiles     g  dblbuf        shift -&+ grid size", 16, -52, canvas); }
+			tty.Write({ 16, -32 }, "F1 debug         l  toggle srgb   [&] tile size    ,&. vis scale       ");
+			tty.Write({ 16, -42 }, " p toggle pause  m  change mode    r  measure       n  wasd capture    ");
+			tty.Write({ 16, -52 }, " f fullscreen   F2  show tiles     g  dblbuf        shift -&+ grid size"); }
 		else if (runtimeInFrames_ < (5 * 60)) {
 			int top = canvas.height() - 11;
-			pp_.write("F1 debug", 0, top, canvas);  }
+			tty.Write({ 0, top }, "F1 debug"); }
 
 		if (debugMode_) {
 			render_jobsys(20, 40, float(visualizerScale_), canvas); }
 
 		if (debugMode_ && lastStats_) {
 			int top = canvas.height() / 2;
-			pp_.write("   min    25th     med    75th     max    mean    sdev", 32, top, canvas);
+			tty.Write({ 32, top }, "   min    25th     med    75th     max    mean    sdev");
 			top += 10;
 			fmt::memory_buffer out;
 			format_to(out, "{: 6.2f}  ", lastStats_->min);
@@ -613,9 +614,9 @@ private:
 			format_to(out, "{: 6.2f}  ", lastStats_->max);
 			format_to(out, "{: 6.2f}  ", lastStats_->avg);
 			format_to(out, "{: 6.2f}  ", lastStats_->std);
-			pp_.write(out, 32, top, canvas);
+			tty.Write({ 32, top }, out);
 			top += 10;
-			pp_.write(string("press C to clear"), 32, top, canvas); } }
+			tty.Write({ 32, top }, "press C to clear"); }}
 
 	void PrepareBuiltInNodes() {
 		globalsNode_ = make_shared<MultiValueNode>("globals", InputList());

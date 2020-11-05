@@ -1,104 +1,31 @@
+/**
+ * ProFont font and string-drawing impl
+ * bitmap font from https://tobiasjung.name/profont/
+ *
+ * todo: store as packed bits (i.e. vector<bool>)
+ * todo: store each glyph in contiguous runs
+ */
 #include "src/rgl/rglr/rglr_profont.hxx"
-
-#include <functional>
-#include <sstream>
-#include <vector>
 
 #include "src/rcl/rclr/rclr_algorithm.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
 
+#include <cassert>
+#include <array>
+#include <functional>
+#include <sstream>
+#include <vector>
+
+#include <fmt/format.h>
 #include "3rdparty/picopng/picopng.h"
 
 namespace rqdq {
-namespace rglr {
+namespace {
 
-extern std::vector<uint8_t> profontbits;
+constexpr int kBitmapStride = 192;
+constexpr rmlv::ivec2 kGlyphDimInPx{ 6, 11 };
 
-const auto BITMAP_STRIDE = int(192);
-const auto GLYPH_SIZE_IN_PX = rmlv::ivec2(6, 11);
-
-
-std::vector<uint8_t> decode_png(std::vector<uint8_t>& png_bits) {
-
-	std::vector<uint8_t> image;
-	std::vector<uint8_t> bitmap;
-
-	unsigned long w, h;
-	int error = decodePNG(image, w, h, png_bits.empty() ? nullptr : png_bits.data(), static_cast<int>(png_bits.size()));
-
-	if (error != 0) {
-		std::stringstream ss;
-		ss << "png error: " << error;
-		throw std::exception(ss.str().c_str()); }
-
-	// convert black-on-white truecolor
-	// to 1=foreground, 0=background
-	for (std::size_t i = 0; i < image.size(); i += 4) {
-		bitmap.push_back(image[i] == 0xff ? 0 : 1); }
-
-	return bitmap; }
-
-
-ProPrinter::ProPrinter()
-	:bitmap(decode_png(profontbits))
-{
-	static const std::string row1(R"( !"#$%&'()*+,-./0123456789:;<=>?)");
-	static const std::string row2(R"(@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_)");
-	static const std::string row3(R"(`abcdefghijklmnopqrstuvwxyz{|}~ )");
-
-	rclr::each(row1, [&](char ch, int x) { charmap[ch] = rmlv::ivec2(x, 0); });
-	rclr::each(row2, [&](char ch, int x) { charmap[ch] = rmlv::ivec2(x, 1); });
-	rclr::each(row3, [&](char ch, int x) { charmap[ch] = rmlv::ivec2(x, 2); }); }
-
-
-
-int ProPrinter::charmap_to_offset(const rmlv::ivec2& cxy) const {
-	rmlv::ivec2 gxy = cxy * GLYPH_SIZE_IN_PX;
-	const int tex_width = 192;
-	//const int tex_height = 77;
-	return gxy.y * tex_width + gxy.x + 1; }
-
-
-int ProPrinter::char_to_offset(const char ch) const {
-	auto cxy = charmap.find(ch);
-	if (cxy == charmap.end()) {
-		// char-not-found mapped to Space
-		return 0; }
-	
-		return charmap_to_offset(cxy->second); }
-
-
-void ProPrinter::draw_glyph(const char ch, int left, int top, TrueColorCanvas& canvas) const {
-
-	left = left < 0 ? canvas.width() + left : left;
-	top = top < 0 ? canvas.height() + top : top;
-
-	const auto* src = &bitmap[char_to_offset(ch)];
-	PixelToaster::TrueColorPixel* dst = &canvas.data()[top * canvas.stride()];
-	for (int y = 0; y < GLYPH_SIZE_IN_PX.y; y++) {
-
-		const int canvas_y = top + y;
-		if (0 <= canvas_y && canvas_y < canvas.height()) {
-			for (int x = 0; x < GLYPH_SIZE_IN_PX.x; x++) {
-
-				const int canvas_x = left + x;
-				//if (canvas_x >= 0 && canvas_x < canvas.width()) {
-				if (0 <= canvas_x && canvas_x < canvas.width()) {
-
-					dst[canvas_x].integer = src[x] != 0u ? 0xffffffff : 0;}}}
-
-		dst += canvas.stride();
-		src += BITMAP_STRIDE; }}
-
-
-
-void ProPrinter::write(std::string_view str, int left, int top, TrueColorCanvas& canvas) const {
-	for (const char& ch : str) {
-		draw_glyph(ch, left, top, canvas);
-		left += GLYPH_SIZE_IN_PX.x; }}
-
-
-std::vector<uint8_t> profontbits = {
+constexpr std::array<uint8_t, 3047> profontpng = { {
 	137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,192,0,0,0,77,8,3,
 	0,0,0,199,44,155,51,0,0,0,25,116,69,88,116,83,111,102,116,119,97,114,
 	101,0,65,100,111,98,101,32,73,109,97,103,101,82,101,97,100,121,113,201,
@@ -232,8 +159,75 @@ std::vector<uint8_t> profontbits = {
 	128,109,75,30,87,248,25,212,250,73,21,118,158,58,129,23,11,32,92,75,32,
 	32,250,78,210,11,84,232,133,2,164,142,222,244,126,57,70,2,213,182,5,188,
 	135,35,43,28,88,255,39,19,0,63,178,247,18,249,203,47,1,6,0,6,98,18,137,
-	114,34,4,253,0,0,0,0,73,69,78,68,174,66,96,130 };
+	114,34,4,253,0,0,0,0,73,69,78,68,174,66,96,130 } };
+
+std::vector<uint8_t> bitmap;
+
+std::array<uint8_t*, 256> charptr;
+
+constexpr std::array<std::string_view, 3> charmap = { {
+	R"( !"#$%&'()*+,-./0123456789:;<=>?)",
+	R"(@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_)",
+	R"(`abcdefghijklmnopqrstuvwxyz{|}~ )" }};
+
+struct init { init() {
+	std::vector<uint8_t> image;
+
+	unsigned long w, h;
+	decodePNG(image, w, h, profontpng.data(), static_cast<int>(profontpng.size()));
+
+	// convert black-on-white truecolor
+	// to 0xff=foreground, 0=background
+	bitmap.resize(image.size()/4);
+	// fmt::print("profont binary image is {} bytes", bitmap.size());
+	// std::exit(1);
+	for (std::size_t i = 0; i < image.size()/4; ++i) {
+		bitmap[i] = (image[i*4] == 0xff ? 0 : 0xff); }
+
+	// all chars default to Space
+	charptr.fill(bitmap.data());
+
+	// rest point to correct glyph
+	for (int y = 0; y < 3; ++y) {
+		for (int x = 0; x < charmap[0].size(); ++x) {
+			char ch = charmap[y][x];
+			auto coordInChars = rmlv::ivec2(x, y);
+			auto coordInPx = coordInChars * kGlyphDimInPx;
+			charptr[ch] = &bitmap[coordInPx.y*kBitmapStride + coordInPx.x]; }}
+
+	} } init;
 
 
-}  // namespace rglr
-}  // namespace rqdq
+}  // close unnamed namespace
+namespace rglr {
+
+void ProPrinter::Write(rmlv::ivec2 coord, char ch) {
+
+	auto& left = coord.x;
+	auto& top = coord.y;
+
+	left = left < 0 ? canvas_.width() + left : left;
+	top = top < 0 ? canvas_.height() + top : top;
+
+	const auto* src = charptr[uint8_t(ch)];
+	PixelToaster::TrueColorPixel* dst = &canvas_.data()[top * canvas_.stride()];
+	for (int y = 0; y < kGlyphDimInPx.y; ++y) {
+		for (int x = 0; x < kGlyphDimInPx.x; ++x) {
+			auto cy = y + top;
+			auto cx = x + left;
+			if (0 <= cy && cy < canvas_.height() &&
+				0 <= cx && cx < canvas_.width()) {
+				dst[cx].integer = src[x] ? 0xffffffff : 0; }}
+
+		dst += canvas_.stride();
+		src += kBitmapStride;  }}
+
+
+void ProPrinter::Write(rmlv::ivec2 coord, std::string_view str) {
+	for (const char& ch : str) {
+		Write(coord, ch);
+		coord.x += kGlyphDimInPx.x; }}
+
+
+}  // close package namespace
+}  // close enterprise namespace
