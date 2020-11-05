@@ -10,8 +10,8 @@
 #include "src/rml/rmlg/rmlg_pow2.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include "3rdparty/fmt/include/fmt/format.h"
-#include "3rdparty/fmt/include/fmt/printf.h"
+#include <fmt/format.h>
+#include <fmt/printf.h>
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 #include "3rdparty/picopng/picopng.h"
 #include "3rdparty/ryg-srgb/ryg-srgb.h"

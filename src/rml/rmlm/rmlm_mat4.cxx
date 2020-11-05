@@ -5,7 +5,7 @@
 
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include "3rdparty/fmt/include/fmt/ostream.h"
+#include <fmt/ostream.h>
 
 namespace rqdq {
 namespace rmlm {

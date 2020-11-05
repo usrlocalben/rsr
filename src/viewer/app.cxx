@@ -35,8 +35,8 @@
 #include "src/viewer/node/i_controller.hxx"
 #include "src/viewer/node/uicamera.hxx"
 
-#include "3rdparty/fmt/include/fmt/format.h"
-#include "3rdparty/fmt/include/fmt/printf.h"
+#include <fmt/format.h>
+#include <fmt/printf.h>
 #include "3rdparty/gason/gason.h"
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 #include <Windows.h>

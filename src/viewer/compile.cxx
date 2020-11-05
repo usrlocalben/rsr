@@ -14,7 +14,7 @@
 #include "src/rgl/rglv/rglv_mesh_store.hxx"
 #include "src/viewer/node/base.hxx"
 
-#include "3rdparty/fmt/include/fmt/printf.h"
+#include <fmt/printf.h>
 #include "3rdparty/gason/gason.h"
 
 namespace rqdq {

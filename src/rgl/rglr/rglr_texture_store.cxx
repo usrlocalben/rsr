@@ -6,8 +6,8 @@
 #include "src/rcl/rcls/rcls_file.hxx"
 #include "src/rgl/rglr/rglr_texture_load.hxx"
 
-#include "3rdparty/fmt/include/fmt/format.h"
-#include "3rdparty/fmt/include/fmt/printf.h"
+#include <fmt/format.h>
+#include <fmt/printf.h>
 
 namespace rqdq {
 namespace rglr {

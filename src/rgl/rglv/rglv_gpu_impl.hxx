@@ -31,7 +31,7 @@
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include "3rdparty/fmt/include/fmt/printf.h"
+#include <fmt/printf.h>
 
 #ifdef _MSC_VER
 #pragma warning(push)
