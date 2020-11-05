@@ -253,9 +253,7 @@ class Compiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("material", /*required=*/true)) { return; }
 
-		std::string_view meshPath{"notfound.obj"};
-		if (auto jv = rclx::jv_find(data_, "mesh", JSON_STRING)) {
-			meshPath = jv->toString(); }
+		auto meshPath = DataString("mesh", "notfound.obj");
 		const auto& mesh = meshStore_->get(meshPath);
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), mesh); }};

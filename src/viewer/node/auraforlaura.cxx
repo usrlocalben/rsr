@@ -223,13 +223,8 @@ class Compiler final : public NodeCompiler {
 		if (!Input("phase", /*required=*/true)) { return; }
 		if (!Input("amp", /*required=*/true)) { return; }
 
-		int divs = 0;
-		if (auto jv = rclx::jv_find(data_, "divs", JSON_NUMBER)) {
-			divs = (int)jv->toNumber(); }
-
-		int hunk = 0;
-		if (auto jv = rclx::jv_find(data_, "hunk", JSON_NUMBER)) {
-			hunk = (int)jv->toNumber(); }
+		auto divs = DataInt("divs", 0);
+		auto hunk = DataInt("hunk", 0);
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), divs, hunk); }};
 

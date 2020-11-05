@@ -142,13 +142,8 @@ class Compiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("input", /*required=*/true)) { return; }
 
-		int intensity{1};
-		if (auto jv = rclx::jv_find(data_, "intensity", JSON_NUMBER)) {
-			intensity = (int)jv->toNumber(); }
-
-		int taskSize{16};
-		if (auto jv = rclx::jv_find(data_, "taskSize", JSON_NUMBER)) {
-			taskSize = (int)jv->toNumber(); }
+		auto intensity = DataInt("intensity", 1);
+		auto taskSize = DataInt("taskSize", 16);
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), intensity, taskSize); }};
 

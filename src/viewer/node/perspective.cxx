@@ -68,23 +68,14 @@ class Compiler final : public NodeCompiler {
 		using rclx::jv_find;
 		if (!Input("position", /*required=*/true)) { return; }
 
-		float ha{3.14F};
-		if (auto jv = jv_find(data_, "h", JSON_NUMBER)) {
-			ha = static_cast<float>(jv->toNumber()); }
+		auto ha = DataReal("h", 3.14F);
+		auto va = DataReal("v", 0.0F);
+		auto fov = DataReal("fov", 45.0F);
 
-		float va{0.0F};
-		if (auto jv = jv_find(data_, "v", JSON_NUMBER)) {
-			va = static_cast<float>(jv->toNumber()); }
+		auto ox = DataReal("originX", 0.0F);
+		auto oy = DataReal("originY", 0.0F);
+		rmlv::vec2 origin{ ox, oy };
 
-		float fov{45.0F};
-		if (auto jv = jv_find(data_, "fov", JSON_NUMBER)) {
-			fov = static_cast<float>(jv->toNumber()); }
-
-		rmlv::vec2 origin{0.0F};
-		if (auto jv = jv_find(data_, "originX", JSON_NUMBER)) {
-			origin.x = static_cast<float>(jv->toNumber()); }
-		if (auto jv = jv_find(data_, "originY", JSON_NUMBER)) {
-			origin.y = static_cast<float>(jv->toNumber()); }
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), ha, va, fov, origin); }};
 
 

@@ -174,9 +174,7 @@ class Compiler final : public NodeCompiler {
 		if (!Input("image", /*required=*/true)) { return; }
 		if (!Input("blur", /*required=*/true)) { return; }
 
-		bool srgb{true};
-		if (auto jv = jv_find(data_, "sRGB", JSON_FALSE)) {
-			srgb = false; }
+		auto srgb = DataBool("sRGB", true);
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), srgb); }};
 

@@ -216,19 +216,10 @@ class Compiler final : public NodeCompiler {
 		if (!Input("text", /*required=*/true)) { return; }
 		if (!Input("color", /*required=*/false)) { return; }
 
-		std::string_view font{"notfound.lua"};
-		if (auto jv = rclx::jv_find(data_, "font", JSON_STRING)) {
-			font = jv->toString(); }
-
-		float width = 10.0F;
-		float leading = 1.0F;
-		float tracking = 1.0F;
-		if (auto jv = rclx::jv_find(data_, "width", JSON_NUMBER)) {
-			width = static_cast<float>(jv->toNumber()); }
-		if (auto jv = rclx::jv_find(data_, "leading", JSON_NUMBER)) {
-			leading = static_cast<float>(jv->toNumber()); }
-		if (auto jv = rclx::jv_find(data_, "tracking", JSON_NUMBER)) {
-			tracking = static_cast<float>(jv->toNumber()); }
+		auto font = DataString("font", "notfound.lua");
+		auto width = DataReal("width", 10.0F);
+		auto leading = DataReal("leading", 1.0F);
+		auto tracking = DataReal("tracking", 1.0F);
 
 		LuaFontLoader lfl(font.data());
 

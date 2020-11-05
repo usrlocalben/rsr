@@ -337,9 +337,7 @@ class Compiler final : public NodeCompiler {
 		if (!Input("material", /*required=*/true)) { return; }
 		if (!Input("frob", /*required=*/true)) { return; }
 
-		int precision{32};
-		if (auto jv = jv_find(data_, "precision", JSON_NUMBER)) {
-			precision = static_cast<int>(jv->toNumber()); }
+		auto precision = DataInt("precision", 32);
 		switch (precision) {
 		case 8:
 		case 16:
@@ -351,16 +349,12 @@ class Compiler final : public NodeCompiler {
 			std::cerr << "FxMC: precision " << precision << " must be one of (8, 16, 32, 64, 128)!  precision will be 32\n";
 			precision = 32; }
 
-		int forkDepth{2};
-		if (auto jv = jv_find(data_, "forkDepth", JSON_NUMBER)) {
-			forkDepth = static_cast<int>(jv->toNumber()); }
+		auto forkDepth = DataInt("forkDepth", 2);
 		if (forkDepth < 0 || forkDepth > 4) {
 			std::cerr << "FxMC: forkDepth " << forkDepth << " exceeds limit (0 <= n <= 4)!  forkDepth will be 2\n";
 			forkDepth = 2; }
 
-		float range{5.0F};
-		if (auto jv = jv_find(data_, "range", JSON_NUMBER)) {
-			range = static_cast<float>(jv->toNumber()); }
+		auto range = DataReal("range", 5.0F);
 		if (range < 0.0001F) {
 			std::cerr << "FxMC: range " << range << " is too small (n<0.0001)!  range will be +/- 5.0\n";
 			range = 5.0F; }

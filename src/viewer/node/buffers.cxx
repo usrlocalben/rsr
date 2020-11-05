@@ -111,17 +111,9 @@ class Compiler final : public NodeCompiler {
 		using rclx::jv_find;
 		if (!Input("gpu", /*required=*/true)) { return; }
 
-		bool color{false};
-		if (auto jv = jv_find(data_, "color", JSON_TRUE)) {
-			color = true; }
-
-		bool depth{false};
-		if (auto jv = jv_find(data_, "depth", JSON_TRUE)) {
-			depth = true; }
-
-		bool half{false};
-		if (auto jv = jv_find(data_, "half", JSON_TRUE)) {
-			half = true; }
+		auto color = DataBool("color", false);
+		auto depth = DataBool("depth", false);
+		auto half = DataBool("half", false);
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), color, depth, half); }};
 

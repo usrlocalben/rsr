@@ -32,29 +32,12 @@ class Compiler final : public NodeCompiler {
 	void Build() override {
 		using rclx::jv_find;
 
-		float b{-1.0F};
-		if (auto jv = jv_find(data_, "b", JSON_NUMBER)) {
-			b = static_cast<float>(jv->toNumber()); }
-
-		float t{1.0F};
-		if (auto jv = jv_find(data_, "t", JSON_NUMBER)) {
-			t = static_cast<float>(jv->toNumber()); }
-
-		float l{-1.0F};
-		if (auto jv = jv_find(data_, "l", JSON_NUMBER)) {
-			l = static_cast<float>(jv->toNumber()); }
-
-		float r{1.0F};
-		if (auto jv = jv_find(data_, "r", JSON_NUMBER)) {
-			r = static_cast<float>(jv->toNumber()); }
-
-		float n{1.0F};
-		if (auto jv = jv_find(data_, "n", JSON_NUMBER)) {
-			n = static_cast<float>(jv->toNumber()); }
-
-		float f{-1.0F};
-		if (auto jv = jv_find(data_, "f", JSON_NUMBER)) {
-			f = static_cast<float>(jv->toNumber()); }
+		auto b = DataReal("b", -1.0F);
+		auto t = DataReal("t",  1.0F);
+		auto l = DataReal("l", -1.0F);
+		auto r = DataReal("r",  1.0F);
+		auto n = DataReal("n",  1.0F);
+		auto f = DataReal("f", -1.0F);
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), l, r, b, t, n, f); }};
 

@@ -190,16 +190,14 @@ public:
 class RepeatCompiler final : public NodeCompiler {
 	void Build() override {
 		using namespace rclx;
-		bool fork{false};
 		if (!Input("rotate", /*required=*/false)) { return; }
 		if (!Input("scale", /*required=*/false)) { return; }
 		if (!Input("translate", /*required=*/false)) { return; }
 		if (!Input("gl", /*required=*/true)) { return; }
-		int many{1};
-		if (auto jv = jv_find(data_, "many", JSON_NUMBER)) {
-			many = static_cast<int>(jv->toNumber()); }
-		if (auto jv = jv_find(data_, "fork", JSON_TRUE)) {
-			fork = true; }
+
+		auto many = DataInt("many", 1);
+		auto fork = DataBool("fork", false);
+
 		out_ = std::make_shared<RepeatOp>(id_, std::move(inputs_), many, fork); }};
 
 

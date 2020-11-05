@@ -115,17 +115,11 @@ class Compiler final : public NodeCompiler {
 	void Build() override {
 		if (!Input("material", /*required=*/false)) { return; }
 
-		std::string_view name{"notfound.obj"};
-		if (auto jv = rclx::jv_find(data_, "name", JSON_STRING)) {
-			name = jv->toString(); }
-		const auto& mesh = meshStore_->get(name);
+		auto meshName = DataString("name", "notfound.obj");
+		const auto& mesh = meshStore_->get(meshName);
 
-		bool takeShadows{true};
-		if (auto jv = rclx::jv_find(data_, "takeShadows", JSON_FALSE)) {
-			takeShadows = false; }
-		bool makeShadows{true};
-		if (auto jv = rclx::jv_find(data_, "makeShadows", JSON_FALSE)) {
-			makeShadows = false; }
+		auto takeShadows = DataBool("takeShadows", true);
+		auto makeShadows = DataBool("makeShadows", true);
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), mesh, takeShadows, makeShadows); }};
 

@@ -191,17 +191,15 @@ public:
 class SpotLightCompiler final : public NodeCompiler {
 	void Build() override {
 		using namespace rclx;
-		float angle{90};
-		if (auto jv = jv_find(data_, "angle", JSON_NUMBER)) {
-			angle = static_cast<float>(jv->toNumber()); }
-		int size{256};
-		if (auto jv = jv_find(data_, "size", JSON_NUMBER)) {
-			auto n = static_cast<int>(jv->toNumber());
-			if (n == 1024 || n == 512 || n == 256 || n == 128 || n == 64 || n == 32 || n == 16) {
-				size = n; }
-			else {
-				std::cerr << "bad spot map size " << n << ", will use 256\n"; }}
-		out_ = std::make_shared<SpotLight>(id_, std::move(inputs_), angle, size); }};
+
+		auto angle = DataReal("angle", 90);
+
+		auto s = DataInt("size", 256);
+		if (!(s == 1024 || s == 512 || s == 256 || s == 128 || s == 64 || s == 32 || s == 16)) {
+			std::cerr << "bad spot map size " << s << ", will use 256\n";
+			s = 256; }
+
+		out_ = std::make_shared<SpotLight>(id_, std::move(inputs_), angle, s); }};
 
 
 class Compiler final : public NodeCompiler {

@@ -130,10 +130,7 @@ class Compiler final : public NodeCompiler {
 	void Build() override {
 		using rclx::jv_find;
 
-		std::string name{"controller:controller"};
-		if (auto jv = jv_find(data_, "instance", JSON_STRING)) {
-			name.assign(jv->toString()); }
-
+		auto name = DataString("instance", "controller:controller");
 		auto segs = rclt::Split(name, ':');
 		std::string fileName = std::string{"data\\"} + segs[0] + ".lua";
 		std::string varName = segs[1];

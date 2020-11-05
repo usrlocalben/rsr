@@ -138,13 +138,8 @@ class Compiler final : public NodeCompiler {
 		if (auto jv = jv_find(data_, "program", JSON_STRING)) {
 			programId = ShaderProgramNameSerializer::Deserialize(jv->toString()); }
 
-		bool filter{false};
-		if (auto jv = jv_find(data_, "filter", JSON_TRUE)) {
-			filter = true; }
-
-		bool alpha{false};
-		if (auto jv = jv_find(data_, "alpha", JSON_TRUE)) {
-			alpha = true; }
+		auto filter = DataBool("filter", false);
+		auto alpha = DataBool("alpha", false);
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), programId, filter, alpha); }};
 

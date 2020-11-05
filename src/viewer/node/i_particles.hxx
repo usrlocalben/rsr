@@ -8,8 +8,7 @@ namespace rqv {
 struct ParticlePtrs {
 	int many;
 	const float *px, *py, *pz;
-	const float *sz;
-	const float *lr; };
+	const float *sz; };
 
 
 class IParticles : public virtual NodeBase {

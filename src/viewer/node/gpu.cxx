@@ -199,9 +199,7 @@ class Compiler final : public NodeCompiler {
 				if (item->value.getTag() == JSON_STRING) {
 					inputs_.emplace_back("layer", item->value.toString()); }}}
 
-		bool aa{false};
-		if (auto jv = rclx::jv_find(data_, "aa", JSON_TRUE)) {
-			aa = true; }
+		auto aa = DataBool("aa", false);
 
 		if (!Input("tileSize", /*required=*/true)) {
 			inputs_.emplace_back("tileSize", "globals:tileSize"); }
