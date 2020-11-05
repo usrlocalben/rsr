@@ -4,21 +4,18 @@
 
 #include <fmt/format.h>
 
-std::ostream& operator<<(std::ostream& os, rqdq::rmlv::vec2 v) {
-	os << fmt::format("<vec2 {:.4f},{:.4f}>", v.x, v.y);
-	return os; }
+
+auto operator<<(std::ostream& os, rqdq::rmlv::vec2 v) -> std::ostream& {
+	return os << fmt::format("<vec2 {:.4f},{:.4f}>", v.x, v.y); }
 
 
-std::ostream& operator<<(std::ostream& os, rqdq::rmlv::vec3 v) {
-	os << fmt::format("<vec3 {:.4f},{:.4f},{:.4f}>", v.x, v.y, v.z);
-	return os; }
+auto operator<<(std::ostream& os, rqdq::rmlv::vec3 v) -> std::ostream& {
+	return os << fmt::format("<vec3 {:.4f},{:.4f},{:.4f}>", v.x, v.y, v.z); }
 
 
-std::ostream& operator<<(std::ostream& os, rqdq::rmlv::vec4 v) {
-	os << fmt::format("<vec4 {:.4f},{:.4f},{:.4f},{:.4f}>", v.x, v.y, v.z, v.w);
-	return os; }
+auto operator<<(std::ostream& os, rqdq::rmlv::vec4 v) -> std::ostream& {
+	return os << fmt::format("<vec4 {:.4f},{:.4f},{:.4f},{:.4f}>", v.x, v.y, v.z, v.w); }
 
 
-std::ostream& operator<<(std::ostream& os, rqdq::rmlv::ivec2 v) {
-	os << "<ivec2 " << v.x << ", " << v.y << ">";
-	return os; }
+auto operator<<(std::ostream& os, rqdq::rmlv::ivec2 v) -> std::ostream& {
+	return os << "<ivec2 " << v.x << ", " << v.y << ">"; }

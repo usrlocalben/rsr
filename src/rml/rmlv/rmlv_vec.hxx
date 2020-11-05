@@ -247,7 +247,8 @@ struct hash<rqdq::rmlv::vec4> {
 
 }  // namespace std
 
-std::ostream& operator<<(std::ostream& os, rqdq::rmlv::vec2 v);
-std::ostream& operator<<(std::ostream& os, rqdq::rmlv::vec4 v);
-std::ostream& operator<<(std::ostream& os, rqdq::rmlv::vec3 v);
-std::ostream& operator<<(std::ostream& os, rqdq::rmlv::ivec2 v);
+
+auto operator<<(std::ostream& os, rqdq::rmlv::vec2 v) -> std::ostream&;
+auto operator<<(std::ostream& os, rqdq::rmlv::vec3 v) -> std::ostream&;
+auto operator<<(std::ostream& os, rqdq::rmlv::vec4 v) -> std::ostream&;
+auto operator<<(std::ostream& os, rqdq::rmlv::ivec2 v) -> std::ostream&;

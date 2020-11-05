@@ -5,19 +5,26 @@
  * todo: velocity/acceleration
  */
 #pragma once
-#include <algorithm>
-#include <iostream>
-
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
-#include "src/rgl/rglv/rglv_math.hxx"
+
+#include <algorithm>
+#include <iostream>
 
 namespace rqdq {
 namespace rglv {
 
 class HandyCam {
+	rmlv::vec3 position_{ 0, 3.5F, 14.0F };
+	rmlv::vec2 angleInRadians_{ 3.14F, 0 };
+	// rmlv::vec3 position_{ 0, 14.0F, 0.0F };
+	// rmlv::vec2 angleInRadians_{ 3.14F, -3.14F/2.0F };
+	float fieldOfViewInDegrees_{ 45.0F };
+
 public:
 	HandyCam() = default;
+
+	// MANIPULATORS
 
 	/**
 	 * update camera angle using mouse/pixel delta
@@ -25,49 +32,42 @@ public:
 	 * vertical angle is clamped to prevent spinning
 	 * upside-down
 	 */
-	void onMouseMove(rmlv::vec2 delta) {
-		angleInRadians_ += mouseSpeedMagic_ * delta;
-		float halfPi{ rmlv::M_PI / 2.0F };
-		angleInRadians_.y = std::clamp(angleInRadians_.y, -halfPi, halfPi); }
+	void OnMouseMove(rmlv::vec2 delta);
 
-public:
-	rmlm::mat4 ViewMatrix() const {
-		auto dir = DirectionVector();
-		auto right = RightVector();
-		auto up = cross(right, dir);
-		return LookAt(eyePosition_, eyePosition_ + dir, up); }
+	void OnMouseWheel(int ticks);
 
-	void moveForward()  { eyePosition_ += DirectionVector(); }
-	void moveBackward() { eyePosition_ -= DirectionVector(); }
-	void moveLeft()     { eyePosition_ -= RightVector(); }
-	void moveRight()    { eyePosition_ += RightVector(); }
-	void moveUp()       { eyePosition_ += rmlv::vec3{ 0, 0.5F, 0 }; }
-	void moveDown()     { eyePosition_ -= rmlv::vec3{ 0, 0.5F, 0 }; }
+	void MoveForward()  { position_ +=  Heading(); }
+	void MoveBackward() { position_ += -Heading(); }
+	void MoveLeft()     { position_ += -Right(); }
+	void MoveRight()    { position_ +=  Right(); }
+	void MoveUp()       { position_ += rmlv::vec3{ 0, 0.5F, 0 }; }
+	void MoveDown()     { position_ -= rmlv::vec3{ 0, 0.5F, 0 }; }
 
-	float FieldOfView() const { return fieldOfViewInDegrees_; }
-	void Zoom(int ticks) { fieldOfViewInDegrees_ += float(ticks); }
+	// ACCESSORS
+	auto FieldOfView() const -> float;
+	auto Heading() const -> rmlv::vec3;
+	auto Right() const -> rmlv::vec3;
+	auto Up() const -> rmlv::vec3;
+	auto ViewMatrix() const -> rmlm::mat4;
 
-	void Print() const {
-		std::cout << "<HandyCam eye=" << eyePosition_ << ", angle=" << angleInRadians_ << ", fov=" << fieldOfViewInDegrees_ << ">"; }
+	// OSTREAM
+	auto Dump(std::ostream& s) const -> std::ostream&; };
 
-private:
-	rmlv::vec3 DirectionVector() const {
-		auto x = cos(angleInRadians_.y) * sin(angleInRadians_.x);
-		auto y = sin(angleInRadians_.y);
-		auto z = cos(angleInRadians_.y) * cos(angleInRadians_.x);
-		return rmlv::vec3{ x, y, z }; }
 
-	rmlv::vec3 RightVector() const {
-		auto x = sin(angleInRadians_.x - 3.14F / 2.0F);
-		auto y = 0.0F;
-		auto z = cos(angleInRadians_.x - 3.14F / 2.0F);
-		return rmlv::vec3{ x, y, z }; }
+inline
+void HandyCam::OnMouseWheel(int ticks) {
+	fieldOfViewInDegrees_ += float(ticks); }
 
-	static constexpr float mouseSpeedMagic_{0.010F};
-	rmlv::vec3 eyePosition_{ 0, 0, 5 };
-	rmlv::vec2 angleInRadians_{ 3.14F, 0 };
-	float fieldOfViewInDegrees_{ 45.0F }; };
+
+inline
+auto HandyCam::FieldOfView() const -> float {
+	return fieldOfViewInDegrees_; }
 
 
 }  // namespace rglv
 }  // namespace rqdq
+
+
+inline
+auto operator<<(std::ostream& os, const rqdq::rglv::HandyCam& a) -> std::ostream& {
+	return a.Dump(os); }

@@ -9,17 +9,18 @@
 namespace rqdq {
 namespace rqv {
 
-UICamera::UICamera(std::string_view id, InputList inputs, const rglv::HandyCam& hc)
-	:ICamera(id, std::move(inputs)), hc_(hc) {}
+UICamera::UICamera(std::string_view id, InputList inputs, const rglv::HandyCam& hc) :
+	ICamera(id, std::move(inputs)),
+	hc_(hc) {}
 
 
-rmlm::mat4 UICamera::ProjectionMatrix(float aspect) const {
-	return rglv::Perspective2(hc_.FieldOfView(), aspect, 10, 1000); }
+auto UICamera::ProjectionMatrix(float aspect) const -> rmlm::mat4 {
+	return rglv::Perspective2(hc_.FieldOfView(), aspect, 0.5, 100); }
 
 
-rmlm::mat4 UICamera::ViewMatrix() const {
+auto UICamera::ViewMatrix() const -> rmlm::mat4 {
 	return hc_.ViewMatrix(); }
 
 
-}  // namespace rqv
-}  // namespace rqdq
+}  // close package namespace
+}  // close enterprise namespace

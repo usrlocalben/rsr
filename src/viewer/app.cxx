@@ -418,15 +418,15 @@ private:
 			show_shader_threads = !show_shader_threads;
 			break;
 		case Key::P:
-			camera_.Print(); cout << "\n";
+			std::cout << camera_ << "\n";
 			isPaused_= !isPaused_;
 			break;
-		case Key::W: camera_.moveForward(); break;
-		case Key::S: camera_.moveBackward(); break;
-		case Key::A: camera_.moveLeft(); break;
-		case Key::D: camera_.moveRight(); break;
-		case Key::E: camera_.moveUp();  break;
-		case Key::Q: camera_.moveDown();  break;
+		case Key::W: camera_.MoveForward(); break;
+		case Key::S: camera_.MoveBackward(); break;
+		case Key::A: camera_.MoveLeft(); break;
+		case Key::D: camera_.MoveRight(); break;
+		case Key::E: camera_.MoveUp();  break;
+		case Key::Q: camera_.MoveDown();  break;
 		case Key::Period:
 			vis_scale += max(vis_scale / 10, 1);
 			break;
@@ -496,12 +496,12 @@ private:
 		float dmy = (display.height() / 2.0F) - mouse.y;
 		if (mouseCaptured_) {
 			//cout << "mm(" << dmx << ", " << dmy << ")" << endl;
-			camera_.onMouseMove({ dmx, dmy });
+			camera_.OnMouseMove({ dmx, dmy });
 			reset_mouse_next_frame = true; }}
 
 	void onMouseWheel(PixelToaster::DisplayInterface&, PixelToaster::Mouse, short wheel_amount) override {
 		int ticks = wheel_amount / 120;
-		camera_.Zoom(ticks); }
+		camera_.OnMouseWheel(ticks); }
 
 	void DrawUI(TrueColorCanvas& canvas) {
 		auto renderTimeInMillis = lastRenderTime_ * 1000.0; // renderTime_.Get();
