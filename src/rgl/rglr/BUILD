@@ -56,13 +56,6 @@ cc_library(
     )
 
 cc_library(
-    name = "display_mode",
-    srcs = ["rglr_display_mode.cxx"],
-    hdrs = ["rglr_display_mode.hxx"],
-    copts = RSR_DEFAULT_COPTS,
-    )
-
-cc_library(
     name = "kawase",
     srcs = ["rglr_kawase.cxx"],
     hdrs = ["rglr_kawase.hxx"],

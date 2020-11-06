@@ -53,7 +53,6 @@ app_deps = [
     "//src/rcl/rcls:smoothedintervaltimer",
     "//src/rcl/rclx:gason_util",
     "//src/rcl/rclx:jsonfile",
-    "//src/rgl/rglr:display_mode",
     "//src/rgl/rglr:pixeltoaster_util",
     "//src/rgl/rglr:profont",
     "//src/rgl/rglr:texture_store",
