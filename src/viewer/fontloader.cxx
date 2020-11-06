@@ -104,7 +104,11 @@ auto LuaFontLoader::Entry(int i) -> GlyphInfo {
 	return gi; }
 
 
-auto operator<<(std::ostream& s, GlyphInfo a) -> std::ostream& {
+}  // close package namespace
+}  // close enterprise namespace
+
+
+auto operator<<(std::ostream& s, rqdq::rqv::GlyphInfo a) -> std::ostream& {
 	s << "<Glyph ch=\"" << a.ch << "\"";
 	s << " width=" << a.width;
 	s << " x=" << a.x;
@@ -115,9 +119,6 @@ auto operator<<(std::ostream& s, GlyphInfo a) -> std::ostream& {
 	s << " oy=" << a.oy;
 	s << ">";
 	return s; }
-
-
-
 
 /*
 int main() {
@@ -133,7 +134,3 @@ int main() {
         std::cerr << "fatal: " << err.what();
         return 1; }}
 */
-
-
-}  // close package namespace
-}  // close enterprise namespace

@@ -183,10 +183,10 @@ public:
 	// CREATORS
 	VTriangleRasterizer(FRAGMENT_PROCESSOR& fp, rmlg::irect rect, int targetHeightInPx) :
 		program_(fp),
-		rectTopLeftX_(rect.top_left.x),
-		rectTopLeftY_(rect.top_left.y),
-		rectBottomRightX_(rect.bottom_right.x),
-		rectBottomRightY_(rect.bottom_right.y),
+		rectTopLeftX_(rect.topLeft.x),
+		rectTopLeftY_(rect.topLeft.y),
+		rectBottomRightX_(rect.bottomRight.x),
+		rectBottomRightY_(rect.bottomRight.y),
 		topRowYCoord_(float(targetHeightInPx) - 0.5F),
 		scissorFlags_(ScissorFlags(rect)) {}
 

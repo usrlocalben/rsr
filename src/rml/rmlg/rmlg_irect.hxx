@@ -2,33 +2,32 @@
 #include <algorithm>
 #include <ostream>
 
+#include "src/rml/rmlv/rmlv_math.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
 namespace rqdq {
 namespace rmlg {
 
-
 struct irect {
 
 	// DATA
 	union {
-		rmlv::ivec2 top_left;
+		rmlv::ivec2 topLeft;
 		rmlv::ivec2 top;
 		rmlv::ivec2 left; };
 	union {
-		rmlv::ivec2 bottom_right;
+		rmlv::ivec2 bottomRight;
 		rmlv::ivec2 bottom;
 		rmlv::ivec2 right; };
 
 	// CREATORS
 	irect() = default;
 	constexpr irect(rmlv::ivec2 tl, rmlv::ivec2 br) :
-		top_left(tl),
-		bottom_right(br) {}
+		topLeft(tl),
+		bottomRight(br) {}
 	constexpr irect(const irect& other) :
-		top_left(other.top_left),
-		bottom_right(other.bottom_right) {}
-
+		topLeft(other.topLeft),
+		bottomRight(other.bottomRight) {}
 
 	// ACCESSORS
 	constexpr auto height() const -> int {
@@ -45,28 +44,19 @@ struct irect {
  * be degenerate.
  */
 inline
-auto Intersect(const irect& a, const irect& b) -> irect {
-	irect out;
-	out.left.x   = std::max(a.left.x,   b.left.x);
-	out.top.y    = std::max(a.top.y,    b.top.y);
-	out.right.x  = std::min(a.right.x,  b.right.x);
-	out.bottom.y = std::min(a.bottom.y, b.bottom.y);
-	return out; }
+auto Intersect(irect a, irect b) -> irect {
+	return {
+		vmax(a.topLeft, b.topLeft),
+		vmin(a.bottomRight, b.bottomRight) }; }
 
 // FREE OPERATORS
 inline
 auto operator==(const irect& a, const irect& b) -> bool {
-	return a.top_left==b.top_left && a.bottom_right==b.bottom_right; }
+	return a.topLeft==b.topLeft && a.bottomRight==b.bottomRight; }
 
 inline
 auto operator!=(const irect& a, const irect& b) -> bool {
-	return a.top_left!=b.top_left || a.bottom_right!=b.bottom_right; }
-
-inline
-auto operator<<(std::ostream& os, const irect& a) -> std::ostream& {
-	os << "<irect tl(" << a.top_left.x << ", " << a.top_left.y << ") br(" << a.bottom_right.x << ", " << a.bottom_right.y << ")>";
-	return os; }
-
+	return a.topLeft!=b.topLeft || a.bottomRight!=b.bottomRight; }
 
 /*
 struct ibox3 {
@@ -96,3 +86,9 @@ struct ibox3 {
 
 }  // namespace rmlg
 }  // namespace rqdq
+
+
+inline
+auto operator<<(std::ostream& os, rqdq::rmlg::irect a) -> std::ostream& {
+	os << "<irect tl(" << a.topLeft.x << ", " << a.topLeft.y << ") br(" << a.bottomRight.x << ", " << a.bottomRight.y << ")>";
+	return os; }

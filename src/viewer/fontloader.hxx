@@ -34,8 +34,8 @@ public:
 	auto Entry(int) -> GlyphInfo; };
 
 
-auto operator<<(std::ostream& s, GlyphInfo a) -> std::ostream&;
-
-
 }  // close package namespace
 }  // close enterprise namespace
+
+
+auto operator<<(std::ostream& s, rqdq::rqv::GlyphInfo a) -> std::ostream&;

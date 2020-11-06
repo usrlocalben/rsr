@@ -7,6 +7,7 @@ cc_library(
     srcs = ["rmlg_irect.cxx", "rmlg_irect.hxx"],
     hdrs = ["rmlg_irect.hxx"],
     deps = [
+        "//src/rml/rmlv:math",
         "//src/rml/rmlv:vec",
         ],
     copts = RSR_DEFAULT_COPTS,

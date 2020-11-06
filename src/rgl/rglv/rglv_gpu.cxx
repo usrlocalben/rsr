@@ -262,7 +262,7 @@ void GPU::BinImpl() {
 
 void GPU::DrawImpl(const unsigned tid, const int tileIdx) {
 	const auto rect = TileRect(tileIdx);
-	const auto tileOrigin = rect.top_left;
+	const auto tileOrigin = rect.topLeft;
 	threadStats_[tid].tiles.emplace_back(tileIdx);
 
 	const auto color0BufPtr = static_cast<void*>(color0Buf_.data() + kTileColorSizeInBytes*rclmt::jobsys::threadId);

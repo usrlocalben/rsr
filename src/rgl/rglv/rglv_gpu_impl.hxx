@@ -343,10 +343,10 @@ class GPUBinImpl : GPU {
 
 		const auto [DS, DO] = DSDO(state);
 
-		const rmlv::mvec4i tlx{ scissorRect.top_left.x };
-		const rmlv::mvec4i tly{ scissorRect.top_left.y };
-		const rmlv::mvec4i brx{ scissorRect.bottom_right.x-1 };
-		const rmlv::mvec4i bry{ scissorRect.bottom_right.y-1 };
+		const rmlv::mvec4i tlx{ scissorRect.topLeft.x };
+		const rmlv::mvec4i tly{ scissorRect.topLeft.y };
+		const rmlv::mvec4i brx{ scissorRect.bottomRight.x-1 };
+		const rmlv::mvec4i bry{ scissorRect.bottomRight.y-1 };
 
 		const auto keepBacks = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_BACK) ? 0 : -1 });
 		const auto keepFronts = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_FRONT) ? 0 : -1 });
@@ -533,10 +533,10 @@ class GPUBinImpl : GPU {
 
 		const auto [DS, DO] = DSDO(state);
 
-		const rmlv::mvec4i tlx{ scissorRect.top_left.x };
-		const rmlv::mvec4i tly{ scissorRect.top_left.y };
-		const rmlv::mvec4i brx{ scissorRect.bottom_right.x-1 };
-		const rmlv::mvec4i bry{ scissorRect.bottom_right.y-1 };
+		const rmlv::mvec4i tlx{ scissorRect.topLeft.x };
+		const rmlv::mvec4i tly{ scissorRect.topLeft.y };
+		const rmlv::mvec4i brx{ scissorRect.bottomRight.x-1 };
+		const rmlv::mvec4i bry{ scissorRect.bottomRight.y-1 };
 
 		const auto keepBacks = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_BACK) ? 0 : -1 });
 		const auto keepFronts = bits2float(rmlv::mvec4i{ cullingEnabled && (cullFace == GL_FRONT) ? 0 : -1 });
@@ -799,10 +799,10 @@ class GPUBinImpl : GPU {
 		const ivec2 idev1{ dc1 };
 		const ivec2 idev2{ dc2 };
 
-		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x),   rect.top_left.x);
-		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y),   rect.top_left.y);
-		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x)+1, rect.bottom_right.x-1);
-		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y)+1, rect.bottom_right.y-1);
+		const int vminx = max(rmlv::Min(idev0.x, idev1.x, idev2.x),   rect.topLeft.x);
+		const int vminy = max(rmlv::Min(idev0.y, idev1.y, idev2.y),   rect.topLeft.y);
+		const int vmaxx = min(rmlv::Max(idev0.x, idev1.x, idev2.x)+1, rect.bottomRight.x-1);
+		const int vmaxy = min(rmlv::Max(idev0.y, idev1.y, idev2.y)+1, rect.bottomRight.y-1);
 
 		auto topLeft = ivec2{ vminx, vminy } / tileDimensionsInPixels_;
 		auto bottomRight = ivec2{ vmaxx, vmaxy } / tileDimensionsInPixels_;

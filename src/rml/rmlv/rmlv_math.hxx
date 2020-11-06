@@ -133,11 +133,13 @@ inline float hmin(vec4 a) { return Min(a.x, a.y, a.z, a.w); }
 
 // vmin/vmax
 inline ivec2 vmin(ivec2 a, ivec2 b) { return { std::min(a.x, b.x), std::min(a.y, b.y) }; }
+inline ivec3 vmin(ivec3 a, ivec3 b) { return { std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z) }; }
 inline vec2 vmin(vec2 a, vec2 b) { return{ std::min(a.x, b.x), std::min(a.y, b.y) }; }
 inline vec3 vmin(vec3 a, vec3 b) { return{ std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z) }; }
 inline vec4 vmin(vec4 a, vec4 b) { return{ std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z), std::min(a.w, b.w) }; }
 
 inline ivec2 vmax(ivec2 a, ivec2 b) { return { std::max(a.x, b.x), std::max(a.y, b.y) }; }
+inline ivec3 vmax(ivec3 a, ivec3 b) { return { std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z) }; }
 inline vec2 vmax(vec2 a, vec2 b) { return{ std::max(a.x, b.x), std::max(a.y, b.y) }; }
 inline vec3 vmax(vec3 a, vec3 b) { return{ std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z) }; }
 inline vec4 vmax(vec4 a, vec4 b) { return{ std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z), std::max(a.w, b.w) }; }
