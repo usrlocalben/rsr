@@ -272,7 +272,13 @@
     <ClCompile Include="$(SolutionDir)\src\viewer\node\truecolor.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\uicamera.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\value.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_particles.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\mc2.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\particles.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\repeat.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\tmp.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\node\writer.cxx" />
+    <ClCompile Include="$(SolutionDir)\src\viewer\perf.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\resource.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\shaders.cxx" />
     <ClCompile Include="$(SolutionDir)\src\viewer\shaders_envmap.cxx" />

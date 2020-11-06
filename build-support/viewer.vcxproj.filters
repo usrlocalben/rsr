@@ -322,6 +322,24 @@
     <ClCompile Include="$(SolutionDir)\src\viewer\node\modify.cxx">
       <Filter>viewer\node</Filter>
     </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\perf.cxx">
+      <Filter>viewer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\particles.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\i_particles.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\mc2.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\repeat.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)\src\viewer\node\tmp.cxx">
+      <Filter>viewer\node</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ral">
