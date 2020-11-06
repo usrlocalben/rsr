@@ -137,9 +137,11 @@ namespace PixelToaster
 	extern int modeset_width;
 	extern int modeset_height;
 	extern bool modeset_enable;
+	extern bool prefer_triple_buffering;
 
-	void modesetEnable(const int width, const int height);
+	void modesetEnable(int width, int height);
 	void modesetDisable();
+	void preferTripleBuffering(bool);
 
 	#ifndef PIXELTOASTER_NO_STL
 	using namespace std;

@@ -176,6 +176,7 @@ class Application::impl : public PixelToaster::Listener {
 	std::optional<BenchStat> lastStats_;
 	ivec2 windowSizeInPx_{ 0, 0 };
 	ivec2 wantedSizeInPx_{modelist[3]};
+	bool wantTripleBuffering_ = false;
 	bool runningFullScreen_ = false;
 	bool showModeList_ = false;
 	bool keys_shifted = false;
@@ -213,6 +214,9 @@ public:
 			scenePath.clear();
 			for (const auto item : *ja) {
 				scenePath.emplace_back(item->value.toString()); } }
+
+		if (jv_find(config_json.GetRoot(), "tripleBuffering", JSON_TRUE)) {
+			wantTripleBuffering_ = true; }
 
 		std::string textureDir{"data/texture"};
 		if (auto jv = jv_find(config_json.GetRoot(), "textureDir")) {
@@ -632,6 +636,7 @@ private:
 		if (windowSizeInPx_ != wantedSizeInPx_ || runningFullScreen_ != wantFullScreen_) {
 			windowSizeInPx_ = wantedSizeInPx_;
 			runningFullScreen_ = wantFullScreen_;
+			preferTripleBuffering(wantTripleBuffering_);
 			display_.close();
 			display_.open("rqdq 2021",
 						  windowSizeInPx_.x, windowSizeInPx_.y,

@@ -33,13 +33,17 @@
 int PixelToaster::modeset_width = 0;
 int PixelToaster::modeset_height = 0;
 bool PixelToaster::modeset_enable = 0;
-void PixelToaster::modesetEnable(const int width, const int height) {
+bool PixelToaster::prefer_triple_buffering = false;
+void PixelToaster::modesetEnable(int width, int height) {
     modeset_enable = true;
     modeset_width = width;
     modeset_height = height;
 }
 void PixelToaster::modesetDisable() {
     modeset_enable = false;
+}
+void PixelToaster::preferTripleBuffering(bool value) {
+	prefer_triple_buffering = value;
 }
 #endif
 

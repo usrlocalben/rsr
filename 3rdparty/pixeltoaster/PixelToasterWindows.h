@@ -1320,7 +1320,7 @@ namespace PixelToaster
 			presentation.SwapEffect = D3DSWAPEFFECT_DISCARD;
 			presentation.BackBufferFormat = convertFormat(format);
 			presentation.hDeviceWindow = window;
-			presentation.BackBufferCount = 2;
+			presentation.BackBufferCount = prefer_triple_buffering ? 2 : 1;
 
 			device.reset();
 
