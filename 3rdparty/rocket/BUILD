@@ -13,7 +13,8 @@ cc_library(
         "rocket/track.h", ],
     hdrs = ["rocket/sync.h"],
     strip_include_prefix = "rocket",
-    copts = ["/DWIN32",] + RSR_DEFAULT_COPTS,
+    defines = ["WIN32",],
+    copts = ["/wd4244"] + RSR_DEFAULT_COPTS,
     linkopts = ['-DEFAULTLIB:ws2_32.lib'],)
 
 
@@ -28,5 +29,7 @@ cc_library(
         "rocket/track.h", ],
     hdrs = ["rocket/sync.h"],
     strip_include_prefix = "rocket",
-    copts = ["/DWIN32", "/DSYNC_PLAYER",] + RSR_DEFAULT_COPTS,
-    linkopts = ['-DEFAULTLIB:ws2_32.lib'],)
+    defines = ["WIN32", "SYNC_PLAYER"],
+    copts = ["/wd4244",] + RSR_DEFAULT_COPTS)
+
+# linkopts = ['-DEFAULTLIB:ws2_32.lib'],)
