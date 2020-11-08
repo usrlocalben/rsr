@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <cctype>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -24,6 +26,8 @@ auto Split(const std::string& text, char delim, std::vector<std::string>& out) -
 auto Trim(const std::string& text) -> std::string;
 
 auto ConsumePrefix(std::string& text, const std::string& prefix) -> bool;
+
+void ToLower(std::string& text);
 
 
 }  // close package namespace

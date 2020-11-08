@@ -93,6 +93,10 @@ auto ConsumePrefix(std::string& str, const std::string& prefix) -> bool {
 		return true; }
 	return false; }
 
+void ToLower(std::string& text) {
+	std::transform(begin(text), end(text), begin(text), 
+				   [](unsigned char ch) -> unsigned char { return (unsigned char)std::tolower(ch); }); }
+
 
 }  // close package namespace
 }  // close enterprise namespace

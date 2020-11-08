@@ -8,6 +8,7 @@
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclr/rclr_algorithm.hxx"
 #include "src/rcl/rcls/rcls_smoothedintervaltimer.hxx"
+#include "src/rcl/rclt/rclt_util.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rcl/rclx/rclx_jsonfile.hxx"
 #include "src/rgl/rglr/rglr_pixeltoaster_util.hxx"
@@ -41,6 +42,19 @@
 #include <Windows.h>
 
 namespace rqdq {
+namespace {
+
+auto boolify(std::string s) {
+	rclt::ToLower(s);
+	s = rclt::Trim(s);
+	return !(s=="0" || s=="no" || s=="false" || s=="off"); }
+
+
+auto stoivec2(std::string s) -> rmlv::ivec2 {
+	auto segs = rclt::Split(s, ',');
+	return { stoi(segs[0]), stoi(segs[1]) }; }
+
+}  // close unnamed namespace
 namespace rqv {
 
 using namespace PixelToaster;
@@ -137,28 +151,48 @@ struct SyncConfigSerializer {
 		return sc; }};
 
 
+AppConfig defaultConfig{
+	/*configPath*/"data/viewer_config.json",
+	/*debug=*/true,
+	/*telemetryScale=*/30,
+	/*nice=*/false,
+	/*concurrency=*/0,
+	/*nodePath=*/{ {"data/scene.json"} },
+	/*latencyInFrames=*/1,
+	/*textureDir=*/"data/texture",
+	/*meshDir=*/"data/mesh",
+	/*fullScreen=*/false,
+	/*outputSizeInPx=*/rmlv::ivec2(1280, 720),
+    /*tileSizeInBlocks=*/rmlv::ivec2(8, 8) };
+
+
 class Application::impl : public PixelToaster::Listener {
 
-	PixelToaster::Display display_;
+	const AppConfig config_;
+	const bool nice_;
+	const std::vector<std::string>& nodePath_;
+
+	// mutable config
+	ivec2 tileSizeInBlocks_;
+	bool wantDebug_;
+	int telemetryScale_;
+	bool showTileThreads_{false};
+	bool shouldQuit_{false};
+	bool isPaused_{false};
+	bool wantFullScreen_;
+	ivec2 wantedSizeInPx_;
+	bool wantModeList_{false};
+
 	rglv::MeshStore meshStore_;
 	TextureStore textureStore_;
+	PixelToaster::Display display_;
 	rcls::SmoothedIntervalTimer refreshTime_;
 	PixelToaster::Timer renderTime_;
 	double lastRenderTime_;
 	PixelToaster::Timer wallClock_;
 
 	// BEGIN debugger state
-	bool shouldQuit_ = false;
 	int runtimeInFrames_{ 0 };
-	int taskSize_ = 6;
-	ivec2 tileSizeInBlocks_{ 12, 4 };
-
-	int visualizerScale_ = 30;
-	bool debugMode_ = false;
-	bool showTileThreads_ = false;
-	bool isPaused_ = false;
-	bool wantFullScreen_ = false;
-	bool nice_ = true;
 
 	bool mouseCaptured_ = false;
 	bool resetMouseNextFrame_ = false;
@@ -175,10 +209,7 @@ class Application::impl : public PixelToaster::Listener {
 	std::vector<double> measurementSamples_;
 	std::optional<BenchStat> lastStats_;
 	ivec2 windowSizeInPx_{ 0, 0 };
-	ivec2 wantedSizeInPx_{modelist[3]};
-	bool wantTripleBuffering_ = false;
 	bool runningFullScreen_ = false;
-	bool showModeList_ = false;
 	bool keys_shifted = false;
 
 	HandyCam camera_;
@@ -204,35 +235,24 @@ class Application::impl : public PixelToaster::Listener {
 #endif
 
 public:
+	impl(AppConfig config) :
+		config_(Merge(defaultConfig, config)),
+		nice_(config_.nice.value()),
+		nodePath_(config_.nodePath.value()),
+		tileSizeInBlocks_(config_.tileSizeInBlocks.value()),
+		wantDebug_(config_.debug.value()),
+		telemetryScale_(config_.telemetryScale.value()),
+		wantFullScreen_(config_.fullScreen.value()),
+		wantedSizeInPx_(config_.outputSizeInPx.value()) {}
+	
 	void Run() {
-		JSONFile config_json("data/viewer_config.json");
-
-		std::vector<std::string> scenePath = { { "data/scene.json" } };
-		if (auto jv = jv_find(config_json.GetRoot(), "scene", JSON_STRING)) {
-			scenePath[0] = jv->toString(); }
-		else if (auto ja = jv_find(config_json.GetRoot(), "scene", JSON_ARRAY)) {
-			scenePath.clear();
-			for (const auto item : *ja) {
-				scenePath.emplace_back(item->value.toString()); } }
-
-		if (jv_find(config_json.GetRoot(), "tripleBuffering", JSON_TRUE)) {
-			wantTripleBuffering_ = true; }
-
-		std::string textureDir{"data/texture"};
-		if (auto jv = jv_find(config_json.GetRoot(), "textureDir")) {
-			textureDir = jv->toString(); }
-
-		std::string meshDir{"data/mesh"};
-		if (auto jv = jv_find(config_json.GetRoot(), "meshDir")) {
-			meshDir = jv->toString(); }
-
-		textureStore_.load_dir(textureDir);
-		meshStore_.LoadDir(meshDir);
+		textureStore_.load_dir(config_.textureDir.value());
+		meshStore_.LoadDir(config_.meshDir.value());
 
 		PrepareBuiltInNodes();
 
 		// initial read of scene data
-		for (const auto& sp : scenePath) {
+		for (const auto& sp : nodePath_) {
 			auto item = std::pair<JSONFile, NodeList>( JSONFile(sp), NodeList{} );
 			userNodes_.emplace_back(item);
 			auto& sj = userNodes_.back().first;
@@ -244,6 +264,7 @@ public:
 
 
 #ifdef ENABLE_MUSIC
+		JSONFile config_json(config_.configPath.value());
 		if (auto jv = jv_find(config_json.GetRoot(), "soundtrack", JSON_OBJECT)) {
 			if (auto result = SoundtrackSerializer::Deserialize(*jv)) {
 				soundtrack_ = result.value(); }
@@ -271,8 +292,8 @@ public:
 
 		auto soundtrack = std::move(result.value());
 
-		const double rowsPerSecond = (double(soundtrack_.tempoInBeatsPerMinute) / 60) * syncConfig_.precisionInRowsPerBeat;
-		const int songDurationInRows = soundtrack_.durationInSeconds * rowsPerSecond;
+		const auto rowsPerSecond = soundtrack_.tempoInBeatsPerMinute / 60.0 * syncConfig_.precisionInRowsPerBeat;
+		const auto songDurationInRows = int(soundtrack_.durationInSeconds * rowsPerSecond);
 
 		rals::SyncController syncController(std::string("data/sync"), soundtrack, rowsPerSecond);
 #ifndef SYNC_PLAYER
@@ -373,20 +394,14 @@ public:
 #endif
 		}
 
-	void SetFullScreen(bool value) {
-		wantFullScreen_ = value; }
-
-	void SetNice(bool value) {
-		nice_ = value; }
-
 private:
 	auto defaultKeyHandlers() const -> bool override {
 		return false; }
 
 	void onKeyPressed(PixelToaster::DisplayInterface& display, PixelToaster::Key key) override {
-		if (!debugMode_) {
+		if (!wantDebug_) {
 			if (key == Key::F1) {
-				debugMode_ = !debugMode_;
+				wantDebug_ = !wantDebug_;
 				return; }
 
 			const std::string_view selector{"game"};
@@ -403,16 +418,16 @@ private:
 			return; }
 
 		switch (key) {
-		case Key::OpenBracket:
-			taskSize_ = max(4, taskSize_ - 1);
-			tileSizeInBlocks_ = ivec2{ taskSize_, taskSize_ };
+		case Key::OpenBracket: {
+			int n = std::clamp(tileSizeInBlocks_.x - 1, 4, 16);
+			tileSizeInBlocks_ = { n, n }; }
 			break;
-		case Key::CloseBracket:
-			taskSize_ = min(taskSize_ + 1, 128);
-			tileSizeInBlocks_ = ivec2{ taskSize_, taskSize_ };
+		case Key::CloseBracket: {
+			int n = std::clamp(tileSizeInBlocks_.x + 1, 4, 16);
+			tileSizeInBlocks_ = { n, n }; }
 			break;
 		case Key::F1:
-			debugMode_ = !debugMode_;
+			wantDebug_ = !wantDebug_;
 			break;
 		case Key::F2:
 			showTileThreads_ = !showTileThreads_;
@@ -428,10 +443,10 @@ private:
 		case Key::E: camera_.MoveUp();  break;
 		case Key::Q: camera_.MoveDown();  break;
 		case Key::Period:
-			visualizerScale_ += max(visualizerScale_ / 10, 1);
+			telemetryScale_ += max(telemetryScale_ / 10, 1);
 			break;
 		case Key::Comma:
-			visualizerScale_ = max(1, visualizerScale_ - (visualizerScale_ / 10));
+			telemetryScale_ = max(1, telemetryScale_ - (telemetryScale_ / 10));
 			break;
 		case Key::R:
 			startMeasuring_ = true;
@@ -462,7 +477,7 @@ private:
 	*/
 		default:
 	//		cout << "key was " << key << endl;
-			if (showModeList_ && (key >= Key::One && key < (Key::One + modelist.size()))) {
+			if (wantModeList_ && (key >= Key::One && key < (Key::One + modelist.size()))) {
 				int modeidx = key - Key::One;
 				wantedSizeInPx_ = modelist[modeidx]; }}}
 
@@ -472,7 +487,7 @@ private:
 			shouldQuit_ = true;
 			break;
 		case Key::M:
-			showModeList_ = true;
+			wantModeList_ = true;
 			break;
 		case Key::Shift:
 			keys_shifted = true;
@@ -482,7 +497,7 @@ private:
 	void onKeyUp(PixelToaster::DisplayInterface&, PixelToaster::Key key) override {
 		switch (key) {
 		case Key::M:
-			showModeList_ = false;
+			wantModeList_ = false;
 			break;
 		case Key::Shift:
 			keys_shifted = false;
@@ -509,7 +524,7 @@ private:
 
 		auto tty = ProPrinter(canvas);
 
-		if (showModeList_) {
+		if (wantModeList_) {
 			int idx = 1;
 			int top = canvas.height() / 2;
 			for (const auto& mode : modelist) {
@@ -581,21 +596,21 @@ private:
 			else {
 				measurementSamples_.push_back(renderTimeInMillis); } }
 
-		if (debugMode_) {
+		if (wantDebug_) {
 			double fps = 1.0 / (refreshTimeInMillis / 1000.0);
 			fmt::memory_buffer buf;
 			format_to(buf, "{: 6.2f} ms, fps: {:.0f}", renderTimeInMillis, fps);
 			tty.Write({ 16, 16 }, buf); }
 
-		if (debugMode_) {
+		if (wantDebug_) {
 			fmt::memory_buffer buf;
 			format_to(buf, "tile size: {}x{}", tileSizeInBlocks_.x, tileSizeInBlocks_.y);
-			format_to(buf, ", visu scale: {}", visualizerScale_);
+			format_to(buf, ", visu scale: {}", telemetryScale_);
 			if (isPaused_) {
 				format_to(buf, "   PAUSED"); }
 			tty.Write({ 16, 27 }, buf); }
 
-		if (debugMode_) {
+		if (wantDebug_) {
 			tty.Write({ 16, -32 }, "F1 debug         l  toggle srgb   [&] tile size    ,&. vis scale       ");
 			tty.Write({ 16, -42 }, " p toggle pause  m  change mode    r  measure       n  wasd capture    ");
 			tty.Write({ 16, -52 }, " f fullscreen   F2  show tiles     g  dblbuf        shift -&+ grid size"); }
@@ -603,10 +618,10 @@ private:
 			int top = canvas.height() - 11;
 			tty.Write({ 0, top }, "F1 debug"); }
 
-		if (debugMode_) {
-			render_jobsys(20, 40, float(visualizerScale_), canvas); }
+		if (wantDebug_) {
+			render_jobsys(20, 40, float(telemetryScale_), canvas); }
 
-		if (debugMode_ && lastStats_) {
+		if (wantDebug_ && lastStats_) {
 			int top = canvas.height() / 2;
 			tty.Write({ 32, top }, "   min    25th     med    75th     max    mean    sdev");
 			top += 10;
@@ -636,7 +651,7 @@ private:
 		if (windowSizeInPx_ != wantedSizeInPx_ || runningFullScreen_ != wantFullScreen_) {
 			windowSizeInPx_ = wantedSizeInPx_;
 			runningFullScreen_ = wantFullScreen_;
-			preferTripleBuffering(wantTripleBuffering_);
+			preferTripleBuffering(config_.latencyInFrames == 2);
 			display_.close();
 			display_.open("rqdq 2021",
 						  windowSizeInPx_.x, windowSizeInPx_.y,
@@ -716,22 +731,125 @@ private:
 		return false; }};
 
 
-Application::Application() :impl_(std::make_unique<impl>()) {}
+Application::Application(AppConfig c) :impl_(std::make_unique<impl>(c)) {}
 Application::~Application() = default;
 Application& Application::operator=(Application&&) noexcept = default;
-
-Application& Application::SetNice(bool value) {
-	impl_->SetNice(value);
-	return *this;}
-
-Application& Application::SetFullScreen(bool value) {
-	impl_->SetFullScreen(value);
-	return *this;}
-
 Application& Application::Run() {
 	impl_->Run();
 	return *this;}
 
 
-}  // namespace rqv
-}  // namespace rqdq
+
+
+auto GetEnvConfig() -> AppConfig {
+	using std::getenv;
+	AppConfig out;
+
+	char *s;
+	if (s = getenv("RQDQ__VIEWER__CONFIG_PATH"); s) {
+		out.configPath = s; }
+	if (s = getenv("RQDQ__VIEWER__DEBUG"); s) {
+		out.debug = boolify(s); }
+	if (s = getenv("RQDQ__VIEWER__TELEMETRY_SACLE"); s) {
+		out.telemetryScale = atoi(s); }
+	if (s = getenv("RQDQ__VIEWER__NICE"); s) {
+		out.nice = boolify(s); }
+	if (s = getenv("RQDQ__VIEWER__CONCURRENCY"); s) {
+		out.concurrency = atoi(s); }
+	if (s = getenv("RQDQ__VIEWER__NODE_SOURCE"); s) {
+		out.nodePath = rclt::Split(s, ','); }
+	if (s = getenv("RQDQ__VIEWER__LATENCY"); s) {
+		out.latencyInFrames = atoi(s); }
+	if (s = getenv("RQDQ__VIEWER__TEXTURE_DIR"); s) {
+		out.textureDir = s; }
+	if (s = getenv("RQDQ__VIEWER__MESH_DIR"); s) {
+		out.meshDir = s; }
+	if (s = getenv("RQDQ__VIEWER__FULLSCREEN"); s) {
+		out.fullScreen = boolify(s); }
+	if (s = getenv("RQDQ__VIEWER__OUTPUT_SIZE"); s) {
+		out.outputSizeInPx = stoivec2(s); }
+	if (s = getenv("RQDQ__VIEWER__TILE_SIZE"); s) {
+		out.tileSizeInBlocks = stoivec2(s); }
+	return out; }
+
+
+auto GetArgConfig(int argc, char** argv) -> AppConfig {
+	using rclt::ConsumePrefix;
+	AppConfig out;
+	std::vector<std::string> np{};
+	for (int i=1; i<argc; ++i) {
+		std::string tmp{argv[i]};
+		if (ConsumePrefix(tmp, "-c") || ConsumePrefix(tmp, "--config=")) {
+			out.configPath = tmp; }
+		else if (ConsumePrefix(tmp, "-d") || ConsumePrefix(tmp, "--debug")) {
+			out.debug = true; }
+		else if (ConsumePrefix(tmp, "-C") || ConsumePrefix(tmp, "--concurrency=")) {
+			out.concurrency = stoi(tmp); }
+		else if (ConsumePrefix(tmp, "-n") || ConsumePrefix(tmp, "--nodes=")) {
+			np.push_back(tmp); }
+		else if (ConsumePrefix(tmp, "-l") || ConsumePrefix(tmp, "--latency=")) {
+			out.latencyInFrames = stoi(tmp); }
+		else if (ConsumePrefix(tmp, "--texture-dir=")) {
+			out.textureDir = tmp; }
+		else if (ConsumePrefix(tmp, "--mesh-dir=")) {
+			out.meshDir = tmp; }
+		else if (ConsumePrefix(tmp, "-f") || ConsumePrefix(tmp, "--fullscreen")) {
+			out.fullScreen = true; }
+		else if (ConsumePrefix(tmp, "-m") || ConsumePrefix(tmp, "--mode=")) {
+			out.outputSizeInPx = stoivec2(tmp); }
+		else if (ConsumePrefix(tmp, "-t") || ConsumePrefix(tmp, "--tile=")) {
+			out.tileSizeInBlocks = stoivec2(tmp); }
+		else {
+			std::cerr << "warning: unknown arg \"" << tmp << "\"\n";}}
+	if (!np.empty()) {
+		out.nodePath = np; }
+	return out; }
+
+
+auto GetFileConfig(const std::string& fn) -> AppConfig {
+	JSONFile f(fn);
+	auto root = f.GetRoot();
+	AppConfig out;
+	std::vector<std::string> np;
+
+	if (auto jv = jv_find(root, "debug", JSON_TRUE)) {
+		out.debug = true; }
+	if (auto jv = jv_find(root, "debug", JSON_FALSE)) {
+		out.debug = false; }
+
+	if (auto jv = jv_find(root, "telemetryScale", JSON_NUMBER)) {
+		out.telemetryScale = static_cast<int>(jv->toNumber()); }
+	
+	if (auto jv = jv_find(root, "nice", JSON_TRUE)) {
+		out.nice = true; }
+	if (auto jv = jv_find(root, "nice", JSON_FALSE)) {
+		out.nice = false; }
+
+	if (auto jv = jv_find(root, "concurrency", JSON_NUMBER)) {
+		out.concurrency = static_cast<int>(jv->toNumber()); }
+
+	if (auto jv = jv_find(root, "scene", JSON_STRING)) {
+		np = { { jv->toString() } }; }
+	if (auto jv = jv_find(root, "scene", JSON_ARRAY)) {
+       for (const auto item : *jv) {
+          np.emplace_back(item->value.toString()); } }
+
+	if (auto jv = jv_find(root, "latency", JSON_NUMBER)) {
+		out.latencyInFrames = static_cast<int>(jv->toNumber()); }
+
+	if (auto jv = jv_find(root, "textureDir", JSON_STRING)) {
+		out.textureDir = jv->toString(); }
+
+	if (auto jv = jv_find(root, "meshDir", JSON_STRING)) {
+		out.meshDir = jv->toString(); }
+
+	if (auto jv = jv_find(root, "fullScreen", JSON_TRUE)) {
+		out.fullScreen = true; }
+	if (auto jv = jv_find(root, "fullScreen", JSON_FALSE)) {
+		out.fullScreen = false; }
+
+	return out; }
+
+
+}  // close package namespace
+}  // close enterprise namespace

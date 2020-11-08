@@ -1,87 +1,117 @@
-#include <thread>
-
 #include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
+#include "src/rcl/rclt/rclt_util.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rcl/rclx/rclx_jsonfile.hxx"
 #include "src/viewer/resource.h"
 #include "src/viewer/app.hxx"
+
+#include <algorithm>
+#include <cstdlib>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <thread>
 
 #include <fmt/format.h>
 #include <fmt/printf.h>
 #include "3rdparty/gason/gason.h"
 #include <Windows.h>
 
-int main() {
+auto LevelToThreads(int level) -> int {
+	const auto maxThreads = int(std::thread::hardware_concurrency());
+	if (level == 0) {
+		return maxThreads; }
+	else if (level < 0) {
+		return maxThreads + level; }
+	else {
+		return std::clamp(level, 0, maxThreads); }}
+
+
+int main(int argc, char** argv) {
+	using namespace rqdq;
 	using namespace rqdq::rclx;
 	using namespace rqdq::rqv;
 	namespace jobsys = rqdq::rclmt::jobsys;
 	namespace framepool = rqdq::rclma::framepool;
 
-	JSONFile config_json("data/viewer_config.json");
-	int threads = std::thread::hardware_concurrency();
+	auto argConfig = GetArgConfig(argc, argv);
+	auto envConfig = GetEnvConfig();
 
-	if (auto jv = jv_find(config_json.GetRoot(), "concurrency", JSON_NUMBER)) {
-		const auto concurrency = int(jv->toNumber());
-		if (concurrency <= 0) {
-			threads = int(std::thread::hardware_concurrency()) + concurrency; }
-		else {
-			threads = concurrency; } }
+	std::string configPath{"data/viewer_config.json"};
+
+	{
+		auto tmp = Merge(envConfig, argConfig);
+		if (tmp.configPath.has_value()) {
+			configPath = tmp.configPath.value(); }}
+
+	auto fileConfig = configPath != "null" ? GetFileConfig(configPath) : AppConfig{};
+
+	auto theConfig = Merge(fileConfig, Merge(envConfig, argConfig));
+
+	int threads = LevelToThreads(theConfig.concurrency.value_or(0));
 
 	jobsys::telemetryEnabled = true;
-	jobsys::init(threads); // threads);
+	jobsys::init(threads);
 	framepool::Init();
 
-	try {
-		auto app = Application();
-		bool nice{false};
-		if (auto jv = jv_find(config_json.GetRoot(), "nice", JSON_TRUE)) {
-			nice = true; }
-		app.SetNice(nice);
-		app.Run(); }
-	catch (const std::exception& err) {
-		std::cout << "exception: " << err.what() << std::endl; }
-	catch (...) {
-		std::cout << "caught unknown exception\n"; }
+	// try {
+		auto app = Application(theConfig);
+		app.Run();
+//}
+	// catch (const std::exception& err) {
+// 		std::cout << "exception: " << err.what() << std::endl; }
+//	catch (...) {
+//		std::cout << "caught unknown exception\n"; }
 
 	jobsys::stop();
 	jobsys::join();
 	return 0; }
 
 
-struct SplashDialog {
-	bool demoWillStart = false;
-	bool wantFullScreen = false;
-	bool want720p = false;
+struct SplashDialogResult {
+	bool start{false};
+	bool fullScreen{false};
 	// int wantednMode = -1;
-	HWND d_hDlg;
+	bool force720p{false}; };
 
-	SplashDialog& create(HINSTANCE hInst) {
-		d_hDlg = CreateDialogParamW(hInst, MAKEINTRESOURCE(IDD_SPLASH), nullptr, DialogProcThunk, reinterpret_cast<LPARAM>(this));
+
+class SplashDialog {
+
+	HWND window_{0};
+	SplashDialogResult result_{};
+
+public:
+	auto Create(HINSTANCE hInst) -> SplashDialog& {
+		window_ = CreateDialogParamW(hInst, MAKEINTRESOURCE(IDD_SPLASH), nullptr, DialogProcJmp, reinterpret_cast<LPARAM>(this));
 		return *this; }
 
-	SplashDialog& show(int nCmdShow) {
-		ShowWindow(d_hDlg, nCmdShow);
+	auto Show(int nCmdShow) -> SplashDialog& {
+		ShowWindow(window_, nCmdShow);
 		return *this; }
 
-	SplashDialog& runUntilClosed() {
+	auto RunUntilClosed() -> SplashDialog& {
 		MSG msg;
 		BOOL ret;
 		while ((ret = GetMessageW(&msg, nullptr, 0, 0)) != 0) {
 			if (ret == -1) {
 				throw std::runtime_error("GetMessage error"); }
-			if (IsDialogMessageW(d_hDlg, &msg) == 0) {
+			if (IsDialogMessageW(window_, &msg) == 0) {
 				TranslateMessage(&msg);
 				DispatchMessageW(&msg); }}
 		return *this; }
 
-	static INT_PTR CALLBACK DialogProcThunk(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	auto Result() {
+		return result_; }
+
+private:
+	static
+	auto CALLBACK DialogProcJmp(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) -> INT_PTR {
 		if (uMsg == WM_INITDIALOG) {
 			SetWindowLongPtr(hDlg, DWLP_USER, lParam); }
 		auto* pThis = reinterpret_cast<SplashDialog*>(GetWindowLongPtr(hDlg, DWLP_USER));
 		return pThis != nullptr ? pThis->DialogProc(hDlg, uMsg, wParam, lParam) : FALSE; }
-
-	INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam [[maybe_unused]]) {
+	auto DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam [[maybe_unused]]) -> INT_PTR {
 		switch (uMsg) {
 		case WM_INITDIALOG: {
 			/*HWND combogpu = GetDlgItem(hDlg, IDC_GPU);
@@ -89,22 +119,23 @@ struct SplashDialog {
 				SendMessage(combogpu, CB_ADDSTRING, 0, (LPARAM)igpu[i]); }
 			SendMessage(combogpu, CB_SETCURSEL, 0, 0);*/
 			SendMessage(GetDlgItem(hDlg, IDC_TDFMODE), BM_SETCHECK, 1, 0);
-			SendMessage(GetDlgItem(hDlg, IDC_FULLSCREEN), BM_SETCHECK, 1, 0); }
-			break;
+			SendMessage(GetDlgItem(hDlg, IDC_FULLSCREEN), BM_SETCHECK, 1, 0);
+			return TRUE; }
+
 		case WM_COMMAND:
 			switch (LOWORD(wParam)) {
 			case IDCANCEL:
 				SendMessage(hDlg, WM_CLOSE, 0, 0);
 				return TRUE;
 			case IDOK:
-				demoWillStart = true;
+				result_.start = true;
 				SendMessage(hDlg, WM_CLOSE, 0, 0);
 				return TRUE; }
 			break;
 
 		case WM_CLOSE:
-			wantFullScreen = SendMessage(GetDlgItem(hDlg, IDC_FULLSCREEN), BM_GETCHECK, 0, 0) > 0;
-			want720p = SendMessage(GetDlgItem(hDlg, IDC_TDFMODE), BM_GETCHECK, 0, 0) > 0;
+			result_.fullScreen = SendMessage(GetDlgItem(hDlg, IDC_FULLSCREEN), BM_GETCHECK, 0, 0) > 0;
+			result_.force720p = SendMessage(GetDlgItem(hDlg, IDC_TDFMODE), BM_GETCHECK, 0, 0) > 0;
 			//run_screenmode = SendMessage( GetDlgItem(hDlg,IDC_RES), CB_GETCURSEL, 0, 0 );
 			DestroyWindow(hDlg);
 			return TRUE;
@@ -115,21 +146,24 @@ struct SplashDialog {
 		return FALSE; }};
 
 
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE h0 [[maybe_unused]], LPSTR lpCmdLine [[maybe_unused]], int nCmdShow) {
+auto WINAPI WinMain(HINSTANCE hInst, HINSTANCE h0 [[maybe_unused]], LPSTR lpCmdLine [[maybe_unused]], int nCmdShow) -> int {
 	using namespace rqdq::rqv;
 	namespace jobsys = rqdq::rclmt::jobsys;
 	namespace framepool = rqdq::rclma::framepool;
 
-	SplashDialog splashDialog;
-	splashDialog.create(hInst).show(nCmdShow).runUntilClosed();
+	auto wants = SplashDialog().Create(hInst).Show(nCmdShow).RunUntilClosed().Result();
 
-	if (!splashDialog.demoWillStart) {
+	if (!wants.start) {
 		return 0;}
 
-	int threads = std::thread::hardware_concurrency();
+	AppConfig config;
+	config.nice = true;
+	config.fullScreen = wants.fullScreen;
+	int threads = LevelToThreads(config.concurrency.value_or(0));
 	jobsys::init(threads);
 	framepool::Init();
-	auto app = Application();
+
+	auto app = Application(config);
 	/*
 	if (want720p) {
 		//hackmode_enable = 1;
@@ -138,8 +172,6 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE h0 [[maybe_unused]], LPSTR lpCmdLi
 	else {
 		hackmode_enable = 0; }
 	*/
-	app.SetNice(true);
-	app.SetFullScreen(splashDialog.wantFullScreen);
 	// app.startedFromGUI = true;  XXX for modesetting
 	app.Run();
 	return 0; }
