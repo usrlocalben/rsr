@@ -189,7 +189,7 @@ struct init { init() {
 
 	// rest point to correct glyph
 	for (int y = 0; y < 3; ++y) {
-		for (int x = 0; x < charmap[0].size(); ++x) {
+		for (int x = 0, siz=int(charmap[0].size()); x < siz; ++x) {
 			char ch = charmap[y][x];
 			auto coordInChars = rmlv::ivec2(x, y);
 			auto coordInPx = coordInChars * kGlyphDimInPx;
