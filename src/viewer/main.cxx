@@ -18,6 +18,7 @@
 #include "3rdparty/gason/gason.h"
 #include <Windows.h>
 
+
 auto LevelToThreads(int level) -> int {
 	const auto maxThreads = int(std::thread::hardware_concurrency());
 	if (level == 0) {
@@ -37,32 +38,26 @@ int main(int argc, char** argv) {
 
 	auto argConfig = GetArgConfig(argc, argv);
 	auto envConfig = GetEnvConfig();
-
-	std::string configPath{"data/viewer_config.json"};
-
-	{
-		auto tmp = Merge(envConfig, argConfig);
-		if (tmp.configPath.has_value()) {
-			configPath = tmp.configPath.value(); }}
-
-	auto fileConfig = configPath != "null" ? GetFileConfig(configPath) : AppConfig{};
-
-	auto theConfig = Merge(fileConfig, Merge(envConfig, argConfig));
-
-	int threads = LevelToThreads(theConfig.concurrency.value_or(0));
+	auto configPath = Merge(envConfig, argConfig).configPath.value_or("data/viewer_config.json");
+	auto fileConfig = configPath != "null" ? GetFileConfig(configPath) : PartialAppConfig{};
+	auto allConfig = Merge(fileConfig, Merge(envConfig, argConfig));
+	int threads = LevelToThreads(allConfig.concurrency.value_or(0));
 
 	jobsys::telemetryEnabled = true;
 	jobsys::init(threads);
 	framepool::Init();
 
-	// try {
-		auto app = Application(theConfig);
+#ifdef NDEBUG
+	try {
+#endif
+		auto app = Application(allConfig);
 		app.Run();
-//}
-	// catch (const std::exception& err) {
-// 		std::cout << "exception: " << err.what() << std::endl; }
-//	catch (...) {
-//		std::cout << "caught unknown exception\n"; }
+#ifdef NDEBUG
+	} catch (const std::exception& err) {
+ 		std::cout << "exception: " << err.what() << std::endl; }
+	catch (...) {
+		std::cout << "caught unknown exception\n"; }
+#endif
 
 	jobsys::stop();
 	jobsys::join();
@@ -156,7 +151,7 @@ auto WINAPI WinMain(HINSTANCE hInst, HINSTANCE h0 [[maybe_unused]], LPSTR lpCmdL
 	if (!wants.start) {
 		return 0;}
 
-	AppConfig config;
+	PartialAppConfig config;
 	config.nice = true;
 	config.fullScreen = wants.fullScreen;
 	int threads = LevelToThreads(config.concurrency.value_or(0));

@@ -33,6 +33,7 @@
 #include <memory>
 #include <optional>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <fmt/format.h>
@@ -151,7 +152,7 @@ struct SyncConfigSerializer {
 		return sc; }};
 
 
-AppConfig defaultConfig{
+PartialAppConfig defaultConfig{
 	/*configPath*/"data/viewer_config.json",
 	/*debug=*/true,
 	/*telemetryScale=*/30,
@@ -169,8 +170,6 @@ AppConfig defaultConfig{
 class Application::impl : public PixelToaster::Listener {
 
 	const AppConfig config_;
-	const bool nice_;
-	const std::vector<std::string>& nodePath_;
 
 	// mutable config
 	ivec2 tileSizeInBlocks_;
@@ -235,24 +234,22 @@ class Application::impl : public PixelToaster::Listener {
 #endif
 
 public:
-	impl(AppConfig config) :
-		config_(Merge(defaultConfig, config)),
-		nice_(config_.nice.value()),
-		nodePath_(config_.nodePath.value()),
-		tileSizeInBlocks_(config_.tileSizeInBlocks.value()),
-		wantDebug_(config_.debug.value()),
-		telemetryScale_(config_.telemetryScale.value()),
-		wantFullScreen_(config_.fullScreen.value()),
-		wantedSizeInPx_(config_.outputSizeInPx.value()) {}
+	impl(const PartialAppConfig& config) :
+		config_(Solidify(Merge(defaultConfig, config))),
+		tileSizeInBlocks_(config_.tileSizeInBlocks),
+		wantDebug_(config_.debug),
+		telemetryScale_(config_.telemetryScale),
+		wantFullScreen_(config_.fullScreen),
+		wantedSizeInPx_(config_.outputSizeInPx) {}
 	
 	void Run() {
-		textureStore_.load_dir(config_.textureDir.value());
-		meshStore_.LoadDir(config_.meshDir.value());
+		textureStore_.load_dir(config_.textureDir);
+		meshStore_.LoadDir(config_.meshDir);
 
 		PrepareBuiltInNodes();
 
 		// initial read of scene data
-		for (const auto& sp : nodePath_) {
+		for (const auto& sp : config_.nodePath) {
 			auto item = std::pair<JSONFile, NodeList>( JSONFile(sp), NodeList{} );
 			userNodes_.emplace_back(item);
 			auto& sj = userNodes_.back().first;
@@ -264,7 +261,7 @@ public:
 
 
 #ifdef ENABLE_MUSIC
-		JSONFile config_json(config_.configPath.value());
+		JSONFile config_json(config_.configPath);
 		if (auto jv = jv_find(config_json.GetRoot(), "soundtrack", JSON_OBJECT)) {
 			if (auto result = SoundtrackSerializer::Deserialize(*jv)) {
 				soundtrack_ = result.value(); }
@@ -306,7 +303,7 @@ public:
 		soundtrack.Play();
 #endif //ENABLE_MUSIC
 
-		if (!nice_) { jobsys::work_start();}
+		if (!config_.nice) { jobsys::work_start();}
 
 		try {
 			while (!shouldQuit_) {
@@ -322,7 +319,7 @@ public:
 				auto frame = Frame(display_);
 				auto canvas = frame.canvas();
 
-				if (nice_) {
+				if (config_.nice) {
 					jobsys::work_start(); }
 				jobsys::reset();
 				framepool::Reset();
@@ -368,7 +365,7 @@ public:
 							node->BeforeFrame(isPaused_ ? float(0) : tNow); }}}
 
 				ComputeAndRenderFrame(canvas);
-				if (nice_) { jobsys::work_end();}
+				if (config_.nice) { jobsys::work_end();}
 
 #ifdef ENABLE_MUSIC
 				audioController.FillBuffers();  // decrease chance of missing vsync
@@ -384,7 +381,7 @@ public:
 		catch (WrongFormat) {
 			std::cerr << "framebuffer not rgba8888" << endl; }
 
-		if (!nice_) { jobsys::work_end();}
+		if (!config_.nice) { jobsys::work_end();}
 
 		std::cerr << "terminated.\n";
 #ifdef ENABLE_MUSIC
@@ -731,7 +728,7 @@ private:
 		return false; }};
 
 
-Application::Application(AppConfig c) :impl_(std::make_unique<impl>(c)) {}
+Application::Application(const PartialAppConfig& c) :impl_(std::make_unique<impl>(c)) {}
 Application::~Application() = default;
 Application& Application::operator=(Application&&) noexcept = default;
 Application& Application::Run() {
@@ -741,9 +738,9 @@ Application& Application::Run() {
 
 
 
-auto GetEnvConfig() -> AppConfig {
+auto GetEnvConfig() -> PartialAppConfig {
 	using std::getenv;
-	AppConfig out;
+	PartialAppConfig out;
 
 	char *s;
 	if (s = getenv("RQDQ__VIEWER__CONFIG_PATH"); s) {
@@ -773,9 +770,9 @@ auto GetEnvConfig() -> AppConfig {
 	return out; }
 
 
-auto GetArgConfig(int argc, char** argv) -> AppConfig {
+auto GetArgConfig(int argc, char** argv) -> PartialAppConfig {
 	using rclt::ConsumePrefix;
-	AppConfig out;
+	PartialAppConfig out;
 	std::vector<std::string> np{};
 	for (int i=1; i<argc; ++i) {
 		std::string tmp{argv[i]};
@@ -806,10 +803,10 @@ auto GetArgConfig(int argc, char** argv) -> AppConfig {
 	return out; }
 
 
-auto GetFileConfig(const std::string& fn) -> AppConfig {
+auto GetFileConfig(const std::string& fn) -> PartialAppConfig {
 	JSONFile f(fn);
 	auto root = f.GetRoot();
-	AppConfig out;
+	PartialAppConfig out;
 	std::vector<std::string> np;
 
 	if (auto jv = jv_find(root, "debug", JSON_TRUE)) {
