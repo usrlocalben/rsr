@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <string>
 #include <tuple>
 
@@ -8,7 +9,7 @@ namespace rglv {
 struct Mesh;
 class MaterialStore;
 
-auto LoadOBJ(const std::string& prepend, const std::string& fn) -> Mesh;
+auto LoadOBJ(const std::string& fn, std::optional<const std::string> dir=std::nullopt) -> Mesh;
 
 
 }  // namespace rglv

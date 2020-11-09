@@ -17,7 +17,7 @@
 namespace rqdq {
 namespace rcls {
 
-std::vector<std::string> FindGlob(const std::string& pathpat) {
+auto FindGlob(const std::string& pathpat) -> std::vector<std::string> {
 	std::vector<std::string> lst;
 	WIN32_FIND_DATA ffd;
 
@@ -35,7 +35,7 @@ std::vector<std::string> FindGlob(const std::string& pathpat) {
 * example from
 * http://nickperrysays.wordpress.com/2011/05/24/monitoring-a-file-last-modified-date-with-visual-c/
 */
-int64_t GetMTime(const std::string& path) {
+auto GetMTime(const std::string& path) -> int64_t {
 	int64_t mtime = -1;
 	HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
 	if (hFile != INVALID_HANDLE_VALUE) {
@@ -48,7 +48,7 @@ int64_t GetMTime(const std::string& path) {
 	return mtime; }
 
 
-std::vector<char> LoadBytes(const std::string& path) {
+auto LoadBytes(const std::string& path) -> std::vector<char> {
 	std::vector<char> buf;
 	std::ifstream f(path);
 	f.exceptions(std::ifstream::badbit | std::ifstream::failbit | std::ifstream::eofbit);
@@ -75,7 +75,7 @@ void LoadBytes(const std::string& path, std::vector<char>& buf) {
 		fd.read(buf.data(), buf.size()); }}
 
 
-std::vector<std::string> LoadLines(const std::string& path) {
+auto LoadLines(const std::string& path) -> std::vector<std::string> {
 	std::ifstream fd(path);
 	std::vector<std::string> out;
 	std::string line;
@@ -84,25 +84,21 @@ std::vector<std::string> LoadLines(const std::string& path) {
 	return out; }
 
 
-std::string JoinPath(const std::string& a, const std::string& b) {
-	std::string out(a);
-	if (out.back() != '\\') {
-		out.push_back('\\'); }
-
-	if (b.empty()) {
-		return out; }
-
-	if (b.front() == '\\') {
-		out.assign(b); }
-	else {
-		out += b; }
-
-	return out; }
+auto JoinPath(std::string a, const std::string& b) -> std::string {
+	if (!a.empty() && a.back() != '\\' && a.back() != '/') {
+		a.push_back('\\'); }
+	if (!b.empty()) {
+		if (b.front() == '\\') {
+			a = b; }
+		else {
+			a += b; }}
+	return a; }
 
 
-std::string JoinPath(const std::string& a, const std::string& b, const std::string& c) {
-	std::string out = JoinPath(a, b);
-	return JoinPath(out, c); }
+auto JoinPath(std::string a, const std::string& b, const std::string& c) -> std::string {
+	a = JoinPath(move(a), b);
+	a = JoinPath(move(a), c);
+	return a; }
 
 
 void EnsureOpenable(const std::wstring& path) {
@@ -126,6 +122,16 @@ void EnsureDirectoryExists(const std::string& path) {
 		pos = path.find_first_of("\\/", pos+1);
 		CreateDirectoryA(path.substr(0, pos).c_str(), nullptr);
 	} while (pos != std::string::npos); }
+
+
+auto DirName(std::string fn) -> std::string {
+	int i;
+	for (i = int(fn.size()); i>=0; --i) {
+		if (fn[i] == '\\' || fn[i] == '/') {
+			break; }
+	}
+	fn = fn.substr(0, i<0?0:i);
+	return fn; }
 
 
 }  // namespace rcls

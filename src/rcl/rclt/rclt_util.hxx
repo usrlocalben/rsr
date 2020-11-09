@@ -28,6 +28,7 @@ auto Trim(const std::string& text) -> std::string;
 auto ConsumePrefix(std::string& text, const std::string& prefix) -> bool;
 
 void ToLower(std::string& text);
+auto ToLower_copy(std::string text) -> std::string;
 
 
 }  // close package namespace

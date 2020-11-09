@@ -14,13 +14,14 @@ void LoadBytes(const std::string& path, std::vector<char>& buf);
 
 std::vector<std::string> LoadLines(const std::string& path);
 
-std::string JoinPath(const std::string& a, const std::string& b);
-std::string JoinPath(const std::string& a, const std::string& b, const std::string& c);
+auto JoinPath(std::string a, const std::string& b) -> std::string;
+auto JoinPath(std::string a, const std::string& b, const std::string& c) -> std::string;
 
 void EnsureOpenable(const std::wstring& path);
 
 void EnsureDirectoryExists(const std::string& path);
 
+auto DirName(std::string fn) -> std::string;
 
 }  // namespace rcls
 }  // namespace rqdq

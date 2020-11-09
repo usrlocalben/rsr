@@ -1,18 +1,19 @@
 #include "src/rgl/rglv/rglv_obj.hxx"
 
-#include <cmath>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <tuple>
-#include <vector>
-
 #include "src/rcl/rcls/rcls_file.hxx"
 #include "src/rcl/rclt/rclt_util.hxx"
 // #include "src/rgl/rglv/rglv_material.hxx"
 #include "src/rgl/rglv/rglv_mesh.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
+
+#include <cmath>
+#include <fstream>
+#include <iostream>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <tuple>
+#include <vector>
 
 namespace rqdq {
 
@@ -180,11 +181,12 @@ auto LoadMaterials(const std::string& fn) -> MaterialList {
 
 namespace rglv {
 
-auto LoadOBJ(const std::string& prepend, const std::string& fn) -> Mesh {
+auto LoadOBJ(const std::string& fn, std::optional<const std::string> dir) -> Mesh {
 
 	// std::cout << "---- loading [" << fn << "]:" << std::endl;
 
-	auto lines = rcls::LoadLines(prepend + fn);
+	auto lines = rcls::LoadLines(fn);
+	const auto materialDir = dir.value_or(rcls::DirName(fn));
 
 	std::string group_name("defaultgroup");
 	int material_idx = -1;
@@ -209,7 +211,7 @@ auto LoadOBJ(const std::string& prepend, const std::string& fn) -> Mesh {
 			std::string mtlfn;
 			ss >> mtlfn;
 			// std::cout << "material library is [" << mtlfn << "]\n";
-			mesh.material_ = LoadMaterials(prepend + mtlfn); }
+			mesh.material_ = LoadMaterials(rcls::JoinPath(materialDir, mtlfn)); }
 
 		else if (cmd == "g") {
 			// group, XXX unused

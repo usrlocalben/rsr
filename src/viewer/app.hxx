@@ -10,11 +10,13 @@
 namespace rqdq {
 namespace rqv {
 
+enum class IdlePolicy { Sleep, Spin };
+
 #define APPCONFIG_ITEMS \
     X(configPath, std::string) \
 	X(debug, bool) \
 	X(telemetryScale, int) \
-	X(nice, bool) \
+	X(idlePolicy, IdlePolicy) \
 	X(concurrency, int) \
 	X(nodePath, std::vector<std::string>) \
 	X(latencyInFrames, int) \

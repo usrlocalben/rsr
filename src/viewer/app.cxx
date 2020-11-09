@@ -45,9 +45,8 @@
 namespace rqdq {
 namespace {
 
-auto boolify(std::string s) {
-	rclt::ToLower(s);
-	s = rclt::Trim(s);
+auto boolify(std::string s) -> bool {
+	s = rclt::Trim(rclt::ToLower_copy(std::move(s)));
 	return !(s=="0" || s=="no" || s=="false" || s=="off"); }
 
 
@@ -156,7 +155,7 @@ PartialAppConfig defaultConfig{
 	/*configPath*/"data/viewer_config.json",
 	/*debug=*/true,
 	/*telemetryScale=*/30,
-	/*nice=*/false,
+	/*waitPolicy=*/IdlePolicy::Spin,
 	/*concurrency=*/0,
 	/*nodePath=*/{ {"data/scene.json"} },
 	/*latencyInFrames=*/1,
@@ -303,7 +302,8 @@ public:
 		soundtrack.Play();
 #endif //ENABLE_MUSIC
 
-		if (!config_.nice) { jobsys::work_start();}
+		if (config_.idlePolicy == IdlePolicy::Spin) {
+			jobsys::work_start(); }
 
 		try {
 			while (!shouldQuit_) {
@@ -319,7 +319,7 @@ public:
 				auto frame = Frame(display_);
 				auto canvas = frame.canvas();
 
-				if (config_.nice) {
+				if (config_.idlePolicy == IdlePolicy::Sleep) {
 					jobsys::work_start(); }
 				jobsys::reset();
 				framepool::Reset();
@@ -365,7 +365,8 @@ public:
 							node->BeforeFrame(isPaused_ ? float(0) : tNow); }}}
 
 				ComputeAndRenderFrame(canvas);
-				if (config_.nice) { jobsys::work_end();}
+				if (config_.idlePolicy == IdlePolicy::Sleep) {
+					jobsys::work_end();}
 
 #ifdef ENABLE_MUSIC
 				audioController.FillBuffers();  // decrease chance of missing vsync
@@ -381,7 +382,8 @@ public:
 		catch (WrongFormat) {
 			std::cerr << "framebuffer not rgba8888" << endl; }
 
-		if (!config_.nice) { jobsys::work_end();}
+		if (config_.idlePolicy == IdlePolicy::Spin) {
+			jobsys::work_end();}
 
 		std::cerr << "terminated.\n";
 #ifdef ENABLE_MUSIC
@@ -749,8 +751,8 @@ auto GetEnvConfig() -> PartialAppConfig {
 		out.debug = boolify(s); }
 	if (s = getenv("RQDQ__VIEWER__TELEMETRY_SACLE"); s) {
 		out.telemetryScale = atoi(s); }
-	if (s = getenv("RQDQ__VIEWER__NICE"); s) {
-		out.nice = boolify(s); }
+	if (s = getenv("RQDQ__VIEWER__IDLE_POLICY"); s) {
+		out.idlePolicy = rclt::ToLower_copy(move(s)) == "sleep" ? IdlePolicy::Sleep : IdlePolicy::Spin; }
 	if (s = getenv("RQDQ__VIEWER__CONCURRENCY"); s) {
 		out.concurrency = atoi(s); }
 	if (s = getenv("RQDQ__VIEWER__NODE_SOURCE"); s) {
@@ -774,14 +776,17 @@ auto GetArgConfig(int argc, char** argv) -> PartialAppConfig {
 	using rclt::ConsumePrefix;
 	PartialAppConfig out;
 	std::vector<std::string> np{};
+	std::string tmp;
 	for (int i=1; i<argc; ++i) {
-		std::string tmp{argv[i]};
+		tmp = argv[i];
 		if (ConsumePrefix(tmp, "-c") || ConsumePrefix(tmp, "--config=")) {
 			out.configPath = tmp; }
 		else if (ConsumePrefix(tmp, "-d") || ConsumePrefix(tmp, "--debug")) {
 			out.debug = true; }
 		else if (ConsumePrefix(tmp, "-C") || ConsumePrefix(tmp, "--concurrency=")) {
 			out.concurrency = stoi(tmp); }
+		else if (ConsumePrefix(tmp, "--idle-policy=")) {
+			out.idlePolicy = rclt::ToLower_copy(move(tmp)) == "sleep" ? IdlePolicy::Sleep : IdlePolicy::Spin; }
 		else if (ConsumePrefix(tmp, "-n") || ConsumePrefix(tmp, "--nodes=")) {
 			np.push_back(tmp); }
 		else if (ConsumePrefix(tmp, "-l") || ConsumePrefix(tmp, "--latency=")) {
@@ -817,10 +822,8 @@ auto GetFileConfig(const std::string& fn) -> PartialAppConfig {
 	if (auto jv = jv_find(root, "telemetryScale", JSON_NUMBER)) {
 		out.telemetryScale = static_cast<int>(jv->toNumber()); }
 	
-	if (auto jv = jv_find(root, "nice", JSON_TRUE)) {
-		out.nice = true; }
-	if (auto jv = jv_find(root, "nice", JSON_FALSE)) {
-		out.nice = false; }
+	if (auto jv = jv_find(root, "idlePolicy", JSON_STRING)) {
+		out.idlePolicy = rclt::ToLower_copy(jv->toString()) == "sleep" ? IdlePolicy::Sleep : IdlePolicy::Spin; }
 
 	if (auto jv = jv_find(root, "concurrency", JSON_NUMBER)) {
 		out.concurrency = static_cast<int>(jv->toNumber()); }

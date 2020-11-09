@@ -97,6 +97,11 @@ void ToLower(std::string& text) {
 	std::transform(begin(text), end(text), begin(text), 
 				   [](unsigned char ch) -> unsigned char { return (unsigned char)std::tolower(ch); }); }
 
+auto ToLower_copy(std::string text) -> std::string {
+	std::transform(begin(text), end(text), begin(text), 
+				   [](unsigned char ch) -> unsigned char { return (unsigned char)std::tolower(ch); });
+	return text; }
+
 
 }  // close package namespace
 }  // close enterprise namespace

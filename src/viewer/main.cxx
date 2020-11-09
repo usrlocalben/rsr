@@ -43,6 +43,21 @@ int main(int argc, char** argv) {
 	auto allConfig = Merge(fileConfig, Merge(envConfig, argConfig));
 	int threads = LevelToThreads(allConfig.concurrency.value_or(0));
 
+	/*
+	auto T = [](auto s) {
+		auto dn = rcls::DirName(s);
+		std::cerr << "DirName(\"" << s << "\") == \"" << dn << "\"\n"; };
+
+	T("foo.exe");
+	T("bar\\foo.exe");
+	T("baz\\bar\\foo.exe");
+	T("c:\\foo.exe");
+	T("");
+	T("/cygdrive/c/foo.exe");
+	std::exit(1);
+	*/
+
+
 	jobsys::telemetryEnabled = true;
 	jobsys::init(threads);
 	framepool::Init();
@@ -152,7 +167,7 @@ auto WINAPI WinMain(HINSTANCE hInst, HINSTANCE h0 [[maybe_unused]], LPSTR lpCmdL
 		return 0;}
 
 	PartialAppConfig config;
-	config.nice = true;
+	config.idlePolicy = IdlePolicy::Sleep;
 	config.fullScreen = wants.fullScreen;
 	int threads = LevelToThreads(config.concurrency.value_or(0));
 	jobsys::init(threads);

@@ -27,14 +27,14 @@ namespace rglv {
 using std::cout;
 using std::endl;
 
-void MeshStore::LoadDir(const std::string& prefix) {
+void MeshStore::LoadDir(const std::string& dir) {
 
 	const std::string spec = "*.obj";
 
-	for (auto& fn : rcls::FindGlob(prefix + spec)) {
+	for (auto& fn : rcls::FindGlob(rcls::JoinPath(dir, spec))) {
 		// cout << "loading mesh [" << prefix << "][" << fn << "]" << endl;
-		auto tmp_mesh = rglv::LoadOBJ(prefix, fn);
-		store_.push_back(tmp_mesh); }}
+		auto mesh = rglv::LoadOBJ(rcls::JoinPath(dir, fn));
+		store_.push_back(mesh); }}
 
 
 }  // namespace rglv

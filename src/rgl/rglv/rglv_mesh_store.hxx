@@ -22,7 +22,7 @@ public:
 		throw std::exception("mesh not found"); }
 
 	void Print() const;
-	void LoadDir(const std::string& prefix); };
+	void LoadDir(const std::string& dir); };
 
 
 }  // namespace rglv
