@@ -163,8 +163,9 @@ constexpr std::array<uint8_t, 3047> profontpng = { {
 
 std::vector<uint8_t> bitmap;
 
-std::array<uint8_t*, 256> charptr;
+std::array<uint8_t*, 128> charptr;
 
+// image contains 32x3 matrix of glyphs
 constexpr std::array<std::string_view, 3> charmap = { {
 	R"( !"#$%&'()*+,-./0123456789:;<=>?)",
 	R"(@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_)",
@@ -179,8 +180,6 @@ struct init { init() {
 	// convert black-on-white truecolor
 	// to 0xff=foreground, 0=background
 	bitmap.resize(image.size()/4);
-	// fmt::print("profont binary image is {} bytes", bitmap.size());
-	// std::exit(1);
 	for (std::size_t i = 0; i < image.size()/4; ++i) {
 		bitmap[i] = (image[i*4] == 0xff ? 0 : 0xff); }
 
@@ -191,9 +190,10 @@ struct init { init() {
 	for (int y = 0; y < 3; ++y) {
 		for (int x = 0, siz=int(charmap[0].size()); x < siz; ++x) {
 			char ch = charmap[y][x];
-			auto coordInChars = rmlv::ivec2(x, y);
-			auto coordInPx = coordInChars * kGlyphDimInPx;
-			charptr[ch] = &bitmap[coordInPx.y*kBitmapStride + coordInPx.x]; }}
+			if (0 <= ch && ch <= 127) {
+				auto coordInChars = rmlv::ivec2(x, y);
+				auto coordInPx = coordInChars * kGlyphDimInPx;
+				charptr[ch] = &bitmap[coordInPx.y*kBitmapStride + coordInPx.x]; }}}
 
 	} } init;
 
@@ -209,7 +209,12 @@ void ProPrinter::Write(rmlv::ivec2 coord, char ch) {
 	left = left < 0 ? canvas_.width() + left : left;
 	top = top < 0 ? canvas_.height() + top : top;
 
-	const auto* src = charptr[uint8_t(ch)];
+	const uint8_t* src;
+	if (0 <= ch && ch <= 127) {
+		src = charptr[ch]; }
+	else {
+		src = bitmap.data(); }
+
 	PixelToaster::TrueColorPixel* dst = &canvas_.data()[top * canvas_.stride()];
 	for (int y = 0; y < kGlyphDimInPx.y; ++y) {
 		for (int x = 0; x < kGlyphDimInPx.x; ++x) {

@@ -12,8 +12,13 @@ OWD=$(pwd)
 
 #mkdir -p "$TMP"/$(dirname "$RC_FILE")"
 cp $RC_FILE $TMP/bazel.rc
-mkdir -p "$TMP/$(dirname "$HEADER_FILE")"
-cp $HEADER_FILE $TMP/$HEADER_FILE
+
+# use this if .rc file includes e.g. "src/foo/bar/resource.h"
+#mkdir -p "$TMP/$(dirname "$HEADER_FILE")"
+#cp $HEADER_FILE $TMP/$HEADER_FILE
+
+# use this if .rc and resource.h are in same dir (makes vs happy)
+cp $HEADER_FILE $TMP/$(basename "$HEADER_FILE")
 
 
 # Create the batch file that sets up the VC environment and runs the Resource
