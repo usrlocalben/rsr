@@ -1,10 +1,3 @@
-#include <atomic>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <string_view>
-#include <tuple>
-
 #include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
@@ -20,14 +13,21 @@
 #include "src/viewer/node/i_layer.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <atomic>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <tuple>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
-
 namespace jobsys = rclmt::jobsys;
 
 class Impl : public ILayer {
+
 	std::vector<IGl*> gls_{};
 	ICamera* cameraNode_{nullptr};
 	IValue* colorNode_{nullptr};
@@ -96,7 +96,7 @@ public:
 			jobsys::run(doneJob); }}
 
 	static
-	void AllThen(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+	void AllThen(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
 		if (--counter != 0) {
@@ -195,7 +195,7 @@ protected:
 				AddDep(gl); } }}
 
 private:
-	rclmt::jobsys::Job* Post() {
+	auto Post() -> jobsys::Job* {
 		return rclmt::jobsys::make_job(Impl::PostJmp, std::tuple{this}); }
 	static void PostJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto& [self] = *data;
@@ -208,7 +208,6 @@ private:
 			if (enableNode_->Eval(enableSlot_).as_float() < 1.0F) {
 				enabled = false; }}
 		return enabled; } };
-
 
 
 class Compiler final : public NodeCompiler {
@@ -229,5 +228,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

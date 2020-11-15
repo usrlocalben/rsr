@@ -1,7 +1,3 @@
-#include <iostream>
-#include <string_view>
-#include <utility>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
@@ -12,17 +8,29 @@
 #include "src/viewer/node/i_gpu.hxx"
 #include "src/viewer/node/i_texture.hxx"
 
-namespace rqdq {
+#include <iostream>
+#include <string_view>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 class Impl : public ITexture {
+
+	rglr::Texture outputTexture_;
+	rglr::FloatingPointCanvas outCanvas_;
+
+	// inputs
+	IGPU* gpuNode_{nullptr};
+
 public:
 	Impl(std::string_view id, InputList inputs) :
 		ITexture(id, std::move(inputs)) {}
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "gpu") {
 			gpuNode_ = dynamic_cast<IGPU*>(other);
 			if (gpuNode_ == nullptr) {
@@ -39,7 +47,7 @@ public:
 		ITexture::AddDeps();
 		AddDep(gpuNode_); }
 
-	bool IsValid() override {
+	auto IsValid() -> bool override {
 		if (gpuNode_ == nullptr) {
 			std::cerr << "RenderToTexture(" << get_id() << ") has no gpu" << std::endl;
 			return false; }
@@ -49,9 +57,9 @@ public:
 		gpuNode_->AddLink(AfterAll(Render()));
 		gpuNode_->Run(); }
 
-	rclmt::jobsys::Job* Render() {
-		return rclmt::jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
-	static void RenderJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
+	auto Render() -> jobsys::Job* {
+		return jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
+	static void RenderJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
@@ -74,27 +82,21 @@ public:
 
 		ic.Finish();
 		auto renderJob = gpuNode_->Render();
-		rclmt::jobsys::add_link(renderJob, PostProcess());
-		rclmt::jobsys::run(renderJob); }
+		jobsys::add_link(renderJob, PostProcess());
+		jobsys::run(renderJob); }
 
-	rclmt::jobsys::Job* PostProcess() {
-		return rclmt::jobsys::make_job(Impl::PostProcessJmp, std::tuple{this}); }
-	static void PostProcessJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
+	auto PostProcess() -> jobsys::Job* {
+		return jobsys::make_job(Impl::PostProcessJmp, std::tuple{this}); }
+	static void PostProcessJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto&[self] = *data;
 		self->PostProcessImpl(); }
 	void PostProcessImpl() {
 		outputTexture_.maybe_make_mipmap();
 		RunLinks(); }
 
-	const rglr::Texture& GetTexture() override {
-		return outputTexture_; }
-
-private:
-	rglr::Texture outputTexture_;
-	rglr::FloatingPointCanvas outCanvas_;
-
-	// inputs
-	IGPU* gpuNode_{nullptr}; };
+	// -- ITexture --
+	auto GetTexture() -> const rglr::Texture& override {
+		return outputTexture_; }};
 
 
 class Compiler final : public NodeCompiler {
@@ -108,5 +110,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

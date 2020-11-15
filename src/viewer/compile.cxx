@@ -1,5 +1,10 @@
 #include "compile.hxx"
 
+#include "src/rcl/rclt/rclt_util.hxx"
+#include "src/rcl/rclx/rclx_gason_util.hxx"
+#include "src/rgl/rglv/rglv_mesh_store.hxx"
+#include "src/viewer/node/base.hxx"
+
 #include <cassert>
 #include <map>
 #include <memory>
@@ -8,11 +13,6 @@
 #include <tuple>
 #include <variant>
 #include <vector>
-
-#include "src/rcl/rclt/rclt_util.hxx"
-#include "src/rcl/rclx/rclx_gason_util.hxx"
-#include "src/rgl/rglv/rglv_mesh_store.hxx"
-#include "src/viewer/node/base.hxx"
 
 #include <fmt/printf.h>
 #include "3rdparty/gason/gason.h"
@@ -26,7 +26,6 @@ int idGen{0};
 
 namespace rqv {
 
-using namespace std::string_literals;
 using namespace std;
 using namespace rclx;
 using namespace rmlv;
@@ -50,11 +49,9 @@ void NodeRegistry::Register(std::string_view jsonName, FactoryFunc factoryFunc) 
 
 
 auto NodeRegistry::Get(std::string_view jsonName) -> FactoryFunc {
-	static std::string key;
+	static std::string key; // XXX not threadsafe
 	key.assign(jsonName);  // XXX yuck!
-	if (auto found = db_.find(key); found != end(db_)) {
-		return found->second; }
-	return {}; }
+	return Get(key); }
 
 
 auto NodeRegistry::Get(const std::string& jsonName) -> FactoryFunc {
@@ -131,7 +128,7 @@ auto IdentifyNode(JsonValue data) -> optional<tuple<NodeRegistry::FactoryFunc, J
 					else {
 						guid = fmt::sprintf("__auto%d__", idGen++); }
 					// std::cerr << "IdentifyNode id=\"" << guid << "\"\n";
-					return std::tuple{ compilerFactory, node->value, guid }; }}
+					return std::tuple{ compilerFactory, node->value, move(guid) }; }}
 			else {
 				std::cerr << "not registered: " << node->key << "\n"; }}}
 	return {};}
@@ -161,17 +158,16 @@ auto CompileDocument(const JsonValue root, const rglv::MeshStore& meshStore) -> 
 			std::cerr << "error deserializing json item\n";
 			success = false; }}
 
-	return tuple{success, nodes}; }
+	return tuple{success, move(nodes)}; }
 
 
 auto Link(NodeList& nodes) -> bool {
 	unordered_map<string, int> byId;
 
 	// index by id, check for duplicates
-	std::string nodeId;
 	for (int idx=0; idx<int(nodes.size()); idx++) {
 		// std::cerr << "  " << nodes[idx]->get_id() << "\n";
-		nodeId.assign(nodes[idx]->get_id());  // xxx yuck
+		auto& nodeId = nodes[idx]->get_id();
 		if (auto existing = byId.find(nodeId); existing != end(byId)) {
 			std::cerr << "error: node id \"" << nodeId << "\" not unique\n";
 			return false; }
@@ -184,11 +180,13 @@ auto Link(NodeList& nodes) -> bool {
 			// cerr << "node(" << node->name << ") will get input \"" << destAttr << "\" from " << depNodeRef << endl;
 
 			// deserialize reference
+			// XXX reuse strings or use pmr
+			// XXX most common case is no-slot/default
 			string depId;
 			string depSlot;
 			auto parts = Split(depNodeRef, ':');
 			if (parts.size() == 1) {
-				depId = parts[0];  depSlot = "default"s; }
+				depId = parts[0];  depSlot = "default"; }
 			else {
 				depId = parts[0];  depSlot = parts[1]; }
 

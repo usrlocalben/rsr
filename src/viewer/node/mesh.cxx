@@ -1,9 +1,3 @@
-#include <memory>
-#include <mutex>
-#include <string>
-#include <string_view>
-#include <utility>
-
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
@@ -15,10 +9,17 @@
 #include "src/viewer/node/i_gl.hxx"
 #include "src/viewer/node/i_material.hxx"
 
-namespace rqdq {
+#include <memory>
+#include <mutex>
+#include <string>
+#include <string_view>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 class Impl final : public IGl {
 
@@ -129,5 +130,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

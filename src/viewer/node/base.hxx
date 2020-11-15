@@ -36,7 +36,7 @@ public:
 
 	void AddLink(rclmt::jobsys::Job *after);
 	void Run();
-	auto get_id() -> std::string_view;
+	auto get_id() -> const std::string&;
 
 	static void DecrJob(rclmt::jobsys::Job* job, unsigned tid, std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data);
 	auto AfterAll(rclmt::jobsys::Job* job) -> rclmt::jobsys::Job*;
@@ -71,7 +71,7 @@ void ComputeIndegreesFrom(NodeBase *node, int d=0);
 // ============================================================================
 
 inline
-auto NodeBase::get_id() -> std::string_view {
+auto NodeBase::get_id() -> const std::string& {
 	return id_; }
 
 inline

@@ -1,8 +1,3 @@
-#include <iostream>
-#include <memory>
-#include <mutex>
-#include <string_view>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
@@ -18,11 +13,15 @@
 #include "src/viewer/node/i_particles.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <iostream>
+#include <memory>
+#include <mutex>
+#include <string_view>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
-
 namespace jobsys = rclmt::jobsys;
 
 template<int EXP>
@@ -297,9 +296,7 @@ private:
 		return itof(i-rmlv::mvec4i{half_}) / float(dim_) * scale_; }
 
 	auto DstRow(int y, int z) -> float* {
-		return &cloud_[y*dim_*dim_ + z*dim_]; }
-
-	};
+		return &cloud_[y*dim_*dim_ + z*dim_]; } };
 
 
 class Compiler final : public NodeCompiler {
@@ -342,8 +339,8 @@ struct init { init() {
 	NodeRegistry::GetInstance().Register("$mc2", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
-}  // namespace
-}  // namespace rqdq
+
+}  // close unnamed namespace
 
 /*
 

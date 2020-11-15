@@ -1,11 +1,3 @@
-#include <atomic>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <tuple>
-#include <utility>
-#include <vector>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
@@ -18,13 +10,19 @@
 #include "src/viewer/node/i_value.hxx"
 #include "src/viewer/shaders.hxx"
 
-namespace rqdq {
+#include <atomic>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
-
 namespace jobsys = rclmt::jobsys;
-
 
 class GPUNode : public IGPU {
 
@@ -57,7 +55,7 @@ public:
 		aa_(aa) {
 		rqdq::rqv::Install(gpu_); }
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "layer") {
 			auto tmp = dynamic_cast<ILayer*>(other);
 			if (tmp == nullptr) {
@@ -147,9 +145,9 @@ public:
 			for (auto layer : layers_) {
 				layer->Run(); } }}
 
-	rclmt::jobsys::Job* Draw() {
-		return rclmt::jobsys::make_job(GPUNode::DrawJmp, std::tuple{this}); }
-	static void DrawJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<GPUNode*>* data) {
+	auto Draw() -> jobsys::Job* {
+		return jobsys::make_job(GPUNode::DrawJmp, std::tuple{this}); }
+	static void DrawJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<GPUNode*>* data) {
 		auto& [self] = *data;
 		self->DrawImpl(); }
 	void DrawImpl() {
@@ -162,33 +160,34 @@ public:
 			layer->Render(1, &gpu_.IC(), targetSizeInPx_, aspect_); }
 		jobsys::run(postJob); }
 
-	static void AllThen(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+	static
+	void AllThen(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
 		if (--counter != 0) {
 			return; }
 		jobsys::run(link); }
 
-	rclmt::jobsys::Job* Post() {
-		return rclmt::jobsys::make_job(GPUNode::PostJmp, std::tuple{this}); }
-	static void PostJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<GPUNode*>* data) {
+	auto Post() -> jobsys::Job* {
+		return jobsys::make_job(GPUNode::PostJmp, std::tuple{this}); }
+	static void PostJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<GPUNode*>* data) {
 		auto& [self] = *data;
 		self->Post(); }
 	void PostImpl() {}
 
-	rglv::GL& IC() override {
+	auto IC() -> rglv::GL& override {
 		return gpu_.IC(); }
 
-	rclmt::jobsys::Job* Render() override {
+	auto Render() -> jobsys::Job* override {
 		return gpu_.Run(); }
 
 	/**
 	 * only valid after Main()!
 	 */
-	rmlv::ivec2 GetTargetSize() const override {
+	auto GetTargetSize() const -> rmlv::ivec2 override {
 		return targetSizeInPx_; }
 
-	bool GetAA() const override {
+	auto GetAA() const -> bool override {
 		return aa_; }};
 
 
@@ -216,5 +215,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

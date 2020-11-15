@@ -1,9 +1,3 @@
-#include <memory>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglr/rglr_texture.hxx"
@@ -15,11 +9,16 @@
 #include "src/viewer/node/i_value.hxx"
 #include "src/viewer/shaders.hxx"
 
-namespace rqdq {
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
-
 namespace jobsys = rclmt::jobsys;
 
 class Impl : public IMaterial {
@@ -149,6 +148,5 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace
 

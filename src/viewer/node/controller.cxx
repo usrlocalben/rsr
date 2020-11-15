@@ -1,10 +1,3 @@
-#include <iostream>
-#include <vector>
-#include <string>
-#include <string_view>
-#include <memory>
-#include <mutex>
-
 #include "src/rcl/rclt/rclt_util.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
@@ -12,11 +5,18 @@
 #include "src/viewer/node/i_value.hxx"
 #include "src/viewer/node/i_controller.hxx"
 
+#include <iostream>
+#include <vector>
+#include <string>
+#include <string_view>
+#include <memory>
+#include <mutex>
+
 #include "3rdparty/lua/lua.hpp"
 
-namespace rqdq {
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
 using vec2 = rmlv::vec2;
 using vec3 = rmlv::vec3;
@@ -150,5 +150,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

@@ -1,4 +1,8 @@
 #pragma once
+#include "src/rcl/rclx/rclx_gason_util.hxx"
+#include "src/rgl/rglv/rglv_mesh_store.hxx"
+#include "src/viewer/node/base.hxx"
+
 #include <functional>
 #include <memory>
 #include <optional>
@@ -7,10 +11,6 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
-
-#include "src/rcl/rclx/rclx_gason_util.hxx"
-#include "src/rgl/rglv/rglv_mesh_store.hxx"
-#include "src/viewer/node/base.hxx"
 
 #include "3rdparty/gason/gason.h"
 

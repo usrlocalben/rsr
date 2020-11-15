@@ -1,20 +1,16 @@
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 
-#include <optional>
-#include <string>
-#include <string_view>
-#include <variant>
-
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
-#include "3rdparty/gason/gason.h"
+#include <optional>
+#include <string_view>
 
-using namespace std::string_literals;
+#include "3rdparty/gason/gason.h"
 
 namespace rqdq {
 namespace rclx {
 
-std::optional<JsonValue> jv_find(const JsonValue& data, std::string_view key, int tag) {
+auto jv_find(const JsonValue& data, std::string_view key, int tag) -> std::optional<JsonValue> {
 	for (const auto& item : data) {
 		if (key == item->key) {
 			if (tag == -1 || item->value.getTag() == tag) {
@@ -25,13 +21,13 @@ std::optional<JsonValue> jv_find(const JsonValue& data, std::string_view key, in
 /**
  * {"$vec3": [nbr, nbr, nbr]} -> vec3{nbr, nbr, nbr}
  */
-std::optional<rmlv::vec3> jv_decode_vec3(const JsonValue& data) {
+auto jv_decode_vec3(const JsonValue& data) -> std::optional<rmlv::vec3> {
 	// a vec3 is
 	if (data.getTag() == JSON_OBJECT) {
 		// an object
 		if (auto node = data.toNode(); node) {
 			// with its first key/value pair
-			if ("$vec3"s == node->key) {
+			if (std::string_view{"$vec3"} == node->key) {
 				// having a key of "$vec3"
 				if (auto arr = node->value; arr.getTag() == JSON_ARRAY) {
 					// and a value that is an array
@@ -47,7 +43,8 @@ std::optional<rmlv::vec3> jv_decode_vec3(const JsonValue& data) {
 	return {}; }
 
 
-std::variant<std::monostate, std::string, rmlv::vec3> jv_decode_ref_or_vec3(const JsonValue& data) {
+/*
+auto jv_decode_ref_or_vec3(const JsonValue& data) -> std::variant<std::monostate, std::string, rmlv::vec3> {
 	switch (data.getTag()) {
 	case JSON_STRING:
 		return data.toString();
@@ -56,7 +53,7 @@ std::variant<std::monostate, std::string, rmlv::vec3> jv_decode_ref_or_vec3(cons
 			return *value; }
 	default: break; }
 	return {}; }
-
+*/
 
 }  // namespace rclx
 }  // namespace rqdq

@@ -1,8 +1,3 @@
-#include <iostream>
-#include <string_view>
-#include <tuple>
-#include <utility>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
@@ -14,17 +9,38 @@
 #include "src/viewer/node/i_value.hxx"
 #include "src/viewer/shaders.hxx"
 
-namespace rqdq {
+#include <iostream>
+#include <string_view>
+#include <tuple>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 class Impl : public IOutput {
-public:
-	Impl(std::string_view id, InputList inputs, int programId, bool sRGB)
-		:IOutput(id, std::move(inputs)), programId_(programId), sRGB_(sRGB) {}
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	// static config
+	int programId_;
+	bool sRGB_;
+
+	// runtime config
+	rglr::TrueColorCanvas* outCanvas_{nullptr};
+
+	// inputs
+	IGPU* gpuNode_{nullptr};
+	IValue* uf0Node_{nullptr};
+	std::string uf0Slot_{"default"};
+
+public:
+	Impl(std::string_view id, InputList inputs, int programId, bool sRGB) :
+		IOutput(id, std::move(inputs)),
+		programId_(programId),
+		sRGB_(sRGB) {}
+
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "gpu") {
 			gpuNode_ = dynamic_cast<IGPU*>(other);
 			if (gpuNode_ == nullptr) {
@@ -53,7 +69,7 @@ public:
 		IOutput::Reset();
 		outCanvas_ = nullptr; }
 
-	bool IsValid() override {
+	auto IsValid() -> bool override {
 		if (outCanvas_ == nullptr) {
 			std::cerr << "truecolor(" << get_id() << ") has no output set" << std::endl;
 			return false; }
@@ -66,9 +82,9 @@ public:
 		gpuNode_->AddLink(AfterAll(Render()));
 		gpuNode_->Run(); }
 
-	rclmt::jobsys::Job* Render() override {
-		return rclmt::jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
-	static void RenderJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
+	auto Render() -> jobsys::Job* override {
+		return jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
+	static void RenderJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
@@ -89,23 +105,10 @@ public:
 		ic.Finish();
 		auto renderJob = gpuNode_->Render();
 		AddLinksTo(renderJob);
-		rclmt::jobsys::run(renderJob); }
+		jobsys::run(renderJob); }
 
 	void SetOutputCanvas(rglr::TrueColorCanvas* canvas) override {
-		outCanvas_ = canvas; }
-
-private:
-	// static config
-	int programId_;
-	bool sRGB_;
-
-	// runtime config
-	rglr::TrueColorCanvas* outCanvas_{nullptr};
-
-	// inputs
-	IGPU* gpuNode_{nullptr};
-	IValue* uf0Node_{nullptr};
-	std::string uf0Slot_{"default"}; };
+		outCanvas_ = canvas; } };
 
 
 class Compiler final : public NodeCompiler {
@@ -129,5 +132,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

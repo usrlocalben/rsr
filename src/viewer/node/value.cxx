@@ -1,17 +1,18 @@
-#include <memory>
-#include <stdexcept>
-#include <string_view>
-
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 #include "src/viewer/compile.hxx"
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <memory>
+#include <stdexcept>
+#include <string_view>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 class StringNode : public IValue {
 	std::string value_{};
@@ -25,18 +26,24 @@ public:
 
 
 class FloatNode : public IValue {
-public:
-	FloatNode(std::string_view id, InputList inputs, float value)
-		:IValue(id, std::move(inputs)), value_(value) {}
 
-	NamedValue Eval(std::string_view name) override {
+	float value_{};
+	IValue* xNode_{nullptr};
+	std::string xSlot_{};
+
+public:
+	FloatNode(std::string_view id, InputList inputs, float value) :
+		IValue(id, std::move(inputs)),
+		value_(value) {}
+
+	auto Eval(std::string_view name) -> NamedValue override {
 		thread_local std::string tmp;
 		tmp.assign(name);
 		float value = value_;
 		if (xNode_ != nullptr) { value = xNode_->Eval(xSlot_).as_float(); }
 		return NamedValue{ value }; }
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "x") {
 			xNode_ = dynamic_cast<IValue*>(other);
 			xSlot_ = slot;
@@ -52,20 +59,23 @@ public:
 
 protected:
 	void AddDeps() override {
-		IValue::AddDeps(); }
-
-private:
-	float value_{};
-	IValue* xNode_{nullptr};
-	std::string xSlot_{}; };
+		IValue::AddDeps(); }};
 
 
 class Vec2Node : public IValue {
-public:
-	Vec2Node(std::string_view id, InputList inputs, rmlv::vec2 value)
-		:IValue(id, std::move(inputs)), value_(value) {}
 
-	NamedValue Eval(std::string_view name) override {
+	rmlv::vec2 value_{};
+	IValue* xNode_{nullptr};
+	IValue* yNode_{nullptr};
+	std::string xSlot_{};
+	std::string ySlot_{}; 
+
+public:
+	Vec2Node(std::string_view id, InputList inputs, rmlv::vec2 value) :
+		IValue(id, std::move(inputs)),
+		value_(value) {}
+
+	auto Eval(std::string_view name) -> NamedValue override {
 		rmlv::vec2 value = value_;
 		if (xNode_ != nullptr) { value.x = xNode_->Eval(xSlot_).as_float(); }
 		if (yNode_ != nullptr) { value.y = yNode_->Eval(ySlot_).as_float(); }
@@ -73,7 +83,7 @@ public:
 		if (name == "y") { return NamedValue{ value.y }; }
 		return NamedValue{ value }; }
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "x") {
 			xNode_ = dynamic_cast<IValue*>(other);
 			xSlot_ = slot;
@@ -95,25 +105,26 @@ public:
 		xNode_ = nullptr;
 		yNode_ = nullptr; }
 
-
 protected:
 	void AddDeps() override {
-		IValue::AddDeps(); }
-
-private:
-	rmlv::vec2 value_{};
-	IValue* xNode_{nullptr};
-	IValue* yNode_{nullptr};
-	std::string xSlot_{};
-	std::string ySlot_{}; };
+		IValue::AddDeps(); }};
 
 
 class Vec3Node : public IValue {
-public:
-	Vec3Node(std::string_view id, InputList inputs, rmlv::vec3 value)
-		:IValue(id, std::move(inputs)), value_(value) {}
+	rmlv::vec3 value_;
+	IValue* xNode_{nullptr};
+	IValue* yNode_{nullptr};
+	IValue* zNode_{nullptr};
+	std::string xSlot_{};
+	std::string ySlot_{};
+	std::string zSlot_{};
 
-	NamedValue Eval(std::string_view name) override {
+public:
+	Vec3Node(std::string_view id, InputList inputs, rmlv::vec3 value) :
+		IValue(id, std::move(inputs)),
+		value_(value) {}
+
+	auto Eval(std::string_view name) -> NamedValue override {
 		rmlv::vec3 value = value_;
 		if (xNode_ != nullptr) { value.x = xNode_->Eval(xSlot_).as_float(); }
 		if (yNode_ != nullptr) { value.y = yNode_->Eval(ySlot_).as_float(); }
@@ -124,7 +135,7 @@ public:
 		if (name == "xy") { return NamedValue{ value.xy() }; }
 		return NamedValue{ value }; }
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "x") {
 			xNode_ = dynamic_cast<IValue*>(other);
 			xSlot_ = slot;
@@ -156,16 +167,7 @@ public:
 
 protected:
 	void AddDeps() override {
-		IValue::AddDeps(); }
-
-private:
-	rmlv::vec3 value_;
-	IValue* xNode_{nullptr};
-	IValue* yNode_{nullptr};
-	IValue* zNode_{nullptr};
-	std::string xSlot_{};
-	std::string ySlot_{};
-	std::string zSlot_{}; };
+		IValue::AddDeps(); }};
 
 
 class StringCompiler final : public NodeCompiler {
@@ -240,5 +242,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

@@ -1,10 +1,3 @@
-#include <array>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <string_view>
-#include <utility>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
@@ -20,10 +13,18 @@
 #include "src/viewer/node/i_value.hxx"
 #include "src/viewer/shaders.hxx"
 
-namespace rqdq {
+#include <array>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <string_view>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 class Impl : public IGl {
 	rglv::VertexArray_F3F3F3 vbo_;
@@ -77,10 +78,9 @@ public:
 		AddDep(materialNode_); }
 
 	void Main() override {
-		using namespace rclmt::jobsys;
 		using rmlv::ivec2, rmlv::vec3;
 
-		Job* postSetup = make_job(noop);
+		jobsys::Job* postSetup = jobsys::make_job(jobsys::noop);
 		AddLinksTo(postSetup);
 		materialNode_->AddLink(postSetup);
 		materialNode_->Run();}
@@ -220,5 +220,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

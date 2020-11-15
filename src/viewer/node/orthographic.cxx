@@ -1,18 +1,20 @@
-#include <memory>
-#include <utility>
-
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
 #include "src/viewer/compile.hxx"
 #include "src/viewer/node/i_camera.hxx"
 
-namespace rqdq {
+#include <memory>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 class Impl final : public ICamera {
+
 	const rmlm::mat4 m_;
 
 public:
@@ -47,5 +49,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

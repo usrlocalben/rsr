@@ -1,8 +1,3 @@
-#include <iostream>
-#include <memory>
-#include <mutex>
-#include <string_view>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
@@ -15,10 +10,16 @@
 #include "src/viewer/node/i_material.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <iostream>
+#include <memory>
+#include <mutex>
+#include <string_view>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 
 inline float sdSphere(const rmlv::vec3& pos, const float r) {
@@ -104,6 +105,27 @@ private:
 
 
 class Impl final : public IGl {
+
+	Surface field_;
+
+	std::array<std::vector<rglv::VertexArray_F3F3F3>, 3> buffers_;
+	std::array<std::atomic<int>, 3> bufferEnd_{ 0, 0, 0 };
+	std::atomic<int> activeBuffer_{0};
+	std::mutex bufferMutex_{};
+
+	BlockDivider blockDivider_{};
+
+	// config
+	rglr::Texture envmap_;
+	int precision_;
+	int forkDepth_;
+	float range_;
+
+	// connections
+	IMaterial* materialNode_{nullptr};
+	IValue* frobNode_{nullptr};
+	std::string frobSlot_;
+
 public:
 	Impl(std::string_view id, InputList inputs, int precision, int forkDepth, float range) :
 		NodeBase(id, std::move(inputs)),
@@ -138,7 +160,6 @@ public:
 
 	void Main() override {
 		using rmlv::vec3;
-		namespace jobsys = rclmt::jobsys;
 
 		SwapBuffers();
 
@@ -227,19 +248,19 @@ private:
 		vao.clear();
 		return vao; }
 
-	rclmt::jobsys::Job* Finalize() {
-		return rclmt::jobsys::make_job(Impl::FinalizeJmp, std::tuple{this}); }
-	static void FinalizeJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
+	jobsys::Job* Finalize() {
+		return jobsys::make_job(Impl::FinalizeJmp, std::tuple{this}); }
+	static void FinalizeJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto&[self] = *data;
 		self->FinalizeImpl(); }
 	void FinalizeImpl() {
 		RunLinks(); }
 
-	rclmt::jobsys::Job* Resolve(AABB block, int dim, rclmt::jobsys::Job* parent = nullptr) {
+	jobsys::Job* Resolve(AABB block, int dim, jobsys::Job* parent = nullptr) {
 		if (parent != nullptr) {
-			return rclmt::jobsys::make_job_as_child(parent, Impl::ResolveJmp, std::tuple{this, block, dim}); }
-		return rclmt::jobsys::make_job(Impl::ResolveJmp, std::tuple{this, block, dim}); }
-	static void ResolveJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*, AABB, int>* data) {
+			return jobsys::make_job_as_child(parent, Impl::ResolveJmp, std::tuple{this, block, dim}); }
+		return jobsys::make_job(Impl::ResolveJmp, std::tuple{this, block, dim}); }
+	static void ResolveJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*, AABB, int>* data) {
 		auto&[self, block, dim] = *data;
 		self->ResolveImpl(block, dim);}
 	void ResolveImpl(AABB block, int dim) {
@@ -307,28 +328,7 @@ private:
 
 					cell.value[7] = buf[top][(iz+1)*stride + ix];
 					cell.pos[7] = vec3{ origin.x,         origin.y + delta, origin.z + delta };
-					rglv::march_sdf_vao(vao, delta, cell, field_); }}}}
-
-private:
-	Surface field_;
-
-	std::array<std::vector<rglv::VertexArray_F3F3F3>, 3> buffers_;
-	std::array<std::atomic<int>, 3> bufferEnd_{ 0, 0, 0 };
-	std::atomic<int> activeBuffer_{0};
-	std::mutex bufferMutex_{};
-
-	BlockDivider blockDivider_{};
-
-	// config
-	rglr::Texture envmap_;
-	int precision_;
-	int forkDepth_;
-	float range_;
-
-	// connections
-	IMaterial* materialNode_{nullptr};
-	IValue* frobNode_{nullptr};
-	std::string frobSlot_; };
+					rglv::march_sdf_vao(vao, delta, cell, field_); }}}}};
 
 
 class Compiler final : public NodeCompiler {
@@ -366,5 +366,4 @@ struct init { init() {
 	NodeRegistry::GetInstance().Register("$mc", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

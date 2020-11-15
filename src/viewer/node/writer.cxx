@@ -1,10 +1,4 @@
-#include <memory>
-#include <mutex>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <unordered_map>
-
+#include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rcl/rclt/rclt_util.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
@@ -19,10 +13,18 @@
 #include "src/viewer/node/i_material.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <memory>
+#include <mutex>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <unordered_map>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 struct FontInfo {
 	int height;
@@ -94,11 +96,11 @@ public:
 		materialNode_->Run(); }
 
 private:
-	rclmt::jobsys::Job* Compute(rclmt::jobsys::Job* parent = nullptr) {
+	auto Compute(jobsys::Job* parent = nullptr) -> jobsys::Job* {
 		if (parent != nullptr) {
-			return rclmt::jobsys::make_job_as_child(parent, Impl::ComputeJmp, std::tuple{this}); }
-		return rclmt::jobsys::make_job(Impl::ComputeJmp, std::tuple{this}); }
-	static void ComputeJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
+			return jobsys::make_job_as_child(parent, Impl::ComputeJmp, std::tuple{this}); }
+		return jobsys::make_job(Impl::ComputeJmp, std::tuple{this}); }
+	static void ComputeJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto&[self] = *data;
 		self->ComputeImpl(); }
 	void ComputeImpl() {
@@ -239,5 +241,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

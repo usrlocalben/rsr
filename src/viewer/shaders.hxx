@@ -1,8 +1,4 @@
 #pragma once
-#include <array>
-#include <cassert>
-#include <string_view>
-
 #include "src/rgl/rglv/rglv_fragment.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
 #include "src/rgl/rglv/rglv_gpu_protocol.hxx"
@@ -15,6 +11,10 @@
 #include "src/rml/rmlm/rmlm_soa.hxx"
 #include "src/rml/rmlv/rmlv_soa.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
+
+#include <array>
+#include <cassert>
+#include <string_view>
 
 #define gl_ModelViewMatrix mats.vm
 #define gl_ModelViewProjectionMatrix mats.vpm

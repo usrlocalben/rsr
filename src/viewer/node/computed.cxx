@@ -1,20 +1,20 @@
-#include <iostream>
-#include <vector>
-#include <string>
-#include <string_view>
-#include <memory>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 #include "src/viewer/compile.hxx"
 #include "src/viewer/node/i_value.hxx"
 
+#include <iostream>
+#include <vector>
+#include <string>
+#include <string_view>
+#include <memory>
+
 #include "3rdparty/exprtk/exprtk.hpp"
 
-namespace rqdq {
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
 namespace jobsys = rclmt::jobsys;
 using vec2 = rmlv::vec2;
@@ -46,11 +46,15 @@ struct ComputedNodeState {
  * vec3 computed using exprTk, with inputs from other nodes
  */
 class ComputedVec3Node : public IValue {
+
+	std::vector<std::unique_ptr<ComputedNodeState>> state_pt_;
+	std::vector<std::unordered_map<std::string, NamedValue>> cache_pt_;
+
 public:
 	using VarDefList = std::vector<std::pair<std::string, std::string>>;
 
-	ComputedVec3Node(std::string_view id, InputList inputs, std::string code, VarDefList varDefs)
-		:IValue(id, std::move(inputs)) {
+	ComputedVec3Node(std::string_view id, InputList inputs, std::string code, VarDefList varDefs) :
+		IValue(id, std::move(inputs)) {
 
 		// initialize a ComputedNodeState for each thread
 		for (int threadNum=0; threadNum<jobsys::numThreads; threadNum++) {
@@ -97,7 +101,7 @@ public:
 			state_pt_.push_back(move(td)); }}
 
 	// NodeBase
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		bool connected = false;
 		// apply the same connections for all threads
 		for (auto& td : state_pt_) {
@@ -124,7 +128,7 @@ public:
 			cache.clear(); }}
 
 	// IValue
-	NamedValue Eval(std::string_view name) override {
+	auto Eval(std::string_view name) -> NamedValue override {
 		rmlv::vec3 result;
 		auto& td = state_pt_[jobsys::threadId];
 		auto& cache = cache_pt_[jobsys::threadId];
@@ -189,11 +193,7 @@ public:
 		else {
 			out = NamedValue{ result }; };
 		cache[cacheKey] = out;
-		return out; }
-
-private:
-	std::vector<std::unique_ptr<ComputedNodeState>> state_pt_;
-	std::vector<std::unordered_map<std::string, NamedValue>> cache_pt_; };
+		return out; } };
 
 
 class Compiler final : public NodeCompiler {
@@ -224,5 +224,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

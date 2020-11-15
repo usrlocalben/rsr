@@ -1,4 +1,5 @@
 #pragma once
+
 #include <array>
 
 #include "3rdparty/pixeltoaster/PixelToaster.h"

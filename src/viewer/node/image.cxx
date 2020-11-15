@@ -1,9 +1,3 @@
-#include <memory>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglr/rglr_texture.hxx"
 #include "src/rgl/rglr/rglr_texture_load.hxx"
@@ -11,21 +5,29 @@
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/i_texture.hxx"
 
-namespace rqdq {
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 class Impl final : public ITexture {
+	const rglr::Texture texture_;
+
 public:
-	Impl(std::string_view id, InputList inputs, rglr::Texture texture)
-		:ITexture(id, std::move(inputs)), texture_(std::move(texture)) {}
+	Impl(std::string_view id, InputList inputs, rglr::Texture texture) :
+		ITexture(id, std::move(inputs)),
+		texture_(std::move(texture)) {}
 
-	const rglr::Texture& GetTexture() override {
-		return texture_; };
-
-private:
-	rglr::Texture texture_; };
+	// -- ITexture --
+	auto GetTexture() -> const rglr::Texture& override {
+		return texture_; }};
 
 
 class Compiler final : public NodeCompiler {
@@ -43,6 +45,4 @@ struct init { init() {
 	NodeRegistry::GetInstance().Register("$image", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
-
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

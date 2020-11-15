@@ -1,9 +1,3 @@
-#include <iostream>
-#include <stdexcept>
-#include <string_view>
-#include <type_traits>
-#include <utility>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglr/rglr_canvas.hxx"
@@ -13,19 +7,42 @@
 #include "src/viewer/node/base.hxx"
 #include "src/viewer/node/i_canvas.hxx"
 
-namespace rqdq {
+#include <iostream>
+#include <stdexcept>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 class Impl : public ICanvas {
+
+	const int intensity_;
+	const int taskSize_;
+
+	// inputs
+	ICanvas* inputNode_{nullptr};
+	std::string inputSlot_{};
+
+	std::vector<jobsys::Job*> jobs_;
+	rglr::FloatingPointCanvas ca_;
+	rglr::FloatingPointCanvas cb_;
+	const rglr::FloatingPointCanvas* src_;
+	rglr::FloatingPointCanvas* dst_;
+	const rglr::FloatingPointCanvas* output_;
+	int dist_;
+
 public:
 	Impl(std::string_view id, InputList inputs, int intensity, int taskSize) :
 		ICanvas(id, std::move(inputs)),
 		intensity_(intensity),
 		taskSize_(taskSize) {}
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "input") {
 			inputNode_ = dynamic_cast<ICanvas*>(other);
 			if (inputNode_ == nullptr) {
@@ -36,14 +53,14 @@ public:
 		return ICanvas::Connect(attr, other, slot); }
 
 	void DisconnectAll() override {
-		inputSlot_ = nullptr;
+		inputNode_ = nullptr;
 		ICanvas::DisconnectAll(); }
 
 	void AddDeps() override {
 		ICanvas::AddDeps();
 		AddDep(inputNode_); }
 
-	bool IsValid() override {
+	auto IsValid() -> bool override {
 		if (inputNode_ == nullptr) {
 			std::cerr << "kawase(" << get_id() << ") has no input" << std::endl;
 			return false; }
@@ -53,9 +70,9 @@ public:
 		inputNode_->AddLink(AfterAll(Render()));
 		inputNode_->Run(); }
 
-	rclmt::jobsys::Job* Render() {
-		return rclmt::jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
-	static void RenderJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
+	auto Render() -> jobsys::Job* {
+		return jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
+	static void RenderJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
@@ -85,7 +102,7 @@ public:
 		const int yEnd = input->height();
 
 		for (; dist_<intensity_; ++dist_) {
-			auto blurParent = rclmt::jobsys::make_job(rclmt::jobsys::noop);
+			auto blurParent = jobsys::make_job(jobsys::noop);
 			jobs_.clear();
 			for (int y=0; y<yEnd; y+=taskSize_) {
 				int taskYBegin = y;
@@ -107,35 +124,19 @@ public:
 		output_ = src_;
 		RunLinks(); }
 
-	rclmt::jobsys::Job* BlurLines(int yBegin, int yEnd, rclmt::jobsys::Job* parent=nullptr) {
+	auto BlurLines(int yBegin, int yEnd, jobsys::Job* parent=nullptr) -> jobsys::Job* {
 		if (parent) {
-			return rclmt::jobsys::make_job_as_child(parent, Impl::BlurLinesJmp, std::tuple{this, yBegin, yEnd}); }
+			return jobsys::make_job_as_child(parent, Impl::BlurLinesJmp, std::tuple{this, yBegin, yEnd}); }
 		else {
-			return rclmt::jobsys::make_job(Impl::BlurLinesJmp, std::tuple{this, yBegin, yEnd}); }}
-	static void BlurLinesJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*, int, int>* data) {
+			return jobsys::make_job(Impl::BlurLinesJmp, std::tuple{this, yBegin, yEnd}); }}
+	static void BlurLinesJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*, int, int>* data) {
 		auto&[self, yBegin, yEnd] = *data;
 		self->BlurLinesImpl(yBegin, yEnd); }
 	void BlurLinesImpl(int yBegin, int yEnd) {
 		KawaseBlurFilter(*src_, *dst_, dist_, yBegin, yEnd); }
 
-    std::pair<int, const void*> GetCanvas(std::string_view slot [[maybe_unused]]) override {
-        return { ICanvas::CT_FLOAT4_LINEAR, output_ }; }
-
-private:
-	const int intensity_;
-	const int taskSize_;
-
-	// inputs
-	ICanvas* inputNode_{nullptr};
-	std::string inputSlot_{};
-
-	std::vector<rclmt::jobsys::Job*> jobs_;
-	rglr::FloatingPointCanvas ca_;
-	rglr::FloatingPointCanvas cb_;
-	const rglr::FloatingPointCanvas* src_;
-	rglr::FloatingPointCanvas* dst_;
-	const rglr::FloatingPointCanvas* output_;
-	int dist_; };
+    auto GetCanvas(std::string_view slot [[maybe_unused]]) -> std::pair<int, const void*> override {
+		return { ICanvas::CT_FLOAT4_LINEAR, output_ }; }};
 
 
 class Compiler final : public NodeCompiler {
@@ -153,5 +154,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

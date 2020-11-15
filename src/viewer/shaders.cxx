@@ -1,5 +1,4 @@
 #include "shaders.hxx"
-#include <string_view>
 
 #include "src/rgl/rglr/rglr_fragmentcursor.hxx"
 #include "src/rgl/rglv/rglv_gpu.hxx"
@@ -7,10 +6,10 @@
 #include "src/viewer/shaders_wireframe.hxx"
 #include "src/viewer/shaders_envmap.hxx"
 
+#include <string_view>
 
 namespace rqdq {
 namespace rqv {
-
 
 using namespace std;
 

@@ -1,9 +1,3 @@
-#include <memory>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
@@ -13,17 +7,28 @@
 #include "src/viewer/node/i_layer.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
 namespace jobsys = rclmt::jobsys;
 
 class Impl : public ILayer {
+
+	std::vector<ILayer*> layers_;
+	IValue* selectorNode_{nullptr};
+	std::string selectorSlot_;
+
 public:
 	using ILayer::ILayer;
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "layer") {
 			auto tmp = dynamic_cast<ILayer*>(other);
 			if (tmp == nullptr) {
@@ -81,11 +86,7 @@ private:
 		const int lastLayer = int(layers_.size() - 1);
 		if (idx < 0 || lastLayer < idx) {
 			return nullptr; }
-		return layers_[idx]; }
-
-	std::vector<ILayer*> layers_;
-	IValue* selectorNode_{nullptr};
-	std::string selectorSlot_; };
+		return layers_[idx]; }};
 
 
 class Compiler final : public NodeCompiler {
@@ -103,5 +104,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

@@ -1,9 +1,3 @@
-#include <iostream>
-#include <memory>
-#include <mutex>
-#include <string_view>
-#include <utility>
-
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
 #include "src/rgl/rglv/rglv_icosphere.hxx"
@@ -15,9 +9,15 @@
 #include "src/viewer/node/i_material.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <iostream>
+#include <memory>
+#include <mutex>
+#include <string_view>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
 
 //PixelToaster::Timer ttt;
@@ -234,5 +234,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

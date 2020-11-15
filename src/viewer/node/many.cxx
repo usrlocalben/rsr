@@ -1,10 +1,3 @@
-#include <iostream>
-#include <memory>
-#include <mutex>
-#include <random>
-#include <string_view>
-#include <utility>
-
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_gl.hxx"
 #include "src/rgl/rglv/rglv_mesh.hxx"
@@ -17,13 +10,20 @@
 #include "src/viewer/node/i_material.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <iostream>
+#include <memory>
+#include <mutex>
+#include <random>
+#include <string_view>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 constexpr int batch = 3000;
-
 
 class Impl final : public IGl {
 
@@ -126,7 +126,7 @@ public:
 
 			M = M * mat4::rotate(rotDist(e2), normalize(rmlv::vec3{0.2F, 0.4F, 0.6F})); } }
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "material") {
 			materialNode_ = dynamic_cast<IMaterial*>(other);
 			if (materialNode_ == nullptr) {
@@ -143,7 +143,7 @@ public:
 		AddDep(materialNode_); }
 
 	void Main() override {
-		rclmt::jobsys::run(Compute());}
+		jobsys::run(Compute());}
 
 	void DrawDepth(rglv::GL* _dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		using namespace rglv;
@@ -230,20 +230,20 @@ public:
 		}
 
 public:
-	rclmt::jobsys::Job* Compute(rclmt::jobsys::Job* parent = nullptr) {
+	auto Compute(jobsys::Job* parent = nullptr) -> jobsys::Job* {
 		if (parent != nullptr) {
-			return rclmt::jobsys::make_job_as_child(parent, Impl::ComputeJmp, std::tuple{this}); }
-		return rclmt::jobsys::make_job(Impl::ComputeJmp, std::tuple{this}); }
+			return jobsys::make_job_as_child(parent, Impl::ComputeJmp, std::tuple{this}); }
+		return jobsys::make_job(Impl::ComputeJmp, std::tuple{this}); }
 
 private:
-	static void ComputeJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
+	static void ComputeJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*>* data) {
 		auto&[self] = *data;
 		self->ComputeImpl(); }
 	void ComputeImpl() {
 		using rmlv::ivec2;
 		activeBuffer_ = (activeBuffer_+1)%3;
 
-		auto postSetup = rclmt::jobsys::make_job(rclmt::jobsys::noop);
+		auto postSetup = jobsys::make_job(jobsys::noop);
 		AddLinksTo(postSetup);
 		materialNode_->AddLink(postSetup);
 		materialNode_->Run();} };
@@ -264,5 +264,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

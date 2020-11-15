@@ -1,8 +1,3 @@
-#include <memory>
-#include <string>
-#include <string_view>
-#include <utility>
-
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglv/rglv_math.hxx"
 #include "src/rml/rmlm/rmlm_mat4.hxx"
@@ -11,17 +6,35 @@
 #include "src/viewer/node/i_camera.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 class Impl : public ICamera {
-public:
-	Impl(std::string_view id, InputList inputs, float ha, float va, float fov, rmlv::vec2 origin)
-		:ICamera(id, std::move(inputs)), ha(ha), va(va), fov(fov), origin(origin) {}
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	IValue* positionNode_{nullptr};
+	std::string positionSlot_{};
+	float ha;
+	float va;
+	float fov;
+	rmlv::vec2 origin;
+
+public:
+	Impl(std::string_view id, InputList inputs, float ha, float va, float fov, rmlv::vec2 origin) :
+		ICamera(id, std::move(inputs)),
+		ha(ha),
+		va(va),
+		fov(fov),
+		origin(origin) {}
+
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "position") {
 			positionNode_ = dynamic_cast<IValue*>(other);
 			positionSlot_ = slot;
@@ -35,12 +48,12 @@ public:
 		ICamera::DisconnectAll();
 		positionNode_ = nullptr; }
 
-	rmlm::mat4 ProjectionMatrix(float aspect) const override {
+	auto ProjectionMatrix(float aspect) const -> rmlm::mat4 override {
 		rmlm::mat4 m = rglv::Perspective2(fov, aspect, 10, 1000);
 		m = rmlm::mat4::translate(origin.x, origin.y, 0) * m;
 		return m; }
 
-	rmlm::mat4 ViewMatrix() const override {
+	auto ViewMatrix() const -> rmlm::mat4 override {
 		rmlv::vec3 position = positionNode_->Eval(positionSlot_).as_vec3();
 		rmlv::vec3 dir = MakeDir();
 		rmlv::vec3 right = MakeRight();
@@ -48,19 +61,11 @@ public:
 		return rglv::LookAt(position, position + dir, up); }
 
 private:
-	rmlv::vec3 MakeDir() const {
+	auto MakeDir() const -> rmlv::vec3 {
 		return { cosf(va)*sinf(ha), sinf(va), cosf(va)*cosf(ha) }; }
 
-	rmlv::vec3 MakeRight() const {
-		return { sinf(ha-3.14F/2.0F), 0.0F, cosf(ha-3.14F/2.0F) }; }
-
-private:
-	IValue* positionNode_{nullptr};
-	std::string positionSlot_{};
-	float ha;
-	float va;
-	float fov;
-	rmlv::vec2 origin; };
+	auto MakeRight() const -> rmlv::vec3 {
+		return { sinf(ha-3.14F/2.0F), 0.0F, cosf(ha-3.14F/2.0F) }; }};
 
 
 class Compiler final : public NodeCompiler {
@@ -79,11 +84,9 @@ class Compiler final : public NodeCompiler {
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), ha, va, fov, origin); }};
 
 
-
 struct init { init() {
 	NodeRegistry::GetInstance().Register("$perspective", [](){ return std::make_unique<Compiler>(); });
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

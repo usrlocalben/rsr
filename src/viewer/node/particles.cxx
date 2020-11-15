@@ -1,7 +1,3 @@
-#include <iostream>
-#include <string_view>
-#include <random>
-
 #include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
@@ -13,11 +9,15 @@
 #include "src/viewer/node/i_particles.hxx"
 #include "src/viewer/compile.hxx"
 
+#include <iostream>
+#include <string_view>
+#include <random>
+
 #include "3rdparty/pixeltoaster/PixelToaster.h"
 
-namespace rqdq {
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
 using namespace rqdq::rmlm;
 using namespace rqdq::rmlv;
@@ -156,8 +156,7 @@ private:
 			/*p=*/{ posDist(rng_), posDist(rng_), posDist(rng_) },
 			/*v=*/vel,
 			/*lr=*/life_,
-			/*sz=*/sizDist(rng_) }; }
-	};
+			/*sz=*/sizDist(rng_) }; } };
 
 
 class Compiler final : public NodeCompiler {
@@ -179,4 +178,3 @@ struct init { init() {
 
 
 }  // close unnamed namespace
-}  // close enterprise namespace

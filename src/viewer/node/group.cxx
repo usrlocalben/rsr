@@ -1,10 +1,3 @@
-#include <atomic>
-#include <memory>
-#include <string_view>
-#include <tuple>
-#include <utility>
-#include <vector>
-
 #include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
@@ -15,9 +8,16 @@
 #include "src/viewer/node/i_gl.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <atomic>
+#include <memory>
+#include <string_view>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
 namespace jobsys = rclmt::jobsys;
 
@@ -165,5 +165,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

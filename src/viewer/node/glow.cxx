@@ -1,8 +1,3 @@
-#include <iostream>
-#include <string_view>
-#include <tuple>
-#include <utility>
-
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
 #include "src/rgl/rglr/rglr_algorithm.hxx"
@@ -15,10 +10,16 @@
 #include "src/viewer/node/i_canvas.hxx"
 #include "src/viewer/node/i_output.hxx"
 
-namespace rqdq {
+#include <iostream>
+#include <string_view>
+#include <tuple>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 struct GlowShader {
 	static rmlv::qfloat3 ShadeCanvas(
@@ -37,12 +38,29 @@ struct GlowShader {
 
 
 class Impl : public IOutput {
+
+	// static config
+	bool sRGB_;
+
+	// runtime config
+	rglr::TrueColorCanvas* outCanvas_{nullptr};
+
+	// inputs
+	ICanvas* imageNode_{nullptr};
+	std::string imageSlot_{};
+	ICanvas* blurNode_{nullptr};
+	std::string blurSlot_{};
+
+	const rglr::QFloat4Canvas* src0_{nullptr};
+	const rglr::FloatingPointCanvas* src1_{nullptr};
+	std::vector<jobsys::Job*> jobs_;
+
 public:
 	Impl(std::string_view id, InputList inputs, bool sRGB) :
 		IOutput(id, std::move(inputs)),
 		sRGB_(sRGB) {}
 
-	bool Connect(std::string_view attr, NodeBase* other, std::string_view slot) override {
+	auto Connect(std::string_view attr, NodeBase* other, std::string_view slot) -> bool override {
 		if (attr == "image") {
 			imageNode_ = dynamic_cast<ICanvas*>(other);
 			if (imageNode_ == nullptr) {
@@ -73,7 +91,7 @@ public:
 		IOutput::Reset();
 		outCanvas_ = nullptr; }
 
-	bool IsValid() override {
+	auto IsValid() -> bool override {
 		if (imageNode_ == nullptr) {
 			std::cerr << "glow(" << get_id() << ") has no image" << std::endl;
 			return false; }
@@ -89,9 +107,9 @@ public:
 		imageNode_->Run();
 		blurNode_->Run(); }
 
-	rclmt::jobsys::Job* Render() override {
-		return rclmt::jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
-	static void RenderJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
+	auto Render() -> jobsys::Job* override {
+		return jobsys::make_job(Impl::RenderJmp, std::tuple{this}); }
+	static void RenderJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*> * data) {
 		auto&[self] = *data;
 		self->RenderImpl(); }
 	void RenderImpl() {
@@ -114,7 +132,7 @@ public:
 		const int taskSize = 16;
 
 		jobs_.clear();
-		auto ppParent = rclmt::jobsys::make_job(rclmt::jobsys::noop);
+		auto ppParent = jobsys::make_job(jobsys::noop);
 		for (int y=0; y<yEnd; y+=taskSize) {
 			int taskYBegin = y;
 			int taskYEnd = std::min(y+taskSize, yEnd);
@@ -126,11 +144,11 @@ public:
 
 		RunLinks(); }
 
-	rclmt::jobsys::Job* PP(int yBegin, int yEnd, rclmt::jobsys::Job* parent = nullptr) {
+	auto PP(int yBegin, int yEnd, jobsys::Job* parent = nullptr) -> jobsys::Job* {
 		if (parent != nullptr) {
-			return rclmt::jobsys::make_job_as_child(parent, Impl::PPJmp, std::tuple{this, yBegin, yEnd}); }
-		return rclmt::jobsys::make_job(Impl::PPJmp, std::tuple{this, yBegin, yEnd}); }
-	static void PPJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*, int, int>* data) {
+			return jobsys::make_job_as_child(parent, Impl::PPJmp, std::tuple{this, yBegin, yEnd}); }
+		return jobsys::make_job(Impl::PPJmp, std::tuple{this, yBegin, yEnd}); }
+	static void PPJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<Impl*, int, int>* data) {
 		auto& [self, yBegin, yEnd] = *data;
 		self->PPImpl(yBegin, yEnd); }
 	void PPImpl(int yBegin, int yEnd) {
@@ -148,24 +166,7 @@ public:
 			rglr::Filter<GlowShader, rglr::LinearColor>(src0, src1, out, rect); }}
 
 	void SetOutputCanvas(rglr::TrueColorCanvas* canvas) override {
-		outCanvas_ = canvas; }
-
-private:
-	// static config
-	bool sRGB_;
-
-	// runtime config
-	rglr::TrueColorCanvas* outCanvas_{nullptr};
-
-	// inputs
-	ICanvas* imageNode_{nullptr};
-	std::string imageSlot_{};
-	ICanvas* blurNode_{nullptr};
-	std::string blurSlot_{};
-
-	const rglr::QFloat4Canvas* src0_{nullptr};
-	const rglr::FloatingPointCanvas* src1_{nullptr};
-	std::vector<rclmt::jobsys::Job*> jobs_; };
+		outCanvas_ = canvas; }};
 
 
 class Compiler final : public NodeCompiler {
@@ -184,5 +185,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

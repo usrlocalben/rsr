@@ -1,8 +1,3 @@
-#include <map>
-#include <string>
-#include <string_view>
-#include <utility>
-
 #include "src/rcl/rclma/rclma_framepool.hxx"
 #include "src/rcl/rclmt/rclmt_jobsys.hxx"
 #include "src/rcl/rclx/rclx_gason_util.hxx"
@@ -14,10 +9,16 @@
 #include "src/viewer/node/i_gl.hxx"
 #include "src/viewer/node/i_value.hxx"
 
-namespace rqdq {
+#include <map>
+#include <string>
+#include <string_view>
+#include <utility>
+
 namespace {
 
+using namespace rqdq;
 using namespace rqv;
+namespace jobsys = rclmt::jobsys;
 
 constexpr float kTau = static_cast<float>(rmlv::M_PI * 2.0);
 // constexpr int kForkUntilDepth = 100;
@@ -89,7 +90,6 @@ public:
 		AddDep(lowerNode_); }
 
 	void Main() override {
-		namespace jobsys = rclmt::jobsys;
 		auto* my_noop = jobsys::make_job(jobsys::noop);
 		AddLinksTo(my_noop);
 		lowerNode_->AddLink(my_noop);
@@ -97,7 +97,6 @@ public:
 
 	void DrawDepth(rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* mvmat) override {
 		using rmlm::mat4;
-		namespace jobsys = rclmt::jobsys;
 
 		auto translate = rmlv::vec3{0,0,0};
 		if (translateNode_ != nullptr) {
@@ -129,7 +128,6 @@ public:
 
 	void Draw(int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) override {
 		using rmlm::mat4;
-		namespace jobsys = rclmt::jobsys;
 
 		auto translate = rmlv::vec3{0,0,0};
 		if (translateNode_ != nullptr) {
@@ -144,7 +142,7 @@ public:
 		if (cnt_ == 0) {
 			return; }
 
-		auto root = rclmt::jobsys::make_job(rclmt::jobsys::noop);
+		auto root = jobsys::make_job(jobsys::noop);
 		jobsys::Job* ptrs[128];  // XXX
 		int ptrcnt{0};
 
@@ -173,16 +171,16 @@ public:
 			jobsys::wait(root); }}
 
 	static 
-	void AfterDraw(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, rclmt::jobsys::Job*>* data) {
+	void AfterDraw(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<std::atomic<int>*, jobsys::Job*>* data) {
 		auto [cnt, link] = *data;
 		auto& counter = *cnt;
 		if (--counter == 0) {
-			rclmt::jobsys::run(link); }}
+			jobsys::run(link); }}
 
-	auto DrawLower(rclmt::jobsys::Job* p, int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) -> rclmt::jobsys::Job* {
-		return rclmt::jobsys::make_job_as_child(p, DrawLowerJmp, std::tuple{this, pass, &lights, dc, pmat, vmat, mmat}); }
+	auto DrawLower(jobsys::Job* p, int pass, const LightPack& lights, rglv::GL* dc, const rmlm::mat4* const pmat, const rmlm::mat4* vmat, const rmlm::mat4* mmat) -> jobsys::Job* {
+		return jobsys::make_job_as_child(p, DrawLowerJmp, std::tuple{this, pass, &lights, dc, pmat, vmat, mmat}); }
 	static
-	void DrawLowerJmp(rclmt::jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<RepeatOp*, int, const LightPack&, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const, const rmlm::mat4* const>* data) {
+	void DrawLowerJmp(jobsys::Job*, unsigned threadId [[maybe_unused]], std::tuple<RepeatOp*, int, const LightPack&, rglv::GL*, const rmlm::mat4* const, const rmlm::mat4* const, const rmlm::mat4* const>* data) {
 		auto [self, pass, lights, dc, pmat, vmat, mmat] = *data;
 		self->lowerNode_->Draw(pass, lights, dc, pmat, vmat, mmat); }};
 
@@ -206,5 +204,4 @@ struct init { init() {
 }} init{};
 
 
-}  // namespace
-}  // namespace rqdq
+}  // close unnamed namespace

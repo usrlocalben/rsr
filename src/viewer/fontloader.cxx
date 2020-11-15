@@ -1,9 +1,9 @@
 #include "fontloader.hxx"
 
-#include "3rdparty/lua/lua.hpp"
-
 #include <iostream>
 #include <stdexcept>
+
+#include "3rdparty/lua/lua.hpp"
 
 namespace rqdq {
 namespace {
