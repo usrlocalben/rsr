@@ -12,8 +12,9 @@
 
 #include <fmt/format.h>
 #include <fmt/printf.h>
-#include "3rdparty/pixeltoaster/PixelToaster.h"
+#include "3rdparty/mio/mio.hpp"
 #include "3rdparty/picopng/picopng.h"
+#include "3rdparty/pixeltoaster/PixelToaster.h"
 #include "3rdparty/ryg-srgb/ryg-srgb.h"
 
 namespace rqdq {
@@ -35,13 +36,13 @@ auto LoadFile(std::ifstream& fd) -> std::vector<char> {
 	return buffer; }
 
 
-auto PNGToTexture(const std::vector<char>& data, std::string name, const bool premultiply) -> rglr::Texture {
+auto PNGToTexture(const unsigned char* const data, size_t length, std::string name, const bool premultiply) -> rglr::Texture {
 	using ryg::srgb8_to_float;
 
 	std::vector<unsigned char> image;
 
 	unsigned long w, h;
-	int error = decodePNG(image, w, h, data.empty() ? nullptr : reinterpret_cast<const std::uint8_t*>(data.data()), static_cast<unsigned long>(data.size()));
+	int error = decodePNG(image, w, h, data, static_cast<unsigned long>(length));
 	if (error != 0) {
 		std::cout << "error(" << error << ") decoding png from [" << name << "]" << std::endl;
 		while (1) {}}
@@ -68,18 +69,18 @@ auto PNGToTexture(const std::vector<char>& data, std::string name, const bool pr
 namespace rglr {
 
 auto LoadPNG(const std::pmr::string& filename, std::string_view name, const bool premultiply) -> Texture {
-	std::ifstream fd(filename.c_str(), std::ios::in | std::ios::binary);
-	return PNGToTexture(LoadFile(fd), std::string(name), premultiply); }
+	mio::ummap_source png(filename.c_str());
+	return PNGToTexture(png.data(), png.size(), std::string(name), premultiply); }
 
 
 auto LoadPNG(const char* filename, std::string name, const bool premultiply) -> Texture {
-	std::ifstream fd(filename, std::ios::in | std::ios::binary);
-	return PNGToTexture(LoadFile(fd), name, premultiply); }
+	mio::ummap_source png(filename);
+	return PNGToTexture(png.data(), png.size(), name, premultiply); }
 
 
 auto LoadPNG(const std::pmr::string& filename, std::string name, const bool premultiply) -> Texture {
-	std::ifstream fd(filename.c_str(), std::ios::in | std::ios::binary);
-	return PNGToTexture(LoadFile(fd), name, premultiply); }
+	mio::ummap_source png(filename.c_str());
+	return PNGToTexture(png.data(), png.size(), move(name), premultiply); }
 
 
 }  // namespace rglr

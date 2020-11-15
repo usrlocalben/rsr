@@ -139,6 +139,7 @@ cc_library(
     hdrs = ["rglr_texture_load.hxx"],
     deps = [
         "//3rdparty/fmt",
+        "//3rdparty/mio",
         "//3rdparty/picopng",
         "//3rdparty/pixeltoaster",
         "//3rdparty/ryg-srgb",
