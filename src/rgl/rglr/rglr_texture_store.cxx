@@ -1,15 +1,27 @@
 #include "src/rgl/rglr/rglr_texture_store.hxx"
 
-#include <string>
-#include <vector>
-
+#include "src/rcl/rclt/rclt_util.hxx"
 #include "src/rcl/rcls/rcls_file.hxx"
 #include "src/rgl/rglr/rglr_texture_load.hxx"
+
+#include <algorithm>
+#include <memory_resource>
+#include <string>
+#include <vector>
 
 #include <fmt/format.h>
 #include <fmt/printf.h>
 
 namespace rqdq {
+namespace {
+
+template <typename T1, typename T2>
+auto EndsWithI(const T1& suffix, const T2& text) -> bool {
+	return equal(rbegin(suffix), rend(suffix), rbegin(text),
+	             [](char a, char b) { return tolower(a) == tolower(b); }); }
+
+
+}  // close unnamed namespace
 namespace rglr {
 
 Texture checkerboard2x2() {
@@ -22,47 +34,53 @@ Texture checkerboard2x2() {
 
 
 TextureStore::TextureStore() {
-	this->append(checkerboard2x2()); }
+	Append(checkerboard2x2()); }
 
 
-void TextureStore::append(Texture t) {
+void TextureStore::Append(Texture t) {
 	store.push_back(t); }
 
 
-const Texture * TextureStore::find_by_name(const std::string& name) const {
+auto TextureStore::Find(std::string_view name) const -> const Texture* {
 	for (auto& item : store) {
 		if (item.name == name) {
 			return &item; }}
 	return nullptr; }
 
 
-void TextureStore::load_any(const std::string& prepend, const std::string& fname) {
-	auto existing = this->find_by_name(fname);
+void TextureStore::LoadPNG(const std::pmr::string& path, std::string_view name) {
+	auto existing = Find(name);
 	if (existing != nullptr) {
 		return; }
 
-	Texture newtex = rglr::load_any(prepend, fname, fname, true);
+	Texture newtex = rglr::LoadPNG(path, name, true);
 	newtex.maybe_make_mipmap();
-	this->append(newtex); }
+	Append(newtex); }
 
 
-void TextureStore::load_dir(const std::string& prepend) {
-	static const std::vector<std::string> extensions{ "*.png" }; // , "*.jpg" };
+void TextureStore::LoadDir(std::string_view dir) {
+	char buf[4096];
+	std::pmr::monotonic_buffer_resource pool(buf, sizeof(buf));
 
-	for (auto& ext : extensions) {
-		for (auto& fn : rcls::FindGlob(prepend + ext)) {
-			//std::cout << "scanning [" << prepend << "][" << fn << "]" << std::endl;
-			this->load_any(prepend, fn); }}}
+	auto lst = rcls::ListDir(dir, &pool);
+
+	std::pmr::string path(&pool);
+	path.reserve(dir.size() + 16);
+	for (const auto& item : lst) {
+		rcls::JoinPath(dir, item, path);
+		if (EndsWithI(std::string_view{".png"}, item)) {
+			fmt::print("loading texture \"{}\"\n", item);
+			LoadPNG(path, item); }}}
 
 
-void TextureStore::print() {
+void TextureStore::Print() {
 	int i = 0;
 	for (const auto& item : store) {
 		const void * const ptr = item.buf.data();
 		fmt::printf("#% 3d \"%-20s\" % 4d x% 4d", i, item.name, item.width, item.height);
 		fmt::printf("  data@ 0x%p\n", ptr);
-		i++; }}
+		++i; }}
 
 
-}  // namespace rglr
-}  // namespace rqdq
+}  // close package namespace
+}  // close enterprise namespace

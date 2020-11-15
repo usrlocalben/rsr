@@ -33,7 +33,7 @@ class Compiler final : public NodeCompiler {
 		using rclx::jv_find;
 		rglr::Texture tex;
 		if (auto jv = jv_find(data_, "file", JSON_STRING)) {
-			tex = rglr::load_png(jv->toString(), jv->toString(), false);
+			tex = rglr::LoadPNG(jv->toString(), jv->toString(), false);
 			tex.maybe_make_mipmap(); }
 
 		out_ = std::make_shared<Impl>(id_, std::move(inputs_), tex); }};

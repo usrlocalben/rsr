@@ -242,7 +242,7 @@ public:
 		wantedSizeInPx_(config_.outputSizeInPx) {}
 	
 	void Run() {
-		textureStore_.load_dir(config_.textureDir);
+		textureStore_.LoadDir(config_.textureDir);
 		meshStore_.LoadDir(config_.meshDir);
 
 		PrepareBuiltInNodes();

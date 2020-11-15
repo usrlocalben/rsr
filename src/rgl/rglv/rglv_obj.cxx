@@ -2,13 +2,15 @@
 
 #include "src/rcl/rcls/rcls_file.hxx"
 #include "src/rcl/rclt/rclt_util.hxx"
-// #include "src/rgl/rglv/rglv_material.hxx"
+#include "src/rgl/rglv/rglv_material.hxx"
 #include "src/rgl/rglv/rglv_mesh.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
 
+#include <charconv>
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <memory_resource>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -25,98 +27,105 @@ using rglv::Material;
 
 using MaterialList = std::vector<Material>;
 
-
 namespace {
 
-struct SVec3 {
-
-	static
-	auto read(std::stringstream& ss) -> SVec3 {
-		float x, y, z;
-		ss >> x >> y >> z;
-		return SVec3{x, y, z}; }
-
-	float x{0}, y{0}, z{0};
-
-	SVec3()  {}
-	SVec3(float a) :x(a), y(a), z(a) {}
-	SVec3(float x, float y, float z) :x(x), y(y), z(z) {}
-
-	auto xyz1() const -> vec4 {
-		return vec4{x, y, z, 1}; }
-	auto xyz0() const -> vec4 {
-		return vec4{x, y, z, 0}; }
-	auto xyz() const -> vec3 {
-		return vec3{x, y, z}; }};
+auto SplitWhitespce(std::string_view text, std::pmr::memory_resource* mem) -> std::pmr::vector<std::pmr::string> {
+	std::string_view delims(" \t\n\r");
+	std::pmr::vector<std::pmr::string> out(mem);
+	std::size_t start = text.find_first_not_of(delims), end = 0;
+	while ((end = text.find_first_of(delims, start)) != std::pmr::string::npos) {
+		out.emplace_back(text.substr(start, end-start));
+		start = text.find_first_not_of(delims, end); }
+	if (start != std::pmr::string::npos) {
+		out.emplace_back(text.substr(start)); }
+	return out; }
 
 
-struct SVec2 {
+auto SplitFloats(std::string_view text, int limit, float* out) {
+	if (limit <= 0) return;
+	int idx{ 0 };
+	std::string_view delims(" \t");
+	std::size_t start = text.find_first_not_of(delims), end = 0;
+	while ((end = text.find_first_of(delims, start)) != std::pmr::string::npos) {
+		auto segBegin = text.data() + start;
+		// auto segEnd = text.data() + end;
+		auto res = std::from_chars(segBegin, text.data() + text.size(), out[idx++], std::chars_format::general);
+		if (res.ec != std::errc()) {
+			std::printf("bad float [%llu, %llu)\n", start, end);
+			std::exit(1); }
+		if (idx == limit) return;
+		start = text.find_first_not_of(delims, end); }
+	if (start != std::pmr::string::npos) {
+		auto res = std::from_chars(text.data() + start, text.data() + text.size(), out[idx++], std::chars_format::general);
+		if (res.ec != std::errc()) {
+			std::printf("bad float [%llu, %llu)\n", start, end);
+			std::exit(1); }}}
 
-	static
-	auto read(std::stringstream& ss) -> SVec2 {
-		float x, y;
-		ss >> x >> y;
-		return { x, y }; }
 
-	float x{0}, y{0};
+auto ParseVec3(std::string_view text) -> vec3 {
+	float f[3];
+	SplitFloats(text, 3, f);
+	return { f[0], f[1], f[2] }; }
 
-	SVec2()  {}
-	SVec2(float x, float y) :x(x), y(y) {}
 
-	auto xy00() const -> vec4 {
-		// the bilinear texture sampler
-		// assumes that the texcoords
-		// will be non-negative. this
-		// offset prevents badness for
-		// some meshes. XXX
-		return { x, y, 0, 0 }; }
-		//return rqlma::Vec4{ x, y, 0, 0 }; };
+auto ParseVec2(std::string_view text) -> vec2 {
+	float f[2];
+	SplitFloats(text, 2, f);
+	return { f[0], f[1] }; }
 
-	auto xy() const -> vec2 {
-		// the bilinear texture sampler
-		// assumes that the texcoords
-		// will be non-negative. this
-		// offset prevents badness for
-		// some meshes. XXX
-		return { x, y }; } };
+
+auto ParseFloat(std::string_view text) -> float {
+	float f;
+	SplitFloats(text, 1, &f);
+	return f; }
 
 
 struct faceidx {
 	int vv, vt, vn; };
 
 
-auto to_faceidx(const std::string& data) -> faceidx {
-	auto tmp = rclt::Split(data, '/'); // "nn/nn/nn" or "nn//nn", 1+ indexed!!
-	return faceidx{
-		tmp[0].length() != 0u ? std::stol(tmp[0]) - 1 : 0, // vv
-		tmp[1].length() != 0u ? std::stol(tmp[1]) - 1 : 0, // vt
-		tmp[2].length() != 0u ? std::stol(tmp[2]) - 1 : 0  // vn
-	}; }
+auto to_faceidx(std::string_view data) -> faceidx {
+	char buf[128];
+	std::pmr::monotonic_buffer_resource pool(buf, sizeof(buf));
+
+	// "nn/nn/nn" or "nn//nn", 1+ indexed!!
+	auto tmp = rclt::Split(data, '/', &pool);
+
+	// default to 1 for e.g. 'nn//nn'
+	int idx[3] = { 1, 1, 1 };
+
+	for (int i = 0; i < 3; ++i) {
+		if (tmp[i].size()) {
+			auto res = std::from_chars(tmp[i].data(), tmp[i].data()+tmp[i].size(), idx[i]);
+			if (res.ec != std::errc()) {
+				throw std::runtime_error("bad integer in obj face indices");}}}
+
+	return faceidx{ idx[0]-1, idx[1]-1, idx[2]-1 }; } // vv, vt, vn
 
 
 struct ObjMaterial {
 	std::string name;
 	std::string texture;
-	SVec3 ka;
-	SVec3 kd;
-	SVec3 ks;
+	vec3 ka;
+	vec3 kd;
+	vec3 ks;
 	float specpow;
 	float density;
 
 	void Reset() {
-		name = "__none__";
-		texture = "";
-		ka = SVec3{0.0F};
-		kd = SVec3{0.0F};
-		ks = SVec3{0.0F};
-		specpow = 1.0F;
-		density = 1.0F; }
+		name.assign("__none__");
+		texture.clear();
+		ka = 0;
+		kd = 0;
+		ks = 0;
+		specpow = 1.F;
+		density = 1.F; }
 
 	auto ToMaterial() const -> Material {
 		Material mm;
-		mm.ka = ka.xyz();
-		mm.kd = kd.xyz();
-		mm.ks = ks.xyz();
+		mm.ka = ka;
+		mm.kd = kd;
+		mm.ks = ks;
 		mm.specpow = specpow;
 		mm.d = density;
 		mm.name = name;
@@ -125,51 +134,51 @@ struct ObjMaterial {
 		return mm; }};
 
 
-auto LoadMaterials(const std::string& fn) -> MaterialList {
-
+auto ParseMtllib(std::istream& fd) -> MaterialList {
 	MaterialList mlst;
 	ObjMaterial m;
 
 	auto push = [&mlst, &m]() {
-		float p = 1.0f; // 2.2f;
+#if 0
+		// gamma-space to linear-space
+		float p = 2.2F;
 		m.kd.x = pow(m.kd.x, p);
 		m.kd.y = pow(m.kd.y, p);
 		m.kd.z = pow(m.kd.z, p);
+#endif
 		mlst.push_back(m.ToMaterial()); };
 
-	auto lines = rcls::LoadLines(fn);
+	char buf[256];
+	std::pmr::monotonic_buffer_resource pool(buf, sizeof(buf));
+	std::pmr::string line(&pool);
+	line.reserve(255);
 
 	m.Reset();
-	for (auto& line : lines) {
+	while (getline(fd, line)) {
+		auto text = std::string_view(line);
+		text = text.substr(0, text.find('#')); // remove end-of-line comments
+		text = rclt::TrimView(text); // trim whitespace
+		if (text.empty()) { continue; } // skip empty lines
+		std::string_view cmd;
+		tie(cmd, text) = rclt::Split1View(text); // take the command off the front
 
-		// remove comments, trim, skip empty lines
-		auto tmp = line.substr(0, line.find('#'));
-		tmp = rclt::Trim(tmp);
-		if (tmp.empty()) {
-			continue; }
-
-		// create a stream
-		std::stringstream ss(tmp, std::stringstream::in);
-
-		std::string cmd;
-		ss >> cmd;
 		if (cmd == "newmtl") {  //name
 			if (m.name != "__none__") {
 				push();
 				m.Reset(); }
-			ss >> m.name; }
+			m.name = text; }
 		else if (cmd == "Ka") { // ambient color
-			m.ka = SVec3::read(ss); }
+			m.ka = ParseVec3(text); }
 		else if (cmd == "Kd") { // diffuse color
-			m.kd = SVec3::read(ss); }
+			m.kd = ParseVec3(text); }
 		else if (cmd == "Ks") { // specular color
-			m.ks = SVec3::read(ss); }
+			m.ks = ParseVec3(text); }
 		else if (cmd == "Ns") { // phong exponent
-			ss >> m.specpow; }
+			m.specpow = ParseFloat(text); }
 		else if (cmd == "d") { // opacity ("d-issolve")
-			ss >> m.density; }
+			m.density = ParseFloat(text); }
 		else if (cmd == "map_Kd") { //diffuse texturemap
-			ss >> m.texture; }}
+			m.texture = text; }}
 
 	if (m.name != "__none__") {
 		push(); }
@@ -181,80 +190,91 @@ auto LoadMaterials(const std::string& fn) -> MaterialList {
 
 namespace rglv {
 
-auto LoadOBJ(const std::string& fn, std::optional<const std::string> dir) -> Mesh {
+auto LoadOBJ(const std::pmr::string& fn) -> Mesh {
+	char buf[1024];
+	std::pmr::monotonic_buffer_resource pool(buf, sizeof(buf));
 
-	// std::cout << "---- loading [" << fn << "]:" << std::endl;
+	std::pmr::string line(&pool);
+	line.reserve(100);
 
-	auto lines = rcls::LoadLines(fn);
-	const auto materialDir = dir.value_or(rcls::DirName(fn));
+	std::ifstream fd(fn.c_str());
 
-	std::string group_name("defaultgroup");
+	std::pmr::string groupName("defaultgroup", &pool);
+
+	auto objDir = rcls::DirNameView(fn);
+
+	auto [ll, rr] = rcls::SplitPath(fn);
+	// const auto materialDir = dir ? dir : rcls::DirName(fn);
+
 	int material_idx = -1;
 
 	Mesh mesh;
+	mesh.name_ = rr; // XXX basename
 
-	mesh.name_ = fn;
-
-	for (auto& line : lines) {
-
-		auto tmp = line.substr(0, line.find('#'));
-		tmp = rclt::Trim(tmp);
-		if (tmp.empty()) {
-			continue; }
-		std::stringstream ss(tmp, std::stringstream::in);
-
-		std::string cmd;
-		ss >> cmd;
+	while (getline(fd, line)) {
+		// std::cerr << "LINE: \"" << line << "\"\n";
+		auto text = std::string_view(line);
+		// std::cerr << "TEXT: \"" << text << "\"\n";
+		text = text.substr(0, text.find('#')); // remove end-of-line comments
+		// std::cerr << "TEXT: \"" << text << "\"\n";
+		text = rclt::TrimView(text); // trim whitespace
+		// std::cerr << "TEXT: \"" << text << "\"\n";
+		if (text.empty()) { continue; } // skip empty lines
+		std::string_view cmd;
+		tie(cmd, text) = rclt::Split1View(text); // take the command off the front
+		// std::cerr << "COMMAND: \"" << cmd << "\"\n";
+		// std::cerr << "TEXT: \"" << text << "\"\n";
 
 		if (cmd == "mtllib") {
 			// material library
-			std::string mtlfn;
-			ss >> mtlfn;
-			// std::cout << "material library is [" << mtlfn << "]\n";
-			mesh.material_ = LoadMaterials(rcls::JoinPath(materialDir, mtlfn)); }
+			auto mtlPath = rcls::JoinPath(objDir, text, &pool);
+// std::cerr << "obj: mtllib " << mtlPath << "\n";
+			std::ifstream mtlFd(mtlPath.c_str());
+			mesh.material_ = ParseMtllib(mtlFd); }
 
 		else if (cmd == "g") {
 			// group, XXX unused
-			ss >> group_name; }
+			groupName = text; }
 
 		else if (cmd == "usemtl") {
 			// material setting
-			std::string material_name;
-			ss >> material_name;
-			auto found = std::find_if(begin(mesh.material_), end(mesh.material_), [&](const auto& item) { return item.name == material_name; });
+			auto mtlName = text;
+			auto found = find_if(begin(mesh.material_), end(mesh.material_),
+			                     [&](const auto& item) { return item.name == mtlName; });
 			if (found == end(mesh.material_)) {
-				std::cout << "usemtl \"" << material_name << "\" not found in mtl\n";
+				std::cerr << "usemtl \"" << mtlName << "\" not found in mtl\n";
 				throw std::runtime_error("usemtl not found"); }
 			material_idx = static_cast<int>(std::distance(begin(mesh.material_), found)); }
 
 		else if (cmd == "v") {
 			// vertex
-			mesh.position_.push_back(SVec3::read(ss).xyz()); }
+			mesh.position_.push_back(ParseVec3(text)); }
 
 		else if (cmd == "vn") {
 			// vertex normal
-			mesh.normal_.push_back(SVec3::read(ss).xyz()); }
+			mesh.normal_.push_back(ParseVec3(text)); }
 
 		else if (cmd == "vt") {
 			// vertex uv
-			mesh.texture_.push_back(SVec2::read(ss).xy()); }
+			mesh.texture_.push_back(ParseVec2(text)); }
 
 		else if (cmd == "f") {
 			// face indices
-			std::string data = line.substr(line.find(' ') + 1, std::string::npos);
-			auto faces = rclt::Split(data, ' ');
-			std::vector<faceidx> indexes;
+			char faceBuf[512];
+			std::pmr::monotonic_buffer_resource facePool(faceBuf, sizeof(faceBuf));
+			std::pmr::vector<faceidx> indexes(&facePool);
+			auto faces = rclt::Split(text, ' ', &facePool);
 			indexes.reserve(faces.size());
 			for (auto& facechunk : faces) {
 				indexes.push_back(to_faceidx(facechunk)); }
 			// triangulate and make faces
-			for (int i = 0; i < int(indexes.size()) - 2; ++i) {
-				Face fd;
-				fd.frontMaterial = material_idx;
-				fd.idx.position = { { indexes[0].vv, indexes[i+1].vv, indexes[i+2].vv } };
-				fd.idx.normal   = { { indexes[0].vn, indexes[i+1].vn, indexes[i+2].vn } };
-				fd.idx.texture  = { { indexes[0].vt, indexes[i+1].vt, indexes[i+2].vt } };
-				mesh.face_.push_back(fd); }}}
+			for (int i=0, siz=int(indexes.size()); i<siz-2; ++i) {
+				Face f;
+				f.frontMaterial = material_idx;
+				f.idx.position = { { indexes[0].vv, indexes[i+1].vv, indexes[i+2].vv } };
+				f.idx.normal   = { { indexes[0].vn, indexes[i+1].vn, indexes[i+2].vn } };
+				f.idx.texture  = { { indexes[0].vt, indexes[i+1].vt, indexes[i+2].vt } };
+				mesh.face_.push_back(f); }}}
 
 	mesh.ComputeBBox();
 	mesh.ComputeFaceAndVertexNormals();

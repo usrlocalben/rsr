@@ -1,14 +1,14 @@
 #include "src/rgl/rglr/rglr_texture_load.hxx"
 
-#include <fstream>
-#include <string>
-#include <vector>
-
 #include "src/rcl/rcls/rcls_aligned_containers.hxx"
 #include "src/rcl/rcls/rcls_file.hxx"
 #include "src/rgl/rglr/rglr_texture.hxx"
 #include "src/rml/rmlg/rmlg_pow2.hxx"
 #include "src/rml/rmlv/rmlv_vec.hxx"
+
+#include <fstream>
+#include <string>
+#include <vector>
 
 #include <fmt/format.h>
 #include <fmt/printf.h>
@@ -17,21 +17,33 @@
 #include "3rdparty/ryg-srgb/ryg-srgb.h"
 
 namespace rqdq {
-namespace rglr {
+namespace {
 
-std::vector<uint8_t> load_file(const std::string& filename);
+auto LoadFile(std::ifstream& fd) -> std::vector<char> {
+	if (!fd.is_open()) {
+		std::cerr << "file is not open!\n";
+		std::exit(1); }
+	// get filesize
+	std::streamsize size = 0;
+	if (fd.seekg(0, std::ios::end).good()) {
+		size = fd.tellg(); }
+	if (fd.seekg(0, std::ios::beg).good()) {
+		size -= fd.tellg(); }
 
-Texture load_png(const std::string& filename, const std::string& name, const bool premultiply) {
+	std::vector<char> buffer(size);
+	fd.read(buffer.data(), size);
+	return buffer; }
+
+
+auto PNGToTexture(const std::vector<char>& data, std::string name, const bool premultiply) -> rglr::Texture {
 	using ryg::srgb8_to_float;
 
 	std::vector<unsigned char> image;
 
-	auto data = load_file(filename);
-
 	unsigned long w, h;
-	int error = decodePNG(image, w, h, data.empty() ? nullptr : data.data(), static_cast<unsigned long>(data.size()));
+	int error = decodePNG(image, w, h, data.empty() ? nullptr : reinterpret_cast<const std::uint8_t*>(data.data()), static_cast<unsigned long>(data.size()));
 	if (error != 0) {
-		std::cout << "error(" << error << ") decoding png from [" << filename << "]" << std::endl;
+		std::cout << "error(" << error << ") decoding png from [" << name << "]" << std::endl;
 		while (1) {}}
 
 	rcls::vector<PixelToaster::FloatingPointPixel> pc;
@@ -50,38 +62,24 @@ Texture load_png(const std::string& filename, const std::string& name, const boo
 			dst.g *= dst.a;
 			dst.b *= dst.a; }}
 
-	return { pc, int(w), int(h), int(w), name, -1, false }; }
+	return { pc, int(w), int(h), int(w), move(name), -1, false }; }
+
+}  // close unnamed namespace
+namespace rglr {
+
+auto LoadPNG(const std::pmr::string& filename, std::string_view name, const bool premultiply) -> Texture {
+	std::ifstream fd(filename.c_str(), std::ios::in | std::ios::binary);
+	return PNGToTexture(LoadFile(fd), std::string(name), premultiply); }
 
 
-Texture load_any(const std::string& prefix, const std::string& fn, const std::string& name, const bool premultiply) {
-	//	string tmp = fn;
-	//	transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
-	// std::cout << "texturestore: loading " << prefix << fn << std::endl;
-	std::string ext = fn.substr(fn.length() - 4, 4);
-	if (ext == ".png" || ext == ".PNG") {
-		return load_png(prefix + fn, name, premultiply); }
-//	else if (ext == ".jpg") {
-//		return loadJpg(prefix + fn, name);
-//	}
-	std::cout << "unsupported texture extension \"" << ext << "\"" << std::endl;
-	while (1) {}}
+auto LoadPNG(const char* filename, std::string name, const bool premultiply) -> Texture {
+	std::ifstream fd(filename, std::ios::in | std::ios::binary);
+	return PNGToTexture(LoadFile(fd), name, premultiply); }
 
 
-std::vector<uint8_t> load_file(const std::string& filename) {
-	std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
-
-	// get filesize
-	std::streamsize size = 0;
-	if (file.seekg(0, std::ios::end).good()) {
-		size = file.tellg(); }
-	if (file.seekg(0, std::ios::beg).good()) {
-		size -= file.tellg(); }
-
-	std::vector<uint8_t> buffer;
-	if (size > 0) {
-		buffer.resize(size);
-		file.read(reinterpret_cast<char*>(buffer.data()), size); }
-	return buffer; }
+auto LoadPNG(const std::pmr::string& filename, std::string name, const bool premultiply) -> Texture {
+	std::ifstream fd(filename.c_str(), std::ios::in | std::ios::binary);
+	return PNGToTexture(LoadFile(fd), name, premultiply); }
 
 
 }  // namespace rglr

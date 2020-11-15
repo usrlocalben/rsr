@@ -6,8 +6,10 @@
 namespace rqdq {
 namespace rglr {
 
-Texture load_png(const std::string& filename, const std::string& name, bool premultiply);
-Texture load_any(const std::string& prefix, const std::string& fn, const std::string& name, bool premultiply);
+auto LoadPNG(const std::pmr::string& filename, std::string_view name, const bool premultiply) -> Texture;
+auto LoadPNG(const std::pmr::string& filename, std::string name, bool premultiply) -> Texture;
+auto LoadPNG(const char* filename, std::string name, bool premultiply) -> Texture;
+// auto LoadAny(const std::string& prefix, const std::string& fn, const std::string& name, bool premultiply) -> Texture;
 
 
 }  // namespace rglr

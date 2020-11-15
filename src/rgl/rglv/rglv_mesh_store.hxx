@@ -22,8 +22,8 @@ public:
 		throw std::exception("mesh not found"); }
 
 	void Print() const;
-	void LoadDir(const std::string& dir); };
+	void LoadDir(std::string_view dir); };
 
 
-}  // namespace rglv
-}  // namespace rqdq
+}  // close package namespace
+}  // close enterprise namespace

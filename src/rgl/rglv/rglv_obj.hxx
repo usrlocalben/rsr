@@ -1,16 +1,13 @@
 #pragma once
-#include <optional>
+#include "src/rgl/rglv/rglv_mesh.hxx"
+
 #include <string>
-#include <tuple>
 
 namespace rqdq {
 namespace rglv {
 
-struct Mesh;
-class MaterialStore;
-
-auto LoadOBJ(const std::string& fn, std::optional<const std::string> dir=std::nullopt) -> Mesh;
+auto LoadOBJ(const std::pmr::string&) -> Mesh;
 
 
-}  // namespace rglv
-}  // namespace rqdq
+}  // close package namespace
+}  // clsoe enterprise namespace
